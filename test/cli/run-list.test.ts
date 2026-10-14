@@ -1,0 +1,200 @@
+import type { MockInstance } from 'vitest'
+
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
+
+import type { ListResult } from '../../types/list-result'
+import type { Diagnostic } from '../../types/diagnostic'
+
+import { listMutants } from '../../core/list-mutants'
+import { runList } from '../../cli/run-list'
+
+vi.mock(import('../../core/list-mutants'))
+
+/**
+ * Warning of the run without a file.
+ */
+let skippedPath: Diagnostic = {
+  message: 'Skipped notes.md: not a JavaScript or TypeScript source file.',
+  code: 'skipped-path',
+  severity: 'warning',
+  column: null,
+  file: null,
+  line: null,
+}
+
+/**
+ * Warning of a file with a position.
+ */
+let unknownMutator: Diagnostic = {
+  // spell-checker: disable-next-line
+  message: 'Unknown mutator "strng-literal" in mootant-ignore-next-line.',
+  code: 'unknown-mutator',
+  severity: 'warning',
+  file: 'example.ts',
+  column: 1,
+  line: 1,
+}
+
+/**
+ * Error of a file without a position.
+ */
+let readError: Diagnostic = {
+  message: 'Cannot read the file (EACCES).',
+  code: 'read-error',
+  severity: 'error',
+  file: 'locked.ts',
+  column: null,
+  line: null,
+}
+
+/**
+ * Creates the result of a run that lists one mutant of `example.ts`.
+ *
+ * @param diagnostics - Problems of the run.
+ * @returns List result.
+ */
+function createResult(diagnostics: Diagnostic[]): ListResult {
+  return {
+    files: [
+      {
+        mutants: [
+          {
+            mutator: 'string-literal',
+            id: '000000000001',
+            kind: 'expression',
+            file: 'example.ts',
+            status: 'Pending',
+            replacement: "''",
+            ignoredBy: null,
+            reason: null,
+            scope: null,
+            start: 11,
+            end: 15,
+          },
+        ],
+        source: "let unit = 'cm'",
+        file: 'example.ts',
+        diagnostics: [],
+        parsed: true,
+      },
+    ],
+    mutators: [
+      {
+        mutator: {
+          meta: { description: 'Empties a string literal.' },
+          create: () => ({}),
+        },
+        id: 'string-literal',
+        options: {},
+        rank: 0,
+      },
+    ],
+    preset: 'recommended',
+    diagnostics,
+  }
+}
+
+describe('runList', () => {
+  let consoleErrorSpy: MockInstance<typeof console.error>
+  let consoleInfoSpy: MockInstance<typeof console.info>
+  let consoleWarnSpy: MockInstance<typeof console.warn>
+
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    process.exitCode = undefined
+    vi.restoreAllMocks()
+  })
+
+  it('passes the options and the working directory to the run', async () => {
+    vi.mocked(listMutants).mockResolvedValue(createResult([]))
+
+    await runList({ paths: ['src', 'lib'], preset: 'strict', json: false })
+
+    expect(listMutants).toHaveBeenCalledExactlyOnceWith({
+      paths: ['src', 'lib'],
+      cwd: process.cwd(),
+      preset: 'strict',
+    })
+  })
+
+  it('prints the text report and leaves the exit code alone', async () => {
+    vi.mocked(listMutants).mockResolvedValue(createResult([]))
+
+    await runList({ preset: 'recommended', paths: ['src'], json: false })
+
+    expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
+      [
+        "example.ts:1:12  000000000001  string-literal  'cm' -> ''",
+        '',
+        '1 mutant in 1 file: 1 pending, 0 ignored (preset: recommended)',
+      ].join('\n'),
+    )
+    expect(consoleErrorSpy).not.toHaveBeenCalled()
+    expect(consoleWarnSpy).not.toHaveBeenCalled()
+    expect(process.exitCode).toBeUndefined()
+  })
+
+  it('prints diagnostics to stderr in text mode', async () => {
+    vi.mocked(listMutants).mockResolvedValue(
+      createResult([readError, unknownMutator, skippedPath]),
+    )
+
+    await runList({ preset: 'recommended', paths: ['src'], json: false })
+
+    expect(consoleWarnSpy.mock.calls).toStrictEqual([
+      [
+        'warning: Skipped notes.md: not a JavaScript or TypeScript source file. [skipped-path]',
+      ],
+      [
+        // spell-checker: disable-next-line
+        'example.ts:1:1: warning: Unknown mutator "strng-literal" in mootant-ignore-next-line. [unknown-mutator]',
+      ],
+    ])
+    expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
+      'locked.ts: error: Cannot read the file (EACCES). [read-error]',
+    )
+    expect(process.exitCode).toBe(1)
+  })
+
+  it('prints only the JSON document in JSON mode', async () => {
+    vi.mocked(listMutants).mockResolvedValue(
+      createResult([readError, skippedPath]),
+    )
+
+    await runList({ preset: 'recommended', paths: ['src'], json: true })
+
+    let [[output]] = consoleInfoSpy.mock.calls as [[string]]
+
+    expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
+      expect.stringMatching(/^\{\n {2}"/u),
+    )
+    expect(JSON.parse(output)).toMatchObject({
+      summary: { totalWarnings: 1, totalErrors: 1 },
+      diagnostics: [skippedPath, readError],
+      schemaVersion: 1,
+    })
+    expect(consoleErrorSpy).not.toHaveBeenCalled()
+    expect(consoleWarnSpy).not.toHaveBeenCalled()
+    expect(process.exitCode).toBe(1)
+  })
+
+  it('reports a failed run and sets the exit code', async () => {
+    vi.mocked(listMutants).mockRejectedValue(
+      new Error('Paths not found: src/missing.ts, lib.'),
+    )
+
+    await runList({ preset: 'recommended', paths: ['src'], json: false })
+
+    expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
+      '\nError:',
+      'Paths not found: src/missing.ts, lib.',
+    )
+    expect(consoleInfoSpy).not.toHaveBeenCalled()
+    expect(process.exitCode).toBe(1)
+  })
+})

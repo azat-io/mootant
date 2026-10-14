@@ -1,0 +1,122 @@
+import type { LogicalExpression, Node } from 'oxc-parser'
+
+import type { RunContext } from './create-run-context'
+
+import { distinguishesNullishSwap } from './distinguishes-nullish-swap'
+import { unwrapParentheses } from '../../tree/unwrap-parentheses'
+import { hasDefinedFalsyValue } from './has-defined-falsy-value'
+import { isCanonicalFalsy } from './is-canonical-falsy'
+import { isBooleanValued } from './is-boolean-valued'
+import { isAlwaysNullish } from './is-always-nullish'
+import { hasPolarMutant } from './has-polar-mutant'
+import { isAlwaysTruthy } from './is-always-truthy'
+import { getFixedTruth } from './get-fixed-truth'
+import { isBooleanMode } from './is-boolean-mode'
+import { mayBeBoolean } from './may-be-boolean'
+import { mayBeNullish } from './may-be-nullish'
+import { getTypeView } from './get-type-view'
+
+/**
+ * Operand drops of a `&&` or `||` that logical-operator emits.
+ */
+export interface LogicalDrops {
+  /**
+   * Whether the right operand is dropped (the node becomes its left operand).
+   */
+  dropRight: boolean
+
+  /**
+   * Whether the left operand is dropped (the node becomes its right operand).
+   */
+  dropLeft: boolean
+
+  /**
+   * Whether the nullish swap `L ?? R` replaces the drop of the right operand of
+   * a value-mode `||`.
+   */
+  swap: boolean
+}
+
+/**
+ * Decides the drops of a `&&` or `||` (catalog 4.8, emissions 1 and 2): each
+ * operand is dropped unless it is a same-operator group, the drop is equivalent
+ * by the types or by fixed operands, or the polarity rule finds a running
+ * mutant that subsumes it. In value mode a `||` whose left side may be nullish
+ * gets the nullish swap instead of the drop of its right operand when `??` and
+ * `||` differ. The plan is pure: the polarity rule of other mutants reads it
+ * without running logical-operator.
+ *
+ * @param node - `&&` or `||` expression of the runtime tree.
+ * @param context - Mutator context with the test of mutants that will run.
+ * @param nullishSwap - The `nullishSwap` option of logical-operator.
+ * @returns Which drops and whether the swap are emitted.
+ */
+export function getLogicalDrops(
+  node: LogicalExpression,
+  context: RunContext,
+  nullishSwap: 'distinguishing' | 'always',
+): LogicalDrops {
+  let { operator, right, left } = node
+  let identity = operator === '&&'
+  let booleanMode = isBooleanMode(node, context)
+  let fixedApplies =
+    context.syntax.isBooleanContext(node) ||
+    (isBooleanValued(left, context) && isBooleanValued(right, context))
+  let fixedLeft = fixedApplies ? getFixedTruth(left, context) : null
+  let fixedRight = fixedApplies ? getFixedTruth(right, context) : null
+  let leftType = context.hints.getType(left)
+  let keepsFalsyDefault =
+    hasDefinedFalsyValue(leftType) &&
+    !mayBeNullish(leftType) &&
+    isCanonicalFalsy(getTypeView(leftType).type, right)
+  let candidate = { mutator: 'logical-operator', node }
+
+  let dropLeft =
+    !isSameOperator(left, operator) &&
+    fixedLeft !== identity &&
+    fixedRight !== !identity &&
+    !(identity ?
+      isAlwaysTruthy(leftType) || keepsFalsyDefault
+    : isAlwaysNullish(leftType)) &&
+    !hasPolarMutant({ value: identity, decision: left, candidate }, context)
+
+  let rightKept =
+    !isSameOperator(right, operator) &&
+    fixedRight !== identity &&
+    fixedLeft !== !identity &&
+    !(identity ?
+      isAlwaysNullish(leftType)
+    : isAlwaysTruthy(leftType) || keepsFalsyDefault)
+  let swap =
+    rightKept &&
+    !identity &&
+    !booleanMode &&
+    mayBeNullish(leftType) &&
+    unwrapParentheses(left).type !== 'LogicalExpression' &&
+    distinguishesNullishSwap(node, context.hints, nullishSwap)
+  let dropRight =
+    rightKept &&
+    !swap &&
+    !hasPolarMutant({ value: identity, decision: right, candidate }, context) &&
+    (booleanMode ||
+      mayBeBoolean(context.hints.getType(right)) ||
+      !hasPolarMutant(
+        { value: !identity, decision: left, candidate },
+        context,
+        true,
+      ))
+  return { dropRight, dropLeft, swap }
+}
+
+/**
+ * Tells whether an operand is, through parentheses, a logical expression with
+ * the same operator, which the group flattens.
+ *
+ * @param node - Operand.
+ * @param operator - Operator of the parent.
+ * @returns Whether dropping the operand would drop a same-operator group.
+ */
+function isSameOperator(node: Node, operator: string): boolean {
+  let inner = unwrapParentheses(node)
+  return inner.type === 'LogicalExpression' && inner.operator === operator
+}

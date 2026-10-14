@@ -1,0 +1,412 @@
+import { describe, expect, it } from 'vitest'
+
+import type { TestContextSetup } from '../../../helpers/create-test-context'
+
+import { getComparisonPlan } from '../../../../core/mutators/shared/get-comparison-plan'
+import { createTestContext } from '../../../helpers/create-test-context'
+
+/**
+ * Parameters with the types of the catalog's examples.
+ */
+const PARAMETERS = [
+  'a: number',
+  'b: number',
+  'mode: string',
+  'value: string',
+  'list: string[]',
+  'user: User',
+  'start: Date',
+  'end: Date',
+  's: string',
+].join(', ')
+
+/**
+ * Builds the texts comparison-operator would emit for a comparison.
+ *
+ * @param body - Body of a function with typed parameters.
+ * @param comparison - Text of the comparison.
+ * @param setup - File name and settings of the run.
+ * @returns The replacement texts in emission order.
+ */
+function planOf(
+  body: string,
+  comparison: string,
+  setup: TestContextSetup = {},
+): string[] {
+  let { context, find } = createTestContext(
+    `interface User {} function f(${PARAMETERS}) { ${body} }`,
+    setup,
+  )
+  return getComparisonPlan(find('BinaryExpression', comparison), context).map(
+    entry => entry.text,
+  )
+}
+
+describe('getComparisonPlan', () => {
+  it.each<[string, string, string[]]>([
+    ['x = a < b', 'a < b', ['a <= b', 'a != b', 'false']],
+    ['x = a <= b', 'a <= b', ['a < b', 'a == b', 'true']],
+    ['x = a > b', 'a > b', ['a >= b', 'a != b', 'false']],
+    ['x = a >= 10', 'a >= 10', ['a > 10', 'a == 10', 'a >= 9']],
+    ['x = 10 > a', '10 > a', ['10 >= a', '10 != a', '9 > a']],
+    ['x = a <= -1', 'a <= -1', ['a < -1', 'a == -1', 'a <= 0']],
+    ['x = 2n >= a', '2n >= a', ['2n > a', '2n == a', '3n >= a']],
+    ['x = a < (5)', 'a < (5)', ['a <= (5)', 'a != (5)', 'a < (4)']],
+    ['x = a === b', 'a === b', ['a <= b', 'a >= b', 'false']],
+    ['x = a != b', 'a != b', ['a < b', 'a > b', 'true']],
+    ["x = mode === 'dark'", "mode === 'dark'", ['true', 'false']],
+    ['x = key in map', 'key in map', ['true', 'false']],
+    ['x = user instanceof Map', 'user instanceof Map', ['true', 'false']],
+    ['x = a < 1e300', 'a < 1e300', ['a <= 1e300', 'a != 1e300', 'false']],
+    ['x = 1 < 2', '1 < 2', ['1 <= 2', '1 != 2', 'false']],
+  ])('plans %s', (body, comparison, expected) => {
+    expect(planOf(body, comparison)).toEqual(expected)
+  })
+
+  it.each<[string, string, string[]]>([
+    [
+      'x = list.length > 0',
+      'list.length > 0',
+      ['list.length >= 0', 'list.length > 1'],
+    ],
+    [
+      'x = 0 < list.length',
+      '0 < list.length',
+      ['0 <= list.length', '1 < list.length'],
+    ],
+    [
+      'x = list.indexOf(s) > -1',
+      'list.indexOf(s) > -1',
+      ['list.indexOf(s) >= -1', 'list.indexOf(s) > 0'],
+    ],
+    [
+      'x = list.indexOf(s) !== -1',
+      'list.indexOf(s) !== -1',
+      ['list.indexOf(s) < -1', 'true'],
+    ],
+    [
+      "const at = s.indexOf(':'); if (at === -1) {}",
+      'at === -1',
+      ['at >= -1', 'false'],
+    ],
+    ['x = list.length < -1', 'list.length < -1', ['list.length != -1']],
+    [
+      'x = list.length >= 0n',
+      'list.length >= 0n',
+      ['list.length > 0n', 'list.length == 0n'],
+    ],
+  ])('skips impossible regions in %s', (body, comparison, expected) => {
+    expect(planOf(body, comparison)).toEqual(expected)
+  })
+
+  it.each<[string, string, string[]]>([
+    ["x = typeof value === 'string'", "typeof value === 'string'", ['false']],
+    ["x = typeof value !== 'number'", "typeof value !== 'number'", ['false']],
+    ['x = user === null', 'user === null', ['true']],
+    ['x = a > b ? a : b', 'a > b', ['a != b', 'false']],
+    ['x = p > q ? p : q', 'p > q', ['p >= q', 'p != q', 'false']],
+    ['x = a > q ? a : q', 'a > q', ['a >= q', 'a != q', 'false']],
+    ['x = q > s ? s : q', 'q > s', ['q >= s', 'q != s', 'false']],
+    ['x = s > value ? s : value', 's > value', ['s != value', 'false']],
+    [
+      'x = start > end ? start : end',
+      'start > end',
+      ['start >= end', 'start != end', 'false'],
+    ],
+    ['x = a > s ? a : s', 'a > s', ['a >= s', 'a != s', 'false']],
+    ['x = a <= b ? (b) : a', 'a <= b', ['a == b', 'true']],
+    ['x = a.c > b ? a : b', 'a.c > b', ['a.c >= b', 'a.c != b', 'false']],
+    ['x = a < -1 ? -1 : a', 'a < -1', ['a != -1', 'a < -2']],
+    ['x = a > -1 ? a : -1', 'a > -1', ['a != -1', 'a > 0']],
+    ['x = a < -b ? -b : a', 'a < -b', ['a <= -b', 'a != -b', 'false']],
+    ['x = f() > b ? f() : b', 'f() > b', ['f() >= b', 'f() != b', 'false']],
+    ['x = a === b ? a : b', 'a === b', ['a <= b', 'a >= b', 'false']],
+    [
+      'x = this.n > 0 ? this.n : 0',
+      'this.n > 0',
+      ['this.n >= 0', 'this.n != 0', 'this.n > 1'],
+    ],
+    [
+      'x = list[0] > s ? list[0] : s',
+      'list[0] > s',
+      ['list[0] >= s', 'list[0] != s', 'false'],
+    ],
+    ['x = c ? (a > b) : b', 'a > b', ['a >= b', 'a != b', 'false']],
+  ])('applies the equivalence rules to %s', (body, comparison, expected) => {
+    expect(planOf(body, comparison)).toEqual(expected)
+  })
+
+  it.each<[string, string, string[]]>([
+    ['if (a > 0 && isActive) {}', 'a > 0', ['a >= 0', 'a != 0', 'a > 1']],
+    ['if (isActive || mode === b) {}', 'mode === b', []],
+    ["x = mode === 'busy' && y", "mode === 'busy'", ['false']],
+    ["x = !(mode === 'busy') && y", "mode === 'busy'", ['true']],
+    ["x = mode === 'busy' || y", "mode === 'busy'", ['true']],
+    ["x = y && mode === 'busy'", "mode === 'busy'", ['true', 'false']],
+    [
+      'x = list.length > 0 && y',
+      'list.length > 0',
+      ['list.length >= 0', 'list.length > 1'],
+    ],
+  ])(
+    'leaves logical-operator its constants in %s',
+    (body, comparison, expected) => {
+      expect(planOf(body, comparison)).toEqual(expected)
+    },
+  )
+
+  it.each<[string, string, string[]]>([
+    ['return x === 0 && y > 3 && isOk(z)', 'x === 0', ['x <= 0', 'x >= 0']],
+    [
+      'return x === 0 && y > 3 && isOk(z)',
+      'y > 3',
+      ['y >= 3', 'y != 3', 'y > 4'],
+    ],
+    ['return isOk(z) && x === y', 'x === y', ['true', 'false']],
+    ['return z > 1 && x === y && isOk(w)', 'x === y', []],
+    ['return z > 1 && (x === y && isOk(w))', 'x === y', []],
+    ['return isOk(w) && (x === y && z)', 'x === y', ['false']],
+    ['return x !== 0 && isOk(z)', 'x !== 0', ['x < 0', 'x > 0']],
+    ['return isOk(z) || !(x === y)', 'x === y', ['true', 'false']],
+    ['return x < y || (z > 1)', 'z > 1', ['z >= 1', 'z != 1', 'z > 2']],
+    ['return u.a || x === y', 'x === y', ['true', 'false']],
+    ['return (u.a || x === y) && c', 'x === y', ['true', 'false']],
+    ['return x === y && 1', 'x === y', ['false']],
+  ])('applies the group constant rule in %s', (body, comparison, expected) => {
+    let { context, find } = createTestContext(`function f(u) { ${body} }`, {
+      file: 'example.js',
+    })
+    let plan = getComparisonPlan(find('BinaryExpression', comparison), context)
+
+    expect(plan.map(entry => entry.text)).toEqual(expected)
+  })
+
+  it.each<[string, string, string[]]>([
+    [
+      'for (let i = 0; i <= 10; i++) {}',
+      'i <= 10',
+      ['i < 10', 'i == 10', 'i <= 11'],
+    ],
+    ['while (a < b) {}', 'a < b', ['a <= b', 'false']],
+    ['while (!(a < b)) {}', 'a < b', ['a <= b', 'a != b']],
+    ['for (let i = 0; i !== b; i++) {}', 'i !== b', ['i > b']],
+    ['for (let i = 10; b !== i; i -= 1) {}', 'b !== i', ['b > i']],
+    ['for (let i = 10; i !== b; i -= 2) {}', 'i !== b', ['i < b']],
+    ['for (let i = 0; i !== b; i += 2) {}', 'i !== b', ['i > b']],
+    ['for (let i = 0; i !== b; i++) { b-- }', 'i !== b', ['i < b', 'i > b']],
+    ['for (let i = 0; i !== b; i *= 2) {}', 'i !== b', ['i < b', 'i > b']],
+    ['for (let i = 0; i !== b; i += b) {}', 'i !== b', ['i < b', 'i > b']],
+    ['for (let i = 0; i !== b; i -= -1) {}', 'i !== b', ['i < b', 'i > b']],
+    ['for (let i = 0; i !== b; i++) { i-- }', 'i !== b', ['i < b', 'i > b']],
+    ['for (let i = 0; i !== b; i++) { f(() => i--) }', 'i !== b', ['i > b']],
+    ['for (let i = 0; f(i) !== b;) {}', 'f(i) !== b', ['f(i) < b', 'f(i) > b']],
+    [
+      'for (let i = 0; this.i !== b; this.i++) {}',
+      'this.i !== b',
+      ['this.i > b'],
+    ],
+    [
+      'for (let i = 0; i?.x !== b; i++) {}',
+      'i?.x !== b',
+      ['i?.x < b', 'i?.x > b'],
+    ],
+    ['for (let i = 0; i?.x !== b; i.x++) {}', 'i?.x !== b', ['i?.x > b']],
+    [
+      'while (this.i !== b) { this.n++; step() }',
+      'this.i !== b',
+      ['this.i < b', 'this.i > b'],
+    ],
+    [
+      'while (this.i !== b) { this.n++; this.i-- }',
+      'this.i !== b',
+      ['this.i < b'],
+    ],
+    [
+      'while (a.x !== b) { a.x++; a[k]++ }',
+      'a.x !== b',
+      ['a.x < b', 'a.x > b'],
+    ],
+    ['while (a.x !== b) { a.x++; c[k]++ }', 'a.x !== b', ['a.x > b']],
+    ['for (; a !== b;) {}', 'a !== b', ['a < b', 'a > b']],
+    ["while (mode !== 'x') {}", "mode !== 'x'", ['false']],
+    ['for (;;) { if (++a > b) break }', '++a > b', ['++a >= b', '++a != b']],
+    ['for (;;) { if (a >= b) break; a++ }', 'a >= b', ['a > b']],
+    ['for (;;) { step(); if (a === b) break; a++ }', 'a === b', ['a <= b']],
+    ['for (;;) { step(); if (a === b) break; a-- }', 'a === b', ['a >= b']],
+    [
+      'for (;;) { step(); if (a === b) break }',
+      'a === b',
+      ['a <= b', 'a >= b'],
+    ],
+    ['for (;;) { step(); if (b === a) break; a++ }', 'b === a', ['b >= a']],
+    [
+      'for (;;) { a = 0; while (true) { if (a === b) return; a++ } }',
+      'a === b',
+      ['a <= b'],
+    ],
+  ])('skips timeout-only entries in %s', (body, comparison, expected) => {
+    expect(planOf(body, comparison)).toEqual(expected)
+  })
+
+  it.each<[string, string, string[]]>([
+    ['while (a < b) {}', 'a < b', ['a <= b', 'a != b', 'false']],
+    ['for (let i = 0; i !== b; i++) {}', 'i !== b', ['i < b', 'i > b', 'true']],
+    [
+      'while (list.length > 0) list.pop()',
+      'list.length > 0',
+      ['list.length >= 0', 'list.length > 1'],
+    ],
+  ])(
+    'keeps timeout-only entries with timeouts in %s',
+    (body, comparison, expected) => {
+      expect(planOf(body, comparison, { timeouts: true })).toEqual(expected)
+    },
+  )
+
+  it.each<[string, string, string[]]>([
+    [
+      'while (list.length > 0) list.pop()',
+      'list.length > 0',
+      ['list.length > 1'],
+    ],
+    [
+      'do { list.pop() } while (list.length >= 1)',
+      'list.length >= 1',
+      ['list.length > 1', 'list.length == 1'],
+    ],
+    [
+      'for (;;) { list.pop(); if (list.length <= 0) break }',
+      'list.length <= 0',
+      ['list.length <= 1'],
+    ],
+    [
+      "while (s.indexOf('x') > -1) s = s.slice(1)",
+      "s.indexOf('x') > -1",
+      ["s.indexOf('x') > 0"],
+    ],
+    [
+      'while (true) { if (list.length === 0) break; list.pop() }',
+      'list.length === 0',
+      [],
+    ],
+  ])(
+    'skips the entries that a lower bound leaves at a loop constant in %s',
+    (body, comparison, expected) => {
+      expect(planOf(body, comparison)).toEqual(expected)
+    },
+  )
+
+  it.each<[string, string, string[]]>([
+    [
+      'x = list.filter(item => item.id !== id)',
+      'item.id !== id',
+      ['true', 'false'],
+    ],
+    [
+      'x = list.filter(item => item.n >= b)',
+      'item.n >= b',
+      ['item.n > b', 'item.n == b', 'true'],
+    ],
+    [
+      'x = list.filter(item => item.tags.length > 0)',
+      'item.tags.length > 0',
+      ['item.tags.length >= 0', 'item.tags.length > 1'],
+    ],
+    [
+      'x = list.filter(item => item.tags.length >= 1)',
+      'item.tags.length >= 1',
+      [
+        'item.tags.length > 1',
+        'item.tags.length == 1',
+        'item.tags.length >= 0',
+      ],
+    ],
+    [
+      'x = list.toSorted((p, q) => p.n < q.n)',
+      'p.n < q.n',
+      ['p.n <= q.n', 'p.n != q.n', 'false'],
+    ],
+  ])(
+    'keeps the constants of callbacks that return a new array in %s',
+    (body, comparison, expected) => {
+      expect(planOf(body, comparison)).toEqual(expected)
+    },
+  )
+
+  it.each<[string, string, string[]]>([
+    [
+      'x = list.sort((p, q) => p.n < q.n)',
+      'p.n < q.n',
+      ['p.n <= q.n', 'p.n != q.n'],
+    ],
+  ])(
+    'leaves no-op callbacks to method-call in %s',
+    (body, comparison, expected) => {
+      expect(planOf(body, comparison)).toEqual(expected)
+    },
+  )
+
+  it('plans a private name check', () => {
+    let { context, find } = createTestContext(
+      'class A { #x; m(o) { return #x in o } }',
+    )
+    let plan = getComparisonPlan(find('BinaryExpression'), context)
+
+    expect(plan.map(entry => entry.text)).toEqual(['true', 'false'])
+  })
+
+  it('describes each entry', () => {
+    let { context, find } = createTestContext(
+      'function f(a: number) { return a >= 10 }',
+    )
+
+    expect(getComparisonPlan(find('BinaryExpression'), context)).toEqual([
+      { text: 'a > 10', region: 'eq', kind: 'swap', value: false },
+      { text: 'a == 10', region: 'gt', kind: 'swap', value: false },
+      { text: 'a >= 9', kind: 'shift', region: 'lt', value: true },
+    ])
+  })
+
+  it.each<{
+    comparison: string
+    expected: string[]
+    body: string
+    file: string
+  }>([
+    {
+      expected: ['a < b <= c', 'a < b != c', 'false'],
+      comparison: 'a < b < c',
+      body: 'x = a < b < c',
+      file: 'example.js',
+    },
+    {
+      expected: ['true', 'false'],
+      comparison: 'q === a < b',
+      body: 'x = q === a < b',
+      file: 'example.js',
+    },
+    {
+      expected: ['(a < b) > (c)', 'a < b == (c)', 'true'],
+      comparison: 'a < b >= (c)',
+      body: 'x = a < b >= (c)',
+      file: 'example.ts',
+    },
+    {
+      expected: ['(a <= b) >= c', '(a <= b) != c', 'false'],
+      comparison: '(a <= b) > c',
+      body: 'x = (a <= b) > c',
+      file: 'example.js',
+    },
+  ])(
+    'keeps inner grouping in $body',
+    ({ comparison, expected, body, file }) => {
+      let { context, find } = createTestContext(body, { file })
+      let plan = getComparisonPlan(
+        find('BinaryExpression', comparison),
+        context,
+      )
+
+      expect(plan.map(entry => entry.text)).toEqual(expected)
+    },
+  )
+})

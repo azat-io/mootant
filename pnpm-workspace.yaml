@@ -1,0 +1,12 @@
+configDependencies:
+  '@pnpm/plugin-trusted-deps': latest
+
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - '@azat-io/*'
+
+onlyBuiltDependenciesFile: node_modules/.pnpm-config/@pnpm/plugin-trusted-deps/allow.json
+allowBuilds:
+  simple-git-hooks: true
+
+sideEffectsCache: false

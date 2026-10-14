@@ -1,0 +1,5 @@
+{
+  "extends": "@azat-io/typescript-config",
+  "include": ["**/*.ts"],
+  "exclude": ["test/fixtures"]
+}

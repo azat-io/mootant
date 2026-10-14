@@ -1,0 +1,2 @@
+bin/mootant.js linguist-vendored
+test/fixtures/** text eol=lf linguist-vendored

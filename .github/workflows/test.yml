@@ -1,0 +1,196 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443 github.com:443 registry.npmjs.org:443
+            release-assets.githubusercontent.com:443
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Tools
+        uses: ./.github/actions/install-tools
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Test
+        run: pnpm test:format
+
+  js:
+    name: JS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443 github.com:443 registry.npmjs.org:443
+            release-assets.githubusercontent.com:443
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Tools
+        uses: ./.github/actions/install-tools
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Build Package
+        uses: ./.github/actions/build-package
+
+      - name: Test
+        run: pnpm test:js
+
+  packages:
+    name: Packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443 github.com:443 registry.npmjs.org:443
+            release-assets.githubusercontent.com:443
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Tools
+        uses: ./.github/actions/install-tools
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Test
+        run: pnpm test:packages
+
+  spelling:
+    name: Spelling
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443 github.com:443 registry.npmjs.org:443
+            release-assets.githubusercontent.com:443
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Tools
+        uses: ./.github/actions/install-tools
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Test
+        run: pnpm test:spelling
+
+  types:
+    name: Types
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443 github.com:443 registry.npmjs.org:443
+            release-assets.githubusercontent.com:443
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Tools
+        uses: ./.github/actions/install-tools
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Build Package
+        uses: ./.github/actions/build-package
+
+      - name: Test
+        run: pnpm test:types
+
+  unit:
+    name: Unit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443 cli.codecov.io:443 github.com:443
+            ingest.codecov.io:443 keybase.io:443 o26192.ingest.us.sentry.io:443
+            registry.npmjs.org:443 release-assets.githubusercontent.com:443
+            storage.googleapis.com:443
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Tools
+        uses: ./.github/actions/install-tools
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Test
+        run: pnpm test:unit
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  usage:
+    name: Usage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443 github.com:443 registry.npmjs.org:443
+            release-assets.githubusercontent.com:443
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Tools
+        uses: ./.github/actions/install-tools
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Test
+        run: pnpm test:usage
