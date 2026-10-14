@@ -225,12 +225,58 @@ describe('getConditionConstants', () => {
   }>([
     {
       expected: [
-        ['true', 'O1', 'comparison-operator'],
+        ['true', 'comparison-region', 'comparison-operator'],
         ['false', 'O1', 'comparison-operator'],
       ],
       type: 'BinaryExpression',
       source: 'if (a < b) x()',
       text: 'a < b',
+    },
+    {
+      expected: [
+        ['true', 'O1', 'comparison-operator'],
+        ['false', 'O1', 'comparison-operator'],
+      ],
+      source: "function f(s: string) { if (s === 'x') x() }",
+      type: 'BinaryExpression',
+      text: "s === 'x'",
+    },
+    {
+      expected: [
+        ['true', 'O1', 'comparison-operator'],
+        ['false', 'proven-comparison', null],
+      ],
+      source: 'function f(user: { id: 1 }) { if (user === null) x() }',
+      type: 'BinaryExpression',
+      text: 'user === null',
+    },
+    {
+      expected: [
+        ['true', 'loop-running', null],
+        ['false', 'comparison-region', 'comparison-operator'],
+      ],
+      source:
+        'function f(list: string[]) { while (list.length > 0) list.pop() }',
+      type: 'BinaryExpression',
+      text: 'list.length > 0',
+    },
+    {
+      expected: [
+        ['true', 'lower-bound', null],
+        ['false', 'comparison-region', 'comparison-operator'],
+      ],
+      source: 'function f(list: string[]) { if (list.length > -1) x() }',
+      type: 'BinaryExpression',
+      text: 'list.length > -1',
+    },
+    {
+      expected: [
+        ['true', 'loop-running', null],
+        ['false', 'lower-bound', null],
+      ],
+      source: 'function f(list: string[]) { while (list.length < -1) x() }',
+      type: 'BinaryExpression',
+      text: 'list.length < -1',
     },
     {
       expected: [

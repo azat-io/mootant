@@ -56,11 +56,12 @@ export function getLiteralSkip(
   let mutator = getLiteralMutator(node)
   if (isComparisonOperand(node, context)) {
     return {
+      reason:
+        'a comparison-operator mutant changes the comparison on part of the inputs where this change does',
       by: {
         node: getOperandParent(node, context),
         mutator: 'comparison-operator',
       },
-      reason: 'comparison-operator owns the literal operands of a comparison',
       rule: 'O4',
     }
   }

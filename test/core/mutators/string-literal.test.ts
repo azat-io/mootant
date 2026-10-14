@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { MutatorSetup } from '../../helpers/generate-mutants'
+import type { MutatorSetup } from '../../helpers/generate-candidates'
 
 import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
@@ -302,7 +302,7 @@ describe('stringLiteral', () => {
     [
       `declare let s: string; a = s === 'x'; if (s.includes('a')) run(); f = run\`tag \${s}\`; g = Symbol('desc'); x = { ['k']: 1 }; switch (s) { case 'c': break }`,
       [
-        "'x' -> '' (owned O4)",
+        "'x' -> '' (subsumed O4)",
         "'a' -> '' (owned O8)",
         `\`tag \${s}\` -> \`\${s}\` (noise tagged-template)`,
         "'desc' -> '' (noise symbol-description)",

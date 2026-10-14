@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { MutatorSetup } from '../../helpers/generate-mutants'
+import type { MutatorSetup } from '../../helpers/generate-candidates'
 
 import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'

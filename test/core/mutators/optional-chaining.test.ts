@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { MutatorSetup } from '../../helpers/generate-mutants'
+import type { MutatorSetup } from '../../helpers/generate-candidates'
 
 import { createMutatorRegistry } from '../../../core/plugins/create-mutator-registry'
 import { generateFileMutants } from '../../../core/generate/generate-file-mutants'

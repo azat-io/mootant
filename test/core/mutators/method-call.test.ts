@@ -438,6 +438,14 @@ describe('methodCall', () => {
       ['s.toLowerCase() -> s.toUpperCase() (owned O17)'],
     ],
     [
+      "declare let s: string; if (s.toUpperCase() === '404') go()",
+      ['s.toUpperCase() -> s.toLowerCase() (equivalent caseless-literal)'],
+    ],
+    [
+      "declare let s: string; if (s.toLowerCase().includes('#')) go()",
+      ['s.toLowerCase() -> s.toUpperCase() (equivalent caseless-literal)'],
+    ],
+    [
       'class A extends B { m() { return super.trim() } }',
       ['super.trim() -> super (invalid invalid-target)'],
     ],

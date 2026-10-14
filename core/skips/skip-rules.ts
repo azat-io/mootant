@@ -51,12 +51,20 @@ export let skipRules = {
     category: 'subsumed',
     heuristic: false,
   },
+  'caseless-literal': {
+    category: 'equivalent',
+    heuristic: false,
+  },
   'numeric-identity': {
     category: 'equivalent',
     heuristic: true,
   },
   'one-way-counter': {
     category: 'equivalent',
+    heuristic: false,
+  },
+  'comparison-region': {
+    category: 'subsumed',
     heuristic: false,
   },
   'comparator-sign': {
@@ -213,7 +221,7 @@ export let skipRules = {
   },
   solitary: {
     category: 'subsumed',
-    heuristic: false,
+    heuristic: true,
   },
   R2: {
     category: 'subsumed',
@@ -232,6 +240,10 @@ export let skipRules = {
     heuristic: false,
   },
   R6: {
+    category: 'subsumed',
+    heuristic: false,
+  },
+  O4: {
     category: 'subsumed',
     heuristic: false,
   },
@@ -284,10 +296,6 @@ export let skipRules = {
     heuristic: false,
   },
   O3: {
-    category: 'owned',
-    heuristic: false,
-  },
-  O4: {
     category: 'owned',
     heuristic: false,
   },

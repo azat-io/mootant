@@ -185,7 +185,7 @@ describe('getNullishPlan', () => {
     {
       expected: [
         ['false', 'O15'],
-        ['x || false', 'O15'],
+        ['x || false', 'falsy-default'],
         ['x', 'falsy-default'],
       ],
       source: 'function f(x: boolean | undefined) { if (x ?? false) {} }',

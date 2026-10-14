@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { MutatorSetup } from '../../helpers/generate-mutants'
+import type { MutatorSetup } from '../../helpers/generate-candidates'
 
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
@@ -277,7 +277,7 @@ describe('booleanLiteral', () => {
     [
       'declare let ok: boolean; a = ok === true; b = ok && true; c = void true; x = ok ? true : false',
       [
-        'true -> false (owned O4)',
+        'true -> false (subsumed O4)',
         'true -> false (owned O3)',
         'true -> false (equivalent void-operand)',
         'true -> false (owned O19)',

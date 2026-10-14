@@ -117,7 +117,16 @@ export function getNullishPlan(
       rule: 'O15',
     }
     skip(rightText, position)
-    skip(swapText, position)
+    skip(
+      swapText,
+      isFalsyConstant(right, context) ?
+        {
+          reason:
+            'the default is falsy, so in a truth position || and ?? agree',
+          rule: 'falsy-default',
+        }
+      : position,
+    )
     if (!mayBeNullish(leftType)) {
       skip(leftText, neverNullish)
     } else if (isFalsyConstant(right, context)) {

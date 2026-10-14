@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { MutatorSetup } from '../../helpers/generate-mutants'
+import type { MutatorSetup } from '../../helpers/generate-candidates'
 
 import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
@@ -564,8 +564,8 @@ describe('condition', () => {
     [
       'function f(flag: boolean, a: number) { if (a > 1) run(); if (!flag && a) run(); if (true) run() }',
       [
-        'a > 1 -> true (owned O1)',
-        'a > 1 -> false (owned O1)',
+        'a > 1 -> true (subsumed comparison-region)',
+        'a > 1 -> false (subsumed comparison-region)',
         '!flag && a -> true (owned O1)',
         '!flag && a -> false (owned O1)',
         '!flag -> true (owned O3)',

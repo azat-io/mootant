@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { MutatorSetup } from '../../helpers/generate-mutants'
+import type { MutatorSetup } from '../../helpers/generate-candidates'
 
 import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
@@ -342,7 +342,7 @@ describe('numberLiteral', () => {
     [
       'declare let n: number; declare let s: string; a = n === 1; b = void 0; switch (n) { case 2: break }; setTimeout(run, 100); c = s.slice(-1); if (2) run(); d = items.sort((x, y) => (x > y ? 1 : -1)); x = { [1]: 2 }',
       [
-        '1 -> 2 (owned O4)',
+        '1 -> 2 (subsumed O4)',
         '0 -> 1 (equivalent void-operand)',
         '2 -> 3 (noise case-label)',
         '100 -> 101 (noise timer-delay)',

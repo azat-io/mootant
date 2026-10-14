@@ -1,4 +1,4 @@
-import type { MutatorSetup } from './generate-mutants'
+import type { MutatorSetup } from './generate-candidates'
 
 import { formatMutant } from './format-mutant'
 import { runMutator } from './run-mutator'

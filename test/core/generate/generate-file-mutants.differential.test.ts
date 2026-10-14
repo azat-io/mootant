@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
+import type { UnsoundSkips } from '../../helpers/find-unsound-skips'
 import type { WeakMutants } from '../../helpers/find-weak-mutants'
 
+import { generateCandidates } from '../../helpers/generate-candidates'
+import { findUnsoundSkips } from '../../helpers/find-unsound-skips'
 import { findWeakMutants } from '../../helpers/find-weak-mutants'
-import { generateMutants } from '../../helpers/generate-mutants'
+import { createReader } from '../../helpers/create-reader'
 import { applyMutant } from '../../helpers/apply-mutant'
 import { runProgram } from '../../helpers/run-program'
 
@@ -12,6 +15,12 @@ import { runProgram } from '../../helpers/run-program'
  * and the findings the catalog documents for it.
  */
 interface Idiom {
+  /**
+   * Skipped candidates whose outputs contradict their category under both
+   * presets, documented with the idiom.
+   */
+  unsoundSkips?: Partial<UnsoundSkips>
+
   /**
    * Findings documented as gaps of catalog 11.8 under `strict` only.
    */
@@ -55,6 +64,35 @@ const NONE: WeakMutants = {
 }
 
 /**
+ * No skipped candidate contradicts its category: the result of a check that
+ * passes.
+ */
+const SOUND: UnsoundSkips = {
+  equivalent: [],
+  duplicate: [],
+  subsumed: [],
+  owned: [],
+}
+
+/**
+ * Categories of skips whose claim the outputs can check; noise, timeout and
+ * invalid candidates are not run.
+ */
+const CHECKED_CATEGORIES = new Set([
+  'equivalent',
+  'duplicate',
+  'subsumed',
+  'owned',
+])
+
+/**
+ * Rules whose claim the outputs of one input cannot check: the solitary rule
+ * says that a test which kills the finer mutant observes the removed code, not
+ * that the coarse mutant differs on every input where the finer one does.
+ */
+const UNCHECKED_RULES = new Set(['solitary'])
+
+/**
  * Lists of items with ids, numbers, flags and tags.
  */
 const ITEMS = [
@@ -79,12 +117,19 @@ const SORT_ROWS = [
 ]
 
 /**
- * Numbers around the literals of the idioms.
+ * Numbers around the literals of the idioms, with `-0` and `NaN`.
  */
-const NUMBERS = [0, 1, 2, 3, 4, 5, 6, -1, -2]
+const NUMBERS = [0, 1, 2, 3, 4, 5, 6, -1, -2, -0, Number.NaN]
 
 /**
- * Strings that tell apart cases, prefixes, suffixes and lookup keys.
+ * Times of dates before, at and after each other, and of an invalid date; each
+ * run builds its own dates, so two equal dates are different objects.
+ */
+const TIMES = [0, 1000, Number.NaN]
+
+/**
+ * Strings that tell apart cases, prefixes, suffixes and lookup keys, with
+ * letters whose case change alters the length.
  */
 const STRINGS = [
   '',
@@ -111,20 +156,10 @@ const STRINGS = [
   'untitled',
   'anon',
   'foo',
+  'ß',
+  'aß',
+  'İ',
 ]
-
-/**
- * Comparator mutants that only the engine's sort tells apart (catalog 11.8): a
- * comparator that never returns a negative number leaves the array as it was,
- * like the removal of the call.
- */
-const COMPARATOR_GAPS: Partial<WeakMutants> = {
-  duplicates: [
-    'method-call rows.toSorted((a, b) => a.n > b.n ? 1 : -1) -> rows | comparison-operator a.n > b.n -> a.n != b.n',
-    'method-call rows.toSorted((a, b) => a.n > b.n ? 1 : -1) -> rows | number-literal -1 -> 0',
-    'comparison-operator a.n > b.n -> a.n != b.n | number-literal -1 -> 0',
-  ],
-}
 
 /**
  * The idioms of the catalog's differential run (12.6): filter predicates and
@@ -140,10 +175,6 @@ const IDIOMS: Idiom[] = [
       '  return items.filter(item => item.id !== id)',
       '}',
     ],
-    gaps: getCopyGaps(
-      'items.filter(item => item.id !== id)',
-      'comparison-operator item.id !== id -> true',
-    ),
     inputs: combine(ITEMS, ['a', 'b', 'z']),
     name: 'a filter with !==',
     file: 'example.ts',
@@ -154,10 +185,6 @@ const IDIOMS: Idiom[] = [
       '  return items.filter(item => item.n >= min)',
       '}',
     ],
-    gaps: getCopyGaps(
-      'items.filter(item => item.n >= min)',
-      'comparison-operator item.n >= min -> true',
-    ),
     inputs: combine(ITEMS, NUMBERS),
     name: 'a filter with >=',
     file: 'example.ts',
@@ -168,10 +195,6 @@ const IDIOMS: Idiom[] = [
       '  return items.filter(item => item.a || item.b)',
       '}',
     ],
-    gaps: getCopyGaps(
-      'items.filter(item => item.a || item.b)',
-      'logical-operator item.a || item.b -> true',
-    ),
     name: 'a filter with ||',
     inputs: combine(ITEMS),
     file: 'example.ts',
@@ -187,10 +210,6 @@ const IDIOMS: Idiom[] = [
     file: 'example.ts',
   },
   {
-    gaps: getCopyGaps(
-      "items.filter(item => 'id' in item)",
-      "comparison-operator 'id' in item -> true",
-    ),
     lines: [
       'function f(items: object[]) {',
       "  return items.filter(item => 'id' in item)",
@@ -201,10 +220,6 @@ const IDIOMS: Idiom[] = [
     file: 'example.ts',
   },
   {
-    gaps: getCopyGaps(
-      'items.filter(item => item.tags.length > 0)',
-      'comparison-operator item.tags.length > 0 -> item.tags.length >= 0',
-    ),
     lines: [
       'function f(items: { tags: string[] }[]) {',
       '  return items.filter(item => item.tags.length > 0)',
@@ -220,10 +235,6 @@ const IDIOMS: Idiom[] = [
       '  return rows.filter(row => !row.done)',
       '}',
     ],
-    gaps: getCopyGaps(
-      'rows.filter(row => !row.done)',
-      'condition !row.done -> true',
-    ),
     inputs: combine([[], [{ done: true }], [{ done: false }, { done: true }]]),
     name: 'a filter with !',
     file: 'example.ts',
@@ -234,10 +245,6 @@ const IDIOMS: Idiom[] = [
       '  return rows.filter(row => { if (row.x) return true; return false })',
       '}',
     ],
-    gaps: getCopyGaps(
-      'rows.filter(row => { if (row.x) return true; return false })',
-      'condition row.x -> true',
-    ),
     inputs: combine([[], [{ x: 1 }], [{ x: 0 }, { x: 2 }]]),
     name: 'a filter with a return switch',
     file: 'example.js',
@@ -277,6 +284,11 @@ const IDIOMS: Idiom[] = [
     file: 'example.ts',
   },
   {
+    gaps: {
+      duplicates: [
+        'comparison-operator a.n > b.n -> a.n != b.n | number-literal -1 -> 0',
+      ],
+    },
     lines: [
       'function f(rows) {',
       '  return rows.toSorted((a, b) => a.n > b.n ? 1 : -1)',
@@ -284,7 +296,6 @@ const IDIOMS: Idiom[] = [
     ],
     name: 'a sort comparator with a ternary',
     inputs: combine(SORT_ROWS),
-    gaps: COMPARATOR_GAPS,
     file: 'example.js',
   },
   {
@@ -315,6 +326,9 @@ const IDIOMS: Idiom[] = [
       '  return value',
       '}',
     ],
+    unsoundSkips: {
+      owned: ['unary-operator -1 -> 1 (negative-literal)'],
+    },
     name: 'an || default of a number',
     inputs: [[0], [1], [-1], [5]],
     file: 'example.ts',
@@ -326,6 +340,9 @@ const IDIOMS: Idiom[] = [
       '  return value',
       '}',
     ],
+    unsoundSkips: {
+      owned: ['unary-operator -1 -> 1 (negative-literal)'],
+    },
     inputs: [[undefined], [0], [1], [-1], [5]],
     name: 'an || default of a nullable number',
     file: 'example.ts',
@@ -419,6 +436,9 @@ const IDIOMS: Idiom[] = [
       "  return path.slice(-1) === '/'",
       '}',
     ],
+    unsoundSkips: {
+      owned: ['unary-operator -1 -> 1 (negative-literal)'],
+    },
     inputs: STRINGS.map(text => [text]),
     name: 'a comparison of slice(-1)',
     file: 'example.ts',
@@ -429,6 +449,9 @@ const IDIOMS: Idiom[] = [
       '  return parts.slice(-1)[0]',
       '}',
     ],
+    unsoundSkips: {
+      owned: ['unary-operator -1 -> 1 (negative-literal)'],
+    },
     inputs: [[[]], [['a']], [['a', 'b']]],
     name: 'an element of slice(-1)',
     file: 'example.ts',
@@ -595,8 +618,6 @@ const IDIOMS: Idiom[] = [
   {
     gaps: {
       duplicates: [
-        'method-call rows.toSorted((a, b) => { if (a.n < b.n) return -1; return 1 }) -> rows | comparison-operator a.n < b.n -> false',
-        'method-call rows.toSorted((a, b) => { if (a.n < b.n) return -1; return 1 }) -> rows | number-literal -1 -> 0',
         'comparison-operator a.n < b.n -> false | number-literal -1 -> 0',
       ],
       equivalent: ['statement-removal return 1 -> ;'],
@@ -638,17 +659,17 @@ const IDIOMS: Idiom[] = [
       '  return a > b ? a : b',
       '}',
     ],
+    unsoundSkips: {
+      equivalent: ['comparison-operator a > b -> a >= b (min-max-idiom)'],
+    },
     inputs: combine(NUMBERS, NUMBERS),
     name: 'the max idiom',
     file: 'example.ts',
   },
   {
-    strictGaps: {
-      equivalent: ['logical-operator count ?? 0 -> count || 0'],
-    },
     lines: ['function f(count: number | null) {', '  return count ?? 0', '}'],
+    inputs: [[null], [0], [5], [-0], [Number.NaN]],
     name: 'a ?? default of a nullable number',
-    inputs: [[null], [0], [5]],
     file: 'example.ts',
   },
   {
@@ -704,6 +725,120 @@ const IDIOMS: Idiom[] = [
     inputs: NUMBERS.map(value => [value]),
     file: 'example.ts',
   },
+  {
+    lines: [
+      'function f(rows: { n: number }[]) {',
+      '  rows.sort((a, b) => a.n - b.n)',
+      '  return rows.length',
+      '}',
+    ],
+    name: 'an in-place sort of an input',
+    inputs: combine(SORT_ROWS),
+    file: 'example.ts',
+  },
+  {
+    lines: [
+      'function f(items: string[], item: string) {',
+      '  if (!items.includes(item)) items.push(item)',
+      '  return items',
+      '}',
+    ],
+    inputs: combine([[], ['a'], ['a', 'b']], ['a', 'c']),
+    name: 'a push into an input',
+    file: 'example.ts',
+  },
+  {
+    gaps: {
+      subsumed: [
+        'comparison-operator start < end -> start != end < comparison-operator start < end -> start <= end',
+      ],
+    },
+    lines: [
+      'function f(start: Date, end: Date) {',
+      '  return start < end',
+      '}',
+    ],
+    inputs: combine(TIMES, TIMES).map(times =>
+      times.map(time => new Date(time as number)),
+    ),
+    name: 'a comparison of dates',
+    file: 'example.ts',
+  },
+  {
+    lines: [
+      'function f(start: Date, end: Date) {',
+      '  return start.getTime() === end.getTime() ? start : end',
+      '}',
+    ],
+    inputs: combine(TIMES, TIMES).map(times =>
+      times.map(time => new Date(time as number)),
+    ),
+    name: 'a date chosen by its time',
+    file: 'example.ts',
+  },
+  {
+    inputs: [
+      [undefined],
+      [createReader({ name: 'ada' })],
+      [createReader({ name: undefined })],
+      [createReader({ name: '' })],
+    ],
+    lines: [
+      'function f(user: { name?: string } | undefined) {',
+      "  return user?.name ?? 'anon'",
+      '}',
+    ],
+    name: 'an optional read of a getter',
+    file: 'example.ts',
+  },
+  {
+    lines: [
+      'function f(config: { debug: boolean; level: number }) {',
+      '  return config.debug && config.level > 1',
+      '}',
+    ],
+    inputs: combine([true, false], [0, 1, 2]).map(([debug, level]) => [
+      createReader({ debug, level }),
+    ]),
+    name: 'a && of getter reads',
+    file: 'example.ts',
+  },
+  {
+    lines: [
+      'async function f(id: string) {',
+      "  await settle('save', id)",
+      '  run(id)',
+      '}',
+    ],
+    name: 'an awaited effect before a call',
+    file: 'example.ts',
+    inputs: [['a']],
+  },
+  {
+    lines: [
+      'async function f(ids: string[]) {',
+      "  for (const id of ids) await settle('load', id)",
+      '  return ids.length',
+      '}',
+    ],
+    inputs: [[[]], [['a']], [['a', 'b']]],
+    name: 'awaits in a loop',
+    file: 'example.ts',
+  },
+  {
+    lines: [
+      'async function f(ok: boolean) {',
+      '  try {',
+      "    return await (ok ? settle('load', 1) : fail('load'))",
+      '  } catch {',
+      '    return 0',
+      '  }',
+      '}',
+    ],
+    name: 'a returned await inside try',
+    inputs: [[true], [false]],
+    file: 'example.ts',
+  },
 ]
 
 /**
@@ -722,23 +857,84 @@ function combine(...lists: unknown[][]): unknown[][] {
   return combinations
 }
 
-/**
- * Builds the duplicate that the differential run cannot tell apart in a filter:
- * a predicate that keeps every item makes `filter` return a copy of its
- * receiver, while the removal of the call returns the receiver itself. Outputs
- * compared by value see the same items in both.
- *
- * @param call - Text of the `filter` call.
- * @param mutant - Label of the mutant that keeps every item.
- * @returns The gaps of the idiom.
- */
-function getCopyGaps(call: string, mutant: string): Partial<WeakMutants> {
-  return {
-    duplicates: [
-      `method-call ${call} -> ${call.slice(0, call.indexOf('.'))} | ${mutant}`,
+describe('runProgram', () => {
+  it.each([
+    [
+      'function f(items) { return items }',
+      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:*.arguments[0]}}',
     ],
-  }
-}
+    [
+      'function f(items) { return [...items] }',
+      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:["a"]}}',
+    ],
+    [
+      'function f(items) { items.pop() }',
+      '{arguments:@.arguments[@.arguments[0][]],events:[["returned"]],result:{value:undefined:undefined}}',
+    ],
+    [
+      'function f(items) { items[0] = items.at(0) }',
+      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:undefined:undefined}}',
+    ],
+    ['function f() { for (;;) {} }', 'hung'],
+    ['async function f() { await null; for (;;) {} }', 'hung'],
+    [
+      'function f() { return new Promise(() => {}) }',
+      '{arguments:@.arguments[@.arguments[0]["a"]],events:[],result:{pending:boolean:true}}',
+    ],
+    [
+      "async function f() { settle('a'); run() }",
+      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["run"],["returned"],["settled","a"]],result:{value:undefined:undefined}}',
+    ],
+    [
+      "function f() { void (async () => { await settle('a'); await settle('b'); save() })() }",
+      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"],["settled","a"],["settled","b"],["save"]],result:{value:undefined:undefined}}',
+    ],
+    [
+      "async function f() { try { await fail('a') } catch (error) { return error.message } }",
+      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["failed","a"],["returned"]],result:{value:"a"}}',
+    ],
+    [
+      "function f() { throw new Error('no') }",
+      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{thrown:"no"}}',
+    ],
+    [
+      'function f() { let list = []; Object.defineProperty(list, 0, { get: () => run(), enumerable: true }); return list }',
+      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:[<get>]}}',
+    ],
+  ])('observes %s', async (source, expected) => {
+    await expect(
+      runProgram(source, 'example.js', [[['a']]]),
+    ).resolves.toStrictEqual([expected])
+  })
+
+  it('tells a replaced object from the one that existed before the run', async () => {
+    let input = [[{ items: ['a'] }]]
+    let [replaced] = await runProgram(
+      'function f(box) { box.items = box.items.filter(() => true) }',
+      'example.js',
+      input,
+    )
+    let [kept] = await runProgram(
+      'function f(box) { box.items = box.items }',
+      'example.js',
+      input,
+    )
+
+    expect(replaced).not.toBe(kept)
+  })
+
+  it('observes the reads of a getter without calling it when describing', async () => {
+    await expect(
+      runProgram(
+        'function f(user) { return user.name + user.name }',
+        'example.js',
+        [[createReader({ name: 'a' })]],
+      ),
+    ).resolves.toStrictEqual([
+      '{arguments:@.arguments[@.arguments[0]{name:<get>}],events:[["read","name"],["read","name"],["returned"]],result:{value:"aa"}}',
+    ])
+  })
+})
 
 describe('generateFileMutants', () => {
   /*
@@ -760,25 +956,58 @@ describe('generateFileMutants', () => {
       },
     ]),
   )(
-    'keeps no weak mutant in $name under $preset',
-    async ({ expected, inputs, preset, lines, file }) => {
+    'keeps no weak mutant and no unsound skip in $name under $preset',
+    async ({ unsoundSkips, expected, inputs, preset, lines, file }) => {
       let source = lines.join('\n')
-      let mutants = generateMutants(source, {
+      let start = source.indexOf('function f(')
+      let { mutants, skipped } = generateCandidates(source, {
         settings: { coarseMutants: false },
         preset,
         file,
-      }).filter(mutant => mutant.start >= source.indexOf('function f('))
+      })
       let probes = await Promise.all(
-        mutants.map(async mutant => ({
-          label: `${mutant.mutator} ${source.slice(mutant.start, mutant.end)} -> ${mutant.replacement}`,
-          outputs: await runProgram(applyMutant(source, mutant), file, inputs),
-        })),
+        mutants
+          .filter(mutant => mutant.start >= start)
+          .map(async mutant => ({
+            outputs: await runProgram(
+              applyMutant(source, mutant),
+              file,
+              inputs,
+            ),
+            label: `${mutant.mutator} ${source.slice(mutant.start, mutant.end)} -> ${mutant.replacement}`,
+            mutator: mutant.mutator,
+            start: mutant.start,
+            id: mutant.id,
+          })),
       )
+      let skipProbes = await Promise.all(
+        skipped
+          .filter(
+            candidate =>
+              candidate.start >= start &&
+              candidate.kind !== null &&
+              CHECKED_CATEGORIES.has(candidate.category) &&
+              !UNCHECKED_RULES.has(candidate.rule),
+          )
+          .map(async candidate => ({
+            outputs: await runProgram(
+              applyMutant(source, { ...candidate, kind: candidate.kind! }),
+              file,
+              inputs,
+            ),
+            label: `${candidate.mutator} ${source.slice(candidate.start, candidate.end)} -> ${candidate.replacement} (${candidate.rule})`,
+            category: candidate.category,
+            by: candidate.by,
+          })),
+      )
+      let original = await runProgram(source, file, inputs)
 
-      expect(mutants.length).toBeGreaterThan(0)
-      expect(
-        findWeakMutants(await runProgram(source, file, inputs), probes),
-      ).toStrictEqual(expected)
+      expect(probes.length).toBeGreaterThan(0)
+      expect(findWeakMutants(original, probes)).toStrictEqual(expected)
+      expect(findUnsoundSkips(original, probes, skipProbes)).toStrictEqual({
+        ...SOUND,
+        ...unsoundSkips,
+      })
     },
   )
 })

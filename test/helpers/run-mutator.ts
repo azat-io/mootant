@@ -1,5 +1,5 @@
 import type { MutantStatus } from '../../types/mutant-status'
-import type { MutatorSetup } from './generate-mutants'
+import type { MutatorSetup } from './generate-candidates'
 
 import { getSourcePosition } from '../../core/text/get-source-position'
 import { getLineStarts } from '../../core/text/get-line-starts'

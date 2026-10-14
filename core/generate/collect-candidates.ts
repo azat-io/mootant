@@ -172,6 +172,7 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
       let { by } = note
       skipped.push({
         by: by ? { start: by.node.start, mutator: by.mutator, id: null } : null,
+        kind: getReplacementKind(replacement.node),
         heuristic: note.heuristic === true,
         start: replacement.node.start,
         end: replacement.node.end,

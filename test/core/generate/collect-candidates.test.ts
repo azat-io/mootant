@@ -446,6 +446,7 @@ describe('collectCandidates', () => {
     ).toStrictEqual([
       {
         by: { mutator: 'other', start: 8, id: null },
+        kind: 'expression',
         mutator: 'first',
         reason: 'Owned.',
         heuristic: false,
@@ -456,6 +457,7 @@ describe('collectCandidates', () => {
         end: 9,
       },
       {
+        kind: 'expression',
         mutator: 'first',
         reason: 'Noise.',
         heuristic: true,

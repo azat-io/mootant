@@ -1,4 +1,4 @@
-import type { MutatorSetup } from './generate-mutants'
+import type { MutatorSetup } from './generate-candidates'
 
 import { createMutatorRegistry } from '../../core/plugins/create-mutator-registry'
 import { generateFileMutants } from '../../core/generate/generate-file-mutants'

@@ -7,6 +7,12 @@ import type { SkipRuleId } from './skip-rule-id'
  */
 export interface SkippedCandidate {
   /**
+   * How the mutant switch would host the replacement, derived from the replaced
+   * node; null when it cannot host it.
+   */
+  kind: 'expression' | 'block' | null
+
+  /**
    * Mutator that considered the replacement.
    */
   registered: RegisteredMutator

@@ -204,12 +204,20 @@ function getEquivalentSkip(
       rule: 'length-keeping-swap',
     }
   }
-  if (caseMethods.has(name) && isDecidedByLiteral(top, name, context)) {
-    return {
-      reason:
-        'the swapped call is compared with a literal it never matches or both match alike, so the decision is constant or unchanged',
-      rule: 'O17',
-    }
+  let literal =
+    caseMethods.has(name) ? getDecidingLiteral(top, name, context) : null
+  if (literal) {
+    return isCaseless(literal, !name.includes('Lower')) ?
+        {
+          reason:
+            'the literal has no cased letters, so both cases match it alike',
+          rule: 'caseless-literal',
+        }
+      : {
+          reason:
+            'the swapped call never matches the literal, so the decision becomes a constant',
+          rule: 'O17',
+        }
   }
   return null
 }
@@ -261,6 +269,53 @@ function isIdentityCall(call: MethodCall, context: MutatorContext): boolean {
 }
 
 /**
+ * Finds the literal that makes a case swap's decision constant or unchanged
+ * (catalog 4.9, O17): the value is compared by equality with, or searched by
+ * `includes`, `startsWith` or `endsWith` without a position argument in a
+ * lookup position for, a string literal that the original method leaves
+ * unchanged. `indexOf`, `search`, `slice` and the other calls that see
+ * positions keep the swap, since it can change the length of the value.
+ *
+ * @param node - Value of the case call.
+ * @param name - Name of the case method.
+ * @param context - Mutator context of the file.
+ * @returns The literal that decides the swap, or null when the swap is kept.
+ */
+function getDecidingLiteral(
+  node: Node,
+  name: string,
+  context: MutatorContext,
+): Node | null {
+  let { sourceCode, syntax } = context
+  let lower = name.includes('Lower')
+  let { parent, key } = syntax.getContextSlot(node)
+  if (parent?.type === 'BinaryExpression') {
+    let other = key === 'left' ? parent.right : parent.left
+    return equalityOperators.has(parent.operator) && isCaseless(other, lower) ?
+        other
+      : null
+  }
+  if (
+    parent?.type !== 'MemberExpression' ||
+    parent.computed ||
+    !lookupMethods.has(parent.property.name)
+  ) {
+    return null
+  }
+  let { parent: lookup, key: lookupKey } = sourceCode.getSlot(parent)
+  if (
+    lookupKey !== 'callee' ||
+    lookup?.type !== 'CallExpression' ||
+    lookup.arguments.length !== 1 ||
+    !isCaseless(lookup.arguments[0]!, lower) ||
+    !isLookupPosition(lookup, context)
+  ) {
+    return null
+  }
+  return lookup.arguments[0]!
+}
+
+/**
  * Builds the edits that remove a call and keep its receiver (catalog 4.9, T10).
  * When the removed part carried the chain's optional link, the link moves to
  * the first element above the call: past non-null assertions, a non-computed
@@ -301,52 +356,6 @@ function getRemovalEdits(
     return [...edits, { end: dot + 1, start: dot, text: '?.' }]
   }
   return [...edits, { start: current.end, end: current.end, text: '?.' }]
-}
-
-/**
- * Tells whether a case swap makes a decision constant or changes nothing
- * (catalog 4.9, O17): the value is compared by equality with, or searched by
- * `includes`, `startsWith` or `endsWith` without a position argument in a
- * lookup position for, a string literal that the original method leaves
- * unchanged. `indexOf`, `search`, `slice` and the other calls that see
- * positions keep the swap, since it can change the length of the value.
- *
- * @param node - Value of the case call.
- * @param name - Name of the case method.
- * @param context - Mutator context of the file.
- * @returns Whether the swap is skipped.
- */
-function isDecidedByLiteral(
-  node: Node,
-  name: string,
-  context: MutatorContext,
-): boolean {
-  let { sourceCode, syntax } = context
-  let lower = name.includes('Lower')
-  let { parent, key } = syntax.getContextSlot(node)
-  if (parent?.type === 'BinaryExpression') {
-    return (
-      equalityOperators.has(parent.operator) &&
-      isCaseless(key === 'left' ? parent.right : parent.left, lower)
-    )
-  }
-  if (
-    parent?.type !== 'MemberExpression' ||
-    parent.computed ||
-    !lookupMethods.has(parent.property.name)
-  ) {
-    return false
-  }
-  let { parent: lookup, key: lookupKey } = sourceCode.getSlot(parent)
-  if (
-    lookupKey !== 'callee' ||
-    lookup?.type !== 'CallExpression' ||
-    lookup.arguments.length !== 1 ||
-    !isCaseless(lookup.arguments[0]!, lower)
-  ) {
-    return false
-  }
-  return isLookupPosition(lookup, context)
 }
 
 /**

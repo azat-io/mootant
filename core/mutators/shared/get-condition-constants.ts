@@ -2,6 +2,7 @@ import type { Node } from 'oxc-parser'
 
 import type { NullishDirection } from './get-nullish-directions'
 import type { Replacement } from '../../../types/replacement'
+import type { ComparisonPlan } from './get-comparison-plan'
 import type { SkipNote } from '../../../types/skip-note'
 import type { RunContext } from './create-run-context'
 
@@ -9,6 +10,7 @@ import { isNoOpCallbackConstant } from './is-no-op-callback-constant'
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
 import { getNullishDirections } from './get-nullish-directions'
 import { getNextLiteralValue } from './get-next-literal-value'
+import { getComparisonPlan } from './get-comparison-plan'
 import { getLiteralMutator } from './get-literal-mutator'
 import { getOwnedConstants } from './get-owned-constants'
 import { getLeaveNowValue } from './get-leave-now-value'
@@ -129,13 +131,9 @@ export function getConditionConstants(
     return plan
   }
   let { node: inner, negations } = getInnermost(node)
-  if (isComparison(inner)) {
-    return skipBoth({
-      reason: 'comparison-operator owns the constants of a comparison',
-      by: { mutator: 'comparison-operator', node: inner },
-      rule: 'O1',
-    })
-  }
+  let negated = negations % 2 === 1
+  let comparison =
+    isComparison(inner) ? getComparisonPlan(inner, context) : null
   if (isAndOr(inner)) {
     return skipBoth({
       reason: 'logical-operator owns the constants of a && or || group',
@@ -143,7 +141,6 @@ export function getConditionConstants(
       rule: 'O1',
     })
   }
-  let negated = negations % 2 === 1
   if (inner.type === 'Literal' || getLiteralValue(inner) !== null) {
     for (let value of [true, false]) {
       plan.skipped.push({
@@ -175,13 +172,16 @@ export function getConditionConstants(
     : []
   let leaveNow = getLeaveNowValue(node, context)
   for (let value of [true, false]) {
-    let note = getConstantSkip(value, {
-      noOp: () => isNoOpCallbackConstant(node, value, context),
-      running: running?.value,
-      subsumed,
-      leaveNow,
-      fixed,
-    })
+    let note =
+      (comparison &&
+        getComparisonConstantSkip(inner, value !== negated, comparison)) ??
+      getConstantSkip(value, {
+        noOp: () => isNoOpCallbackConstant(node, value, context),
+        running: running?.value,
+        subsumed,
+        leaveNow,
+        fixed,
+      })
     if (note) {
       plan.skipped.push({ text: String(value), skip: note, node })
     } else {
@@ -282,4 +282,44 @@ function getLiteralConstantSkip(
       rule: isTest ? 'O7' : 'O1',
     }
   )
+}
+
+/**
+ * Finds why a constant of condition's replaced node is skipped when its
+ * innermost node is a comparison (catalog 4.7, O1): comparison-operator emits
+ * the same constant, or a swap or shifted literal that gives the comparison
+ * this value on part of the inputs where the constant does, so a test that
+ * kills it kills the constant too. Otherwise the constant keeps the skip that
+ * comparison-operator's plan gives a constant of its value, if any.
+ *
+ * @param comparison - Innermost comparison of the node.
+ * @param truth - Truth value the constant gives the comparison.
+ * @param plan - Plan of comparison-operator for the comparison.
+ * @returns Rule and reason of the skip, or null when the plan gives none.
+ */
+function getComparisonConstantSkip(
+  comparison: Node,
+  truth: boolean,
+  plan: ComparisonPlan,
+): SkipNote | null {
+  let by = { mutator: 'comparison-operator', node: comparison }
+  if (
+    plan.entries.some(
+      entry => entry.kind === 'constant' && entry.value === truth,
+    )
+  ) {
+    return {
+      reason: 'comparison-operator emits the same constant',
+      rule: 'O1',
+      by,
+    }
+  }
+  if (plan.entries.some(entry => entry.value === truth)) {
+    return {
+      reason: `a comparison-operator mutant makes the comparison ${truth} on part of the inputs where the constant does`,
+      rule: 'comparison-region',
+      by,
+    }
+  }
+  return plan.skippedConstants.get(truth) ?? null
 }

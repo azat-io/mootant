@@ -32,6 +32,14 @@ import { getTypeView } from './get-type-view'
  */
 export interface ComparisonPlan {
   /**
+   * Skips that hold for a constant of each value: the skip of the plan's
+   * constant or of the shifted literal that stands for it, the skip of an entry
+   * that a lower bound leaves equal to the constant, or the lower bound itself
+   * when it makes every input where the constant differs impossible.
+   */
+  skippedConstants: Map<boolean, SkipNote>
+
+  /**
    * Entries that are emitted, in emission order.
    */
   entries: ComparisonEntry[]
@@ -264,6 +272,7 @@ export function getComparisonPlan(
 
   let entries: ComparisonEntry[] = []
   let skipped: Replacement[] = []
+  let skippedConstants = new Map<boolean, SkipNote>()
 
   /**
    * Skips an entry of the plan.
@@ -281,11 +290,15 @@ export function getComparisonPlan(
         (shift?.text ?? String(to))
       : sourceCode.replaceOperator(node, to)
     if (region && impossible.has(region)) {
-      skip(text, {
+      let note: SkipNote = {
         reason:
           'a lower bound of an operand makes the inputs where it differs impossible',
         rule: 'lower-bound',
-      })
+      }
+      skip(text, note)
+      if (typeof to === 'boolean') {
+        skippedConstants.set(to, note)
+      }
       continue
     }
     if (typeof to === 'boolean') {
@@ -293,6 +306,7 @@ export function getComparisonPlan(
         let note = constantSkips.get(to)
         if (note) {
           skip(text, note)
+          skippedConstants.set(to, note)
         } else {
           entries.push({ kind: 'constant', value: to, region, text })
         }
@@ -305,12 +319,13 @@ export function getComparisonPlan(
       )
       if (note) {
         skip(text, note)
+        skippedConstants.set(to, note)
       } else {
         entries.push({ kind: 'shift', value: to, region, text })
       }
       continue
     }
-    let note =
+    let operatorNote =
       operatorSkips.get(to) ??
       (minMax && region === 'eq' ?
         {
@@ -318,9 +333,14 @@ export function getComparisonPlan(
             'at equality both branches of the min/max ternary give the same value',
           rule: 'min-max-idiom' as const,
         }
-      : getBoundedSkip(valueSkips, impossible, to))
-    if (note) {
-      skip(text, note)
+      : null)
+    let bounded =
+      operatorNote ? null : getBoundedSkip(valueSkips, impossible, to)
+    if (operatorNote ?? bounded) {
+      skip(text, (operatorNote ?? bounded)!)
+      if (bounded && !skippedConstants.has(getEntryConstant(impossible, to)!)) {
+        skippedConstants.set(getEntryConstant(impossible, to)!, bounded)
+      }
       continue
     }
     entries.push({
@@ -330,7 +350,22 @@ export function getComparisonPlan(
       text,
     })
   }
-  return { entries, skipped }
+  for (let value of [true, false]) {
+    if (
+      !skippedConstants.has(value) &&
+      planned.every(
+        entry =>
+          getPlannedValue(entry) !== value ||
+          (entry.region !== null && impossible.has(entry.region)),
+      )
+    ) {
+      skippedConstants.set(value, {
+        reason: `a lower bound of an operand makes every input where the comparison is not ${value} impossible`,
+        rule: 'lower-bound',
+      })
+    }
+  }
+  return { skippedConstants, entries, skipped }
 }
 
 /**
@@ -737,6 +772,20 @@ function hasPrimitiveOperands(
     operand => getTypeView(context.hints.getType(operand)).type,
   )
   return left === right && primitiveTypes.has(left!)
+}
+
+/**
+ * Reads the truth value an entry of a plan gives the comparison on the inputs
+ * where it differs from the original.
+ *
+ * @param entry - Entry of the plan.
+ * @returns The constant, or the value of the new operator in the entry's
+ *   region.
+ */
+function getPlannedValue(entry: PlannedEntry): boolean {
+  return typeof entry.to === 'boolean' ?
+      entry.to
+    : trueRegions.get(entry.to)!.includes(entry.region!)
 }
 
 /**
