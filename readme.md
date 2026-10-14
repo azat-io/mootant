@@ -1,8 +1,8 @@
 # Mootant
 
-[![Version](https://img.shields.io/npm/v/mootant.svg?color=fff&labelColor=fc46aa)](https://npmjs.com/package/mootant)
-[![Code Coverage](https://img.shields.io/codecov/c/github/azat-io/mootant.svg?color=fff&labelColor=fc46aa)](https://codecov.io/gh/azat-io/mootant)
-[![GitHub License](https://img.shields.io/badge/license-MIT-232428.svg?color=fff&labelColor=fc46aa)](https://github.com/azat-io/mootant/blob/main/license.md)
+[![Version](https://img.shields.io/npm/v/mootant.svg?color=b8f12a&labelColor=f4f2ec)](https://npmjs.com/package/mootant)
+[![Code Coverage](https://img.shields.io/codecov/c/github/azat-io/mootant.svg?color=b8f12a&labelColor=f4f2ec)](https://codecov.io/gh/azat-io/mootant)
+[![GitHub License](https://img.shields.io/badge/license-MIT-232428.svg?color=b8f12a&labelColor=f4f2ec)](https://github.com/azat-io/mootant/blob/main/license.md)
 
 Mutation testing for JavaScript and TypeScript.
 
