@@ -15,6 +15,12 @@ import { corePlugin } from './plugins/core-plugin'
  */
 interface ListMutantsOptions {
   /**
+   * Whether the candidates that were considered and not emitted are listed too;
+   * false when omitted.
+   */
+  skipped?: boolean
+
+  /**
    * Files and directories to list, as given on the command line.
    */
   paths: string[]
@@ -34,7 +40,8 @@ interface ListMutantsOptions {
  * Lists the mutants of the given files and directories: resolves the preset,
  * expands the paths, reads every file and generates its mutants one file at a
  * time. A file that cannot be read or parsed is reported and the others are
- * still listed.
+ * still listed. Skipped candidates are collected only on request and never
+ * change the mutants.
  *
  * @param options - Paths, preset and working directory of the run.
  * @returns Result of the run, before it is formatted.
@@ -48,6 +55,7 @@ export async function listMutants(
   let { mutators, settings } = resolvePreset(registry, options.preset)
   let { diagnostics, files } = await expandPaths(options.paths, options.cwd)
   let knownMutatorIds = new Set(registry.mutators.keys())
+  let skipped = options.skipped ?? false
 
   let sources = await Promise.allSettled(
     files.map(listed => readFile(listed.absolute, 'utf8')),
@@ -71,6 +79,7 @@ export async function listMutants(
         file: listed.file,
         parsed: false,
         source: null,
+        skipped: [],
         mutants: [],
       }
     }
@@ -80,9 +89,16 @@ export async function listMutants(
       knownMutatorIds,
       settings,
       mutators,
+      skipped,
     })
   })
 
   assertUniqueIds(results)
-  return { preset: options.preset, files: results, diagnostics, mutators }
+  return {
+    preset: options.preset,
+    files: results,
+    diagnostics,
+    mutators,
+    skipped,
+  }
 }

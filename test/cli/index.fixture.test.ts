@@ -5,8 +5,10 @@ import { readFile } from 'node:fs/promises'
 
 import type { ListReport } from '../../types/list-report'
 
+import expectedStrictSkipped from '../fixtures/list/expected-skipped-strict.json'
 import expectedStrictReport from '../fixtures/list/expected-mutants-strict.json'
 import { getSourceBlocks } from '../../core/parser/get-source-blocks'
+import expectedSkipped from '../fixtures/list/expected-skipped.json'
 import expectedReport from '../fixtures/list/expected-mutants.json'
 import { parseFile } from '../../core/parser/parse-file'
 import { applyMutant } from '../helpers/apply-mutant'
@@ -145,5 +147,63 @@ describe('run', () => {
       `${totalMutants} mutants in ${totalFiles} files: ${totalPending} pending, ${totalIgnored} ignored, ${totalWarnings} warnings (preset: recommended)`,
     )
     expect(process.exitCode).toBeUndefined()
+  })
+
+  it.each([
+    { skipped: expectedSkipped, preset: 'recommended', report: expected },
+    {
+      skipped: expectedStrictSkipped,
+      report: expectedStrict,
+      preset: 'strict',
+    },
+  ])(
+    'lists the same mutants and ids, and the expected skipped ones, with --skipped ($preset)',
+    async ({
+      skipped: expectedPresetSkipped,
+      report: expectedPresetReport,
+      preset,
+    }) => {
+      await runCli(
+        'list',
+        'test/fixtures/list/source',
+        '--json',
+        '--skipped',
+        '--preset',
+        preset,
+      )
+
+      let { skipped, ...report } = JSON.parse(
+        consoleInfoSpy.mock.calls[0]![0] as string,
+      ) as ListReport
+      let { skippedByCategory, totalSkipped, ...summary } = report.summary
+
+      expect({ ...report, summary }).toStrictEqual(expectedPresetReport)
+      expect({
+        summary: { skippedByCategory, totalSkipped },
+        skipped,
+      }).toStrictEqual(expectedPresetSkipped)
+      expect(skipped!.length).toBeGreaterThan(0)
+      expect(totalSkipped).toBe(skipped!.length)
+      expect(
+        Object.values(skippedByCategory!).reduce(
+          (sum, count) => sum + count,
+          0,
+        ),
+      ).toBe(skipped!.length)
+    },
+  )
+
+  it('prints the same mutants before the skipped section in the text format', async () => {
+    await runCli('list', 'test/fixtures/list/source')
+    let plain = consoleInfoSpy.mock.calls[0]![0] as string
+    await runCli('list', 'test/fixtures/list/source', '--skipped')
+    let withSkipped = consoleInfoSpy.mock.calls[1]![0] as string
+
+    let [list] = plain.split('\n\n', 1)
+    let sections = withSkipped.split('\n\n')
+    expect(sections[0]).toBe(list)
+    expect(sections[1]!.startsWith('Skipped:\n')).toBe(true)
+    expect(sections[2]!.split('\n', 1)[0]).toBe(plain.split('\n\n', 2)[1])
+    expect(sections[2]!.split('\n', 2)[1]).toMatch(/^\d+ skipped: /u)
   })
 })

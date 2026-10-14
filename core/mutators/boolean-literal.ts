@@ -1,13 +1,7 @@
 import type { Mutator } from '../../types/mutator'
 
-import { isNoOpCallbackLiteral } from './shared/is-no-op-callback-literal'
-import { isBooleanModeOperand } from './shared/is-boolean-mode-operand'
-import { isBranchCopySkipped } from './shared/is-branch-copy-skipped'
-import { isComparisonOperand } from './shared/is-comparison-operand'
-import { isOrDefaultSkipped } from './shared/is-or-default-skipped'
 import { createRunContext } from './shared/create-run-context'
-import { getRunningValue } from './shared/get-running-value'
-import { isVoidOperand } from './shared/is-void-operand'
+import { getLiteralSkip } from './shared/get-literal-skip'
 
 /**
  * Inverts a boolean literal (catalog 4.5). Skipped: a comparison operand (the
@@ -19,7 +13,7 @@ import { isVoidOperand } from './shared/is-void-operand'
  * mutant that will run moves the test toward it (R5); the right operand of a
  * value-mode `L || true` with a nullable boolean `L` while the `??` swap will
  * run (R7); and a flip toward the running value of a loop unless the `timeouts`
- * setting is on (TIMEOUT).
+ * setting is on (TIMEOUT). A skipped flip follows as a skipped replacement.
  */
 export let booleanLiteral: Mutator = {
   create(context) {
@@ -30,19 +24,12 @@ export let booleanLiteral: Mutator = {
           return []
         }
         let value = !node.value
-        if (
-          isComparisonOperand(node, context) ||
-          isBooleanModeOperand(node, context) ||
-          isVoidOperand(node, context) ||
-          isNoOpCallbackLiteral(node, value, context) ||
-          isBranchCopySkipped(node, { value }, runContext) ||
-          isOrDefaultSkipped(node, value, runContext) ||
-          (!context.settings.timeouts &&
-            getRunningValue(node, context)?.value === value)
-        ) {
-          return []
-        }
-        return [{ text: String(value), node }]
+        let skip = getLiteralSkip(node, { change: { value } }, runContext)
+        return [
+          skip ?
+            { text: String(value), skip, node }
+          : { text: String(value), node },
+        ]
       },
     }
   },

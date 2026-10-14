@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
 import { formatMutant } from '../../helpers/format-mutant'
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('stringLiteral', () => {
@@ -296,4 +297,38 @@ describe('stringLiteral', () => {
       ).toStrictEqual(expected)
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      `declare let s: string; a = s === 'x'; if (s.includes('a')) run(); f = run\`tag \${s}\`; g = Symbol('desc'); x = { ['k']: 1 }; switch (s) { case 'c': break }`,
+      [
+        "'x' -> '' (owned O4)",
+        "'a' -> '' (owned O8)",
+        `\`tag \${s}\` -> \`\${s}\` (noise tagged-template)`,
+        "'desc' -> '' (noise symbol-description)",
+        "'k' -> '' (noise property-key)",
+        "'c' -> '' (noise case-label)",
+      ],
+    ],
+    [
+      `declare let t: string | undefined; declare let u: string; x = u || 'a'; y = t || 'a'; z = ok ? \`a\${s}\` : \`\${s}\`; function f() { throw new TypeError(\`bad \${u}\`) } run(); 'bare'`,
+      [
+        "'a' -> '' (owned O16)",
+        "'a' -> '' (subsumed R7)",
+        `\`a\${s}\` -> \`\${s}\` (owned O19)`,
+        `\`bad \${u}\` -> \`\${u}\` (noise error-message)`,
+        "'bare' -> '' (noise bare-string)",
+      ],
+    ],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('string-literal', source)).toStrictEqual(expected)
+  })
+
+  it('lists a JSX attribute string as skipped', () => {
+    expect(
+      listSkipped('string-literal', 'x = <a href="x" />', {
+        file: 'example.tsx',
+      }),
+    ).toStrictEqual(['"x" -> "" (noise jsx-attribute)'])
+  })
 })

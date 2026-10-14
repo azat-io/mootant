@@ -1,6 +1,8 @@
-import type { Node } from 'oxc-parser'
+import type { PrivateInExpression, BinaryExpression, Node } from 'oxc-parser'
 
+import type { MutatorContext } from '../../types/mutator-context'
 import type { LiteralValue } from './shared/get-literal-value'
+import type { SkipNote } from '../../types/skip-note'
 import type { Mutator } from '../../types/mutator'
 
 import { getLiteralValue } from './shared/get-literal-value'
@@ -39,11 +41,11 @@ let identities = new Map<string, Set<LiteralValue>>([
  * `+`, `*` to `/`, `/`, `%` and `**` to `*`. Swaps are skipped for identities
  * (`+ 0`, `- 0` after a number, `* 1`, `/ -1`, `** 1`, EQ) and for a `+` or `-`
  * before a unary `-` that is not a negative number literal (unary-operator owns
- * it, O14).
+ * it, O14). Skipped mutants follow as skipped replacements.
  */
 export let arithmeticOperator: Mutator = {
   create(context) {
-    let { sourceCode, syntax, hints } = context
+    let { sourceCode, hints } = context
     return {
       BinaryExpression(node) {
         let swap = swaps.get(node.operator)
@@ -51,32 +53,17 @@ export let arithmeticOperator: Mutator = {
           return []
         }
         let { operator, right, left } = node
-        let leftType = hints.getType(left)
         if (
           operator === '+' &&
-          !isNumericPair(leftType, hints.getType(right))
+          !isNumericPair(hints.getType(left), hints.getType(right))
         ) {
-          if (
-            typeof getLiteralValue(syntax.unwrapExpression(right)) ===
-              'string' ||
-            syntax.isErrorMessage(node)
-          ) {
-            return []
-          }
-          return [{ text: sourceCode.text.slice(node.start, left.end), node }]
+          let text = sourceCode.text.slice(node.start, left.end)
+          let skip = getDropSkip(node, context)
+          return [skip ? { text, skip, node } : { text, node }]
         }
-        let value = getLiteralValue(right)
-        if (
-          value !== null &&
-          identities.get(operator)?.has(value) &&
-          (operator !== '-' || isNumberType(leftType))
-        ) {
-          return []
-        }
-        if (isOperandNegation(operator, syntax.unwrapExpression(right))) {
-          return []
-        }
-        return [{ text: sourceCode.replaceOperator(node, swap), node }]
+        let text = sourceCode.replaceOperator(node, swap)
+        let skip = getSwapSkip(node, swap, context)
+        return [skip ? { text, skip, node } : { text, node }]
       },
     }
   },
@@ -84,6 +71,79 @@ export let arithmeticOperator: Mutator = {
     description:
       'Swaps an arithmetic operator, or drops the right operand of a + that is not known to be numeric.',
   },
+}
+
+/**
+ * Decides whether the swap of an arithmetic operator is skipped (catalog 4.1):
+ * the right operand is an identity of the operator (EQ; for `+` and `-` only
+ * once the hints make the left operand a number), or a unary `-` that
+ * unary-operator removes (O14).
+ *
+ * @param node - Arithmetic expression.
+ * @param swap - Operator written in place of the operator.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null when the mutant is emitted.
+ */
+function getSwapSkip(
+  node: PrivateInExpression | BinaryExpression,
+  swap: string,
+  context: MutatorContext,
+): SkipNote | null {
+  let { operator, right, left } = node
+  let value = getLiteralValue(right)
+  if (
+    value !== null &&
+    identities.get(operator)?.has(value) &&
+    (operator !== '-' || isNumberType(context.hints.getType(left)))
+  ) {
+    let additive = operator === '+' || operator === '-'
+    return {
+      reason: `with the right operand ${String(value)}, ${operator} and ${swap} give the same result`,
+      rule: additive ? 'numeric-identity' : 'identity-operand',
+    }
+  }
+  let inner = context.syntax.unwrapExpression(right)
+  if (isOperandNegation(operator, inner)) {
+    return {
+      reason:
+        "it equals unary-operator's removal of the - of the right operand",
+      by: { mutator: 'unary-operator', node: inner },
+      rule: 'O14',
+    }
+  }
+  return null
+}
+
+/**
+ * Decides whether the drop of the right operand of a `+` that is not known to
+ * be numeric is skipped (catalog 4.1): the expression builds an error message
+ * (NOISE), whose operands string-literal skips too, or the right operand is a
+ * string literal or a template without expressions (O11).
+ *
+ * @param node - `+` expression.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null when the mutant is emitted.
+ */
+function getDropSkip(
+  node: PrivateInExpression | BinaryExpression,
+  context: MutatorContext,
+): SkipNote | null {
+  let { syntax } = context
+  let right = syntax.unwrapExpression(node.right)
+  if (syntax.isErrorMessage(node)) {
+    return {
+      reason: 'the text of an error message is not worth a test',
+      rule: 'error-message',
+    }
+  }
+  if (typeof getLiteralValue(right) === 'string') {
+    return {
+      reason: "dropping a string operand is string-literal's emptying of it",
+      by: { mutator: 'string-literal', node: right },
+      rule: 'O11',
+    }
+  }
+  return null
 }
 
 /**

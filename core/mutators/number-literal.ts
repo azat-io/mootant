@@ -2,19 +2,14 @@ import type { Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator-context'
 import type { Replacement } from '../../types/replacement'
+import type { SkipNote } from '../../types/skip-note'
 import type { Mutator } from '../../types/mutator'
 
-import { isNoOpCallbackLiteral } from './shared/is-no-op-callback-literal'
-import { isBooleanModeOperand } from './shared/is-boolean-mode-operand'
-import { isBranchCopySkipped } from './shared/is-branch-copy-skipped'
-import { isComparisonOperand } from './shared/is-comparison-operand'
-import { isOrDefaultSkipped } from './shared/is-or-default-skipped'
 import { getCallbackOwner } from './shared/get-callback-owner'
 import { createRunContext } from './shared/create-run-context'
-import { getRunningValue } from './shared/get-running-value'
 import { getLiteralValue } from './shared/get-literal-value'
+import { getLiteralSkip } from './shared/get-literal-skip'
 import { getNumberText } from './shared/get-number-text'
-import { isVoidOperand } from './shared/is-void-operand'
 import { getCalleeName } from '../tree/get-callee-name'
 import { getTypeView } from './shared/get-type-view'
 
@@ -47,7 +42,7 @@ let identityMethods = new Set(['substr', 'slice'])
  * changes that keep the truth value in a boolean context, that only a timeout
  * can kill, that keep the sign of a sort comparator's result, or that another
  * mutant owns or subsumes (branch pairs, no-op callbacks, emptied `||`
- * defaults, `slice(-1)`).
+ * defaults, `slice(-1)`). A skipped change follows as a skipped replacement.
  */
 export let numberLiteral: Mutator<NumberLiteralOptions> = {
   create(context) {
@@ -79,19 +74,21 @@ export let numberLiteral: Mutator<NumberLiteralOptions> = {
 }
 
 /**
- * Builds the mutant of a numeric constant, or nothing when a rule of catalog
- * 4.11 skips it.
+ * Decides whether number-literal skips the change of a numeric constant
+ * (catalog 4.11): keys, case labels unless the `caseTests` option is set, timer
+ * delays, the rules all literal mutators share, and a change that keeps the
+ * truth value in a boolean context, that keeps the sign of a sort comparator's
+ * result or that makes `slice(-1)` the removed call (O18).
  *
  * @param node - Number or BigInt literal, or `-` applied directly to one.
  * @param context - Mutator context of the file.
- * @returns The mutant, or nothing.
+ * @returns Rule and reason of the skip, or null when the mutant is emitted.
  */
-function mutateNumber(
+function getNumberSkip(
   node: Node,
   context: MutatorContext<NumberLiteralOptions>,
-): Replacement[] {
-  let { settings, options, syntax } = context
-  let runContext = createRunContext(context)
+): SkipNote | null {
+  let { options, syntax } = context
   let value = getLiteralValue(node) as bigint | number
   let next: bigint | number
   if (typeof value === 'bigint') {
@@ -99,34 +96,61 @@ function mutateNumber(
   } else {
     next = value + 1
   }
-  let text = getNumberText(node, 1)
   let { parent, index, key } = syntax.getContextSlot(node)
-  if (
-    text === null ||
-    key === 'key' ||
-    (parent?.type === 'SwitchCase' && !options.caseTests) ||
-    (index === 1 &&
-      parent?.type === 'CallExpression' &&
-      timerNames.has(getCalleeName(parent.callee) ?? '')) ||
-    isComparisonOperand(node, context) ||
-    isBooleanModeOperand(node, context) ||
-    isVoidOperand(node, context)
-  ) {
-    return []
+  if (key === 'key') {
+    return { reason: 'property keys are not mutated', rule: 'property-key' }
+  }
+  if (parent?.type === 'SwitchCase' && !options.caseTests) {
+    return {
+      reason: 'case labels are mutated only with the caseTests option',
+      rule: 'case-label',
+    }
   }
   if (
-    (syntax.isBooleanContext(node) && Boolean(value) === Boolean(next)) ||
-    (!settings.timeouts &&
-      getRunningValue(node, context)?.value === Boolean(next)) ||
-    (getSign(value) === getSign(next) && isComparatorResult(node, context)) ||
-    (next === 0 && isIdentityArgument(node, context)) ||
-    isBranchCopySkipped(node, { value: next }, runContext) ||
-    isNoOpCallbackLiteral(node, next, context) ||
-    isOrDefaultSkipped(node, next, runContext)
+    index === 1 &&
+    parent?.type === 'CallExpression' &&
+    timerNames.has(getCalleeName(parent.callee) ?? '')
   ) {
-    return []
+    return {
+      reason: 'a timer delay is not worth a test',
+      rule: 'timer-delay',
+    }
   }
-  return [{ text, node }]
+  /**
+   * Skips a change that keeps the truth value in a boolean context, that keeps
+   * the sign of a sort comparator's result, or that makes `slice(-1)` the
+   * removed call (O18).
+   *
+   * @returns Rule and reason of the skip, or null.
+   */
+  function getOwnSkip(): SkipNote | null {
+    if (syntax.isBooleanContext(node) && Boolean(value) === Boolean(next)) {
+      return {
+        reason: 'the new value has the same truth value in a boolean context',
+        rule: 'same-truth',
+      }
+    }
+    if (getSign(value) === getSign(next) && isComparatorResult(node, context)) {
+      return {
+        reason: 'only the sign of a sort comparator result matters',
+        rule: 'comparator-sign',
+      }
+    }
+    if (next === 0 && isIdentityArgument(node, context)) {
+      return {
+        reason:
+          "the call with the argument 0 returns its receiver, which is method-call's removal of the call",
+        by: { mutator: 'method-call', node: parent! },
+        rule: 'O18',
+      }
+    }
+    return null
+  }
+  return getLiteralSkip(
+    node,
+    { change: { value: next }, getOwnSkip },
+    createRunContext(context),
+  )
 }
 
 /**
@@ -190,6 +214,27 @@ function isComparatorResult(node: Node, context: MutatorContext): boolean {
     callback = syntax.getEnclosingFunction(parent)
   }
   return callback !== null && getCallbackOwner(callback, context) !== null
+}
+
+/**
+ * Builds the mutant of a numeric constant, skipped when a rule of catalog 4.11
+ * applies.
+ *
+ * @param node - Number or BigInt literal, or `-` applied directly to one.
+ * @param context - Mutator context of the file.
+ * @returns The mutant or the skipped mutant, or nothing when the new value has
+ *   no text.
+ */
+function mutateNumber(
+  node: Node,
+  context: MutatorContext<NumberLiteralOptions>,
+): Replacement[] {
+  let text = getNumberText(node, 1)
+  if (text === null) {
+    return []
+  }
+  let skip = getNumberSkip(node, context)
+  return [skip ? { text, skip, node } : { text, node }]
 }
 
 /**

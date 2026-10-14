@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('assignmentOperator', () => {
@@ -247,4 +248,53 @@ describe('assignmentOperator', () => {
       ])
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      "declare let n: number; declare let s: string; n += 0; s += 'x'; n <<= 0; n *= 1; n -= 0",
+      [
+        'n += 0 -> n -= 0 (equivalent numeric-identity)',
+        "s += 'x' -> s -= 'x' (noise non-numeric-plus)",
+        'n <<= 0 -> n >>= 0 (equivalent identity-operand)',
+        'n *= 1 -> n /= 1 (equivalent identity-operand)',
+        'n -= 0 -> n += 0 (equivalent numeric-identity)',
+      ],
+    ],
+    [
+      "declare let u: string; declare let v: number | undefined; declare let w: null; u ??= 'x'; v ??= 0; w ??= 1",
+      [
+        "u ??= 'x' -> u = 'x' (subsumed swap-subsumes-drop)",
+        "u ??= 'x' -> u (equivalent never-nullish)",
+        'v ??= 0 -> v ||= 0 (noise nullish-swap)',
+        'w ??= 1 -> w ||= 1 (noise nullish-swap)',
+        'w ??= 1 -> w = 1 (equivalent typed-constant)',
+      ],
+    ],
+    [
+      'declare let b: boolean | undefined; declare let c: boolean; declare let o: object; declare let w: null; b ||= true; c ||= false; o ||= {}; w ||= 1',
+      [
+        'b ||= true -> b (subsumed swap-subsumes-drop)',
+        'c ||= false -> c (equivalent canonical-falsy-default)',
+        'o ||= {} -> o (equivalent typed-constant)',
+        'w ||= 1 -> w = 1 (equivalent typed-constant)',
+        'w ||= 1 -> w ??= 1 (noise nullish-swap)',
+      ],
+    ],
+    [
+      'declare let o: object; declare let w: null; o &&= {}; w &&= 1',
+      [
+        'o &&= {} -> o = {} (equivalent typed-constant)',
+        'w &&= 1 -> w (equivalent typed-constant)',
+      ],
+    ],
+    [
+      'declare let n: number; for (let i = 0; i < 9; i += 1) {} for (let j = 0; j < 9; j += 0) {}',
+      [
+        'i += 1 -> i -= 1 (timeout loop-advance)',
+        'j += 0 -> j -= 0 (equivalent numeric-identity)',
+      ],
+    ],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('assignment-operator', source)).toStrictEqual(expected)
+  })
 })

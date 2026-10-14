@@ -1,11 +1,13 @@
 import type { VariableDeclaration, AwaitExpression, Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator-context'
+import type { SkipNote } from '../../types/skip-note'
 import type { Mutator } from '../../types/mutator'
 
 import { isBooleanModeOperand } from './shared/is-boolean-mode-operand'
 import { isTypedByMethodName } from './shared/is-typed-by-method-name'
 import { createRunContext } from './shared/create-run-context'
+import { getNegationTop } from './shared/get-negation-top'
 import { isNumberType } from './shared/is-number-type'
 import { isComparison } from './shared/is-comparison'
 import { getTypeView } from './shared/get-type-view'
@@ -49,20 +51,15 @@ let relationalOperators = new Set(['<=', '>=', '<', '>'])
  * whose truthiness alone is used, as in a condition test, keeps its mutant: a
  * promise is always truthy, but the constants of the decision's owner skip the
  * awaited call, while the mutant still makes it, with its effects and its
- * rejection.
+ * rejection. Skipped mutants follow as skipped replacements.
  */
 export let missingAwait: Mutator = {
   create(context) {
     return {
       AwaitExpression(node) {
-        if (
-          isAwaitedByCaller(node, context) ||
-          isComparisonConstant(node, context) ||
-          isSettled(node, context)
-        ) {
-          return []
-        }
-        return [{ text: context.sourceCode.getText(node.argument), node }]
+        let text = context.sourceCode.getText(node.argument)
+        let skip = getAwaitSkip(node, context)
+        return [skip ? { text, skip, node } : { text, node }]
       },
     }
   },
@@ -130,20 +127,71 @@ function isAwaitedByCaller(
 }
 
 /**
- * Tells whether the `await` is an operand of a comparison whose other operand
- * is a primitive, so that the mutant makes the comparison constant: in a
- * boolean-mode operand that constant belongs to logical-operator (O3);
- * otherwise comparison-operator's mutants cover it while that mutator will run
- * on the comparison (R8).
+ * Decides whether the removal of an `await` is skipped (catalog 4.10): the
+ * caller awaits the same promise (EQ), the removal makes a comparison with a
+ * primitive constant (O3, R8), or the awaited value is not a promise by its
+ * type (EQ).
  *
  * @param node - Await expression.
  * @param context - Mutator context of the file.
- * @returns Whether the mutant is skipped.
+ * @returns Rule and reason of the skip, or null when the mutant is emitted.
  */
-function isComparisonConstant(
+function getAwaitSkip(
   node: AwaitExpression,
   context: MutatorContext,
-): boolean {
+): SkipNote | null {
+  if (isAwaitedByCaller(node, context)) {
+    return {
+      reason: 'the caller awaits the same promise without the await',
+      rule: 'awaited-by-caller',
+    }
+  }
+  let comparison = getConstantComparison(node, context)
+  if (comparison) {
+    return isBooleanModeOperand(comparison, context) ?
+        {
+          by: {
+            node: context.syntax.getContextSlot(
+              getNegationTop(comparison, context).node,
+            ).parent!,
+            mutator: 'logical-operator',
+          },
+          reason:
+            'it makes the comparison constant, and logical-operator owns the truth value of an operand of && or ||',
+          rule: 'O3',
+        }
+      : {
+          reason:
+            "it makes the comparison constant, which comparison-operator's mutants cover",
+          by: { mutator: 'comparison-operator', node: comparison },
+          rule: 'R8',
+        }
+  }
+  if (isSettled(node, context)) {
+    return {
+      reason:
+        'the type hints say the value is not a promise, so the await only changes timing',
+      rule: 'settled-value',
+    }
+  }
+  return null
+}
+
+/**
+ * Finds the comparison that the removal of an `await` makes constant: the
+ * `await` is an operand of a comparison whose other operand is a primitive, and
+ * the comparison is a boolean-mode operand, whose constant belongs to
+ * logical-operator (O3), or comparison-operator will run on it, whose mutants
+ * cover the constant (R8).
+ *
+ * @param node - Await expression.
+ * @param context - Mutator context of the file.
+ * @returns The comparison, or null when the mutant is not skipped for it.
+ */
+function getConstantComparison(
+  node: AwaitExpression,
+  context: MutatorContext,
+): Node | null {
   let { syntax, hints } = context
   let { parent: comparison, key } = syntax.getContextSlot(node)
   if (
@@ -151,7 +199,7 @@ function isComparisonConstant(
     comparison.operator === 'instanceof' ||
     comparison.operator === 'in'
   ) {
-    return false
+    return null
   }
   let other = key === 'left' ? comparison.right : comparison.left
   let constant =
@@ -159,13 +207,15 @@ function isComparisonConstant(
       isNumberType(hints.getType(other))
     : primitiveTypes.has(getTypeView(hints.getType(other)).type)
   return (
-    constant &&
-    (isBooleanModeOperand(comparison, context) ||
-      createRunContext(context).runs(
-        { mutator: 'comparison-operator', node: comparison },
-        { mutator: context.id, node },
-      ))
-  )
+      constant &&
+        (isBooleanModeOperand(comparison, context) ||
+          createRunContext(context).runs(
+            { mutator: 'comparison-operator', node: comparison },
+            { mutator: context.id, node },
+          ))
+    ) ?
+      comparison
+    : null
 }
 
 /**

@@ -8,14 +8,14 @@ import { compareCandidates } from './compare-candidates'
  */
 interface RangeSearch {
   /**
+   * Candidates the rule has already dropped.
+   */
+  dropped: ReadonlyMap<MutantCandidate, MutantCandidate>
+
+  /**
    * Every candidate of the file in canonical order.
    */
   candidates: readonly MutantCandidate[]
-
-  /**
-   * Candidates the rule has already dropped.
-   */
-  dropped: ReadonlySet<MutantCandidate>
 
   /**
    * Coarse candidate being decided.
@@ -29,6 +29,22 @@ interface RangeSearch {
 }
 
 /**
+ * Candidates the solitary rule keeps and drops.
+ */
+interface SolitaryOutcome {
+  /**
+   * Every dropped coarse candidate, with the finer candidate inside it that
+   * counted.
+   */
+  dropped: Map<MutantCandidate, MutantCandidate>
+
+  /**
+   * The candidates that are kept, in canonical order.
+   */
+  kept: MutantCandidate[]
+}
+
+/**
  * Drops coarse candidates, such as a removed statement, when a finer candidate
  * lies inside one of their solitary ranges: a test that kills the finer mutant
  * must observe the effect the coarse mutant erases. A finer candidate counts
@@ -38,38 +54,47 @@ interface RangeSearch {
  * innermost first.
  *
  * @param candidates - Candidates of one file in canonical order.
- * @returns The candidates that are kept, in canonical order.
+ * @returns The candidates that are kept, in canonical order, and the dropped
+ *   ones with the finer candidate that dropped each.
  */
 export function applySolitaryRule(
   candidates: readonly MutantCandidate[],
-): MutantCandidate[] {
-  let dropped = new Set<MutantCandidate>()
+): SolitaryOutcome {
+  let dropped = new Map<MutantCandidate, MutantCandidate>()
   let coarse = candidates
     .filter(candidate => candidate.solitary !== null)
     .toSorted(compareCoarseCandidates)
 
   for (let candidate of coarse) {
-    let hasInner = candidate.solitary!.some(range =>
-      hasCountedCandidate({ candidates, candidate, dropped, range }),
-    )
-    if (hasInner) {
-      dropped.add(candidate)
+    for (let range of candidate.solitary!) {
+      let inner = findCountedCandidate({
+        candidates,
+        candidate,
+        dropped,
+        range,
+      })
+      if (inner !== null) {
+        dropped.set(candidate, inner)
+        break
+      }
     }
   }
 
-  return candidates.filter(candidate => !dropped.has(candidate))
+  return {
+    kept: candidates.filter(candidate => !dropped.has(candidate)),
+    dropped,
+  }
 }
 
 /**
- * Tells whether a candidate that counts lies inside a solitary range of a
- * coarse candidate. Candidates are sorted by start, so the search starts at the
- * first candidate that starts in the range and stops at the first one that
- * starts after it.
+ * Finds a candidate that counts inside a solitary range of a coarse candidate.
+ * Candidates are sorted by start, so the search starts at the first candidate
+ * that starts in the range and stops at the first one that starts after it.
  *
  * @param search - Coarse candidate, its range and the state of the rule.
- * @returns Whether some counted candidate lies inside the range.
+ * @returns The first counted candidate inside the range, or null.
  */
-function hasCountedCandidate(search: RangeSearch): boolean {
+function findCountedCandidate(search: RangeSearch): MutantCandidate | null {
   let { candidates, candidate, dropped, range } = search
   for (
     let index = findFirstStart(candidates, range.start);
@@ -83,10 +108,10 @@ function hasCountedCandidate(search: RangeSearch): boolean {
       !dropped.has(inner) &&
       countsFor(inner, candidate)
     ) {
-      return true
+      return inner
     }
   }
-  return false
+  return null
 }
 
 /**

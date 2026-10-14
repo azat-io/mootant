@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest'
 import type { TestContextSetup } from '../../../helpers/create-test-context'
 
 import { createRunContext } from '../../../../core/mutators/shared/create-run-context'
-import { hasGroupConstant } from '../../../../core/mutators/shared/has-group-constant'
+import { getGroupConstant } from '../../../../core/mutators/shared/get-group-constant'
 import { createTestContext } from '../../../helpers/create-test-context'
 
-describe('hasGroupConstant', () => {
+describe('getGroupConstant', () => {
   it.each<{
     setup: TestContextSetup
     expected: boolean
@@ -213,10 +213,10 @@ describe('hasGroupConstant', () => {
       let { context, find } = createTestContext(source, setup)
 
       expect(
-        hasGroupConstant(
+        getGroupConstant(
           find('LogicalExpression', group),
           createRunContext(context),
-        ),
+        ).emitted,
       ).toBe(expected)
     },
   )
@@ -244,10 +244,58 @@ describe('hasGroupConstant', () => {
     let { context, find } = createTestContext(source, { file: 'example.js' })
 
     expect(
-      hasGroupConstant(
+      getGroupConstant(
         find('LogicalExpression', 'x === 0 && y > 3 && isOk(z)'),
         createRunContext(context),
-      ),
+      ).emitted,
     ).toBe(expected)
   })
+
+  it.each<{ rule: string | null; source: string; group: string }>([
+    { source: 'if (a && b && c) {}', group: 'a && b', rule: null },
+    {
+      source: 'if (isMember && isActive) run()',
+      group: 'isMember && isActive',
+      rule: null,
+    },
+    {
+      source: 'function f(user) { x = user && user.name }',
+      group: 'user && user.name',
+      rule: null,
+    },
+    {
+      source: 'if (ok && false) {}',
+      rule: 'fixed-operand',
+      group: 'ok && false',
+    },
+    { source: 'while (a || b) step()', rule: 'loop-running', group: 'a || b' },
+    { source: 'for (;;) { if (a || b) break }', group: 'a || b', rule: 'O13' },
+    {
+      source: 'x = rows.sort((a, b) => a.pinned && compare(a, b))',
+      group: 'a.pinned && compare(a, b)',
+      rule: 'O12',
+    },
+    {
+      source: 'function f(x, y, z) { return x === 0 && y > 3 && isOk(z) }',
+      group: 'x === 0 && y > 3 && isOk(z)',
+      rule: 'R2',
+    },
+    {
+      source: 'if ((c || a) && (b || (!d && e))) {}',
+      group: '(c || a) && (b || (!d && e))',
+      rule: 'R2',
+    },
+  ])(
+    'names the rule that skips the constant of $source',
+    ({ source, group, rule }) => {
+      let { context, find } = createTestContext(source, { file: 'example.js' })
+
+      expect(
+        getGroupConstant(
+          find('LogicalExpression', group),
+          createRunContext(context),
+        ).skip?.rule ?? null,
+      ).toBe(rule)
+    },
+  )
 })

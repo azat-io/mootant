@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest'
 
 import type { TestContextSetup } from '../../../helpers/create-test-context'
 
-import { ownerEmitsConstant } from '../../../../core/mutators/shared/owner-emits-constant'
+import { getOwnerConstant } from '../../../../core/mutators/shared/get-owner-constant'
 import { createTestContext } from '../../../helpers/create-test-context'
 
-describe('ownerEmitsConstant', () => {
+describe('getOwnerConstant', () => {
   it.each<{
     setup: TestContextSetup
     type: Node['type']
@@ -192,9 +192,57 @@ describe('ownerEmitsConstant', () => {
     ({ expected, source, value, setup, type, text }) => {
       let { context, find } = createTestContext(source, setup)
 
-      expect(ownerEmitsConstant(find(type, text), value, context)).toBe(
+      expect(getOwnerConstant(find(type, text), value, context) !== null).toBe(
         expected,
       )
+    },
+  )
+
+  it.each<{
+    type: Node['type']
+    expected: string
+    source: string
+    value: boolean
+  }>([
+    {
+      source: 'if (x) notify(x)',
+      expected: 'condition x',
+      type: 'Identifier',
+      value: false,
+    },
+    {
+      expected: 'comparison-operator x > y',
+      source: 'if (x > y) save(x)',
+      type: 'BinaryExpression',
+      value: false,
+    },
+    {
+      expected: 'logical-operator a && b',
+      source: 'if (a && b) f()',
+      type: 'LogicalExpression',
+      value: false,
+    },
+    {
+      expected: 'number-literal 0',
+      source: 'if (0) f()',
+      type: 'Literal',
+      value: true,
+    },
+    {
+      source: 'function f(c, x) { return c ? true : x }',
+      type: 'ConditionalExpression',
+      expected: 'condition c',
+      value: true,
+    },
+  ])(
+    'finds the mutant of $source at $type for $value',
+    ({ expected, source, value, type }) => {
+      let { context, find } = createTestContext(source)
+      let site = getOwnerConstant(find(type), value, context)
+
+      expect(
+        site && `${site.mutator} ${context.sourceCode.getText(site.node)}`,
+      ).toBe(expected)
     },
   )
 })

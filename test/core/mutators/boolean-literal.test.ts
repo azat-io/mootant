@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('booleanLiteral', () => {
@@ -270,5 +271,28 @@ describe('booleanLiteral', () => {
   ])('leaves $source to $mutator', ({ expected, mutator, source }) => {
     expect(runMutator(mutator, source)).toMatchObject(expected)
     expect(runMutator('boolean-literal', source)).toEqual([])
+  })
+
+  it.each<[string, string[]]>([
+    [
+      'declare let ok: boolean; a = ok === true; b = ok && true; c = void true; x = ok ? true : false',
+      [
+        'true -> false (owned O4)',
+        'true -> false (owned O3)',
+        'true -> false (equivalent void-operand)',
+        'true -> false (owned O19)',
+        'false -> true (owned O19)',
+      ],
+    ],
+    [
+      'items.sort((a, c) => { if (a) return false; return true }); while (false) {}',
+      [
+        'false -> true (owned O19)',
+        'true -> false (owned O12)',
+        'false -> true (timeout loop-running)',
+      ],
+    ],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('boolean-literal', source)).toStrictEqual(expected)
   })
 })

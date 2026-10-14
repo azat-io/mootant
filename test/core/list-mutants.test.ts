@@ -29,7 +29,14 @@ vi.mock(import('../../core/plugins/core-plugin'), () => {
       'number-swap': {
         create: () => ({
           Literal(node) {
-            return [{ text: '2', node }]
+            return [
+              { text: '2', node },
+              {
+                skip: { reason: 'comparison owns it', rule: 'O4' },
+                text: '3',
+                node,
+              },
+            ]
           },
         }),
         meta: { description: 'Swaps a number.' },
@@ -111,6 +118,28 @@ describe('listMutants', () => {
     ])
   })
 
+  it.each([
+    { skipped: undefined, count: 0 },
+    { skipped: false, count: 0 },
+    { skipped: true, count: 1 },
+  ])(
+    'collects skipped candidates only on request ($skipped)',
+    async ({ skipped, count }) => {
+      installFileSystem({ '/repo/a.ts': 'x = 1' })
+
+      let result = await listMutants({
+        preset: 'recommended',
+        paths: ['a.ts'],
+        cwd: '/repo',
+        skipped,
+      })
+
+      expect(result.skipped).toBe(skipped ?? false)
+      expect(result.files[0]!.skipped).toHaveLength(count)
+      expect(result.files[0]!.mutants).toHaveLength(1)
+    },
+  )
+
   it('rejects an unknown preset', async () => {
     installFileSystem({ '/repo/a.ts': 'x = 1' })
 
@@ -157,6 +186,7 @@ describe('listMutants', () => {
       file: 'locked.ts',
       parsed: false,
       source: null,
+      skipped: [],
       mutants: [],
     })
     expect(result.files[1]!.mutants).toHaveLength(1)

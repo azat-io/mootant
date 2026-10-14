@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('updateOperator', () => {
@@ -137,4 +138,17 @@ describe('updateOperator', () => {
       ).toMatchObject([{ replacement: 'i--', original: 'i++' }])
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      'declare let n: number; for (let i = 0; i < n; i++) {} n++; a = n++',
+      [
+        'i++ -> i-- (timeout loop-advance)',
+        'i++ -> ++i (equivalent unused-result)',
+        'n++ -> ++n (equivalent unused-result)',
+      ],
+    ],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('update-operator', source)).toStrictEqual(expected)
+  })
 })

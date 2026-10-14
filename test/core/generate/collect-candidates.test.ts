@@ -19,6 +19,11 @@ interface CollectSetup {
    * Whether mutants that only a timeout can kill are kept.
    */
   timeouts?: boolean
+
+  /**
+   * Whether skipped replacements are collected.
+   */
+  skipped?: boolean
 }
 
 /**
@@ -74,6 +79,7 @@ function collect(
       syntax,
       hints,
     },
+    skipped: setup.skipped ?? false,
     mutators: recorded,
     parsed,
     rules,
@@ -373,5 +379,124 @@ describe('collectCandidates', () => {
       },
     ])
     expect(candidates.map(candidate => candidate.text)).toStrictEqual(['a - b'])
+  })
+
+  it.each([
+    { skipped: false, count: 0 },
+    { skipped: true, count: 1 },
+  ])(
+    'collects a skipped replacement only when asked ($skipped)',
+    ({ skipped, count }) => {
+      let result = collect(
+        ['x = a + b'],
+        [
+          activate('first', 0, () => ({
+            BinaryExpression(node) {
+              return [
+                { skip: { reason: 'Owned.', rule: 'O1' }, text: 'a', node },
+                { text: 'a - b', node },
+              ]
+            },
+          })),
+        ],
+        { skipped },
+      )
+
+      expect(result.candidates.map(candidate => candidate.emission)).toEqual([
+        0,
+      ])
+      expect(result.skipped).toHaveLength(count)
+    },
+  )
+
+  it('keeps the rule, reason and justifying mutant of a skipped replacement', () => {
+    let { candidates, skipped } = collect(
+      ['x = a + b'],
+      [
+        activate('first', 0, () => ({
+          BinaryExpression(node) {
+            return [
+              {
+                skip: {
+                  by: { mutator: 'other', node: node.right },
+                  reason: 'Owned.',
+                  rule: 'O1',
+                },
+                text: 'a',
+                node,
+              },
+              {
+                skip: { reason: 'Noise.', heuristic: true, rule: 'O12' },
+                text: 'b',
+                node,
+              },
+            ]
+          },
+        })),
+      ],
+      { skipped: true },
+    )
+
+    expect(candidates).toStrictEqual([])
+    expect(
+      skipped.map(({ registered, ...candidate }) => ({
+        ...candidate,
+        mutator: registered.id,
+      })),
+    ).toStrictEqual([
+      {
+        by: { mutator: 'other', start: 8, id: null },
+        mutator: 'first',
+        reason: 'Owned.',
+        heuristic: false,
+        emission: 0,
+        rule: 'O1',
+        text: 'a',
+        start: 4,
+        end: 9,
+      },
+      {
+        mutator: 'first',
+        reason: 'Noise.',
+        heuristic: true,
+        rule: 'O12',
+        emission: 1,
+        text: 'b',
+        by: null,
+        start: 4,
+        end: 9,
+      },
+    ])
+  })
+
+  it('lists an invalid replacement and a loop-advance value as skipped', () => {
+    let { skipped } = collect(
+      ['let x = 1', 'while (!done) {', '  done = check()', '}'],
+      [
+        activate('first', 0, context => ({
+          CallExpression(node) {
+            let [declaration] = context.sourceCode.program.body
+            return [
+              { node: declaration as Node, text: '' },
+              { text: 'true', node },
+            ]
+          },
+        })),
+      ],
+      { skipped: true },
+    )
+
+    expect(
+      skipped.map(candidate => [candidate.rule, candidate.reason]),
+    ).toStrictEqual([
+      [
+        'invalid-target',
+        'the mutator cannot replace a VariableDeclaration node; replace an expression or a statement',
+      ],
+      [
+        'loop-advance',
+        'it changes the value that advances a loop, so only a timeout could kill it',
+      ],
+    ])
   })
 })

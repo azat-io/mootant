@@ -2,6 +2,7 @@ import type { StaticMemberExpression, CallExpression, Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator-context'
 import type { Replacement } from '../../types/replacement'
+import type { SkipNote } from '../../types/skip-note'
 import type { TextEdit } from '../../types/text-edit'
 import type { Mutator } from '../../types/mutator'
 
@@ -142,7 +143,7 @@ let identityMethods = new Set(['substring', 'substr', 'slice'])
  * `slice`, `substring` and `substr`, and the case swaps decided by a literal
  * (O17). A call that an optional link at or below it can skip is replaced
  * through its chain root, with the change as edits inside the root's text
- * (T10).
+ * (T10). Skipped mutants follow as skipped replacements.
  */
 export let methodCall: Mutator<MethodCallOptions> = {
   meta: {
@@ -157,6 +158,60 @@ export let methodCall: Mutator<MethodCallOptions> = {
       },
     }
   },
+}
+
+/**
+ * Decides whether the mutant of a call is skipped: a removal on a `super`
+ * receiver, which leaves no expression, or of an identity call, a case, pad or
+ * trim swap whose result is only used for its truthiness or length (EQ), and a
+ * case swap decided by a literal (O17).
+ *
+ * @param call - Method call.
+ * @param rule - Rule of the method name.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null when the mutant is emitted.
+ */
+function getEquivalentSkip(
+  call: MethodCall,
+  rule: MethodRule,
+  context: MutatorContext,
+): SkipNote | null {
+  let { name } = call.callee.property
+  if (rule.partner === null) {
+    if (call.callee.object.type === 'Super') {
+      return {
+        reason: 'super alone is not an expression',
+        rule: 'invalid-target',
+      }
+    }
+    return isIdentityCall(call, context) ?
+        {
+          reason: `this ${name} call returns the receiver's contents`,
+          rule: 'identity-call',
+        }
+      : null
+  }
+  let top = getCallTop(call, context)
+  if (truthKeepingMethods.has(name) && context.syntax.isBooleanContext(top)) {
+    return {
+      reason: `only the truth of the result is used, which ${name} and ${rule.partner} share`,
+      rule: 'truth-keeping-swap',
+    }
+  }
+  if (lengthKeepingMethods.has(name) && isLengthObject(top, context)) {
+    return {
+      reason: `only the length of the result is used, which ${name} and ${rule.partner} share`,
+      rule: 'length-keeping-swap',
+    }
+  }
+  if (caseMethods.has(name) && isDecidedByLiteral(top, name, context)) {
+    return {
+      reason:
+        'the swapped call is compared with a literal it never matches or both match alike, so the decision is constant or unchanged',
+      rule: 'O17',
+    }
+  }
+  return null
 }
 
 /**
@@ -296,32 +351,38 @@ function isDecidedByLiteral(
 
 /**
  * Builds the mutant of a method call: the rename to the partner or the removal
- * of the call, unless the receiver gate or a skip of catalog 4.9 rules it out.
+ * of the call. A mutant that the receiver gate or a skip of catalog 4.9 rules
+ * out, or whose node the mutant switch cannot wrap, follows as a skipped
+ * replacement.
  *
  * @param call - Method call.
  * @param context - Mutator context of the file.
- * @returns The replacement, or none.
+ * @returns The replacement, or none for a name outside the table.
  */
 function getReplacements(
   call: MethodCall,
   context: MutatorContext<MethodCallOptions>,
 ): readonly Replacement[] {
   let rule = rules.get(call.callee.property.name)
-  let target = rule ? getTarget(call, context) : null
-  if (
-    !rule ||
-    !target ||
-    !acceptsReceiver(call, rule, context) ||
-    isEquivalent(call, rule, context)
-  ) {
+  if (!rule) {
     return []
   }
+  let target = getTarget(call, context)
+  let wrapped = context.syntax.isValuePosition(target)
   let { property } = call.callee
   let edits =
     rule.partner === null ?
       getRemovalEdits(call, context)
     : [{ start: property.start, text: rule.partner, end: property.end }]
-  return [{ text: context.sourceCode.editText(target, edits), node: target }]
+  let text = context.sourceCode.editText(target, edits)
+  let skip: SkipNote | null =
+    wrapped ?
+      getSkip(call, rule, context)
+    : {
+        reason: 'the mutant switch cannot wrap the call in this position',
+        rule: 'invalid-target',
+      }
+  return [skip ? { node: target, text, skip } : { node: target, text }]
 }
 
 /**
@@ -357,47 +418,29 @@ function acceptsReceiver(
 }
 
 /**
- * Tells whether the mutant of a call is skipped: a removal on a `super`
- * receiver or of an identity call, a case, pad or trim swap whose result is
- * only used for its truthiness or length (EQ), and a case swap decided by a
- * literal (O17).
+ * Decides whether the mutant of a call is skipped: the receiver does not pass
+ * the gate of the rule (NOISE), or a skip of catalog 4.9 applies.
  *
  * @param call - Method call.
  * @param rule - Rule of the method name.
  * @param context - Mutator context of the file.
- * @returns Whether no mutant is emitted.
+ * @returns Rule and reason of the skip, or null when the mutant is emitted.
  */
-function isEquivalent(
+function getSkip(
   call: MethodCall,
   rule: MethodRule,
-  context: MutatorContext,
-): boolean {
-  if (rule.partner === null) {
-    return call.callee.object.type === 'Super' || isIdentityCall(call, context)
+  context: MutatorContext<MethodCallOptions>,
+): SkipNote | null {
+  if (!acceptsReceiver(call, rule, context)) {
+    return {
+      reason:
+        rule.receivers === null ?
+          'the receiver is not the global Math'
+        : `the type hints say the receiver is not of type ${rule.receivers.join(' or ')}`,
+      rule: 'receiver-type',
+    }
   }
-  let { name } = call.callee.property
-  let top = getCallTop(call, context)
-  return (
-    (truthKeepingMethods.has(name) && context.syntax.isBooleanContext(top)) ||
-    (lengthKeepingMethods.has(name) && isLengthObject(top, context)) ||
-    (caseMethods.has(name) && isDecidedByLiteral(top, name, context))
-  )
-}
-
-/**
- * Finds the node a mutant of the call replaces: the call itself, or the root of
- * its optional chain when an optional link at or below the call can skip it
- * (T10).
- *
- * @param call - Method call.
- * @param context - Mutator context of the file.
- * @returns The replaced node, or null when no node around the call can be
- *   switched, as for the operand of `delete`.
- */
-function getTarget(call: CallExpression, context: MutatorContext): Node | null {
-  let { syntax } = context
-  let target = syntax.isValuePosition(call) ? call : syntax.getChainRoot(call)
-  return target && syntax.isValuePosition(target) ? target : null
+  return getEquivalentSkip(call, rule, context)
 }
 
 /**
@@ -447,4 +490,21 @@ function isCaseless(node: Node, lower: boolean): boolean {
     typeof value === 'string' &&
     (lower ? value.toLowerCase() : value.toUpperCase()) === value
   )
+}
+
+/**
+ * Finds the node a mutant of the call replaces: the call itself, or the root of
+ * its optional chain when an optional link at or below the call can skip it
+ * (T10).
+ *
+ * @param call - Method call.
+ * @param context - Mutator context of the file.
+ * @returns The replaced node, which may still lie where the mutant switch
+ *   cannot wrap it, as for the operand of `delete`.
+ */
+function getTarget(call: CallExpression, context: MutatorContext): Node {
+  let { syntax } = context
+  return syntax.isValuePosition(call) ? call : (
+      (syntax.getChainRoot(call) ?? call)
+    )
 }

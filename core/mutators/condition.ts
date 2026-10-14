@@ -20,7 +20,8 @@ export let condition: Mutator = {
     /**
      * Forces the test of a statement or a conditional expression (catalog 4.7):
      * the test without its parentheses gets `true` and `false`, minus the
-     * constants that other mutators own and the skipped ones.
+     * constants that other mutators own and the skipped ones, which follow as
+     * skipped replacements.
      *
      * @param test - Test of the statement or the conditional expression.
      * @returns Replacements of the test.
@@ -97,11 +98,9 @@ function getNeverRunLoop(
  *
  * @param node - Replaced node.
  * @param context - Mutator context with the test of mutants that will run.
- * @returns Replacements of the node, `true` first.
+ * @returns Replacements of the node, `true` first, then the skipped ones.
  */
 function getConstants(node: Node, context: RunContext): Replacement[] {
-  return getConditionConstants(node, context).map(value => ({
-    text: String(value),
-    node,
-  }))
+  let { skipped, values } = getConditionConstants(node, context)
+  return [...values.map(value => ({ text: String(value), node })), ...skipped]
 }

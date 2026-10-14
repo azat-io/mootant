@@ -107,9 +107,9 @@ describe('deduplicateCandidates', () => {
     let outer = createCandidate(4, 7, '!a')
     let inner = createCandidate(5, 7, 'a')
 
-    expect(deduplicateCandidates([outer, inner], 'x = !!a')).toStrictEqual([
-      outer,
-    ])
+    expect(deduplicateCandidates([outer, inner], 'x = !!a').kept).toStrictEqual(
+      [outer],
+    )
   })
 
   it('keeps one removal of identical array elements', () => {
@@ -118,26 +118,27 @@ describe('deduplicateCandidates', () => {
     let second = createCandidate(4, 13, '[b, c]')
     let third = createCandidate(4, 13, '[b, b]')
 
-    expect(deduplicateCandidates([first, second, third], text)).toStrictEqual([
-      first,
-      third,
-    ])
+    expect(
+      deduplicateCandidates([first, second, third], text).kept,
+    ).toStrictEqual([first, third])
   })
 
   it('keeps the first candidate also when it is ignored', () => {
     let ignored = { ...createCandidate(4, 5, '2'), ignoreRule: IGNORE_RULE }
     let pending = createCandidate(4, 5, '2')
 
-    expect(deduplicateCandidates([ignored, pending], 'x = 1')).toStrictEqual([
-      ignored,
-    ])
+    expect(
+      deduplicateCandidates([ignored, pending], 'x = 1').kept,
+    ).toStrictEqual([ignored])
   })
 
   it('keeps texts that differ only in whitespace', () => {
     let spaced = createCandidate(4, 9, 'a  b')
     let single = createCandidate(4, 9, 'a b')
 
-    expect(deduplicateCandidates([spaced, single], 'x = a + b')).toHaveLength(2)
+    expect(
+      deduplicateCandidates([spaced, single], 'x = a + b').kept,
+    ).toHaveLength(2)
   })
 
   it('finds the same duplicates as comparing whole mutated texts', () => {
@@ -153,8 +154,24 @@ describe('deduplicateCandidates', () => {
       'abab',
     ])
 
-    expect(deduplicateCandidates(candidates, text)).toStrictEqual(
+    expect(deduplicateCandidates(candidates, text).kept).toStrictEqual(
       keepFirstMutatedTexts(candidates, text),
+    )
+  })
+
+  it('names the kept candidate that each dropped candidate duplicates', () => {
+    let text = 'x = [b, b, c]'
+    let first = createCandidate(4, 13, '[b, c]')
+    let second = createCandidate(4, 13, '[b, c]')
+    let third = createCandidate(4, 13, '[b, c]')
+
+    expect(
+      deduplicateCandidates([first, second, third], text).duplicates,
+    ).toStrictEqual(
+      new Map([
+        [second, first],
+        [third, first],
+      ]),
     )
   })
 })

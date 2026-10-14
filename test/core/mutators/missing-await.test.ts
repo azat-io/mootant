@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { listMutantTexts } from '../../helpers/list-mutant-texts'
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('missingAwait', () => {
@@ -241,5 +242,27 @@ describe('missingAwait', () => {
     expect(
       listMutantTexts('missing-await', lines, { settings: { timeouts: true } }),
     ).toStrictEqual(['await reader.read() -> reader.read()'])
+  })
+
+  it.each<[string, string[]]>([
+    [
+      'async function f() { return await load() }',
+      ['await load() -> load() (equivalent awaited-by-caller)'],
+    ],
+    [
+      'async function f() { if ((await load()) === 0) stop() }',
+      ['await load() -> load() (subsumed R8)'],
+    ],
+    [
+      'async function f() { if (x && (await load()) === 0) stop() }',
+      ['await load() -> load() (owned O3)'],
+    ],
+    [
+      'declare let name: string; async function f() { use(await name) }',
+      ['await name -> name (equivalent settled-value)'],
+    ],
+    ['async function f() { use(await load()) }', []],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('missing-await', source)).toStrictEqual(expected)
   })
 })

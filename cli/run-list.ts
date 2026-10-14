@@ -14,6 +14,7 @@ import { formatReport } from './format-report'
 export async function runList(options: ListOptions): Promise<void> {
   try {
     let result = await listMutants({
+      skipped: options.skipped,
       preset: options.preset,
       paths: options.paths,
       cwd: process.cwd(),

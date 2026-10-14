@@ -47,6 +47,7 @@ function createResult(
       createActiveMutator('string-literal', 'Empties a string literal.'),
     ],
     preset: 'recommended',
+    skipped: false,
     diagnostics,
     files,
   }
@@ -171,6 +172,7 @@ describe('buildListReport', () => {
           file: 'example.ts',
           diagnostics: [],
           parsed: true,
+          skipped: [],
           source,
         },
       ]),
@@ -249,6 +251,7 @@ describe('buildListReport', () => {
           diagnostics: [],
           file: 'cart.ts',
           parsed: true,
+          skipped: [],
           source,
         },
         {
@@ -256,6 +259,7 @@ describe('buildListReport', () => {
           source: 'let value = (',
           file: 'broken.ts',
           parsed: false,
+          skipped: [],
           mutants: [],
         },
         {
@@ -263,6 +267,7 @@ describe('buildListReport', () => {
           file: 'locked.ts',
           parsed: false,
           source: null,
+          skipped: [],
           mutants: [],
         },
         {
@@ -270,6 +275,7 @@ describe('buildListReport', () => {
           file: 'empty.ts',
           diagnostics: [],
           parsed: true,
+          skipped: [],
           mutants: [],
         },
       ],
@@ -282,6 +288,7 @@ describe('buildListReport', () => {
       ],
       diagnostics: [skippedPath],
       preset: 'strict',
+      skipped: false,
     }
 
     let report = buildListReport(result)
@@ -409,5 +416,117 @@ describe('buildListReport', () => {
 
     expect(forward.diagnostics).toStrictEqual([first, second])
     expect(backward.diagnostics).toStrictEqual([first, second])
+  })
+
+  it('lists skipped candidates with positions and counts them by category', () => {
+    let source = ['let unit = a === null', "f('cm')"].join('\n')
+    let files: FileMutants[] = [
+      {
+        skipped: [
+          {
+            reason: 'the type hints prove the comparison is always false',
+            mutator: 'comparison-operator',
+            rule: 'proven-comparison',
+            category: 'equivalent',
+            replacement: 'false',
+            file: 'example.ts',
+            heuristic: true,
+            start: 11,
+            by: null,
+            end: 21,
+          },
+          {
+            by: { mutator: 'string-literal', id: '000000000001', start: 24 },
+            reason: 'it produces the same mutated file',
+            mutator: 'string-literal',
+            category: 'duplicate',
+            file: 'example.ts',
+            rule: 'duplicate',
+            replacement: "''",
+            heuristic: false,
+            start: 24,
+            end: 28,
+          },
+        ],
+        mutants: [createMutant({ start: 24, end: 28 })],
+        file: 'example.ts',
+        diagnostics: [],
+        parsed: true,
+        source,
+      },
+      {
+        file: 'locked.ts',
+        diagnostics: [],
+        parsed: false,
+        source: null,
+        skipped: [],
+        mutants: [],
+      },
+    ]
+    let report = buildListReport({ ...createResult(files), skipped: true })
+
+    expect(report.skipped).toStrictEqual([
+      {
+        reason: 'the type hints prove the comparison is always false',
+        mutator: 'comparison-operator',
+        rule: 'proven-comparison',
+        category: 'equivalent',
+        original: 'a === null',
+        replacement: 'false',
+        file: 'example.ts',
+        heuristic: true,
+        column: 12,
+        start: 11,
+        by: null,
+        line: 1,
+        end: 21,
+      },
+      {
+        by: {
+          mutator: 'string-literal',
+          id: '000000000001',
+          column: 3,
+          line: 2,
+        },
+        reason: 'it produces the same mutated file',
+        mutator: 'string-literal',
+        category: 'duplicate',
+        file: 'example.ts',
+        rule: 'duplicate',
+        replacement: "''",
+        heuristic: false,
+        original: "'cm'",
+        column: 3,
+        start: 24,
+        line: 2,
+        end: 28,
+      },
+    ])
+    expect(report.summary).toMatchObject({
+      skippedByCategory: {
+        equivalent: 1,
+        duplicate: 1,
+        subsumed: 0,
+        timeout: 0,
+        invalid: 0,
+        owned: 0,
+        noise: 0,
+      },
+      totalSkipped: 2,
+    })
+  })
+
+  it('leaves the skipped fields out of a run that did not ask for them', () => {
+    let report = buildListReport(createResult([]))
+
+    expect(Object.keys(report)).not.toContain('skipped')
+    expect(Object.keys(report.summary)).toStrictEqual([
+      'totalWarnings',
+      'totalIgnored',
+      'totalFiles',
+      'totalMutants',
+      'totalPending',
+      'totalErrors',
+    ])
   })
 })

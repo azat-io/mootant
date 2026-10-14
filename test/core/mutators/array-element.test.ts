@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
 import { formatMutant } from '../../helpers/format-mutant'
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('arrayElement', () => {
@@ -145,5 +146,14 @@ describe('arrayElement', () => {
     expect(
       runMutator('array-element', source).map(mutant => mutant.status),
     ).toStrictEqual(['Ignored'])
+  })
+
+  it.each<[string, string[]]>([
+    [
+      'useEffect(() => {}, []); a = []; b = [1, , 2]',
+      ['[] -> [undefined] (equivalent hook-dependencies)'],
+    ],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('array-element', source)).toStrictEqual(expected)
   })
 })

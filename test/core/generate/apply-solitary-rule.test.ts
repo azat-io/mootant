@@ -131,7 +131,7 @@ function createCoarse(
  * @returns Kept candidates.
  */
 function apply(candidates: MutantCandidate[]): MutantCandidate[] {
-  return applySolitaryRule(candidates.toSorted(compareCandidates))
+  return applySolitaryRule(candidates.toSorted(compareCandidates)).kept
 }
 
 describe('applySolitaryRule', () => {
@@ -289,5 +289,21 @@ describe('applySolitaryRule', () => {
     let fine = createCandidate({ start: 32, end: 35 })
 
     expect(apply([outer, inner, fine])).toStrictEqual([outer, fine])
+  })
+
+  it('names the finer candidate that dropped each coarse candidate', () => {
+    let outer = createCoarse(0, 20)
+    let inner = createCandidate({
+      solitary: [[30, 40]],
+      registered: COARSE,
+      start: 5,
+      end: 10,
+    })
+    let fine = createCandidate({ start: 32, end: 35 })
+
+    expect(
+      applySolitaryRule([outer, inner, fine].toSorted(compareCandidates))
+        .dropped,
+    ).toStrictEqual(new Map([[inner, fine]]))
   })
 })

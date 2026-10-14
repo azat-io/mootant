@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { listMutantTexts } from '../../helpers/list-mutant-texts'
+import { listSkipped } from '../../helpers/list-skipped'
 
 /**
  * Declarations of the catalog's examples for method-call.
@@ -409,5 +410,40 @@ describe('methodCall', () => {
     expect(
       listMutantTexts('method-call', [code], { file: 'example.js' }),
     ).toStrictEqual(expected)
+  })
+
+  it.each<[string, string[]]>([
+    [
+      'declare let s: string; if (s.toUpperCase()) go()',
+      ['s.toUpperCase() -> s.toLowerCase() (equivalent truth-keeping-swap)'],
+    ],
+    [
+      'declare let s: string; n = s.padStart(8).length',
+      ['s.padStart(8) -> s.padEnd(8) (equivalent length-keeping-swap)'],
+    ],
+    [
+      'declare let s: string; e = s.slice(0)',
+      ['s.slice(0) -> s (equivalent identity-call)'],
+    ],
+    [
+      'interface Q { filter(f: unknown): Q }; declare let q: Q; q.filter(f)',
+      ['q.filter(f) -> q (noise receiver-type)'],
+    ],
+    [
+      'm = foo.max(1, 2)',
+      ['foo.max(1, 2) -> foo.min(1, 2) (noise receiver-type)'],
+    ],
+    [
+      "declare let s: string; if (s.toLowerCase() === 'yes') go()",
+      ['s.toLowerCase() -> s.toUpperCase() (owned O17)'],
+    ],
+    [
+      'class A extends B { m() { return super.trim() } }',
+      ['super.trim() -> super (invalid invalid-target)'],
+    ],
+    ['delete s?.trim().x', ['s?.trim().x -> s?.x (invalid invalid-target)']],
+    ['declare let s: string; use(s.trim())', []],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('method-call', source)).toStrictEqual(expected)
   })
 })

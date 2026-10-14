@@ -175,4 +175,101 @@ describe('getNullishPlan', () => {
 
     expect(listPlannedMutants(plan)).toEqual(expected)
   })
+
+  it.each<{
+    expected: [string, string][]
+    options: NullishOptions
+    source: string
+    group: string
+  }>([
+    {
+      expected: [
+        ['false', 'O15'],
+        ['x || false', 'O15'],
+        ['x', 'falsy-default'],
+      ],
+      source: 'function f(x: boolean | undefined) { if (x ?? false) {} }',
+      group: 'x ?? false',
+      options: STRICT,
+    },
+    {
+      expected: [
+        ['true', 'O15'],
+        ['x || true', 'O15'],
+        ['x', 'O15'],
+      ],
+      source: 'function f(x: boolean | undefined) { if (x ?? true) {} }',
+      group: 'x ?? true',
+      options: STRICT,
+    },
+    {
+      expected: [
+        ['1', 'O15'],
+        ['n || 1', 'O15'],
+        ['n', 'never-nullish'],
+      ],
+      source: 'function f(n: number) { if (n ?? 1) {} }',
+      options: STRICT,
+      group: 'n ?? 1',
+    },
+    {
+      source: 'function f(count: number | null) { x = count ?? 0 }',
+      expected: [['count || 0', 'nullish-swap']],
+      options: RECOMMENDED,
+      group: 'count ?? 0',
+    },
+    {
+      source: 'function f(name: string | null) { x = name ?? "a" }',
+      expected: [['"a"', 'swap-subsumes-drop']],
+      group: 'name ?? "a"',
+      options: RECOMMENDED,
+    },
+    {
+      expected: [
+        ['x || 1', 'nullish-swap'],
+        ['1', 'typed-constant'],
+      ],
+      source: 'function f(x: null) { y = x ?? 1 }',
+      options: RECOMMENDED,
+      group: 'x ?? 1',
+    },
+    {
+      expected: [
+        ['x || 1', 'nullish-swap'],
+        ['x', 'never-nullish'],
+      ],
+      source: 'function f(x: object) { y = x ?? 1 }',
+      options: RECOMMENDED,
+      group: 'x ?? 1',
+    },
+    {
+      expected: [
+        ['y || null', 'nullish-swap'],
+        ['y', 'nullish-normalization'],
+      ],
+      source: 'x = y ?? null',
+      options: RECOMMENDED,
+      group: 'y ?? null',
+    },
+    {
+      expected: [['(a ?? b) || c', 'nullish-swap']],
+      source: 'x = a ?? b ?? c',
+      options: RECOMMENDED,
+      group: 'a ?? b ?? c',
+    },
+  ])(
+    'names the rule of each skipped mutant of $source',
+    ({ expected, options, source, group }) => {
+      let { context, find } = createTestContext(source)
+      let { skipped } = getNullishPlan(
+        find('LogicalExpression', group),
+        context,
+        options,
+      )
+
+      expect(
+        skipped.map(replacement => [replacement.text, replacement.skip!.rule]),
+      ).toEqual(expected)
+    },
+  )
 })

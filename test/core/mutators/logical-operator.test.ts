@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
 import { formatMutant } from '../../helpers/format-mutant'
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('logicalOperator', () => {
@@ -798,4 +799,22 @@ describe('logicalOperator', () => {
       ).toStrictEqual(expected)
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      'function f(title: string, count: number | null, name: string | null) { x = title || ""; y = count ?? 0; z = name || "a" }',
+      [
+        'title || "" -> title (equivalent canonical-falsy-default)',
+        'count ?? 0 -> count || 0 (noise nullish-swap)',
+        'name || "a" -> name (subsumed swap-subsumes-drop)',
+      ],
+    ],
+    [
+      'function f(a, b) { if (b && a > 0) run() }',
+      ['b && a > 0 -> b (subsumed R2)', 'b && a > 0 -> false (subsumed R2)'],
+    ],
+    ['while (a || b) step()', ['a || b -> true (timeout loop-running)']],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('logical-operator', source)).toStrictEqual(expected)
+  })
 })

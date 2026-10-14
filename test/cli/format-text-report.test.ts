@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ListReportSummary } from '../../types/list-report-summary'
+import type { ListReportSkipped } from '../../types/list-report-skipped'
 import type { ListReportMutant } from '../../types/list-report-mutant'
 import type { ListReport } from '../../types/list-report'
 
@@ -32,6 +33,33 @@ function createMutant(overrides: Partial<ListReportMutant>): ListReportMutant {
     start: 11,
     line: 1,
     end: 15,
+    ...overrides,
+  }
+}
+
+/**
+ * Creates a skipped candidate at the start of `example.ts`.
+ *
+ * @param overrides - Fields that differ from the default candidate.
+ * @returns Skipped candidate as the report holds it.
+ */
+function createSkipped(
+  overrides: Partial<ListReportSkipped>,
+): ListReportSkipped {
+  return {
+    reason: 'the type hints prove the comparison is always false',
+    mutator: 'comparison-operator',
+    rule: 'proven-comparison',
+    category: 'equivalent',
+    original: 'a === null',
+    replacement: 'false',
+    file: 'example.ts',
+    heuristic: true,
+    column: 5,
+    start: 4,
+    by: null,
+    line: 1,
+    end: 14,
     ...overrides,
   }
 }
@@ -320,5 +348,72 @@ describe('formatTextReport', () => {
     let text = formatTextReport(createReport([createMutant({})], summary))
 
     expect(text.split('\n').at(-1)).toBe(expected)
+  })
+
+  it('prints the skipped section after the mutants with counts by category', () => {
+    let report = createReport([createMutant({})], {
+      skippedByCategory: {
+        equivalent: 1,
+        duplicate: 0,
+        subsumed: 0,
+        timeout: 0,
+        invalid: 0,
+        owned: 1,
+        noise: 0,
+      },
+      totalSkipped: 2,
+    })
+    report.skipped = [
+      createSkipped({}),
+      createSkipped({
+        reason:
+          'logical-operator owns the truth value of a boolean-mode operand',
+        file: 'src/example.ts',
+        mutator: 'condition',
+        replacement: 'true',
+        category: 'owned',
+        original: 'ready',
+        rule: 'O3',
+        line: 12,
+      }),
+    ]
+
+    expect(formatTextReport(report)).toBe(
+      [
+        "example.ts:1:12  000000000001  string-literal  'cm' -> ''",
+        '',
+        'Skipped:',
+        'example.ts:1:5       comparison-operator  a === null -> false (skipped: equivalent proven-comparison: the type hints prove the comparison is always false)',
+        'src/example.ts:12:5  condition            ready -> true (skipped: owned O3: logical-operator owns the truth value of a boolean-mode operand)',
+        '',
+        '1 mutant in 1 file: 1 pending, 0 ignored (preset: recommended)',
+        '2 skipped: 1 equivalent, 1 owned',
+      ].join('\n'),
+    )
+  })
+
+  it('prints only the summaries when nothing is listed or skipped', () => {
+    let report = createReport([], {
+      skippedByCategory: {
+        equivalent: 0,
+        duplicate: 0,
+        subsumed: 0,
+        timeout: 0,
+        invalid: 0,
+        owned: 0,
+        noise: 0,
+      },
+      totalPending: 0,
+      totalMutants: 0,
+      totalSkipped: 0,
+    })
+    report.skipped = []
+
+    expect(formatTextReport(report)).toBe(
+      [
+        '0 mutants in 1 file: 0 pending, 0 ignored (preset: recommended)',
+        '0 skipped',
+      ].join('\n'),
+    )
   })
 })

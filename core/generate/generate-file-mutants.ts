@@ -1,7 +1,9 @@
 import type { Node } from 'oxc-parser'
 
+import type { SkippedCandidate } from '../../types/skipped-candidate'
 import type { MutantCandidate } from '../../types/mutant-candidate'
 import type { PresetSettings } from '../../types/preset-settings'
+import type { SkippedMutant } from '../../types/skipped-mutant'
 import type { ScopeAnalysis } from '../../types/scope-analysis'
 import type { ActiveMutator } from '../../types/active-mutator'
 import type { FileMutants } from '../../types/file-mutants'
@@ -27,6 +29,7 @@ import { collectCandidates } from './collect-candidates'
 import { compareCandidates } from './compare-candidates'
 import { analyzeScopes } from '../hints/analyze-scopes'
 import { parseFile } from '../parser/parse-file'
+import { skipRules } from '../skips/skip-rules'
 import { indexTree } from '../tree/index-tree'
 
 /**
@@ -50,6 +53,12 @@ interface GenerateFileInput {
   mutators: readonly ActiveMutator[]
 
   /**
+   * Whether the candidates that were considered and not emitted are listed;
+   * false when omitted.
+   */
+  skipped?: boolean
+
+  /**
    * Text of the file as read from disk.
    */
   source: string
@@ -58,6 +67,38 @@ interface GenerateFileInput {
    * Display path of the file, also hashed into mutant ids.
    */
   file: string
+}
+
+/**
+ * Candidates of a file at the end of the pipeline, with what dropped the
+ * others.
+ */
+interface Selection {
+  /**
+   * Candidates deduplication dropped, with the kept candidate each duplicates.
+   */
+  duplicates: ReadonlyMap<MutantCandidate, MutantCandidate>
+
+  /**
+   * Coarse candidates the solitary rule dropped, with the finer candidate that
+   * dropped each.
+   */
+  solitary: ReadonlyMap<MutantCandidate, MutantCandidate>
+
+  /**
+   * Id of every candidate.
+   */
+  ids: ReadonlyMap<MutantCandidate, string>
+
+  /**
+   * Replacements the mutators and the collection did not accept.
+   */
+  collected: readonly SkippedCandidate[]
+
+  /**
+   * Candidates that become mutants, in canonical order.
+   */
+  kept: readonly MutantCandidate[]
 }
 
 /**
@@ -101,12 +142,16 @@ interface PreparedProgram {
  * block are sorted together and every candidate gets its id before the solitary
  * rule drops coarse ones, unless the `coarseMutants` setting is on, and
  * deduplication drops duplicate ones. Kept candidates become pending mutants,
- * or ignored ones with the reason and comment of their ignore rule. Depends
- * only on its input.
+ * or ignored ones with the reason and comment of their ignore rule. On request,
+ * the candidates that a mutator, the collection, the solitary rule or
+ * deduplication did not keep are listed as skipped, in canonical order, except
+ * no-ops; they never change the mutants or their ids. Depends only on its
+ * input.
  *
  * @param input - File, text, active mutators, preset settings and known mutator
  *   ids.
- * @returns Mutants in canonical order and the problems of the file.
+ * @returns Mutants in canonical order, skipped candidates and the problems of
+ *   the file.
  */
 export function generateFileMutants(input: GenerateFileInput): FileMutants {
   let { knownMutatorIds, source, file } = input
@@ -124,6 +169,7 @@ export function generateFileMutants(input: GenerateFileInput): FileMutants {
     return {
       diagnostics: parseDiagnostics,
       parsed: false,
+      skipped: [],
       mutants: [],
       source,
       file,
@@ -135,6 +181,7 @@ export function generateFileMutants(input: GenerateFileInput): FileMutants {
   )
   let diagnostics = [...parseDiagnostics]
   let collected: MutantCandidate[] = []
+  let collectedSkipped: SkippedCandidate[] = []
   for (let program of programs) {
     let rules = [
       ...program.rules,
@@ -143,6 +190,7 @@ export function generateFileMutants(input: GenerateFileInput): FileMutants {
     let collection = collectProgramCandidates(input, program, rules)
     diagnostics.push(...collection.diagnostics, ...program.diagnostics)
     collected.push(...collection.candidates)
+    collectedSkipped.push(...collection.skipped)
   }
 
   let candidates = collected
@@ -152,12 +200,31 @@ export function generateFileMutants(input: GenerateFileInput): FileMutants {
     )
     .toSorted(compareCandidates)
   let ids = assignMutantIds(candidates, file, source)
-  let kept = deduplicateCandidates(
-    input.settings.coarseMutants ? candidates : applySolitaryRule(candidates),
+  let solitary =
+    input.settings.coarseMutants ? null : applySolitaryRule(candidates)
+  let deduplication = deduplicateCandidates(
+    solitary?.kept ?? candidates,
     source,
   )
+  let { kept } = deduplication
 
   return {
+    skipped:
+      input.skipped ?
+        listSkipped(
+          {
+            collected: collectedSkipped.filter(
+              candidate =>
+                candidate.text !== source.slice(candidate.start, candidate.end),
+            ),
+            solitary: solitary?.dropped ?? new Map(),
+            duplicates: deduplication.duplicates,
+            kept,
+            ids,
+          },
+          file,
+        )
+      : [],
     mutants: kept.map(candidate =>
       createMutant(candidate, ids.get(candidate)!, file),
     ),
@@ -166,6 +233,85 @@ export function generateFileMutants(input: GenerateFileInput): FileMutants {
     source,
     file,
   }
+}
+
+/**
+ * Lists the candidates of a file that are not mutants: the replacements the
+ * collection did not accept, the coarse candidates of the solitary rule and the
+ * duplicates. A dropped candidate names the candidate that dropped it, with its
+ * id when that candidate is a mutant.
+ *
+ * @param selection - Kept candidates, their ids and what dropped the others.
+ * @param file - Display path of the file.
+ * @returns Skipped mutants in canonical order.
+ */
+function listSkipped(selection: Selection, file: string): SkippedMutant[] {
+  let { duplicates, collected, solitary, kept, ids } = selection
+  let listed = new Set(kept)
+  let dropped: SkippedCandidate[] = []
+
+  /**
+   * Builds the skipped candidate of a candidate that a later step dropped.
+   *
+   * @param candidate - Candidate that the solitary rule or deduplication
+   *   dropped.
+   * @param justifier - Candidate that made it redundant.
+   * @param note - Rule and reason of the skip.
+   * @returns Candidate with its range and text, the rule and the candidate that
+   *   dropped it.
+   */
+  function createDropped(
+    candidate: MutantCandidate,
+    justifier: MutantCandidate,
+    note: Pick<SkippedCandidate, 'reason' | 'rule'>,
+  ): SkippedCandidate {
+    return {
+      by: {
+        id: listed.has(justifier) ? ids.get(justifier)! : null,
+        mutator: justifier.registered.id,
+        start: justifier.start,
+      },
+      registered: candidate.registered,
+      emission: candidate.emission,
+      start: candidate.start,
+      text: candidate.text,
+      end: candidate.end,
+      heuristic: false,
+      ...note,
+    }
+  }
+
+  for (let [candidate, inner] of solitary) {
+    dropped.push(
+      createDropped(candidate, inner, {
+        reason: `a finer ${inner.registered.id} mutant lies inside the code it removes, and killing that mutant needs a test that observes this code`,
+        rule: 'solitary',
+      }),
+    )
+  }
+  for (let [candidate, first] of duplicates) {
+    dropped.push(
+      createDropped(candidate, first, {
+        reason: `it produces the same mutated file as an earlier ${first.registered.id} mutant`,
+        rule: 'duplicate',
+      }),
+    )
+  }
+
+  return [...collected, ...dropped]
+    .toSorted(compareCandidates)
+    .map(candidate => ({
+      ...skipRules[candidate.rule],
+      heuristic: skipRules[candidate.rule].heuristic || candidate.heuristic,
+      mutator: candidate.registered.id,
+      replacement: candidate.text,
+      reason: candidate.reason,
+      start: candidate.start,
+      rule: candidate.rule,
+      end: candidate.end,
+      by: candidate.by,
+      file,
+    }))
 }
 
 /**
@@ -204,6 +350,7 @@ function collectProgramCandidates(
       syntax: createSyntaxHelpers(tree, scopes),
       settings,
     },
+    skipped: input.skipped ?? false,
     mutators,
     parsed,
     rules,

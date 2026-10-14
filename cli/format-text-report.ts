@@ -7,37 +7,72 @@ import type { ListReport } from '../types/list-report'
 const MAX_FRAGMENT_LENGTH = 60
 
 /**
+ * Line of a list before its columns are aligned.
+ */
+interface Row {
+  /**
+   * `file:line:column` of the first replaced character.
+   */
+  location: string
+
+  /**
+   * Id of the mutator.
+   */
+  mutator: string
+
+  /**
+   * Text after the mutator column.
+   */
+  change: string
+
+  /**
+   * Text between the location and the mutator, with its trailing separator,
+   * such as the id of a mutant.
+   */
+  middle: string
+}
+
+/**
  * Formats a report as one aligned line per mutant, an empty line and a summary
- * line. With no mutants only the summary line is returned.
+ * line. With no mutants only the summary line is returned. A report with
+ * skipped candidates also gets a `Skipped:` section after the mutants, one
+ * aligned line per candidate with its category, rule and reason, and a second
+ * summary line that counts them by category.
  *
  * @param report - Report of a list run.
  * @returns Plain text without colors.
  */
 export function formatTextReport(report: ListReport): string {
   let summary = formatSummary(report.summary, report.preset)
-  if (report.mutants.length === 0) {
-    return summary
+  let sections: string[] = []
+  if (report.mutants.length > 0) {
+    sections.push(
+      formatRows(
+        report.mutants.map(mutant => ({
+          change: `${formatChange(mutant)}${mutant.status === 'Ignored' ? ` (ignored: ${mutant.reason})` : ''}`,
+          location: `${mutant.file}:${mutant.line}:${mutant.column}`,
+          middle: `${mutant.id}  `,
+          mutator: mutant.mutator,
+        })),
+      ),
+    )
   }
-
-  let locations: string[] = []
-  let locationWidth = 0
-  let mutatorWidth = 0
-  for (let mutant of report.mutants) {
-    let location = `${mutant.file}:${mutant.line}:${mutant.column}`
-    locations.push(location)
-    locationWidth = Math.max(locationWidth, location.length)
-    mutatorWidth = Math.max(mutatorWidth, mutant.mutator.length)
+  if (report.skipped) {
+    if (report.skipped.length > 0) {
+      let rows = formatRows(
+        report.skipped.map(candidate => ({
+          change: `${formatChange(candidate)} (skipped: ${candidate.category} ${candidate.rule}: ${candidate.reason})`,
+          location: `${candidate.file}:${candidate.line}:${candidate.column}`,
+          mutator: candidate.mutator,
+          middle: '',
+        })),
+      )
+      sections.push(`Skipped:\n${rows}`)
+    }
+    summary += `\n${formatSkippedSummary(report.summary)}`
   }
-
-  let lines = report.mutants.map((mutant, index) => {
-    let location = locations[index]!.padEnd(locationWidth)
-    let mutator = mutant.mutator.padEnd(mutatorWidth)
-    let change = `${shortenFragment(mutant.original)} -> ${shortenFragment(mutant.replacement)}`
-    let suffix =
-      mutant.status === 'Ignored' ? ` (ignored: ${mutant.reason})` : ''
-    return `${location}  ${mutant.id}  ${mutator}  ${change}${suffix}`
-  })
-  return `${lines.join('\n')}\n\n${summary}`
+  sections.push(summary)
+  return sections.join('\n\n')
 }
 
 /**
@@ -57,6 +92,27 @@ function formatSummary(summary: ListReportSummary, preset: string): string {
     text += `, ${pluralize(summary.totalWarnings, 'warning')}`
   }
   return `${text} (preset: ${preset})`
+}
+
+/**
+ * Formats rows with the location and mutator columns aligned.
+ *
+ * @param rows - Rows of one list.
+ * @returns The lines joined with line breaks.
+ */
+function formatRows(rows: readonly Row[]): string {
+  let locationWidth = 0
+  let mutatorWidth = 0
+  for (let row of rows) {
+    locationWidth = Math.max(locationWidth, row.location.length)
+    mutatorWidth = Math.max(mutatorWidth, row.mutator.length)
+  }
+  return rows
+    .map(
+      row =>
+        `${row.location.padEnd(locationWidth)}  ${row.middle}${row.mutator.padEnd(mutatorWidth)}  ${row.change}`,
+    )
+    .join('\n')
 }
 
 /**
@@ -80,6 +136,35 @@ function shortenFragment(text: string): string {
     cut -= 1
   }
   return `${collapsed.slice(0, cut)}...`
+}
+
+/**
+ * Formats the line that counts skipped candidates, naming only the categories
+ * that have some.
+ *
+ * @param summary - Counts of a run with skipped candidates.
+ * @returns One line of text, such as `3 skipped: 2 equivalent, 1 owned`.
+ */
+function formatSkippedSummary(summary: ListReportSummary): string {
+  let counts = Object.entries(summary.skippedByCategory!)
+    .filter(([, count]) => count > 0)
+    .map(([category, count]) => `${count} ${category}`)
+  let total = `${summary.totalSkipped} skipped`
+  return counts.length === 0 ? total : `${total}: ${counts.join(', ')}`
+}
+
+/**
+ * Formats the change of a mutant or skipped candidate as `original ->
+ * replacement`.
+ *
+ * @param entry - Original and replacement texts.
+ * @returns The change on one line.
+ */
+function formatChange(entry: {
+  replacement: string
+  original: string
+}): string {
+  return `${shortenFragment(entry.original)} -> ${shortenFragment(entry.replacement)}`
 }
 
 /**

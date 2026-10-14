@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest'
 import type { TestContextSetup } from '../../../helpers/create-test-context'
 
 import { createRunContext } from '../../../../core/mutators/shared/create-run-context'
-import { isMovedToward } from '../../../../core/mutators/shared/is-moved-toward'
+import { getTowardMutant } from '../../../../core/mutators/shared/get-toward-mutant'
 import { createTestContext } from '../../../helpers/create-test-context'
 
-describe('isMovedToward', () => {
+describe('getTowardMutant', () => {
   it.each<{
     setup: TestContextSetup
     type: Node['type']
@@ -304,14 +304,14 @@ describe('isMovedToward', () => {
       let decision = find(type, text)
 
       expect(
-        isMovedToward(
+        getTowardMutant(
           {
             candidate: { mutator: 'statement-removal', node: decision },
             decision,
             value,
           },
           createRunContext(context),
-        ),
+        ) !== null,
       ).toBe(expected)
     },
   )
@@ -329,7 +329,7 @@ describe('isMovedToward', () => {
     let { context, find } = createTestContext(source)
 
     expect(
-      isMovedToward(
+      getTowardMutant(
         {
           candidate: {
             node: find('ExpressionStatement'),
@@ -339,7 +339,84 @@ describe('isMovedToward', () => {
           value: false,
         },
         createRunContext(context),
-      ),
+      ) !== null,
     ).toBe(expected)
   })
+
+  it.each<{
+    expected: string | null
+    type: Node['type']
+    source: string
+    value: boolean
+    text: string
+  }>([
+    {
+      source: 'if (x) notify(x)',
+      expected: 'condition x',
+      type: 'Identifier',
+      value: false,
+      text: 'x',
+    },
+    {
+      expected: 'comparison-operator x > 1',
+      source: 'if (x > 1) notify(x)',
+      type: 'BinaryExpression',
+      text: 'x > 1',
+      value: false,
+    },
+    {
+      expected: 'logical-operator a && b',
+      source: 'if (a && b) notify(a)',
+      type: 'LogicalExpression',
+      text: 'a && b',
+      value: false,
+    },
+    {
+      source: 'function f(y, z) { return y ? x > 1 : z }',
+      expected: 'comparison-operator x > 1',
+      type: 'ConditionalExpression',
+      text: 'y ? x > 1 : z',
+      value: true,
+    },
+    {
+      source:
+        'function f(e: string | undefined, y: string) { if (a && (e ?? y)) {} }',
+      expected: 'logical-operator e ?? y',
+      type: 'LogicalExpression',
+      text: 'e ?? y',
+      value: false,
+    },
+    {
+      source: 'if (a ?? false) notify(a)',
+      expected: 'boolean-literal false',
+      type: 'LogicalExpression',
+      text: 'a ?? false',
+      value: true,
+    },
+    {
+      source: 'function f(c) { return c ? x : y }',
+      type: 'ConditionalExpression',
+      text: 'c ? x : y',
+      expected: null,
+      value: true,
+    },
+  ])(
+    'finds the mutant of $source at $text toward $value',
+    ({ expected, source, value, type, text }) => {
+      let { context, find } = createTestContext(source)
+      let decision = find(type, text)
+      let site = getTowardMutant(
+        {
+          candidate: { mutator: 'statement-removal', node: decision },
+          decision,
+          value,
+        },
+        createRunContext(context),
+      )
+
+      expect(
+        site && `${site.mutator} ${context.sourceCode.getText(site.node)}`,
+      ).toBe(expected)
+    },
+  )
 })

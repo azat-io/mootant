@@ -1,3 +1,4 @@
+import type { SkippedMutant } from './skipped-mutant'
 import type { Diagnostic } from './diagnostic'
 import type { Mutant } from './mutant'
 
@@ -10,6 +11,12 @@ export interface FileMutants {
    * directive warnings.
    */
   diagnostics: Diagnostic[]
+
+  /**
+   * Candidates that were considered and not emitted, in canonical order. Empty
+   * unless the run asked for them.
+   */
+  skipped: SkippedMutant[]
 
   /**
    * Text of the file as read, or null when it could not be read.

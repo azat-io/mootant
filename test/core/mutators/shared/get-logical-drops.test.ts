@@ -237,4 +237,94 @@ describe('getLogicalDrops', () => {
   ])('swaps in always mode: %s', (source, group, expected) => {
     expect(dropsOf(source, group, { mode: 'always' })).toEqual(expected)
   })
+
+  it.each<{ expected: [string, string][]; source: string; group: string }>([
+    {
+      expected: [['b', 'fixed-operand']],
+      source: 'if (true && b) run()',
+      group: 'true && b',
+    },
+    {
+      expected: [['a', 'fixed-operand']],
+      source: 'if (a && true) run()',
+      group: 'a && true',
+    },
+    {
+      expected: [['false', 'fixed-operand']],
+      source: 'if (false && b) run()',
+      group: 'false && b',
+    },
+    {
+      expected: [['false', 'fixed-operand']],
+      source: 'if (a && false) run()',
+      group: 'a && false',
+    },
+    {
+      source: 'function f(list: string[]) { x = list && b }',
+      expected: [['b', 'typed-constant']],
+      group: 'list && b',
+    },
+    {
+      source: 'function f(list: string[]) { x = list || b }',
+      expected: [['list', 'typed-constant']],
+      group: 'list || b',
+    },
+    {
+      expected: [
+        ['b', 'typed-constant'],
+        ['n ?? b', 'nullish-swap'],
+      ],
+      source: 'function f(n: null) { x = n || b }',
+      group: 'n || b',
+    },
+    {
+      source: 'function f(n: null) { x = n && b }',
+      expected: [['n', 'typed-constant']],
+      group: 'n && b',
+    },
+    {
+      source: "function f(title: string) { x = title || '' }",
+      expected: [['title', 'canonical-falsy-default']],
+      group: "title || ''",
+    },
+    {
+      source: "function f(title: string) { x = title && '' }",
+      expected: [["''", 'canonical-falsy-default']],
+      group: "title && ''",
+    },
+    {
+      source: 'function f(a, b) { if (b && a > 0) run() }',
+      expected: [['b', 'R2']],
+      group: 'b && a > 0',
+    },
+    {
+      source: 'function f(count: number | null) { x = count || 0 }',
+      expected: [['count ?? 0', 'nullish-swap']],
+      group: 'count || 0',
+    },
+    {
+      source: 'function f(name: string | null) { x = name || "a" }',
+      expected: [['name', 'swap-subsumes-drop']],
+      group: 'name || "a"',
+    },
+    {
+      source: 'if (a && b && c) run()',
+      group: 'a && b && c',
+      expected: [],
+    },
+  ])(
+    'names the rule of each skipped drop of $source',
+    ({ expected, source, group }) => {
+      let { context, find } = createTestContext(source)
+      let { skipped } = getLogicalDrops(
+        find('LogicalExpression', group),
+        createRunContext(context),
+        'distinguishing',
+      )
+
+      expect(
+        skipped.map(replacement => [replacement.text, replacement.skip!.rule]),
+      ).toEqual(expected)
+    },
+  )
 })

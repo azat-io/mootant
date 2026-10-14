@@ -15,6 +15,9 @@ const HELP_TEXT = [
   'Options:',
   '  --preset <name>  Mutator preset: recommended or strict (default: recommended)',
   '  --json           Print the list as JSON',
+  '  --skipped        Also list the mutants that were considered and skipped,',
+  '                   with the reason; code that is never mutated, such as',
+  '                   types, decorators and enums, is not listed',
   '  -h, --help       Display this message',
   '  -v, --version    Display version number',
 ].join('\n')
@@ -82,20 +85,21 @@ describe('parseArguments', () => {
       options: {
         paths: ['src', 'lib/a.ts'],
         preset: 'recommended',
+        skipped: false,
         json: false,
       },
       kind: 'list',
     })
   })
 
-  it('reads --json and --preset wherever they appear', () => {
+  it('reads --json, --skipped and --preset wherever they appear', () => {
     let result = parseArguments(
-      ['--json', 'list', '--preset', 'strict', 'src'],
+      ['--json', 'list', '--preset', 'strict', 'src', '--skipped'],
       '1.0.0',
     )
 
     expect(result).toStrictEqual({
-      options: { preset: 'strict', paths: ['src'], json: true },
+      options: { preset: 'strict', paths: ['src'], skipped: true, json: true },
       kind: 'list',
     })
   })
@@ -107,6 +111,7 @@ describe('parseArguments', () => {
       options: {
         paths: ['--json', 'src'],
         preset: 'recommended',
+        skipped: false,
         json: false,
       },
       kind: 'list',

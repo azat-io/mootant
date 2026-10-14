@@ -76,6 +76,7 @@ function createResult(diagnostics: Diagnostic[]): ListResult {
         file: 'example.ts',
         diagnostics: [],
         parsed: true,
+        skipped: [],
       },
     ],
     mutators: [
@@ -90,6 +91,7 @@ function createResult(diagnostics: Diagnostic[]): ListResult {
       },
     ],
     preset: 'recommended',
+    skipped: false,
     diagnostics,
   }
 }
@@ -113,19 +115,30 @@ describe('runList', () => {
   it('passes the options and the working directory to the run', async () => {
     vi.mocked(listMutants).mockResolvedValue(createResult([]))
 
-    await runList({ paths: ['src', 'lib'], preset: 'strict', json: false })
+    await runList({
+      paths: ['src', 'lib'],
+      preset: 'strict',
+      skipped: true,
+      json: false,
+    })
 
     expect(listMutants).toHaveBeenCalledExactlyOnceWith({
       paths: ['src', 'lib'],
       cwd: process.cwd(),
       preset: 'strict',
+      skipped: true,
     })
   })
 
   it('prints the text report and leaves the exit code alone', async () => {
     vi.mocked(listMutants).mockResolvedValue(createResult([]))
 
-    await runList({ preset: 'recommended', paths: ['src'], json: false })
+    await runList({
+      preset: 'recommended',
+      paths: ['src'],
+      skipped: false,
+      json: false,
+    })
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
       [
@@ -144,7 +157,12 @@ describe('runList', () => {
       createResult([readError, unknownMutator, skippedPath]),
     )
 
-    await runList({ preset: 'recommended', paths: ['src'], json: false })
+    await runList({
+      preset: 'recommended',
+      paths: ['src'],
+      skipped: false,
+      json: false,
+    })
 
     expect(consoleWarnSpy.mock.calls).toStrictEqual([
       [
@@ -166,7 +184,12 @@ describe('runList', () => {
       createResult([readError, skippedPath]),
     )
 
-    await runList({ preset: 'recommended', paths: ['src'], json: true })
+    await runList({
+      preset: 'recommended',
+      paths: ['src'],
+      skipped: false,
+      json: true,
+    })
 
     let [[output]] = consoleInfoSpy.mock.calls as [[string]]
 
@@ -188,7 +211,12 @@ describe('runList', () => {
       new Error('Paths not found: src/missing.ts, lib.'),
     )
 
-    await runList({ preset: 'recommended', paths: ['src'], json: false })
+    await runList({
+      preset: 'recommended',
+      paths: ['src'],
+      skipped: false,
+      json: false,
+    })
 
     expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
       '\nError:',

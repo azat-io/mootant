@@ -1,6 +1,7 @@
 import type { UnaryExpression, Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator-context'
+import type { SkipNote } from '../../types/skip-note'
 import type { Mutator } from '../../types/mutator'
 
 import { getLiteralValue } from './shared/get-literal-value'
@@ -11,24 +12,31 @@ import { getTypeView } from './shared/get-type-view'
  * the argument with its parentheses. `~~x` is one unit, also as `~(~x)`: the
  * outer `~` gives `x` and the inner one nothing. Any other operator removes
  * only itself: `-~x` gives `~x`. Skipped: `-` applied to a number literal
- * (number-literal owns it) and `+x` when `x` is a literal or hinted to be only
- * a number, never nullish or a BigInt (EQ): `+null` is `0`, `+undefined` is
- * `NaN` and `+1n` throws. `!`, `typeof`, `void` and `delete` are never
- * mutated.
+ * (number-literal owns it), `+x` when `x` is a number literal or hinted to be
+ * only a number, never nullish or a BigInt (EQ), and `+x` of any other literal
+ * (NOISE: `+'3'` is a number, `+1n` throws). The inner `~` of `~~x` and `!`,
+ * `typeof`, `void` and `delete` are never mutated.
  */
 export let unaryOperator: Mutator = {
   create(context) {
     let { sourceCode, syntax } = context
     return {
       UnaryExpression(node, parent) {
-        if (isSkipped(node, parent, context)) {
+        if (
+          (node.operator !== '-' &&
+            node.operator !== '+' &&
+            node.operator !== '~') ||
+          (node.operator === '~' && isTilde(parent))
+        ) {
           return []
         }
         let { argument } = node
         let inner = syntax.unwrapParentheses(argument)
         let kept =
           node.operator === '~' && isTilde(inner) ? inner.argument : argument
-        return [{ text: sourceCode.getText(kept), node }]
+        let text = sourceCode.getText(kept)
+        let skip = getSkip(node, context)
+        return [skip ? { text, skip, node } : { text, node }]
       },
     }
   },
@@ -38,35 +46,50 @@ export let unaryOperator: Mutator = {
 }
 
 /**
- * Tells whether a unary expression gets no mutant (catalog 4.17).
+ * Decides whether the removal of a `-` or `+` is skipped (catalog 4.17).
  *
- * @param node - Unary expression.
- * @param parent - Direct parent of the expression.
+ * @param node - Unary `-`, `+` or `~` expression.
  * @param context - Mutator context of the file.
- * @returns Whether the expression is not mutated.
+ * @returns Rule and reason of the skip, or null when the mutant is emitted.
  */
-function isSkipped(
+function getSkip(
   node: UnaryExpression,
-  parent: Node | null,
   context: MutatorContext,
-): boolean {
-  switch (node.operator) {
-    case '-': {
-      let value = getLiteralValue(node)
-      return typeof value === 'number' || typeof value === 'bigint'
-    }
-    case '+': {
-      if (context.syntax.unwrapParentheses(node.argument).type === 'Literal') {
-        return true
-      }
-      let view = getTypeView(context.hints.getType(node.argument))
-      return view.type === 'number' && view.nullability === 'non-nullable'
-    }
-    case '~':
-      return isTilde(parent)
-    default:
-      return true
+): SkipNote | null {
+  if (node.operator === '-') {
+    let value = getLiteralValue(node)
+    return typeof value === 'number' || typeof value === 'bigint' ?
+        {
+          reason: 'number-literal owns the sign of a number literal',
+          by: { mutator: 'number-literal', node },
+          rule: 'negative-literal',
+        }
+      : null
   }
+  if (node.operator === '+') {
+    let argument = context.syntax.unwrapParentheses(node.argument)
+    if (argument.type === 'Literal') {
+      return typeof getLiteralValue(argument) === 'number' ?
+          {
+            reason: 'the operand is a number literal',
+            rule: 'number-literal-plus',
+          }
+        : {
+            reason:
+              'it converts a literal that is not a number, which a test rarely relies on',
+            rule: 'literal-coercion',
+          }
+    }
+    let view = getTypeView(context.hints.getType(node.argument))
+    return view.type === 'number' && view.nullability === 'non-nullable' ?
+        {
+          reason:
+            'the type hints make the operand a number that is never nullish',
+          rule: 'numeric-plus',
+        }
+      : null
+  }
+  return null
 }
 
 /**

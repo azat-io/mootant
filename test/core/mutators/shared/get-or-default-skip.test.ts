@@ -4,24 +4,25 @@ import { describe, expect, it } from 'vitest'
 
 import type { LiteralValue } from '../../../../core/mutators/shared/get-literal-value'
 import type { TestContextSetup } from '../../../helpers/create-test-context'
+import type { SkipRuleId } from '../../../../types/skip-rule-id'
 
-import { isOrDefaultSkipped } from '../../../../core/mutators/shared/is-or-default-skipped'
+import { getOrDefaultSkip } from '../../../../core/mutators/shared/get-or-default-skip'
 import { createRunContext } from '../../../../core/mutators/shared/create-run-context'
 import { createTestContext } from '../../../helpers/create-test-context'
 
-describe('isOrDefaultSkipped', () => {
+describe('getOrDefaultSkip', () => {
   it.each<{
+    expected: SkipRuleId | null
     setup: TestContextSetup
     value: LiteralValue
     type: Node['type']
-    expected: boolean
     source: string
     text: string
   }>([
     {
       source: "function f(t: string) { x = t || 'a' }",
       type: 'Literal',
-      expected: true,
+      expected: 'O16',
       text: "'a'",
       value: '',
       setup: {},
@@ -30,7 +31,7 @@ describe('isOrDefaultSkipped', () => {
       source: "function f(n: string | undefined) { x = n || 'anon' }",
       type: 'Literal',
       text: "'anon'",
-      expected: true,
+      expected: 'R7',
       value: '',
       setup: {},
     },
@@ -38,7 +39,7 @@ describe('isOrDefaultSkipped', () => {
       source: "function f(n: string | undefined) { x = n || 'anon' }",
       setup: { disabled: ['logical-operator'] },
       type: 'Literal',
-      expected: false,
+      expected: null,
       text: "'anon'",
       value: '',
     },
@@ -50,7 +51,7 @@ describe('isOrDefaultSkipped', () => {
         '}',
       ].join('\n'),
       type: 'Literal',
-      expected: false,
+      expected: null,
       text: "'anon'",
       value: '',
       setup: {},
@@ -58,7 +59,7 @@ describe('isOrDefaultSkipped', () => {
     {
       source: 'function f(n: number) { x = n || -1 }',
       type: 'UnaryExpression',
-      expected: true,
+      expected: 'O16',
       text: '-1',
       setup: {},
       value: 0,
@@ -66,7 +67,7 @@ describe('isOrDefaultSkipped', () => {
     {
       source: 'function f(n: bigint) { x = n || -1n }',
       type: 'UnaryExpression',
-      expected: true,
+      expected: 'O16',
       text: '-1n',
       value: 0n,
       setup: {},
@@ -74,7 +75,7 @@ describe('isOrDefaultSkipped', () => {
     {
       source: 'function f(n: number) { x = n || 1 }',
       type: 'Literal',
-      expected: false,
+      expected: null,
       text: '1',
       setup: {},
       value: 2,
@@ -82,7 +83,7 @@ describe('isOrDefaultSkipped', () => {
     {
       source: 'function f(v: boolean | undefined) { x = v || true }',
       type: 'Literal',
-      expected: true,
+      expected: 'R7',
       text: 'true',
       value: false,
       setup: {},
@@ -90,7 +91,7 @@ describe('isOrDefaultSkipped', () => {
     {
       source: "function f(t: string) { if (t || 'a') {} }",
       type: 'Literal',
-      expected: false,
+      expected: null,
       text: "'a'",
       value: '',
       setup: {},
@@ -98,7 +99,7 @@ describe('isOrDefaultSkipped', () => {
     {
       source: "function f(t: string) { x = 'a' || t }",
       type: 'Literal',
-      expected: false,
+      expected: null,
       text: "'a'",
       value: '',
       setup: {},
@@ -106,7 +107,7 @@ describe('isOrDefaultSkipped', () => {
     {
       source: "function f(t: string) { x = t ?? 'a' }",
       type: 'Literal',
-      expected: false,
+      expected: null,
       text: "'a'",
       value: '',
       setup: {},
@@ -114,7 +115,7 @@ describe('isOrDefaultSkipped', () => {
     {
       source: "function f(t: string) { x = t && 'a' }",
       type: 'Literal',
-      expected: false,
+      expected: null,
       text: "'a'",
       value: '',
       setup: {},
@@ -122,7 +123,7 @@ describe('isOrDefaultSkipped', () => {
     {
       source: "x = y || 'a'",
       type: 'Literal',
-      expected: false,
+      expected: null,
       text: "'a'",
       value: '',
       setup: {},
@@ -130,7 +131,7 @@ describe('isOrDefaultSkipped', () => {
     {
       source: "function f(n: string | undefined) { x = (n && m) || 'a' }",
       type: 'Literal',
-      expected: false,
+      expected: null,
       text: "'a'",
       value: '',
       setup: {},
@@ -139,7 +140,8 @@ describe('isOrDefaultSkipped', () => {
     let { context, find } = createTestContext(source, setup)
 
     expect(
-      isOrDefaultSkipped(find(type, text), value, createRunContext(context)),
+      getOrDefaultSkip(find(type, text), value, createRunContext(context))
+        ?.rule ?? null,
     ).toBe(expected)
   })
 })

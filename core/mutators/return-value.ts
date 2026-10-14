@@ -3,17 +3,18 @@ import type { VariableDeclarator, Node } from 'oxc-parser'
 import type { ReturnValueKind } from './shared/get-return-value-kind'
 import type { MutatorContext } from '../../types/mutator-context'
 import type { Replacement } from '../../types/replacement'
+import type { SkipNote } from '../../types/skip-note'
 import type { Binding } from '../../types/binding'
 import type { Mutator } from '../../types/mutator'
 
 import { getReturnValueKind } from './shared/get-return-value-kind'
 import { isPlainReturnValue } from './shared/is-plain-return-value'
-import { ownerEmitsConstant } from './shared/owner-emits-constant'
 import { getCallbackResult } from './shared/get-callback-result'
+import { getOwnerConstant } from './shared/get-owner-constant'
 import { createRunContext } from './shared/create-run-context'
 import { getLiteralValue } from './shared/get-literal-value'
+import { getTowardMutant } from './shared/get-toward-mutant'
 import { emptiesCallback } from './shared/empties-callback'
-import { isMovedToward } from './shared/is-moved-toward'
 
 /**
  * Default written in place of a returned value.
@@ -58,7 +59,8 @@ let effectTypes = new Set<Node['type']>([
  * value or that makes the comparator of an in-place `sort` a no-op (O12) is
  * skipped. Every default but the boolean constants is solitary (2.6); the
  * boolean constants are skipped when the owner of the result emits them (O19)
- * or while a mutant moves the result toward them (R6).
+ * or while a mutant moves the result toward them (R6). Skipped mutants follow
+ * as skipped replacements.
  */
 export let returnValue: Mutator = {
   create(context) {
@@ -80,7 +82,10 @@ export let returnValue: Mutator = {
 }
 
 /**
- * Builds the defaults of one returned value.
+ * Builds the defaults of one returned value. A logging call (NOISE), a `void`
+ * default of a value without an effect (EQ), a default that empties a no-op
+ * callback (O12) and a boolean constant that the owner emits (O19) or a mutant
+ * moves the result toward (R6) follow as skipped replacements.
  *
  * @param returned - Argument of a `return` or concise body of an arrow.
  * @param context - Mutator context of the file.
@@ -94,38 +99,108 @@ function getReplacements(
   let target = syntax.unwrapParentheses(returned)
   let value = syntax.unwrapExpression(target)
   let kind = getReturnValueKind(target, context)
-  if (kind === null || !isReplaceable(value, context)) {
+  if (kind === null || isPlainReturnValue(value, context)) {
     return []
   }
-  let callback = getCallbackResult(target, context)
-  let defaults = getDefaults(kind, value).filter(
-    item => !callback || !emptiesCallback(callback.owner, item.value),
-  )
-  if (kind === 'boolean') {
-    let sources = [target, ...getAssignedValues(value, context)]
-    let candidate = { mutator: context.id, node: target }
-    let runContext = createRunContext(context)
-    return defaults
-      .filter(
-        item =>
-          !ownerEmitsConstant(target, item.value === true, context) &&
-          sources.every(
-            source =>
-              !isMovedToward(
-                { value: item.value === true, decision: source, candidate },
-                runContext,
-              ),
-          ),
-      )
-      .map(item => ({ text: item.text, node: target }))
+  if (isLoggingCall(value, context)) {
+    return getDefaults(kind, value).map(item => ({
+      skip: {
+        reason: 'the result of a logging call is not worth a test',
+        rule: 'logging-call',
+      },
+      text: item.text,
+      node: target,
+    }))
   }
-  let solitary = [target, ...getLocalRanges(value, context)]
-  return defaults.map(item => ({ text: item.text, node: target, solitary }))
+  if (kind === 'void' && !hasEffect(value)) {
+    return [
+      {
+        skip: {
+          reason:
+            'the function returns void and the value has no effect to remove',
+          rule: 'void-result',
+        },
+        text: 'undefined',
+        node: target,
+      },
+    ]
+  }
+  let callback = getCallbackResult(target, context)
+  let solitary =
+    kind === 'boolean' ? null : [target, ...getLocalRanges(value, context)]
+  return getDefaults(kind, value).map(item => {
+    let replacement: Replacement =
+      solitary ?
+        { text: item.text, node: target, solitary }
+      : { text: item.text, node: target }
+    let skip: SkipNote | null =
+      callback && emptiesCallback(callback.owner, item.value) ?
+        {
+          reason:
+            "it makes the callback a no-op, which is method-call's removal of the call",
+          rule: 'O12',
+        }
+      : null
+    if (!skip && kind === 'boolean') {
+      skip = getConstantSkip(target, item.value === true, context)
+    }
+    if (skip) {
+      replacement.skip = skip
+    }
+    return replacement
+  })
+}
+
+/**
+ * Decides whether a boolean constant of a returned value is skipped (catalog
+ * 4.14): the owner of the result emits the constant (O19), or a mutant that
+ * will run moves the result, or a value assigned to its local, toward it (R6).
+ *
+ * @param target - Returned value, through parentheses.
+ * @param value - Constant written in place of the value.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null when the constant is emitted.
+ */
+function getConstantSkip(
+  target: Node,
+  value: boolean,
+  context: MutatorContext,
+): SkipNote | null {
+  let owner = getOwnerConstant(target, value, context)
+  if (owner) {
+    return {
+      reason: `the owner of the result emits the constant ${value}`,
+      rule: 'O19',
+      by: owner,
+    }
+  }
+  let sources = [
+    target,
+    ...getAssignedValues(context.syntax.unwrapExpression(target), context),
+  ]
+  let candidate = { mutator: context.id, node: target }
+  let runContext = createRunContext(context)
+  for (let source of sources) {
+    let toward = getTowardMutant(
+      { decision: source, candidate, value },
+      runContext,
+    )
+    if (toward) {
+      return {
+        reason: `a running mutant moves the result toward ${value}`,
+        by: toward,
+        rule: 'R6',
+      }
+    }
+  }
+  return null
 }
 
 /**
  * Lists the defaults of a kind (catalog 4.14, emission by kind), without the
- * one the value already is: an empty array literal or an empty template.
+ * one the value already is: an empty array literal or an empty template. The
+ * `void` kind gets `undefined`; its caller skips it for a value without an
+ * effect.
  *
  * @param kind - Kind of the returned value.
  * @param value - Returned expression, through wrappers.
@@ -150,8 +225,6 @@ function getDefaults(kind: ReturnValueKind, value: Node): ReturnDefault[] {
       return value.type === 'ArrayExpression' && value.elements.length === 0 ?
           []
         : [{ text: '[]', value: [] }]
-    case 'void':
-      return hasEffect(value) ? [{ text: 'undefined', value: undefined }] : []
     default:
       return [{ text: 'undefined', value: undefined }]
   }
@@ -259,19 +332,14 @@ function getAssignedValues(value: Node, context: MutatorContext): Node[] {
 }
 
 /**
- * Tells whether return-value replaces a returned expression: not a literal (a
- * negative number literal included), `undefined`, `void x` (EQ), `this`
- * (statement-removal removes `return this`), a function or class expression
- * (COARSE) or a logging call, also as an optional chain (NOISE).
+ * Tells whether a returned expression is a logging call, also as an optional
+ * chain (catalog 4.14, NOISE).
  *
  * @param value - Returned expression, through wrappers.
  * @param context - Mutator context of the file.
- * @returns Whether the value gets a default.
+ * @returns Whether the value is a logging call.
  */
-function isReplaceable(value: Node, context: MutatorContext): boolean {
+function isLoggingCall(value: Node, context: MutatorContext): boolean {
   let call = value.type === 'ChainExpression' ? value.expression : value
-  return (
-    !isPlainReturnValue(value, context) &&
-    (call.type !== 'CallExpression' || !context.syntax.isLoggingCall(call))
-  )
+  return call.type === 'CallExpression' && context.syntax.isLoggingCall(call)
 }

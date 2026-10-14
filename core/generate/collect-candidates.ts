@@ -1,5 +1,7 @@
 import type { Node } from 'oxc-parser'
 
+import type { RegisteredMutator } from '../../types/registered-mutator'
+import type { SkippedCandidate } from '../../types/skipped-candidate'
 import type { MutantCandidate } from '../../types/mutant-candidate'
 import type { PresetSettings } from '../../types/preset-settings'
 import type { SyntaxHelpers } from '../../types/syntax-helpers'
@@ -12,6 +14,7 @@ import type { IgnoreRule } from '../../types/ignore-rule'
 import type { Diagnostic } from '../../types/diagnostic'
 import type { TreeIndex } from '../../types/tree-index'
 import type { TypeHints } from '../../types/type-hints'
+import type { SkipNote } from '../../types/skip-note'
 
 import { getSourcePosition } from '../text/get-source-position'
 import { validateReplacement } from './validate-replacement'
@@ -57,6 +60,28 @@ interface MutatorServices {
 }
 
 /**
+ * Candidates of one file and the problems of its mutators.
+ */
+interface CandidateCollection {
+  /**
+   * Accepted replacements in the order the visitors returned them.
+   */
+  candidates: MutantCandidate[]
+
+  /**
+   * Replacements that were not accepted, in the order they were found: those a
+   * visitor marked as skipped, invalid ones and, without the `timeouts`
+   * setting, those of a value that advances a loop. Empty unless requested.
+   */
+  skipped: SkippedCandidate[]
+
+  /**
+   * Mutator errors: a throwing `create` or visitor, or an invalid replacement.
+   */
+  diagnostics: Diagnostic[]
+}
+
+/**
  * What the candidates of one file are collected from.
  */
 interface CollectInput {
@@ -81,24 +106,14 @@ interface CollectInput {
   parsed: ParsedFile
 
   /**
+   * Whether skipped replacements are collected.
+   */
+  skipped: boolean
+
+  /**
    * Runtime tree of the file.
    */
   tree: TreeIndex
-}
-
-/**
- * Candidates of one file and the problems of its mutators.
- */
-interface CandidateCollection {
-  /**
-   * Accepted replacements in the order the visitors returned them.
-   */
-  candidates: MutantCandidate[]
-
-  /**
-   * Mutator errors: a throwing `create` or visitor, or an invalid replacement.
-   */
-  diagnostics: Diagnostic[]
 }
 
 /**
@@ -124,16 +139,50 @@ interface VisitorEntry {
  * solitary ranges and ignore rule. A throwing `create` or visitor and an
  * invalid replacement become mutator errors and cost only that mutator, visit
  * or replacement. Without the `timeouts` setting, a replacement of the value
- * that advances a loop is dropped.
+ * that advances a loop is dropped. A replacement that a visitor marks as
+ * skipped is never validated and never becomes a candidate; on request it is
+ * collected with its rule, like dropped and invalid replacements, so that
+ * skipped replacements never change the candidates.
  *
  * @param input - Mutators, parsed file, runtime tree, ignore rules and shared
  *   context services.
- * @returns Candidates in emission order and mutator errors.
+ * @returns Candidates in emission order, mutator errors and skipped
+ *   replacements.
  */
 export function collectCandidates(input: CollectInput): CandidateCollection {
   let { services, mutators, parsed, rules, tree } = input
   let diagnostics: Diagnostic[] = []
   let candidates: MutantCandidate[] = []
+  let skipped: SkippedCandidate[] = []
+
+  /**
+   * Keeps a replacement that is not accepted, when skipped replacements are
+   * requested.
+   *
+   * @param registered - Mutator that returned the replacement.
+   * @param replacement - Replacement that is not accepted.
+   * @param note - Rule and reason of the skip.
+   */
+  function skip(
+    registered: RegisteredMutator,
+    replacement: Replacement,
+    note: SkipNote,
+  ): void {
+    if (input.skipped) {
+      let { by } = note
+      skipped.push({
+        by: by ? { start: by.node.start, mutator: by.mutator, id: null } : null,
+        heuristic: note.heuristic === true,
+        start: replacement.node.start,
+        end: replacement.node.end,
+        emission: skipped.length,
+        text: replacement.text,
+        reason: note.reason,
+        rule: note.rule,
+        registered,
+      })
+    }
+  }
   let table = new Map<string, VisitorEntry[]>()
 
   for (let registered of mutators) {
@@ -186,6 +235,10 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
         continue
       }
       for (let replacement of replacements) {
+        if (replacement.skip) {
+          skip(registered, replacement, replacement.skip)
+          continue
+        }
         let violation = validateReplacement(tree, replacement.node)
         if (violation !== null) {
           diagnostics.push(
@@ -195,12 +248,21 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
               `Mutator "${registered.id}" ${violation}`,
             ),
           )
+          skip(registered, replacement, {
+            reason: `the mutator ${violation.slice(0, -1)}`,
+            rule: 'invalid-target',
+          })
           continue
         }
         if (
           !services.settings.timeouts &&
           services.syntax.isLoopAdvanceValue(replacement.node)
         ) {
+          skip(registered, replacement, {
+            reason:
+              'it changes the value that advances a loop, so only a timeout could kill it',
+            rule: 'loop-advance',
+          })
           continue
         }
         let { start, end } = replacement.node
@@ -223,7 +285,7 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
     }
   }
 
-  return { diagnostics, candidates }
+  return { diagnostics, candidates, skipped }
 }
 
 /**

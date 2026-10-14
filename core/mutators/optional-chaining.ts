@@ -1,5 +1,6 @@
 import type { ChainExpression, Node } from 'oxc-parser'
 
+import type { Replacement } from '../../types/replacement'
 import type { TextEdit } from '../../types/text-edit'
 import type { Mutator } from '../../types/mutator'
 
@@ -39,26 +40,37 @@ interface OptionalChainingOptions {
  * edited (T10). A link whose object or callee cannot be nullish by type hints
  * is kept unless the `nonNullable` option is set. A chain the mutant switch
  * cannot wrap, such as a `delete` operand or a callee that passes `this`, is
- * kept (catalog 2.1).
+ * kept (catalog 2.1). Skipped mutants follow as skipped replacements.
  */
 export let optionalChaining: Mutator<OptionalChainingOptions> = {
   create(context) {
     let { sourceCode, options, syntax, hints } = context
     return {
       ChainExpression(node) {
-        if (!syntax.isValuePosition(node)) {
-          return []
-        }
-        return getOptionalLinks(node)
-          .filter(
-            ({ receiver }) =>
-              options.nonNullable || !isNonNullable(hints.getType(receiver)),
-          )
-          .map(({ receiver, text }) => {
-            let start = sourceCode.findTokenStart(receiver.end, node.end)
-            let edit: TextEdit = { end: start + 2, start, text }
-            return { text: sourceCode.editText(node, [edit]), node }
-          })
+        let wrapped = syntax.isValuePosition(node)
+        return getOptionalLinks(node).map(({ receiver, text }) => {
+          let start = sourceCode.findTokenStart(receiver.end, node.end)
+          let edit: TextEdit = { end: start + 2, start, text }
+          let replacement: Replacement = {
+            text: sourceCode.editText(node, [edit]),
+            node,
+          }
+          if (!wrapped) {
+            replacement.skip = {
+              reason: 'the mutant switch cannot wrap a chain in this position',
+              rule: 'invalid-target',
+            }
+          } else if (
+            !options.nonNullable &&
+            isNonNullable(hints.getType(receiver))
+          ) {
+            replacement.skip = {
+              reason: 'the type hints say the object cannot be nullish',
+              rule: 'non-nullable',
+            }
+          }
+          return replacement
+        })
       },
     }
   },

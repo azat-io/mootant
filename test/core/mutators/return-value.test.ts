@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
 import { listMutantTexts } from '../../helpers/list-mutant-texts'
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('returnValue', () => {
@@ -463,4 +464,23 @@ describe('returnValue', () => {
       )
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      'function f(): void { return x }',
+      ['x -> undefined (equivalent void-result)'],
+    ],
+    [
+      'function f() { return console.log(x) }',
+      ['console.log(x) -> undefined (noise logging-call)'],
+    ],
+    ['items.sort((a: number, b: number) => a - b)', ['a - b -> 0 (owned O12)']],
+    [
+      'items.sort(() => x > y)',
+      ['x > y -> true (subsumed R6)', 'x > y -> false (owned O12)'],
+    ],
+    ['function f() { return x }', []],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('return-value', source)).toStrictEqual(expected)
+  })
 })

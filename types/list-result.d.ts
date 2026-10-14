@@ -22,6 +22,11 @@ export interface ListResult {
   files: FileMutants[]
 
   /**
+   * Whether the files list their skipped candidates.
+   */
+  skipped: boolean
+
+  /**
    * Id of the preset used.
    */
   preset: string

@@ -46,6 +46,7 @@ function createResult(
     mutants: mutants.map(([id, start]) => createMutant(file, id, start)),
     diagnostics: [],
     parsed: true,
+    skipped: [],
     source,
     file,
   }
@@ -63,6 +64,7 @@ describe('assertUniqueIds', () => {
         diagnostics: [],
         parsed: false,
         source: null,
+        skipped: [],
         mutants: [],
       },
       createResult('src/c.ts', 'c + d', [['cccccccccccc', 2]]),

@@ -7,7 +7,9 @@ import type { Mutator } from '../../types/mutator'
  * when the update advances a loop (catalog 2.2 a), emitted only with the
  * `timeouts` setting. When the value of the update is used, the prefix/postfix
  * swap with the same operator follows (`arr[j++]` to `arr[++j]`); it still
- * advances a loop, so it is always kept.
+ * advances a loop, so it is always kept. Where the value is unused, that swap
+ * changes nothing (EQ) and follows as a skipped replacement, like the timeout
+ * `++`/`--` swap.
  */
 export let updateOperator: Mutator = {
   create(context) {
@@ -16,26 +18,35 @@ export let updateOperator: Mutator = {
     return {
       UpdateExpression(node) {
         let { operator, prefix } = node
-        let replacements: Replacement[] = []
-        if (settings.timeouts || !syntax.advancesLoop(node)) {
-          replacements.push({
-            text: sourceCode.replaceOperator(
-              node,
-              operator === '++' ? '--' : '++',
-            ),
+        let swap: Replacement = {
+          text: sourceCode.replaceOperator(
             node,
-          })
+            operator === '++' ? '--' : '++',
+          ),
+          node,
         }
-        if (!syntax.isResultUnused(node)) {
-          replacements.push({
-            text:
-              prefix ?
-                text.slice(node.start + 2, node.end).trimStart() + operator
-              : operator + text.slice(node.start, node.end - 2).trimEnd(),
-            node,
-          })
+        if (!settings.timeouts && syntax.advancesLoop(node)) {
+          swap.skip = {
+            reason:
+              'it changes the update that advances a loop, so only a timeout could kill it',
+            rule: 'loop-advance',
+          }
         }
-        return replacements
+        let position: Replacement = {
+          text:
+            prefix ?
+              text.slice(node.start + 2, node.end).trimStart() + operator
+            : operator + text.slice(node.start, node.end - 2).trimEnd(),
+          node,
+        }
+        if (syntax.isResultUnused(node)) {
+          position.skip = {
+            reason:
+              'the value of the update is unused, so prefix and postfix do the same',
+            rule: 'unused-result',
+          }
+        }
+        return [swap, position]
       },
     }
   },

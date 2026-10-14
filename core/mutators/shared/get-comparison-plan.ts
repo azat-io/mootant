@@ -1,39 +1,52 @@
 import type {
   AssignmentExpression,
   PrivateInExpression,
-  LogicalExpression,
   BinaryExpression,
   UpdateExpression,
   Node,
 } from 'oxc-parser'
 
 import type { MutatorContext } from '../../../types/mutator-context'
+import type { Replacement } from '../../../types/replacement'
+import type { SkipNote } from '../../../types/skip-note'
 import type { RunningValue } from './get-running-value'
 
 import { getProvenComparisonValue } from './get-proven-comparison-value'
-import { isConstantEligibleGroup } from './is-constant-eligible-group'
 import { isNoOpCallbackConstant } from './is-no-op-callback-constant'
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
-import { isBooleanModeOperand } from './is-boolean-mode-operand'
 import { unwrapExpression } from '../../tree/unwrap-expression'
 import { getMemberPath } from '../../syntax/get-member-path'
+import { getOwnedConstants } from './get-owned-constants'
 import { getLeaveNowValue } from './get-leave-now-value'
 import { getRootName } from '../../syntax/get-root-name'
 import { getRunningValue } from './get-running-value'
-import { isBooleanValued } from './is-boolean-valued'
 import { getLiteralValue } from './get-literal-value'
 import { isFunction } from '../../syntax/is-function'
-import { getNegationTop } from './get-negation-top'
 import { isNumericPair } from './is-numeric-pair'
 import { getNumberText } from './get-number-text'
 import { walkTree } from '../../tree/walk-tree'
 import { getTypeView } from './get-type-view'
-import { isAndOr } from './is-and-or'
+
+/**
+ * Entries comparison-operator emits for a comparison, and those it skips.
+ */
+export interface ComparisonPlan {
+  /**
+   * Entries that are emitted, in emission order.
+   */
+  entries: ComparisonEntry[]
+
+  /**
+   * Replacements of the comparison that the context rules skip, each with its
+   * rule, in plan order.
+   */
+  skipped: Replacement[]
+}
 
 /**
  * Mutant that comparison-operator emits for a comparison.
  */
-export interface ComparisonEntry {
+interface ComparisonEntry {
   /**
    * Operator swap, shifted literal or constant.
    */
@@ -195,17 +208,19 @@ interface Shift {
  * entry of a min/max idiom, a first exit test's leave-now constant, and entries
  * that make a no-op callback. A swap or shifted literal that the lower bound
  * leaves constant is skipped like that constant, except for the constants that
- * logical-operator owns. The plan is pure: other mutators read it without
- * running comparison-operator.
+ * logical-operator owns. Skipped entries are returned with the rule that skips
+ * them. The plan is pure: other mutators read it without running
+ * comparison-operator.
  *
  * @param node - Comparison of the runtime tree.
  * @param context - Mutator context of the file.
- * @returns The entries comparison-operator emits, in emission order.
+ * @returns The entries comparison-operator emits, in emission order, and the
+ *   skipped ones.
  */
 export function getComparisonPlan(
   node: PrivateInExpression | BinaryExpression,
   context: MutatorContext,
-): ComparisonEntry[] {
+): ComparisonPlan {
   let { sourceCode, settings, hints } = context
   let { operator, right, left } = node
   let planned: PlannedEntry[] = orderedPlans.get(operator) ?? constantPlan
@@ -223,121 +238,162 @@ export function getComparisonPlan(
   let shift = orderedPlans.has(operator) ? getShift(node, context) : null
   let impossible = getImpossibleRegions(node, context, 0)
   let running = settings.timeouts ? null : getRunningValue(node, context)
-  let proven = getProvenComparisonValue(node, context)
-  let leaveNow = getLeaveNowValue(node, context)
-  let skippedValues = new Set<boolean | null>(
-    [true, false].filter(
-      value =>
-        value === proven ||
-        value === leaveNow ||
-        value === running?.value ||
-        isNoOpCallbackConstant(node, value, context),
-    ),
-  )
-  let skippedConstants = new Set([
+  let valueSkips = getValueSkips(node, context, running)
+  let constantSkips = new Map([
+    ...valueSkips,
     ...getOwnedConstants(node, context),
-    ...skippedValues,
   ])
-  let skippedOperators = new Set<string | null>([
-    getCounterEntry(node, running),
+  let operatorSkips = new Map<string | null, SkipNote>([
+    [
+      getCounterEntry(node, running),
+      {
+        reason:
+          'the loop moves the counter in one direction only, so this form ends the loop at the same point',
+        rule: 'one-way-counter',
+      },
+    ],
   ])
   if (running) {
-    skippedOperators.add(running.value ? '!=' : '==')
+    operatorSkips.set(running.value ? '!=' : '==', {
+      reason:
+        'a counter that steps over the bound would keep the loop running, so only a timeout could kill it',
+      rule: 'loop-running',
+    })
   }
   let minMax = isMinMaxIdiom(node, context)
 
   let entries: ComparisonEntry[] = []
+  let skipped: Replacement[] = []
+
+  /**
+   * Skips an entry of the plan.
+   *
+   * @param text - Text the entry would write in place of the comparison.
+   * @param note - Rule and reason of the skip.
+   */
+  function skip(text: string, note: SkipNote): void {
+    skipped.push({ skip: note, node, text })
+  }
+
   for (let { region, to } of planned) {
+    let text =
+      typeof to === 'boolean' ?
+        (shift?.text ?? String(to))
+      : sourceCode.replaceOperator(node, to)
     if (region && impossible.has(region)) {
+      skip(text, {
+        reason:
+          'a lower bound of an operand makes the inputs where it differs impossible',
+        rule: 'lower-bound',
+      })
       continue
     }
     if (typeof to === 'boolean') {
       if (shift === null) {
-        if (!skippedConstants.has(to)) {
-          entries.push({
-            text: String(to),
-            kind: 'constant',
-            value: to,
-            region,
-          })
+        let note = constantSkips.get(to)
+        if (note) {
+          skip(text, note)
+        } else {
+          entries.push({ kind: 'constant', value: to, region, text })
         }
-      } else if (
-        !skippedValues.has(
-          getEntryConstant(
-            getImpossibleRegions(node, context, shift.step),
-            operator,
-          ),
-        )
-      ) {
-        entries.push({ text: shift.text, kind: 'shift', value: to, region })
+        continue
+      }
+      let note = getBoundedSkip(
+        valueSkips,
+        getImpossibleRegions(node, context, shift.step),
+        operator,
+      )
+      if (note) {
+        skip(text, note)
+      } else {
+        entries.push({ kind: 'shift', value: to, region, text })
       }
       continue
     }
-    if (
-      skippedOperators.has(to) ||
-      (minMax && region === 'eq') ||
-      skippedValues.has(getEntryConstant(impossible, to))
-    ) {
+    let note =
+      operatorSkips.get(to) ??
+      (minMax && region === 'eq' ?
+        {
+          reason:
+            'at equality both branches of the min/max ternary give the same value',
+          rule: 'min-max-idiom' as const,
+        }
+      : getBoundedSkip(valueSkips, impossible, to))
+    if (note) {
+      skip(text, note)
       continue
     }
     entries.push({
       value: trueRegions.get(to)!.includes(region!),
-      text: sourceCode.replaceOperator(node, to),
       kind: 'swap',
       region,
+      text,
     })
   }
-  return entries
+  return { entries, skipped }
 }
 
 /**
- * Finds the constants that logical-operator owns (catalog 4.6, rule 2, O3):
- * both in a boolean-mode operand; in value mode, the constant that forces the
- * left operand of a `&&` or `||` to its identity, and the constant that makes a
- * constant-eligible group take its absorbing value while every earlier operand
- * is boolean-valued.
+ * Finds the constants of a comparison that are skipped by their value, with the
+ * rule of each: a value the type hints prove, the leave-now constant of a first
+ * exit test, the value that keeps a loop running and a constant that makes a
+ * no-op callback. The first rule that applies to a value wins.
  *
  * @param node - Comparison.
  * @param context - Mutator context of the file.
- * @returns The constants to skip.
+ * @param running - Running value of the comparison, or null.
+ * @returns The skip of each skipped value.
  */
-function getOwnedConstants(
+function getValueSkips(
   node: PrivateInExpression | BinaryExpression,
   context: MutatorContext,
-): boolean[] {
-  if (isBooleanModeOperand(node, context)) {
-    return [true, false]
+  running: RunningValue | null,
+): Map<boolean, SkipNote> {
+  let proven = getProvenComparisonValue(node, context)
+  let leaveNow = getLeaveNowValue(node, context)
+  let skips = new Map<boolean, SkipNote>()
+  for (let value of [true, false]) {
+    let note: SkipNote | null = null
+    switch (value) {
+      case running?.value: {
+        note = {
+          reason: `${value} keeps the loop running forever, so only a timeout could kill it`,
+          rule: 'loop-running',
+        }
+
+        break
+      }
+      case leaveNow: {
+        note = {
+          reason:
+            "leaving a first exit test's loop at once is the loop's never-run mutant",
+          rule: 'O13',
+        }
+
+        break
+      }
+      case proven: {
+        note = {
+          reason: `the type hints prove the comparison is always ${value}`,
+          rule: 'proven-comparison',
+        }
+
+        break
+      }
+      default:
+        if (isNoOpCallbackConstant(node, value, context)) {
+          note = {
+            reason:
+              "it makes the callback a no-op, which is method-call's removal of the call",
+            rule: 'O12',
+          }
+        }
+    }
+    if (note) {
+      skips.set(value, note)
+    }
   }
-  let { sourceCode, syntax } = context
-  let top = getNegationTop(node, context)
-  let negated = top.negations % 2 === 1
-  let { parent, key } = syntax.getContextSlot(top.node)
-  if (!isAndOr(parent)) {
-    return []
-  }
-  let owned: boolean[] = []
-  if (key === 'left') {
-    owned.push((parent.operator === '&&') !== negated)
-  }
-  let root: LogicalExpression = parent
-  let rootParent = sourceCode.getSlot(root).parent
-  while (
-    rootParent?.type === 'LogicalExpression' &&
-    rootParent.operator === parent.operator
-  ) {
-    root = rootParent
-    rootParent = sourceCode.getSlot(root).parent
-  }
-  let earlier = syntax
-    .getLogicalChain(root)
-    .filter(operand => operand.end <= top.node.start)
-  if (
-    isConstantEligibleGroup(root, context) &&
-    earlier.every(operand => isBooleanValued(operand, context))
-  ) {
-    owned.push((parent.operator === '||') !== negated)
-  }
-  return owned
+  return skips
 }
 
 /**
@@ -571,6 +627,32 @@ function getShift(
         step,
       }
     )
+}
+
+/**
+ * Finds why an entry that the lower bound leaves constant is skipped: the entry
+ * is that constant, so the skip of the constant applies.
+ *
+ * @param valueSkips - Skips of the constants by their value.
+ * @param impossible - Regions the lower bound makes impossible for the entry.
+ * @param operator - Operator of the entry's comparison.
+ * @returns The skip of the constant, reworded for the entry, or null.
+ */
+function getBoundedSkip(
+  valueSkips: ReadonlyMap<boolean, SkipNote>,
+  impossible: Set<ComparisonRegion>,
+  operator: string,
+): SkipNote | null {
+  let constant = getEntryConstant(impossible, operator)
+  let note = constant === null ? undefined : valueSkips.get(constant)
+  if (!note) {
+    return null
+  }
+  return {
+    ...note,
+    reason: `a lower bound of an operand makes it the constant ${constant}, and ${note.reason}`,
+    heuristic: true,
+  }
 }
 
 /**

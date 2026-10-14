@@ -13,19 +13,21 @@ export let comparisonOperator: Mutator = {
       /**
        * Emits the plan of a comparison (catalog 4.6): the operator swaps, the
        * shifted literal or the constants, minus the entries that the context
-       * rules skip.
+       * rules skip, which follow as skipped replacements.
        *
        * @param node - Binary expression of the runtime tree.
-       * @returns Replacements of the comparison, in the plan's order.
+       * @returns Replacements of the comparison, in the plan's order, then the
+       *   skipped ones.
        */
       BinaryExpression(node) {
         if (!isComparison(node)) {
           return []
         }
-        return getComparisonPlan(node, context).map(entry => ({
-          text: entry.text,
-          node,
-        }))
+        let plan = getComparisonPlan(node, context)
+        return [
+          ...plan.entries.map(entry => ({ text: entry.text, node })),
+          ...plan.skipped,
+        ]
       },
     }
   },

@@ -1,7 +1,6 @@
 import type {
   ExpressionStatement,
   ContinueStatement,
-  ReturnStatement,
   SwitchStatement,
   BreakStatement,
   SwitchCase,
@@ -10,13 +9,29 @@ import type {
 
 import type { MutatorContext } from '../../types/mutator-context'
 import type { Replacement } from '../../types/replacement'
+import type { SkipNote } from '../../types/skip-note'
 import type { Mutator } from '../../types/mutator'
 
 import { isPlainReturnValue } from './shared/is-plain-return-value'
-import { ownerEmitsConstant } from './shared/owner-emits-constant'
+import { getOwnerConstant } from './shared/get-owner-constant'
 import { createRunContext } from './shared/create-run-context'
+import { getTowardMutant } from './shared/get-toward-mutant'
 import { isTailPosition } from './shared/is-tail-position'
-import { isMovedToward } from './shared/is-moved-toward'
+
+/**
+ * Mutator context of a removal and the skip its visitor decided.
+ */
+interface RemovalSetup {
+  /**
+   * Mutator context of the file.
+   */
+  context: MutatorContext
+
+  /**
+   * Skip that the visitor decided for the kind of statement, or null.
+   */
+  skip: SkipNote | null
+}
 
 /**
  * Options of the statement-removal mutator.
@@ -57,32 +72,57 @@ let loopTypes = new Set<Node['type'] | undefined>([
  * solitary (2.6), except for a plain assignment; it is skipped for the body of
  * a label, for the whole then-branch of an `if` whose test its owner forces to
  * `false` (O19) or a mutant moves toward `false` (R4), and for a statement that
- * advances a loop while timeouts are off.
+ * advances a loop while timeouts are off. Skipped mutants follow as skipped
+ * replacements.
  */
 export let statementRemoval: Mutator<StatementRemovalOptions> = {
   create(context) {
     let { jumps } = context.options
     return {
-      ContinueStatement(node, parent) {
-        return jumps && !isLoopEnd(node, context) ?
-            getRemoval(node, parent, context)
-          : []
+      BreakStatement(node, parent) {
+        let switchCase = node.label ? null : getEndedCase(node, context)
+        if (!switchCase) {
+          return jumps ? getRemoval(node, parent, { skip: null, context }) : []
+        }
+        let skip: SkipNote | null =
+          fallsThroughToBreak(switchCase, context) ?
+            {
+              reason: 'falling through the case reaches only a break',
+              rule: 'fall-through-break',
+            }
+          : null
+        return getRemoval(node, parent, { context, skip })
       },
       ReturnStatement(node, parent) {
-        return isRemovableReturn(node, context) ?
-            getRemoval(node, parent, context)
-          : []
+        let value =
+          node.argument ? context.syntax.unwrapExpression(node.argument) : null
+        if (value && !isPlainReturnValue(value, context)) {
+          return []
+        }
+        let skip =
+          isTailPosition(node, context) ? getTailSkip(value, context) : null
+        return getRemoval(node, parent, { context, skip })
       },
-      BreakStatement(node, parent) {
-        return isRemovableBreak(node, context) ?
-            getRemoval(node, parent, context)
-          : []
+      ContinueStatement(node, parent) {
+        if (!jumps) {
+          return []
+        }
+        let skip: SkipNote | null =
+          isLoopEnd(node, context) ?
+            {
+              reason: 'the continue ends the body of its loop',
+              rule: 'loop-end',
+            }
+          : null
+        return getRemoval(node, parent, { context, skip })
       },
       ExpressionStatement(node, parent) {
-        return hasEffect(node, context) ? getRemoval(node, parent, context) : []
+        return hasEffect(node, context) ?
+            getRemoval(node, parent, { skip: null, context })
+          : []
       },
       ThrowStatement(node, parent) {
-        return getRemoval(node, parent, context)
+        return getRemoval(node, parent, { skip: null, context })
       },
     }
   },
@@ -91,6 +131,56 @@ export let statementRemoval: Mutator<StatementRemovalOptions> = {
       'Removes one statement with an effect: a call, assignment, delete, throw, early return or case break.',
     defaultOptions: { jumps: false },
   },
+}
+
+/**
+ * Decides whether a statement is the whole then-branch of an `if` without
+ * `else` whose removal another mutant covers (catalog 4.15): removing it forces
+ * the test to `false`, which the test's owner emits (O19, static) or a mutant
+ * that will run moves the test toward (R4).
+ *
+ * @param node - Statement to remove.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null when the removal is emitted.
+ */
+function getForcedThenSkip(
+  node: Node,
+  context: MutatorContext,
+): SkipNote | null {
+  let { sourceCode, syntax } = context
+  let { parent } = sourceCode.getSlot(node)
+  if (parent?.type === 'BlockStatement' && parent.body.length === 1) {
+    ;({ parent } = sourceCode.getSlot(parent))
+  }
+  if (parent?.type !== 'IfStatement' || parent.alternate) {
+    return null
+  }
+  let test = syntax.unwrapParentheses(parent.test)
+  let owner = getOwnerConstant(test, false, context)
+  if (owner) {
+    return {
+      reason:
+        "removing the whole then-branch forces the test to false, a constant the test's owner emits",
+      rule: 'O19',
+      by: owner,
+    }
+  }
+  let toward = getTowardMutant(
+    {
+      candidate: { mutator: context.id, node },
+      decision: test,
+      value: false,
+    },
+    createRunContext(context),
+  )
+  return toward ?
+      {
+        reason:
+          'removing the whole then-branch forces the test to false, and a running mutant moves the test toward false',
+        by: toward,
+        rule: 'R4',
+      }
+    : null
 }
 
 /**
@@ -136,36 +226,37 @@ function hasEffect(
 }
 
 /**
- * Tells whether a statement is the whole then-branch of an `if` without `else`
- * whose removal another mutant covers (catalog 4.15): removing it forces the
- * test to `false`, which the test's owner emits (O19, static) or a mutant that
- * will run moves the test toward (R4).
+ * Decides whether the removal of a statement is skipped: the statement is the
+ * body of a label, a then-branch whose removal another mutant covers (O19, R4),
+ * or a loop advance while timeouts are off (TIMEOUT).
  *
  * @param node - Statement to remove.
+ * @param parent - Parent of the statement.
  * @param context - Mutator context of the file.
- * @returns Whether the removal is skipped.
+ * @returns Rule and reason of the skip, or null when the removal is emitted.
  */
-function isForcedThenBranch(node: Node, context: MutatorContext): boolean {
-  let { sourceCode, syntax } = context
-  let { parent } = sourceCode.getSlot(node)
-  if (parent?.type === 'BlockStatement' && parent.body.length === 1) {
-    ;({ parent } = sourceCode.getSlot(parent))
+function getRemovalSkip(
+  node: Node,
+  parent: Node | null,
+  context: MutatorContext,
+): SkipNote | null {
+  if (parent?.type === 'LabeledStatement') {
+    return {
+      reason: 'the mutant switch cannot wrap the body of a label',
+      rule: 'invalid-target',
+    }
   }
-  if (parent?.type !== 'IfStatement' || parent.alternate) {
-    return false
+  let forced = getForcedThenSkip(node, context)
+  if (forced) {
+    return forced
   }
-  let test = syntax.unwrapParentheses(parent.test)
-  return (
-    ownerEmitsConstant(test, false, context) ||
-    isMovedToward(
+  return !context.settings.timeouts && context.syntax.advancesLoop(node) ?
       {
-        candidate: { mutator: context.id, node },
-        decision: test,
-        value: false,
-      },
-      createRunContext(context),
-    )
-  )
+        reason:
+          'it removes the statement that advances a loop, so only a timeout could kill it',
+        rule: 'loop-advance',
+      }
+    : null
 }
 
 /**
@@ -225,6 +316,36 @@ function fallsThroughToBreak(
 }
 
 /**
+ * Decides whether removing a `return` in tail position is skipped: it changes
+ * nothing, or only turns `null` into `undefined` (EQ), or only turns `false`
+ * into `undefined` (NOISE): an absent value, `undefined`, `void` of a literal
+ * or a name, `null` and `false`.
+ *
+ * @param value - Returned expression, through wrappers, or null.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null when the removal is emitted.
+ */
+function getTailSkip(
+  value: Node | null,
+  context: MutatorContext,
+): SkipNote | null {
+  if (value?.type === 'Literal' && value.value === false) {
+    return {
+      reason:
+        'removing a tail return false only turns false into undefined, which is not worth a test',
+      rule: 'tail-return-false',
+    }
+  }
+  return isTailNoOp(value, context) ?
+      {
+        reason:
+          'removing a tail return of no value, undefined or null changes nothing that matters',
+        rule: 'tail-return',
+      }
+    : null
+}
+
+/**
  * Tells whether a `continue` ends the body of the loop it continues (EQ): it is
  * the body, or the last statement of the block that is the body, and it is
  * unlabeled or names that loop.
@@ -252,9 +373,8 @@ function isLoopEnd(node: ContinueStatement, context: MutatorContext): boolean {
 
 /**
  * Tells whether removing a `return` in tail position changes nothing, or only
- * turns `null` into `undefined` (EQ), or only turns `false` into `undefined`
- * (NOISE): an absent value, `undefined`, `void` of a literal or a name, `null`
- * and `false`.
+ * turns `null` into `undefined` (EQ): an absent value, `undefined`, `void` of a
+ * literal or a name, and `null`.
  *
  * @param value - Returned expression, through wrappers, or null.
  * @param context - Mutator context of the file.
@@ -265,7 +385,7 @@ function isTailNoOp(value: Node | null, context: MutatorContext): boolean {
     return true
   }
   if (value.type === 'Literal') {
-    return value.value === null || value.value === false
+    return value.value === null
   }
   if (value.type === 'UnaryExpression') {
     let operand = context.syntax.unwrapExpression(value.argument)
@@ -278,55 +398,31 @@ function isTailNoOp(value: Node | null, context: MutatorContext): boolean {
 }
 
 /**
- * Builds the removal of a statement, unless it is the body of a label, a
- * then-branch whose removal another mutant covers, or a loop advance while
+ * Builds the removal of a statement. It is skipped when the visitor decided so,
+ * for the body of a label, which the mutant switch cannot wrap, for a
+ * then-branch whose removal another mutant covers, and for a loop advance while
  * timeouts are off.
  *
  * @param node - Statement to remove.
  * @param parent - Parent of the statement.
- * @param context - Mutator context of the file.
- * @returns The replacement, or none.
+ * @param setup - Mutator context and the skip the visitor decided.
+ * @returns The replacement.
  */
 function getRemoval(
   node: Node,
   parent: Node | null,
-  context: MutatorContext,
+  setup: RemovalSetup,
 ): readonly Replacement[] {
-  if (
-    parent?.type === 'LabeledStatement' ||
-    isForcedThenBranch(node, context) ||
-    (!context.settings.timeouts && context.syntax.advancesLoop(node))
-  ) {
-    return []
-  }
-  return [
+  let { context } = setup
+  let removal: Replacement =
     isPlainAssignment(node, context) ?
       { text: ';', node }
-    : { solitary: [node], text: ';', node },
-  ]
-}
-
-/**
- * Tells whether a `return` is removed: its argument is absent or one that
- * return-value never replaces (a literal, a negative number literal,
- * `undefined`, `void x`, `this`, a function or class expression), and it is not
- * a `return;`, `return undefined;`, `return void 0;`, `return null;` (EQ) or
- * `return false;` (NOISE) in tail position.
- *
- * @param node - Return statement.
- * @param context - Mutator context of the file.
- * @returns Whether the statement is removed.
- */
-function isRemovableReturn(
-  node: ReturnStatement,
-  context: MutatorContext,
-): boolean {
-  let value =
-    node.argument ? context.syntax.unwrapExpression(node.argument) : null
-  if (value && !isPlainReturnValue(value, context)) {
-    return false
+    : { solitary: [node], text: ';', node }
+  let skip = setup.skip ?? getRemovalSkip(node, parent, context)
+  if (skip) {
+    removal.skip = skip
   }
-  return !isTailPosition(node, context) || !isTailNoOp(value, context)
+  return [removal]
 }
 
 /**
@@ -367,22 +463,4 @@ function isCallLike(node: Node): boolean {
     default:
       return false
   }
-}
-
-/**
- * Tells whether a `break` is removed: a case `break` whose fall-through reaches
- * more than a `break`, and with `jumps` every other `break`.
- *
- * @param node - Break statement.
- * @param context - Mutator context of the file.
- * @returns Whether the statement is removed.
- */
-function isRemovableBreak(
-  node: BreakStatement,
-  context: MutatorContext<StatementRemovalOptions>,
-): boolean {
-  let switchCase = node.label ? null : getEndedCase(node, context)
-  return switchCase ?
-      !fallsThroughToBreak(switchCase, context)
-    : context.options.jumps
 }

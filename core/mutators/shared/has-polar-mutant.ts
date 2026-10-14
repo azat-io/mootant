@@ -102,14 +102,14 @@ function walkPolar(
         { mutator: 'comparison-operator', node: inner },
         candidate,
       ) &&
-      getComparisonPlan(inner, context).some(
+      getComparisonPlan(inner, context).entries.some(
         entry => (entry.value !== negated) === value,
       )
     )
   }
   if (inner.type === 'LogicalExpression' && inner.operator === '??') {
     return getNullishDirections(inner, candidate, context).some(
-      direction => (direction !== negated) === value,
+      direction => (direction.value !== negated) === value,
     )
   }
   if (!isAndOr(inner)) {

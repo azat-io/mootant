@@ -37,9 +37,10 @@ function planOf(
     `interface User {} function f(${PARAMETERS}) { ${body} }`,
     setup,
   )
-  return getComparisonPlan(find('BinaryExpression', comparison), context).map(
-    entry => entry.text,
-  )
+  return getComparisonPlan(
+    find('BinaryExpression', comparison),
+    context,
+  ).entries.map(entry => entry.text)
 }
 
 describe('getComparisonPlan', () => {
@@ -178,7 +179,7 @@ describe('getComparisonPlan', () => {
     })
     let plan = getComparisonPlan(find('BinaryExpression', comparison), context)
 
-    expect(plan.map(entry => entry.text)).toEqual(expected)
+    expect(plan.entries.map(entry => entry.text)).toEqual(expected)
   })
 
   it.each<[string, string, string[]]>([
@@ -352,7 +353,7 @@ describe('getComparisonPlan', () => {
     )
     let plan = getComparisonPlan(find('BinaryExpression'), context)
 
-    expect(plan.map(entry => entry.text)).toEqual(['true', 'false'])
+    expect(plan.entries.map(entry => entry.text)).toEqual(['true', 'false'])
   })
 
   it('describes each entry', () => {
@@ -360,7 +361,9 @@ describe('getComparisonPlan', () => {
       'function f(a: number) { return a >= 10 }',
     )
 
-    expect(getComparisonPlan(find('BinaryExpression'), context)).toEqual([
+    expect(
+      getComparisonPlan(find('BinaryExpression'), context).entries,
+    ).toEqual([
       { text: 'a > 10', region: 'eq', kind: 'swap', value: false },
       { text: 'a == 10', region: 'gt', kind: 'swap', value: false },
       { text: 'a >= 9', kind: 'shift', region: 'lt', value: true },
@@ -406,7 +409,100 @@ describe('getComparisonPlan', () => {
         context,
       )
 
-      expect(plan.map(entry => entry.text)).toEqual(expected)
+      expect(plan.entries.map(entry => entry.text)).toEqual(expected)
     },
   )
+
+  it.each<[string, string, [string, string, string | null][]]>([
+    [
+      'x = list.length > 0',
+      'list.length > 0',
+      [['list.length != 0', 'lower-bound', null]],
+    ],
+    [
+      'x = list.length < -1',
+      'list.length < -1',
+      [
+        ['list.length <= -1', 'lower-bound', null],
+        ['list.length < -2', 'lower-bound', null],
+      ],
+    ],
+    [
+      "x = typeof value === 'string'",
+      "typeof value === 'string'",
+      [['true', 'proven-comparison', null]],
+    ],
+    [
+      'x = user === null',
+      'user === null',
+      [['false', 'proven-comparison', null]],
+    ],
+    ['x = a > b ? a : b', 'a > b', [['a >= b', 'min-max-idiom', null]]],
+    ['if (a > b && c) {}', 'a > b', [['false', 'O3', 'logical-operator']]],
+    ['x = mode === s && c', 'mode === s', [['true', 'O3', 'logical-operator']]],
+    ['while (a < b) {}', 'a < b', [['a != b', 'loop-running', null]]],
+    [
+      'for (let i = 0; i !== b; i++) {}',
+      'i !== b',
+      [
+        ['i < b', 'one-way-counter', null],
+        ['true', 'loop-running', null],
+      ],
+    ],
+    [
+      'for (;;) { if (a >= b) break; a++ }',
+      'a >= b',
+      [
+        ['a == b', 'loop-running', null],
+        ['true', 'O13', null],
+      ],
+    ],
+    [
+      'x = list.sort((p, q) => p.n > q.n)',
+      'p.n > q.n',
+      [['false', 'O12', null]],
+    ],
+    [
+      'while (list.length > 0) list.pop()',
+      'list.length > 0',
+      [
+        ['list.length >= 0', 'loop-running', null],
+        ['list.length != 0', 'lower-bound', null],
+      ],
+    ],
+  ])(
+    'names the rule of each skipped entry of %s',
+    (body, comparison, expected) => {
+      let { context, find } = createTestContext(
+        `interface User {} function f(${PARAMETERS}) { ${body} }`,
+      )
+      let { skipped } = getComparisonPlan(
+        find('BinaryExpression', comparison),
+        context,
+      )
+
+      expect(
+        skipped.map(replacement => [
+          replacement.text,
+          replacement.skip!.rule,
+          replacement.skip!.by?.mutator ?? null,
+        ]),
+      ).toEqual(expected)
+    },
+  )
+
+  it('words the skip of an entry that the lower bound leaves constant and marks it a heuristic', () => {
+    let { context, find } = createTestContext(
+      'function f(list: string[]) { while (list.length > 0) list.pop() }',
+    )
+    let { skipped } = getComparisonPlan(find('BinaryExpression'), context)
+
+    expect(skipped[0]!.skip!.reason).toBe(
+      'a lower bound of an operand makes it the constant true, and true keeps the loop running forever, so only a timeout could kill it',
+    )
+    expect(skipped[0]!.skip).toMatchObject({
+      rule: 'loop-running',
+      heuristic: true,
+    })
+  })
 })

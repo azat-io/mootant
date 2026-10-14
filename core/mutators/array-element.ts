@@ -15,8 +15,8 @@ const HOOK_PATTERN = /^use[0-9A-Z]/u
  * Removes one element from an array literal, or puts undefined into an empty
  * one (catalog 4.2). Each removal (T6) is solitary over the removed element, so
  * the pipeline drops it while a mutant inside the element will run. Arrays with
- * holes get nothing, and neither does the empty dependency list of a React
- * hook.
+ * holes get nothing; the `[undefined]` of the empty dependency list of a React
+ * hook follows as a skipped replacement.
  */
 export let arrayElement: Mutator = {
   create(context) {
@@ -28,9 +28,19 @@ export let arrayElement: Mutator = {
           return []
         }
         if (elements.length === 0) {
-          return isHookDependencies(node, context) ?
-              []
-            : [{ text: '[undefined]', node }]
+          return [
+            isHookDependencies(node, context) ?
+              {
+                skip: {
+                  reason:
+                    'an empty hook dependency list and [undefined] never change, so the hook behaves the same',
+                  rule: 'hook-dependencies',
+                },
+                text: '[undefined]',
+                node,
+              }
+            : { text: '[undefined]', node },
+          ]
         }
         return elements.map((element, index) => ({
           text: sourceCode.removeListElement(node, index),

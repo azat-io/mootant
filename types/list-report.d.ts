@@ -1,5 +1,6 @@
 import type { ListReportMutator } from './list-report-mutator'
 import type { ListReportSummary } from './list-report-summary'
+import type { ListReportSkipped } from './list-report-skipped'
 import type { ListReportMutant } from './list-report-mutant'
 import type { ListReportFile } from './list-report-file'
 import type { Diagnostic } from './diagnostic'
@@ -12,6 +13,12 @@ export interface ListReport {
    * Mutators the preset turned on, in canonical order.
    */
   mutators: ListReportMutator[]
+
+  /**
+   * Candidates that were considered and not emitted, in canonical order per
+   * file. Present only with `--skipped`; they never change `mutants`.
+   */
+  skipped?: ListReportSkipped[]
 
   /**
    * Mutants of every file, in canonical order.

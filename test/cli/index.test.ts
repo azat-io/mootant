@@ -83,11 +83,12 @@ describe('run', () => {
   it('delegates the list command with the parsed options', async () => {
     vi.mocked(runList).mockResolvedValue()
 
-    await runCli('list', 'src', '--json')
+    await runCli('list', 'src', '--json', '--skipped')
 
     expect(runList).toHaveBeenCalledExactlyOnceWith({
       preset: 'recommended',
       paths: ['src'],
+      skipped: true,
       json: true,
     })
     expect(consoleInfoSpy).not.toHaveBeenCalled()

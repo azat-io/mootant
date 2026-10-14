@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
 import { formatMutant } from '../../helpers/format-mutant'
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 /**
@@ -558,4 +559,32 @@ describe('condition', () => {
       )
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      'function f(flag: boolean, a: number) { if (a > 1) run(); if (!flag && a) run(); if (true) run() }',
+      [
+        'a > 1 -> true (owned O1)',
+        'a > 1 -> false (owned O1)',
+        '!flag && a -> true (owned O1)',
+        '!flag && a -> false (owned O1)',
+        '!flag -> true (owned O3)',
+        '!flag -> false (owned O3)',
+        'true -> false (owned O7)',
+      ],
+    ],
+    [
+      'function f(items: string[]) { if (items) run(); while (ready) step() }',
+      [
+        'items -> true (equivalent typed-constant)',
+        'ready -> true (timeout loop-running)',
+      ],
+    ],
+    [
+      'for (;;) { if (done()) break; tick() }',
+      ['done() -> true (owned O13)', 'done() -> false (timeout loop-running)'],
+    ],
+  ])('lists the skipped constants of %s', (source, expected) => {
+    expect(listSkipped('condition', source)).toStrictEqual(expected)
+  })
 })

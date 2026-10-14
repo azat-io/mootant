@@ -1,5 +1,7 @@
 import type { Node } from 'oxc-parser'
 
+import type { SkipNote } from './skip-note'
+
 /**
  * Proposal of a mutator: replace one node of the file with new text.
  */
@@ -11,6 +13,13 @@ export interface Replacement {
    * (the solitary rule).
    */
   solitary?: readonly Node[]
+
+  /**
+   * Why the mutator does not emit the replacement. A skipped replacement never
+   * becomes a mutant and never counts for the solitary rule, deduplication or
+   * ids; `mootant list --skipped` shows it with the reason.
+   */
+  skip?: SkipNote
 
   /**
    * Text written in place of the node, built from slices of the original

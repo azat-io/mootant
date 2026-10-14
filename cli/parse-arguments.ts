@@ -12,6 +12,9 @@ Commands:
 Options:
   --preset <name>  Mutator preset: recommended or strict (default: recommended)
   --json           Print the list as JSON
+  --skipped        Also list the mutants that were considered and skipped,
+                   with the reason; code that is never mutated, such as
+                   types, decorators and enums, is not listed
   -h, --help       Display this message
   -v, --version    Display version number`
 
@@ -21,6 +24,7 @@ Options:
 let parserOptions = {
   version: { type: 'boolean', short: 'v' },
   help: { type: 'boolean', short: 'h' },
+  skipped: { type: 'boolean' },
   preset: { type: 'string' },
   json: { type: 'boolean' },
 } as const
@@ -29,6 +33,11 @@ let parserOptions = {
  * Options of the `list` command.
  */
 export interface ListOptions {
+  /**
+   * Whether to list skipped candidates too.
+   */
+  skipped: boolean
+
   /**
    * Files and directories to list, as given on the command line.
    */
@@ -112,6 +121,7 @@ export function parseArguments(
     return {
       options: {
         preset: values.preset ?? 'recommended',
+        skipped: values.skipped ?? false,
         json: values.json ?? false,
         paths,
       },

@@ -191,7 +191,7 @@ describe('getConditionConstants', () => {
     )
 
     expect(
-      getConditionConstants(find(type, text), createRunContext(context)),
+      getConditionConstants(find(type, text), createRunContext(context)).values,
     ).toEqual(expected)
   })
 
@@ -213,7 +213,164 @@ describe('getConditionConstants', () => {
     let { context, find } = createTestContext(source)
 
     expect(
-      getConditionConstants(find(type, text), createRunContext(context)),
+      getConditionConstants(find(type, text), createRunContext(context)).values,
     ).toEqual([])
   })
+
+  it.each<{
+    expected: [string, string, string | null][]
+    type: Node['type']
+    source: string
+    text: string
+  }>([
+    {
+      expected: [
+        ['true', 'O1', 'comparison-operator'],
+        ['false', 'O1', 'comparison-operator'],
+      ],
+      type: 'BinaryExpression',
+      source: 'if (a < b) x()',
+      text: 'a < b',
+    },
+    {
+      expected: [
+        ['true', 'O1', 'logical-operator'],
+        ['false', 'O1', 'logical-operator'],
+      ],
+      source: 'k = !(a || b)',
+      type: 'UnaryExpression',
+      text: '!(a || b)',
+    },
+    {
+      expected: [
+        ['true', 'literal-truth', null],
+        ['false', 'O7', 'boolean-literal'],
+      ],
+      source: 'if (true) z()',
+      type: 'Literal',
+      text: 'true',
+    },
+    {
+      expected: [
+        ['true', 'constant-test', null],
+        ['false', 'literal-truth', null],
+      ],
+      source: 'if (null) w()',
+      type: 'Literal',
+      text: 'null',
+    },
+    {
+      expected: [
+        ['true', 'literal-truth', null],
+        ['false', 'constant-test', null],
+      ],
+      source: 'if (/a/) w()',
+      type: 'Literal',
+      text: '/a/',
+    },
+    {
+      expected: [
+        ['true', 'literal-truth', null],
+        ['false', 'constant-test', null],
+      ],
+      source: 'while (1) w()',
+      type: 'Literal',
+      text: '1',
+    },
+    {
+      expected: [
+        ['true', 'loop-running', null],
+        ['false', 'literal-truth', null],
+      ],
+      source: 'while (0) w()',
+      type: 'Literal',
+      text: '0',
+    },
+    {
+      expected: [
+        ['true', 'O1', 'number-literal'],
+        ['false', 'literal-truth', null],
+      ],
+      type: 'UnaryExpression',
+      source: 'k = !-1',
+      text: '!-1',
+    },
+    {
+      expected: [
+        ['true', 'O3', 'logical-operator'],
+        ['false', 'O3', 'logical-operator'],
+      ],
+      source: 'if (!x && y) run()',
+      type: 'UnaryExpression',
+      text: '!x',
+    },
+    {
+      expected: [['true', 'O3', 'logical-operator']],
+      source: 'k = [!x && y]',
+      type: 'UnaryExpression',
+      text: '!x',
+    },
+    {
+      source: 'k = [y && !x]',
+      type: 'UnaryExpression',
+      expected: [],
+      text: '!x',
+    },
+    {
+      source: 'function f(items: string[]) { if (items) run() }',
+      expected: [['true', 'typed-constant', null]],
+      type: 'Identifier',
+      text: 'items',
+    },
+    {
+      expected: [['true', 'loop-running', null]],
+      source: 'while (ready) step()',
+      type: 'Identifier',
+      text: 'ready',
+    },
+    {
+      expected: [
+        ['true', 'O13', null],
+        ['false', 'loop-running', null],
+      ],
+      source: 'for (;;) { if (done()) break; tick() }',
+      type: 'CallExpression',
+      text: 'done()',
+    },
+    {
+      source: 'function f(x: boolean | undefined) { if (x ?? false) {} }',
+      expected: [['true', 'R3', 'boolean-literal']],
+      type: 'LogicalExpression',
+      text: 'x ?? false',
+    },
+    {
+      source: 'x = items.sort(r => { if (r.x) return 0; return 1 })',
+      expected: [['true', 'O12', null]],
+      type: 'MemberExpression',
+      text: 'r.x',
+    },
+    {
+      type: 'UnaryExpression',
+      source: 'm = !!value',
+      text: '!value',
+      expected: [],
+    },
+  ])(
+    'names the rule of each skipped constant of $source',
+    ({ expected, source, type, text }) => {
+      let { context, find } = createTestContext(source)
+      let { skipped } = getConditionConstants(
+        find(type, text),
+        createRunContext(context),
+      )
+
+      expect(
+        skipped.map(replacement => [
+          replacement.text,
+          replacement.skip!.rule,
+          replacement.skip!.by?.mutator ?? null,
+        ]),
+      ).toEqual(expected)
+    },
+  )
 })

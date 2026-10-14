@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
 import { listMutantTexts } from '../../helpers/list-mutant-texts'
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('statementRemoval', () => {
@@ -655,4 +656,41 @@ describe('statementRemoval', () => {
       ).toStrictEqual([expected])
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      'switch (x) { case 1: go(); break; case 2: break }',
+      [
+        'break; -> ; (equivalent fall-through-break)',
+        'break -> ; (equivalent fall-through-break)',
+      ],
+    ],
+    ['lbl: go()', ['go() -> ; (invalid invalid-target)']],
+    ['if (x > 1) go()', ['go() -> ; (subsumed R4)']],
+    [
+      'function f() { if (x) return false; return false }',
+      [
+        'return false; -> ; (owned O19)',
+        'return false -> ; (noise tail-return-false)',
+      ],
+    ],
+    ['function f() { go(); return }', ['return -> ; (equivalent tail-return)']],
+    ['while (i < n) { i++ }', ['i++ -> ; (timeout loop-advance)']],
+    ['go()', []],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('statement-removal', source)).toStrictEqual(expected)
+  })
+
+  it.each<[string, string[]]>([
+    [
+      'for (const i of items) { use(i); continue }',
+      ['continue -> ; (equivalent loop-end)'],
+    ],
+  ])('lists the skipped mutants of %s with jumps', (source, expected) => {
+    expect(
+      listSkipped('statement-removal', source, {
+        mutators: { 'statement-removal': ['on', { jumps: true }] },
+      }),
+    ).toStrictEqual(expected)
+  })
 })

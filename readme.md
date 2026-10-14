@@ -32,6 +32,12 @@ Options:
 - `--preset <name>`: `recommended` (default) or `strict`, which adds noisier
   mutants
 - `--json`: print the list as JSON for tools and AI agents
+- `--skipped`: also list the mutants Mootant considered and did not emit, each
+  with a category (`equivalent`, `noise`, `timeout`, `owned`, `subsumed`,
+  `duplicate` or `invalid`), the rule that skipped it and the reason. With
+  `--json` they come in a `skipped` array, with a `heuristic` flag for skips
+  that rest on a guess (a method name, a type hint) rather than a proof. Code
+  that is never mutated, such as types, decorators and enums, is not listed.
 
 To skip a mutant, add a comment:
 

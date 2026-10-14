@@ -12,6 +12,7 @@ import { createMutantId } from '../../../core/identity/create-mutant-id'
  */
 let knownMutatorIds = new Set([
   'arithmetic',
+  'skipper',
   'removal',
   'probe',
   'copy',
@@ -55,20 +56,48 @@ const SAME: Mutator = {
 }
 
 /**
+ * Skips the drop of the right operand of every `+`, in favor of the swap.
+ */
+const SKIPPER: Mutator = {
+  create: context => ({
+    BinaryExpression(node) {
+      return [
+        {
+          skip: {
+            by: { mutator: 'arithmetic', node },
+            reason: 'the swap covers it',
+            heuristic: true,
+            rule: 'O11',
+          },
+          text: context.sourceCode.getText(node.left),
+          node,
+        },
+      ]
+    },
+  }),
+  meta: { description: 'Skipper.' },
+}
+
+/**
  * Generates the mutants of a snippet without timeouts.
  *
  * @param lines - Source lines, joined with line feeds.
  * @param mutators - Active mutators in rank order.
- * @param coarseMutants - Whether the run keeps coarse mutants.
+ * @param setup - Whether the run keeps coarse mutants and lists skipped
+ *   candidates; neither when omitted.
  * @returns Result of the file.
  */
 function generate(
   lines: string[],
   mutators: ActiveMutator[],
-  coarseMutants = false,
+  setup: { coarseMutants?: boolean; skipped?: boolean } = {},
 ): FileMutants {
   return generateFileMutants({
-    settings: Object.freeze({ timeouts: false, coarseMutants }),
+    settings: Object.freeze({
+      coarseMutants: setup.coarseMutants ?? false,
+      timeouts: false,
+    }),
+    skipped: setup.skipped ?? false,
     source: lines.join('\n'),
     file: 'src/example.ts',
     knownMutatorIds,
@@ -186,6 +215,7 @@ describe('generateFileMutants', () => {
       file: 'src/example.ts',
       diagnostics: [],
       parsed: true,
+      skipped: [],
     })
   })
 
@@ -268,7 +298,7 @@ describe('generateFileMutants', () => {
     let result = generate(
       ['total = a + b'],
       [activate('arithmetic', 0, ARITHMETIC), activate('removal', 1, REMOVAL)],
-      coarseMutants,
+      { coarseMutants },
     )
 
     expect(
@@ -432,5 +462,126 @@ describe('generateFileMutants', () => {
 
     expect(result).toMatchObject({ mutants: [], parsed })
     expect(result.diagnostics).toHaveLength(parseErrors)
+  })
+
+  it('lists skipped candidates in canonical order with their rules', () => {
+    let lines = ['total = a + b']
+    let mutators = [
+      activate('arithmetic', 0, ARITHMETIC),
+      activate('copy', 1, ARITHMETIC),
+      activate('removal', 2, REMOVAL),
+      activate('skipper', 3, SKIPPER),
+    ]
+    let result = generate(lines, mutators, { skipped: true })
+    let arithmeticId = result.mutants[0]!.id
+
+    expect(result.mutants.map(mutant => mutant.mutator)).toStrictEqual([
+      'arithmetic',
+    ])
+    expect(result.skipped).toStrictEqual([
+      {
+        reason:
+          'a finer arithmetic mutant lies inside the code it removes, and killing that mutant needs a test that observes this code',
+        by: { mutator: 'arithmetic', id: arithmeticId, start: 8 },
+        file: 'src/example.ts',
+        category: 'subsumed',
+        mutator: 'removal',
+        rule: 'solitary',
+        heuristic: false,
+        replacement: '',
+        start: 0,
+        end: 13,
+      },
+      {
+        reason:
+          'it produces the same mutated file as an earlier arithmetic mutant',
+        by: { mutator: 'arithmetic', id: arithmeticId, start: 8 },
+        file: 'src/example.ts',
+        category: 'duplicate',
+        replacement: 'a - b',
+        rule: 'duplicate',
+        heuristic: false,
+        mutator: 'copy',
+        start: 8,
+        end: 13,
+      },
+      {
+        by: { mutator: 'arithmetic', start: 8, id: null },
+        reason: 'the swap covers it',
+        file: 'src/example.ts',
+        mutator: 'skipper',
+        category: 'owned',
+        replacement: 'a',
+        heuristic: true,
+        rule: 'O11',
+        start: 8,
+        end: 13,
+      },
+    ])
+  })
+
+  it('names no id for a justifying candidate that is not listed', () => {
+    let probe: Mutator = {
+      create: () => ({
+        Identifier(node) {
+          return node.name === 'c' ? [{ text: 'd', node }] : []
+        },
+        BlockStatement(node) {
+          return [{ text: '{ f(d) }', node }]
+        },
+      }),
+      meta: { description: 'Probe.' },
+    }
+    let result = generate(
+      ['{ f(c) }'],
+      [activate('probe', 0, probe), activate('removal', 1, REMOVAL)],
+      { skipped: true },
+    )
+
+    expect(
+      result.skipped.map(candidate => [candidate.rule, candidate.by]),
+    ).toStrictEqual([
+      ['solitary', { mutator: 'probe', start: 4, id: null }],
+      ['duplicate', { id: result.mutants[0]!.id, mutator: 'probe', start: 0 }],
+    ])
+  })
+
+  it.each([false, true])(
+    'keeps the mutants and their ids when skipped candidates are listed (coarse mutants %s)',
+    coarseMutants => {
+      let lines = ['total = a + b', 'x = c + d']
+      let mutators = [
+        activate('arithmetic', 0, ARITHMETIC),
+        activate('copy', 1, ARITHMETIC),
+        activate('removal', 2, REMOVAL),
+        activate('skipper', 3, SKIPPER),
+      ]
+
+      expect(
+        generate(lines, mutators, { skipped: true, coarseMutants }).mutants,
+      ).toStrictEqual(generate(lines, mutators, { coarseMutants }).mutants)
+    },
+  )
+
+  it('does not list a skipped no-op', () => {
+    let noOp: Mutator = {
+      create: context => ({
+        Literal(node) {
+          return [
+            {
+              skip: { reason: 'the literal mutator owns it', rule: 'O7' },
+              text: context.sourceCode.getText(node),
+              node,
+            },
+          ]
+        },
+      }),
+      meta: { description: 'No-op.' },
+    }
+
+    expect(
+      generate(['x = 1'], [activate('probe', 0, noOp)], { skipped: true })
+        .skipped,
+    ).toStrictEqual([])
   })
 })

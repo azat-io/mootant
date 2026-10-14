@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
 import { formatMutant } from '../../helpers/format-mutant'
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('numberLiteral', () => {
@@ -336,4 +337,26 @@ describe('numberLiteral', () => {
       ).toStrictEqual(expected)
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      'declare let n: number; declare let s: string; a = n === 1; b = void 0; switch (n) { case 2: break }; setTimeout(run, 100); c = s.slice(-1); if (2) run(); d = items.sort((x, y) => (x > y ? 1 : -1)); x = { [1]: 2 }',
+      [
+        '1 -> 2 (owned O4)',
+        '0 -> 1 (equivalent void-operand)',
+        '2 -> 3 (noise case-label)',
+        '100 -> 101 (noise timer-delay)',
+        '-1 -> 0 (owned O18)',
+        '2 -> 3 (equivalent same-truth)',
+        '1 -> 2 (equivalent comparator-sign)',
+        '1 -> 2 (noise property-key)',
+      ],
+    ],
+    [
+      'declare let n: number; x = n || -1; while (0) {}',
+      ['-1 -> 0 (owned O16)', '0 -> 1 (timeout loop-running)'],
+    ],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('number-literal', source)).toStrictEqual(expected)
+  })
 })

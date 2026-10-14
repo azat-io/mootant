@@ -203,6 +203,14 @@ After changing the sources or the expectations, regenerate the reports:
 node test/fixtures/list/derive-expected-mutants.mjs
 ```
 
+`expected-skipped.json` and `expected-skipped-strict.json` hold the skipped
+candidates of `--skipped` with their summary counts. They come from the CLI, not
+from the oracle, so review the diff by hand before you commit it. To regenerate
+them, build first with `pnpm build`, then run
+`node bin/mootant.js list test/fixtures/list/source --json --skipped` (add
+`--preset strict` for the strict file) and keep only `skipped`,
+`summary.totalSkipped` and `summary.skippedByCategory`.
+
 ## Code Style
 
 ### TypeScript

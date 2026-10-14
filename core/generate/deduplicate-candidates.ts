@@ -1,6 +1,22 @@
 import type { MutantCandidate } from '../../types/mutant-candidate'
 
 /**
+ * Candidates that deduplication keeps and drops.
+ */
+interface DeduplicationOutcome {
+  /**
+   * Every dropped candidate, with the earlier candidate that produces the same
+   * file.
+   */
+  duplicates: Map<MutantCandidate, MutantCandidate>
+
+  /**
+   * The candidates that produce a new mutated file, in canonical order.
+   */
+  kept: MutantCandidate[]
+}
+
+/**
  * Keeps the first candidate, in canonical order, of every group of candidates
  * that produce the same mutated file. Two candidates are compared by the
  * smallest edit that turns the original text into their mutated text, so a
@@ -10,21 +26,26 @@ import type { MutantCandidate } from '../../types/mutant-candidate'
  *
  * @param candidates - Candidates of one file in canonical order.
  * @param text - Text of the file.
- * @returns The candidates that produce a new mutated file, in canonical order.
+ * @returns The candidates that produce a new mutated file, in canonical order,
+ *   and the dropped ones with the kept candidate each duplicates.
  */
 export function deduplicateCandidates(
   candidates: readonly MutantCandidate[],
   text: string,
-): MutantCandidate[] {
-  let seen = new Set<string>()
-  return candidates.filter(candidate => {
+): DeduplicationOutcome {
+  let seen = new Map<string, MutantCandidate>()
+  let duplicates = new Map<MutantCandidate, MutantCandidate>()
+  let kept = candidates.filter(candidate => {
     let key = getCanonicalEdit(text, candidate)
-    if (seen.has(key)) {
+    let first = seen.get(key)
+    if (first) {
+      duplicates.set(candidate, first)
       return false
     }
-    seen.add(key)
+    seen.set(key, candidate)
     return true
   })
+  return { duplicates, kept }
 }
 
 /**

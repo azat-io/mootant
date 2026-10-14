@@ -1,4 +1,7 @@
+import type { ListReportSkipped } from '../types/list-report-skipped'
 import type { ListReportMutant } from '../types/list-report-mutant'
+import type { SkippedMutant } from '../types/skipped-mutant'
+import type { SkipCategory } from '../types/skip-category'
 import type { ListResult } from '../types/list-result'
 import type { ListReport } from '../types/list-report'
 import type { Diagnostic } from '../types/diagnostic'
@@ -13,9 +16,23 @@ import { getLineStarts } from '../core/text/get-line-starts'
 const TRAILING_LINE_TERMINATOR_PATTERN = /(?:\r\n|[\n\r\u{2028}\u{2029}])$/u
 
 /**
+ * Skip categories in the order the summary counts them.
+ */
+const SKIP_CATEGORIES: readonly SkipCategory[] = [
+  'equivalent',
+  'noise',
+  'timeout',
+  'owned',
+  'subsumed',
+  'duplicate',
+  'invalid',
+]
+
+/**
  * Turns the result of a list run into the report that every formatter reads:
  * positions, original fragments, source lines, descriptions, counts and sorted
- * diagnostics.
+ * diagnostics. When the run collected skipped candidates, the report lists them
+ * with their positions and counts them by category; otherwise it has neither.
  *
  * @param result - Outcome of the list run.
  * @returns Report of the run.
@@ -29,6 +46,7 @@ export function buildListReport(result: ListResult): ListReport {
   }
 
   let mutants: ListReportMutant[] = []
+  let skipped: ListReportSkipped[] = []
   let diagnostics = [...result.diagnostics]
   for (let fileMutants of result.files) {
     diagnostics.push(...fileMutants.diagnostics)
@@ -62,6 +80,9 @@ export function buildListReport(result: ListResult): ListReport {
         id: mutant.id,
       })
     }
+    for (let candidate of fileMutants.skipped) {
+      skipped.push(createSkippedEntry(candidate, source, lineStarts))
+    }
   }
 
   let sortedDiagnostics = diagnostics.toSorted(compareDiagnostics)
@@ -78,7 +99,7 @@ export function buildListReport(result: ListResult): ListReport {
     }
   }
 
-  return {
+  let report: ListReport = {
     summary: {
       totalWarnings: sortedDiagnostics.length - totalErrors,
       totalIgnored: mutants.length - totalPending,
@@ -103,6 +124,53 @@ export function buildListReport(result: ListResult): ListReport {
     command: 'list',
     mutants,
   }
+  if (result.skipped) {
+    report.summary.skippedByCategory = countCategories(skipped)
+    report.summary.totalSkipped = skipped.length
+    report.skipped = skipped
+  }
+  return report
+}
+
+/**
+ * Builds the report entry of a skipped candidate.
+ *
+ * @param candidate - Skipped candidate of a file that was read.
+ * @param source - Text of the file as read.
+ * @param lineStarts - Line start offsets of the text.
+ * @returns The entry with positions and the original fragment.
+ */
+function createSkippedEntry(
+  candidate: SkippedMutant,
+  source: string,
+  lineStarts: number[],
+): ListReportSkipped {
+  let { by } = candidate
+  let position = getSourcePosition(lineStarts, candidate.start)
+  let justifier = by ? getSourcePosition(lineStarts, by.start) : null
+  return {
+    by:
+      by ?
+        {
+          column: justifier!.column,
+          line: justifier!.line,
+          mutator: by.mutator,
+          id: by.id,
+        }
+      : null,
+    original: source.slice(candidate.start, candidate.end),
+    replacement: candidate.replacement,
+    heuristic: candidate.heuristic,
+    category: candidate.category,
+    mutator: candidate.mutator,
+    reason: candidate.reason,
+    column: position.column,
+    start: candidate.start,
+    file: candidate.file,
+    rule: candidate.rule,
+    line: position.line,
+    end: candidate.end,
+  }
 }
 
 /**
@@ -122,6 +190,24 @@ function compareDiagnostics(left: Diagnostic, right: Diagnostic): number {
     compareCodeUnits(left.code, right.code) ||
     compareCodeUnits(left.message, right.message)
   )
+}
+
+/**
+ * Counts skipped candidates by category.
+ *
+ * @param skipped - Skipped candidates of the run.
+ * @returns The count of every category, in summary order.
+ */
+function countCategories(
+  skipped: readonly ListReportSkipped[],
+): Record<SkipCategory, number> {
+  let counts = Object.fromEntries(
+    SKIP_CATEGORIES.map(category => [category, 0]),
+  ) as Record<SkipCategory, number>
+  for (let candidate of skipped) {
+    counts[candidate.category] += 1
+  }
+  return counts
 }
 
 /**

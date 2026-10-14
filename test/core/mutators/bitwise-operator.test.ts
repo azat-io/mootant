@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('bitwiseOperator', () => {
@@ -94,4 +95,18 @@ describe('bitwiseOperator', () => {
       expect(runMutator('number-literal', source)).toMatchObject(expected)
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      'declare let n: number; a = n ^ 0; b = 0 >> n; c = n << 0; d = 0 ^ n; e = n | 0',
+      [
+        'n ^ 0 -> n | 0 (equivalent identity-operand)',
+        '0 >> n -> 0 << n (equivalent identity-operand)',
+        'n << 0 -> n >> 0 (equivalent identity-operand)',
+        '0 ^ n -> 0 | n (equivalent identity-operand)',
+      ],
+    ],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('bitwise-operator', source)).toStrictEqual(expected)
+  })
 })

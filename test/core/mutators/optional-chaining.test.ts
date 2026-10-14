@@ -7,6 +7,7 @@ import { generateFileMutants } from '../../../core/generate/generate-file-mutant
 import { resolvePreset } from '../../../core/plugins/resolve-preset'
 import { corePlugin } from '../../../core/plugins/core-plugin'
 import { formatMutant } from '../../helpers/format-mutant'
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 /**
@@ -172,5 +173,16 @@ describe('optionalChaining', () => {
       { mutator: 'statement-removal', replacement: ';', start: 0 },
     ])
     expect(mutants.map(mutant => mutant.end)).toStrictEqual([12, 12])
+  })
+
+  it.each<[string, string[]]>([
+    [
+      'declare let ok: { name: string }; use(ok?.name)',
+      ['ok?.name -> ok.name (equivalent non-nullable)'],
+    ],
+    ['delete user?.name', ['user?.name -> user.name (invalid invalid-target)']],
+    ['use(user?.name)', []],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('optional-chaining', source)).toStrictEqual(expected)
   })
 })

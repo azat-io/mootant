@@ -2,16 +2,12 @@ import type { TemplateLiteral, StringLiteral, Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator-context'
 import type { Replacement } from '../../types/replacement'
+import type { SkipNote } from '../../types/skip-note'
 import type { Mutator } from '../../types/mutator'
 
-import { isNoOpCallbackLiteral } from './shared/is-no-op-callback-literal'
-import { isBooleanModeOperand } from './shared/is-boolean-mode-operand'
-import { isBranchCopySkipped } from './shared/is-branch-copy-skipped'
-import { isComparisonOperand } from './shared/is-comparison-operand'
-import { isOrDefaultSkipped } from './shared/is-or-default-skipped'
 import { createRunContext } from './shared/create-run-context'
 import { isLookupPosition } from './shared/is-lookup-position'
-import { isVoidOperand } from './shared/is-void-operand'
+import { getLiteralSkip } from './shared/get-literal-skip'
 
 /**
  * Options of the string-literal mutator.
@@ -53,7 +49,8 @@ let lookupMethods = new Set([
  * JSX attribute strings, bare string statements, tagged templates, templates
  * without static text and (unless the `caseTests` option is set) case labels
  * are skipped, and so are mutants that another mutant owns or subsumes (branch
- * pairs, no-op callbacks, emptied `||` defaults).
+ * pairs, no-op callbacks, emptied `||` defaults). A skipped change follows as a
+ * skipped replacement; a template without static text has nothing to change.
  */
 export let stringLiteral: Mutator<StringLiteralOptions> = {
   create(context) {
@@ -61,9 +58,6 @@ export let stringLiteral: Mutator<StringLiteralOptions> = {
     return {
       TemplateLiteral(node) {
         let { expressions, quasis } = node
-        if (sourceCode.getSlot(node).key === 'quasi') {
-          return []
-        }
         let hasText = quasis.some(quasi => quasi.value.cooked !== '')
         if (expressions.length === 0) {
           let value = hasText ? '' : FILLER
@@ -118,51 +112,82 @@ interface StringChange {
 }
 
 /**
- * Builds the mutant of a string, or nothing when a rule of catalog 4.16 skips
- * it.
+ * Decides whether string-literal skips the change of a string (catalog 4.16):
+ * tagged templates, keys, case labels unless the `caseTests` option is set,
+ * bare string statements, JSX attribute strings, `Symbol` descriptions, the
+ * rules all literal mutators share, and an emptied lookup key whose call is
+ * only tested (O8).
  *
  * @param node - String literal or template literal.
  * @param change - New text and value.
  * @param context - Mutator context of the file.
- * @returns The mutant, or nothing.
+ * @returns Rule and reason of the skip, or null when the mutant is emitted.
  */
-function mutateString(
+function getStringSkip(
   node: TemplateLiteral | StringLiteral,
   change: StringChange,
   context: MutatorContext<StringLiteralOptions>,
-): Replacement[] {
-  let { options, syntax } = context
-  let runContext = createRunContext(context)
+): SkipNote | null {
+  let { sourceCode, options, syntax } = context
   let { parent, key } = syntax.getContextSlot(node)
   let { value, text } = change
-  if (
-    key === 'key' ||
-    (parent?.type === 'SwitchCase' && !options.caseTests) ||
-    parent?.type === 'ExpressionStatement' ||
-    parent?.type === 'JSXAttribute' ||
-    (parent?.type === 'CallExpression' &&
-      isSymbolCall(parent.callee, context)) ||
-    isComparisonOperand(node, context) ||
-    isBooleanModeOperand(node, context) ||
-    isVoidOperand(node, context) ||
-    syntax.isErrorMessage(node)
-  ) {
-    return []
+  if (sourceCode.getSlot(node).key === 'quasi') {
+    return {
+      reason: 'the text of a tagged template belongs to its tag',
+      rule: 'tagged-template',
+    }
   }
+  if (key === 'key') {
+    return { reason: 'property keys are not mutated', rule: 'property-key' }
+  }
+  if (parent?.type === 'SwitchCase' && !options.caseTests) {
+    return {
+      reason: 'case labels are mutated only with the caseTests option',
+      rule: 'case-label',
+    }
+  }
+  if (parent?.type === 'ExpressionStatement') {
+    return {
+      reason: 'a bare string statement, such as a directive, is not mutated',
+      rule: 'bare-string',
+    }
+  }
+  if (parent?.type === 'JSXAttribute') {
+    return {
+      reason: 'a JSX attribute string is not worth a test',
+      rule: 'jsx-attribute',
+    }
+  }
+  if (
+    parent?.type === 'CallExpression' &&
+    isSymbolCall(parent.callee, context)
+  ) {
+    return {
+      reason: 'the description of a symbol is not worth a test',
+      rule: 'symbol-description',
+    }
+  }
+  let runContext = createRunContext(context)
   if (value === null) {
-    return isBranchCopySkipped(node, { text }, runContext) ?
-        []
-      : [{ text, node }]
+    return getLiteralSkip(node, { change: { text } }, runContext)
   }
-  if (
-    (value === '' && isTestedLookupKey(node, context)) ||
-    isBranchCopySkipped(node, { value }, runContext) ||
-    isNoOpCallbackLiteral(node, value, context) ||
-    isOrDefaultSkipped(node, value, runContext)
-  ) {
-    return []
+
+  /**
+   * Skips an emptied lookup key whose call is only tested (O8).
+   *
+   * @returns Rule and reason of the skip, or null.
+   */
+  function getOwnSkip(): SkipNote | null {
+    if (value === '' && isTestedLookupKey(node, context)) {
+      return {
+        reason:
+          'an empty lookup key only makes a tested lookup constant, which the owner of the test emits',
+        rule: 'O8',
+      }
+    }
+    return null
   }
-  return [{ text, node }]
+  return getLiteralSkip(node, { change: { value }, getOwnSkip }, runContext)
 }
 
 /**
@@ -192,6 +217,24 @@ function isTestedLookupKey(node: Node, context: MutatorContext): boolean {
       lookupMethods.has(callee.property.name)) ||
     (index === 1 && path?.join('.') === 'Object.hasOwn')
   return isKey && isLookupPosition(call, context)
+}
+
+/**
+ * Builds the mutant of a string, skipped when a rule of catalog 4.16 applies.
+ *
+ * @param node - String literal or template literal.
+ * @param change - New text and value.
+ * @param context - Mutator context of the file.
+ * @returns The mutant or the skipped mutant.
+ */
+function mutateString(
+  node: TemplateLiteral | StringLiteral,
+  change: StringChange,
+  context: MutatorContext<StringLiteralOptions>,
+): Replacement[] {
+  let { text } = change
+  let skip = getStringSkip(node, change, context)
+  return [skip ? { text, skip, node } : { text, node }]
 }
 
 /**

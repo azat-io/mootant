@@ -2,7 +2,7 @@ import type { Replacement } from '../../types/replacement'
 import type { Mutator } from '../../types/mutator'
 
 import { createRunContext } from './shared/create-run-context'
-import { hasGroupConstant } from './shared/has-group-constant'
+import { getGroupConstant } from './shared/get-group-constant'
 import { getLogicalDrops } from './shared/get-logical-drops'
 import { getNullishPlan } from './shared/get-nullish-plan'
 
@@ -37,10 +37,12 @@ export let logicalOperator: Mutator<LogicalOperatorOptions> = {
        * `||`: the drop of the left operand, the drop of the right operand or
        * the nullish swap in its place, and the absorbing constant of the group.
        * For `??`: the drop of the left side, the drop of the default, and the
-       * swap to `||`.
+       * swap to `||`. The mutants the rules skip follow as skipped
+       * replacements.
        *
        * @param node - Logical expression of the runtime tree.
-       * @returns Replacements of the expression, in emission order.
+       * @returns Replacements of the expression, in emission order, then the
+       *   skipped ones.
        */
       LogicalExpression(node) {
         let left = sourceCode.getText(node.left)
@@ -60,7 +62,7 @@ export let logicalOperator: Mutator<LogicalOperatorOptions> = {
               node,
             })
           }
-          return replacements
+          return [...replacements, ...plan.skipped]
         }
         let drops = getLogicalDrops(node, runContext, options.nullishSwap)
         if (drops.dropLeft) {
@@ -74,8 +76,14 @@ export let logicalOperator: Mutator<LogicalOperatorOptions> = {
         } else if (drops.dropRight) {
           replacements.push({ text: left, node })
         }
-        if (hasGroupConstant(node, runContext)) {
-          replacements.push({ text: String(node.operator === '||'), node })
+        let constant = getGroupConstant(node, runContext)
+        let text = String(node.operator === '||')
+        if (constant.emitted) {
+          replacements.push({ node, text })
+        }
+        replacements.push(...drops.skipped)
+        if (constant.skip) {
+          replacements.push({ skip: constant.skip, node, text })
         }
         return replacements
       },

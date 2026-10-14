@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('unaryOperator', () => {
@@ -111,4 +112,18 @@ describe('unaryOperator', () => {
       ])
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      "declare let n: number; a = -1; b = +n; c = +'3'; d = ~~n; e = +x; g = +(2)",
+      [
+        '-1 -> 1 (owned negative-literal)',
+        '+n -> n (equivalent numeric-plus)',
+        "+'3' -> '3' (noise literal-coercion)",
+        '+(2) -> (2) (equivalent number-literal-plus)',
+      ],
+    ],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('unary-operator', source)).toStrictEqual(expected)
+  })
 })

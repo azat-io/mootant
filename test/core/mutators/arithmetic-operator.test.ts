@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('arithmeticOperator', () => {
@@ -264,4 +265,29 @@ describe('arithmeticOperator', () => {
       ).toMatchObject(expected)
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      "declare let n: number; declare let s: string; a = n + 0; b = n * 1; c = s + 'x'; d = n - -n; e = s + `t`",
+      [
+        'n + 0 -> n - 0 (equivalent numeric-identity)',
+        'n * 1 -> n / 1 (equivalent identity-operand)',
+        "s + 'x' -> s (owned O11)",
+        'n - -n -> n + -n (owned O14)',
+        's + `t` -> s (owned O11)',
+      ],
+    ],
+    [
+      "function f(s: string) { throw new Error('bad ' + s) }",
+      ["'bad ' + s -> 'bad ' (noise error-message)"],
+    ],
+    [
+      "throw new Error('Bad input:' + ' expected a number')",
+      [
+        "'Bad input:' + ' expected a number' -> 'Bad input:' (noise error-message)",
+      ],
+    ],
+  ])('lists the skipped mutants of %s', (source, expected) => {
+    expect(listSkipped('arithmetic-operator', source)).toStrictEqual(expected)
+  })
 })

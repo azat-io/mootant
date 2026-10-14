@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { MutatorSetup } from '../../helpers/generate-mutants'
 
 import { formatMutant } from '../../helpers/format-mutant'
+import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
 describe('comparisonOperator', () => {
@@ -849,4 +850,20 @@ describe('comparisonOperator', () => {
       ).toStrictEqual(expected)
     },
   )
+
+  it.each<[string, string[]]>([
+    [
+      'function f(list: string[], a: number, b: number) { if (list.length > 0 && a < b) run() }',
+      [
+        'list.length > 0 -> list.length != 0 (equivalent lower-bound)',
+        'a < b -> false (owned O3)',
+      ],
+    ],
+    [
+      'function f(a: number, b: number) { while (a < b) a++ }',
+      ['a < b -> a != b (timeout loop-running)'],
+    ],
+  ])('lists the skipped entries of %s', (source, expected) => {
+    expect(listSkipped('comparison-operator', source)).toStrictEqual(expected)
+  })
 })

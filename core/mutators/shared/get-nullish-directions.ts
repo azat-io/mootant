@@ -9,6 +9,21 @@ import { getNullishPlan } from './get-nullish-plan'
 import { getLiteralFlip } from './get-literal-flip'
 
 /**
+ * Truth value toward which a running directional mutant of a `??` moves it.
+ */
+export interface NullishDirection {
+  /**
+   * Directional mutant.
+   */
+  by: MutantSite
+
+  /**
+   * Truth value the mutant moves the `??` toward.
+   */
+  value: boolean
+}
+
+/**
  * Finds the truth values toward which the running directional mutants of a `??`
  * move it (catalog 4.7 and 4.8): logical-operator's drop of the default moves
  * it toward false, its swap to `||` toward true, and the flip of a literal
@@ -21,43 +36,39 @@ import { getLiteralFlip } from './get-literal-flip'
  * @param node - `??` expression of the runtime tree.
  * @param candidate - Mutant whose skip the directions decide.
  * @param context - Mutator context with the test of mutants that will run.
- * @returns The truth values, in the order drop, swap, flip; none outside a
- *   truth position.
+ * @returns The truth values with their mutants, in the order drop, swap, flip;
+ *   none outside a truth position.
  */
 export function getNullishDirections(
   node: LogicalExpression,
   candidate: MutantSite,
   context: RunContext,
-): boolean[] {
+): NullishDirection[] {
   if (
     !context.syntax.isBooleanContext(node) &&
     !isBooleanModeOperand(node, context)
   ) {
     return []
   }
-  let directions: boolean[] = []
+  let directions: NullishDirection[] = []
   let plan = getNullishPlan(node, context, {
     nullishSwap: 'distinguishing',
     nullishNormalization: false,
   })
-  if (context.runs({ mutator: 'logical-operator', node }, candidate)) {
+  let owner = { mutator: 'logical-operator', node }
+  if (context.runs(owner, candidate)) {
     if (plan.dropRight) {
-      directions.push(false)
+      directions.push({ value: false, by: owner })
     }
     if (plan.swap) {
-      directions.push(true)
+      directions.push({ value: true, by: owner })
     }
   }
   let fallback = unwrapParentheses(node.right)
   let flip = getLiteralFlip(fallback, context)
-  if (
-    flip !== null &&
-    context.runs(
-      { mutator: getLiteralMutator(fallback)!, node: fallback },
-      candidate,
-    )
-  ) {
-    directions.push(flip)
+  let literal = { mutator: getLiteralMutator(fallback)!, node: fallback }
+  if (flip !== null && context.runs(literal, candidate)) {
+    directions.push({ value: flip, by: literal })
   }
   return directions
 }

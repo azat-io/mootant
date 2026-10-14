@@ -39,7 +39,7 @@ describe('getNullishDirections', () => {
         group,
         { mutator: 'condition', node: group },
         createRunContext(context),
-      ),
+      ).map(direction => direction.value),
     ).toEqual(expected)
   })
 
@@ -63,7 +63,25 @@ describe('getNullishDirections', () => {
         group,
         { mutator: 'condition', node: group },
         createRunContext(context),
-      ),
+      ).map(direction => direction.value),
     ).toEqual(expected)
+  })
+
+  it('names the mutant of each direction', () => {
+    let { context, find } = createTestContext(
+      'function f(e: string | undefined) { if (e ?? false) {} }',
+    )
+    let group = find('LogicalExpression')
+
+    expect(
+      getNullishDirections(
+        group,
+        { mutator: 'condition', node: group },
+        createRunContext(context),
+      ).map(
+        ({ value, by }) =>
+          `${value} ${by.mutator} ${context.sourceCode.getText(by.node)}`,
+      ),
+    ).toEqual(['true boolean-literal false'])
   })
 })
