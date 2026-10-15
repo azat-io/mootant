@@ -2,7 +2,7 @@ import type { Node } from 'oxc-parser'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import type { TypeHintProvider } from '../../../types/type-hint-provider'
+import type { TypeHintProvider } from '../../../types/hints/type-hint-provider'
 
 import { createSyntacticTypeProvider } from '../../../core/hints/create-syntactic-type-provider'
 import { inferExpressionType } from '../../../core/hints/infer-expression-type'

@@ -1,7 +1,7 @@
 import { realpath, readdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 
-import type { Diagnostic } from '../../types/diagnostic'
+import type { Diagnostic } from '../../types/mutant/diagnostic'
 
 import { isDeclarationFile } from '../parser/is-declaration-file'
 import { compareCodeUnits } from '../compare-code-units'

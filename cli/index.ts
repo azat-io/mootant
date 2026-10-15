@@ -1,4 +1,5 @@
 import { parseArguments } from './parse-arguments'
+import { runMutation } from './run-mutation'
 import { version } from '../package.json'
 import { runList } from './run-list'
 
@@ -18,6 +19,10 @@ export function run(): Promise<void> {
 
   if (parsed.kind === 'list') {
     return runList(parsed.options)
+  }
+
+  if (parsed.kind === 'run') {
+    return runMutation(parsed.options)
   }
 
   console.info(parsed.text)

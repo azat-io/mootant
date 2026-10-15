@@ -1,6 +1,6 @@
-import type { RegisteredMutator } from '../../types/registered-mutator'
-import type { MutatorRegistry } from '../../types/mutator-registry'
-import type { Plugin } from '../../types/plugin'
+import type { RegisteredMutator } from '../../types/mutator/registered-mutator'
+import type { MutatorRegistry } from '../../types/mutator/mutator-registry'
+import type { Plugin } from '../../types/config/plugin'
 
 import { compareCodeUnits } from '../compare-code-units'
 import { isKebabCaseName } from './is-kebab-case-name'

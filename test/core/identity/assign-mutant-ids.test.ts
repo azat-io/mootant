@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import type { RegisteredMutator } from '../../../types/registered-mutator'
-import type { MutantCandidate } from '../../../types/mutant-candidate'
-import type { ParsedFile } from '../../../types/parsed-file'
+import type { RegisteredMutator } from '../../../types/mutator/registered-mutator'
+import type { MutantCandidate } from '../../../types/mutant/mutant-candidate'
+import type { ParsedFile } from '../../../types/source/parsed-file'
 
 import { assignMutantIds } from '../../../core/identity/assign-mutant-ids'
 import { createMutantId } from '../../../core/identity/create-mutant-id'

@@ -1,10 +1,10 @@
 import type { StaticMemberExpression, CallExpression, Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../types/mutator-context'
-import type { Replacement } from '../../types/replacement'
-import type { SkipNote } from '../../types/skip-note'
-import type { TextEdit } from '../../types/text-edit'
-import type { Mutator } from '../../types/mutator'
+import type { MutatorContext } from '../../types/mutator/mutator-context'
+import type { Replacement } from '../../types/mutator/replacement'
+import type { SkipNote } from '../../types/mutant/skip-note'
+import type { TextEdit } from '../../types/source/text-edit'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { isLookupPosition } from './shared/is-lookup-position'
 import { getLiteralValue } from './shared/get-literal-value'

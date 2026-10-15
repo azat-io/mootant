@@ -2,8 +2,8 @@ import type { ExpressionStatement, Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
-import type { OperatorExpression } from '../../../types/operator-expression'
-import type { ParsedFile } from '../../../types/parsed-file'
+import type { OperatorExpression } from '../../../types/syntax/operator-expression'
+import type { ParsedFile } from '../../../types/source/parsed-file'
 
 import { unwrapParentheses } from '../../../core/tree/unwrap-parentheses'
 import { replaceOperator } from '../../../core/text/replace-operator'

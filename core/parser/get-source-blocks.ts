@@ -1,5 +1,5 @@
-import type { SourceBlock } from '../../types/source-block'
-import type { ScriptBlock } from '../../types/script-block'
+import type { SourceBlock } from '../../types/source/source-block'
+import type { ScriptBlock } from '../../types/source/script-block'
 
 import { getComponentFramework } from './get-component-framework'
 import { getParserOptions } from './get-parser-options'

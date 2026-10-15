@@ -1,7 +1,7 @@
 import type { LogicalExpression, Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
-import type { SkipNote } from '../../../types/skip-note'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
+import type { SkipNote } from '../../../types/mutant/skip-note'
 
 import { isConstantEligibleGroup } from './is-constant-eligible-group'
 import { isBooleanValued } from './is-boolean-valued'

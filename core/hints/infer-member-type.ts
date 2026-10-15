@@ -1,8 +1,8 @@
 import type { MemberExpression, ClassBody, Node } from 'oxc-parser'
 
-import type { TypeInference } from '../../types/type-inference'
-import type { InferredType } from '../../types/inferred-type'
-import type { TreeIndex } from '../../types/tree-index'
+import type { TypeInference } from '../../types/hints/type-inference'
+import type { InferredType } from '../../types/hints/inferred-type'
+import type { TreeIndex } from '../../types/syntax/tree-index'
 import type { ThisClass } from './find-this-class'
 
 import { unwrapParentheses } from '../tree/unwrap-parentheses'

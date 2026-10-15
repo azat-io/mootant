@@ -1,4 +1,4 @@
-import type { ValueKind } from '../../types/value-kind'
+import type { ValueKind } from '../../types/hints/value-kind'
 
 /**
  * Result kinds of calls whose callee alone tells the type. A key is the path of

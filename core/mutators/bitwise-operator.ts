@@ -1,7 +1,7 @@
 import type { PrivateInExpression, BinaryExpression } from 'oxc-parser'
 
-import type { SkipNote } from '../../types/skip-note'
-import type { Mutator } from '../../types/mutator'
+import type { SkipNote } from '../../types/mutant/skip-note'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { getLiteralValue } from './shared/get-literal-value'
 

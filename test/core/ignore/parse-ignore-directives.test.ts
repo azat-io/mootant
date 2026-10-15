@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { IgnoreDirective } from '../../../types/ignore-directive'
+import type { IgnoreDirective } from '../../../types/mutant/ignore-directive'
 
 import { parseIgnoreDirectives } from '../../../core/ignore/parse-ignore-directives'
 import { createTestFile } from '../../helpers/create-test-file'

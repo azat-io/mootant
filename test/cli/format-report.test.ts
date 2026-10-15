@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ListReport } from '../../types/list-report'
+import type { ListReport } from '../../types/report/list-report'
 
 import { formatTextReport } from '../../cli/format-text-report'
 import { formatReport } from '../../cli/format-report'

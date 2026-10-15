@@ -1,5 +1,5 @@
 import type { MutatorSetup } from './generate-candidates'
-import type { Mutant } from '../../types/mutant'
+import type { Mutant } from '../../types/mutant/mutant'
 
 import { generateCandidates } from './generate-candidates'
 

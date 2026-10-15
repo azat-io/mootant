@@ -1,6 +1,6 @@
-import type { PresetSettings } from '../../types/preset-settings'
-import type { MutatorSetting } from '../../types/mutator-setting'
-import type { FileMutants } from '../../types/file-mutants'
+import type { MutatorSetting } from '../../types/mutator/mutator-setting'
+import type { PresetSettings } from '../../types/config/preset-settings'
+import type { FileMutants } from '../../types/mutant/file-mutants'
 
 import { createMutatorRegistry } from '../../core/plugins/create-mutator-registry'
 import { generateFileMutants } from '../../core/generate/generate-file-mutants'
@@ -53,7 +53,7 @@ const TEST_PRESET = 'test-run'
 export function generateCandidates(
   source: string,
   setup: MutatorSetup = {},
-): FileMutants {
+): Omit<FileMutants, 'absolute'> {
   let registry = createMutatorRegistry(corePlugin, {})
   registry.presets.set(TEST_PRESET, {
     extends: [setup.preset ?? 'recommended'],

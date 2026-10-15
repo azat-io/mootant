@@ -1,5 +1,5 @@
-import type { InferredType } from '../../../types/inferred-type'
-import type { ValueKind } from '../../../types/value-kind'
+import type { InferredType } from '../../../types/hints/inferred-type'
+import type { ValueKind } from '../../../types/hints/value-kind'
 
 /**
  * Result of `typeof` for each kind that is not nullish.

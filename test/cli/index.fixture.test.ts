@@ -3,7 +3,7 @@ import type { MockInstance } from 'vitest'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { readFile } from 'node:fs/promises'
 
-import type { ListReport } from '../../types/list-report'
+import type { ListReport } from '../../types/report/list-report'
 
 import expectedStrictSkipped from '../fixtures/list/expected-skipped-strict.json'
 import expectedStrictReport from '../fixtures/list/expected-mutants-strict.json'

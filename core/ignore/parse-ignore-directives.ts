@@ -1,8 +1,8 @@
 import type { Comment } from 'oxc-parser'
 
-import type { IgnoreDirective } from '../../types/ignore-directive'
-import type { ParsedFile } from '../../types/parsed-file'
-import type { Diagnostic } from '../../types/diagnostic'
+import type { IgnoreDirective } from '../../types/mutant/ignore-directive'
+import type { ParsedFile } from '../../types/source/parsed-file'
+import type { Diagnostic } from '../../types/mutant/diagnostic'
 
 import { getSourcePosition } from '../text/get-source-position'
 import { findClosestName } from '../text/find-closest-name'

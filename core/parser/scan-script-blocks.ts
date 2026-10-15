@@ -1,5 +1,5 @@
-import type { ComponentFramework } from '../../types/component-framework'
-import type { ScriptBlock } from '../../types/script-block'
+import type { ComponentFramework } from '../../types/source/component-framework'
+import type { ScriptBlock } from '../../types/source/script-block'
 
 /**
  * Opening or closing tag read from the markup.

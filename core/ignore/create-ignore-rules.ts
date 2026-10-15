@@ -1,8 +1,8 @@
-import type { IgnoreDirective } from '../../types/ignore-directive'
-import type { IgnoreSource } from '../../types/ignore-source'
-import type { ParsedFile } from '../../types/parsed-file'
-import type { IgnoreRule } from '../../types/ignore-rule'
-import type { Diagnostic } from '../../types/diagnostic'
+import type { IgnoreDirective } from '../../types/mutant/ignore-directive'
+import type { IgnoreSource } from '../../types/mutant/ignore-source'
+import type { ParsedFile } from '../../types/source/parsed-file'
+import type { IgnoreRule } from '../../types/mutant/ignore-rule'
+import type { Diagnostic } from '../../types/mutant/diagnostic'
 
 import { getComponentFramework } from '../parser/get-component-framework'
 

@@ -1,6 +1,6 @@
 import type { Node } from 'oxc-parser'
 
-import type { TypeHints } from '../../../types/type-hints'
+import type { TypeHints } from '../../../types/hints/type-hints'
 
 import { hasDefinedFalsyValue } from './has-defined-falsy-value'
 import { isCanonicalFalsy } from './is-canonical-falsy'

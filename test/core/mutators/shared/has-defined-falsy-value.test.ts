@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ValueKind } from '../../../../types/value-kind'
+import type { ValueKind } from '../../../../types/hints/value-kind'
 
 import { hasDefinedFalsyValue } from '../../../../core/mutators/shared/has-defined-falsy-value'
 import { createInferredType } from '../../../../core/hints/create-inferred-type'

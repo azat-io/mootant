@@ -1,4 +1,4 @@
-import type { Mutator } from '../../types/mutator'
+import type { Mutator } from '../../types/mutator/mutator'
 
 /**
  * Removes one property or spread from an object literal (catalog 4.12). Each

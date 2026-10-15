@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import type { MutatorRegistry } from '../../../types/mutator-registry'
-import type { PresetSettings } from '../../../types/preset-settings'
-import type { Mutator } from '../../../types/mutator'
-import type { Preset } from '../../../types/preset'
+import type { MutatorRegistry } from '../../../types/mutator/mutator-registry'
+import type { PresetSettings } from '../../../types/config/preset-settings'
+import type { Mutator } from '../../../types/mutator/mutator'
+import type { Preset } from '../../../types/config/preset'
 
 import { createMutatorRegistry } from '../../../core/plugins/create-mutator-registry'
 import { resolvePreset } from '../../../core/plugins/resolve-preset'

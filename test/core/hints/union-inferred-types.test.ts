@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { InferredType } from '../../../types/inferred-type'
-import type { ValueKind } from '../../../types/value-kind'
+import type { InferredType } from '../../../types/hints/inferred-type'
+import type { ValueKind } from '../../../types/hints/value-kind'
 
 import { unionInferredTypes } from '../../../core/hints/union-inferred-types'
 

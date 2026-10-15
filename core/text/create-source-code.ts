@@ -1,9 +1,9 @@
 import type { Node } from 'oxc-parser'
 
-import type { ScopeAnalysis } from '../../types/scope-analysis'
-import type { SourceCode } from '../../types/source-code'
-import type { ParsedFile } from '../../types/parsed-file'
-import type { TreeIndex } from '../../types/tree-index'
+import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
+import type { SourceCode } from '../../types/source/source-code'
+import type { ParsedFile } from '../../types/source/parsed-file'
+import type { TreeIndex } from '../../types/syntax/tree-index'
 
 import { getSourcePosition } from './get-source-position'
 import { removeListElement } from './remove-list-element'

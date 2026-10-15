@@ -1,6 +1,6 @@
-import type { Diagnostic } from '../types/diagnostic'
 import type { ListOptions } from './parse-arguments'
 
+import { printDiagnostics } from './print-diagnostics'
 import { buildListReport } from './build-list-report'
 import { listMutants } from '../core/list-mutants'
 import { formatReport } from './format-report'
@@ -31,36 +31,5 @@ export async function runList(options: ListOptions): Promise<void> {
   } catch (error) {
     console.error('\nError:', (error as Error).message)
     process.exitCode = 1
-  }
-}
-
-/**
- * Formats a diagnostic as `file:line:column: severity: message [code]`.
- *
- * @param diagnostic - Problem to format.
- * @returns One line of text.
- */
-function formatDiagnostic(diagnostic: Diagnostic): string {
-  let { severity, message, column, line, file, code } = diagnostic
-  let where = ''
-  if (file !== null) {
-    where = line === null ? `${file}: ` : `${file}:${line}:${column}: `
-  }
-  return `${where}${severity}: ${message} [${code}]`
-}
-
-/**
- * Prints diagnostics to stderr, one line each, in text mode.
- *
- * @param diagnostics - Sorted problems of the run.
- */
-function printDiagnostics(diagnostics: Diagnostic[]): void {
-  for (let diagnostic of diagnostics) {
-    let line = formatDiagnostic(diagnostic)
-    if (diagnostic.severity === 'error') {
-      console.error(line)
-    } else {
-      console.warn(line)
-    }
   }
 }

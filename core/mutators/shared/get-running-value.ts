@@ -5,7 +5,7 @@ import type {
   Node,
 } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 import { isTestedLoop } from '../../syntax/is-tested-loop'
 import { isBooleanMode } from './is-boolean-mode'

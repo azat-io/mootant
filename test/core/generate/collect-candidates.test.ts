@@ -2,9 +2,9 @@ import type { Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
-import type { MutatorContext } from '../../../types/mutator-context'
-import type { ActiveMutator } from '../../../types/active-mutator'
-import type { Mutator } from '../../../types/mutator'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
+import type { ActiveMutator } from '../../../types/mutator/active-mutator'
+import type { Mutator } from '../../../types/mutator/mutator'
 
 import { parseIgnoreDirectives } from '../../../core/ignore/parse-ignore-directives'
 import { collectCandidates } from '../../../core/generate/collect-candidates'

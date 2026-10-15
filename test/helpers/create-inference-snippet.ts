@@ -1,6 +1,6 @@
 import type { Node } from 'oxc-parser'
 
-import type { TypeInference } from '../../types/type-inference'
+import type { TypeInference } from '../../types/hints/type-inference'
 
 import { createSyntacticTypeProvider } from '../../core/hints/create-syntactic-type-provider'
 import { walkTree } from '../../core/tree/walk-tree'

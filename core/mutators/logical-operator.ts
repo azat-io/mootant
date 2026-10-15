@@ -1,5 +1,5 @@
-import type { Replacement } from '../../types/replacement'
-import type { Mutator } from '../../types/mutator'
+import type { Replacement } from '../../types/mutator/replacement'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { createRunContext } from './shared/create-run-context'
 import { getGroupConstant } from './shared/get-group-constant'

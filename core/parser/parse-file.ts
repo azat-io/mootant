@@ -2,9 +2,9 @@ import type { OxcError, Program } from 'oxc-parser'
 
 import { parseSync } from 'oxc-parser'
 
-import type { ParseSettings } from '../../types/parse-settings'
-import type { ParsedFile } from '../../types/parsed-file'
-import type { Diagnostic } from '../../types/diagnostic'
+import type { ParseSettings } from '../../types/source/parse-settings'
+import type { ParsedFile } from '../../types/source/parsed-file'
+import type { Diagnostic } from '../../types/mutant/diagnostic'
 
 import { getSourcePosition } from '../text/get-source-position'
 import { getLineStarts } from '../text/get-line-starts'

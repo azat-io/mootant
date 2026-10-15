@@ -84,14 +84,20 @@ export default defineConfig({
       external,
     },
     lib: {
-      entry: ['cli/index.ts', 'core/index.ts'],
+      entry: [
+        'adapters/vitest/index.ts',
+        'adapters/vitest/runner.ts',
+        'core/runtime/index.ts',
+        'cli/index.ts',
+        'core/index.ts',
+      ],
       formats: ['es'],
     },
     minify: true,
   },
   plugins: [
     dts({
-      include: ['cli', 'core', 'types'],
+      include: ['adapters', 'cli', 'core', 'types'],
       copyDtsFiles: true,
       strictOutput: true,
       beforeWriteFile,

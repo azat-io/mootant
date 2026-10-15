@@ -1,6 +1,6 @@
 import type { ClassBody, Node } from 'oxc-parser'
 
-import type { TreeIndex } from '../../types/tree-index'
+import type { TreeIndex } from '../../types/syntax/tree-index'
 
 /**
  * Class whose instance or constructor `this` refers to.

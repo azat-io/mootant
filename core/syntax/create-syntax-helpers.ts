@@ -1,6 +1,6 @@
-import type { SyntaxHelpers } from '../../types/syntax-helpers'
-import type { ScopeAnalysis } from '../../types/scope-analysis'
-import type { TreeIndex } from '../../types/tree-index'
+import type { SyntaxHelpers } from '../../types/syntax/syntax-helpers'
+import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
+import type { TreeIndex } from '../../types/syntax/tree-index'
 
 import { getEnclosingFunction } from './get-enclosing-function'
 import { unwrapParentheses } from '../tree/unwrap-parentheses'

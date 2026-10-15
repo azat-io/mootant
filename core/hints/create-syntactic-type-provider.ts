@@ -1,11 +1,11 @@
 import type { Node } from 'oxc-parser'
 
-import type { TypeHintProvider } from '../../types/type-hint-provider'
-import type { ScopeAnalysis } from '../../types/scope-analysis'
-import type { TypeInference } from '../../types/type-inference'
-import type { InferredType } from '../../types/inferred-type'
-import type { ParsedFile } from '../../types/parsed-file'
-import type { TreeIndex } from '../../types/tree-index'
+import type { TypeHintProvider } from '../../types/hints/type-hint-provider'
+import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
+import type { TypeInference } from '../../types/hints/type-inference'
+import type { InferredType } from '../../types/hints/inferred-type'
+import type { ParsedFile } from '../../types/source/parsed-file'
+import type { TreeIndex } from '../../types/syntax/tree-index'
 
 import { inferAnnotationType } from './infer-annotation-type'
 import { inferExpressionType } from './infer-expression-type'

@@ -1,4 +1,4 @@
-import type { InferredType } from '../../../types/inferred-type'
+import type { InferredType } from '../../../types/hints/inferred-type'
 
 /**
  * Tells whether a type holds only numbers and BigInts besides nullish values

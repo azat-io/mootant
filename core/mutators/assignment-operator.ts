@@ -1,12 +1,12 @@
 import type { AssignmentExpression, Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../types/mutator-context'
+import type { MutatorContext } from '../../types/mutator/mutator-context'
+import type { InferredType } from '../../types/hints/inferred-type'
+import type { Replacement } from '../../types/mutator/replacement'
+import type { SourceCode } from '../../types/source/source-code'
 import type { LiteralValue } from './shared/get-literal-value'
-import type { InferredType } from '../../types/inferred-type'
-import type { Replacement } from '../../types/replacement'
-import type { SourceCode } from '../../types/source-code'
-import type { SkipNote } from '../../types/skip-note'
-import type { Mutator } from '../../types/mutator'
+import type { SkipNote } from '../../types/mutant/skip-note'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { distinguishesNullishSwap } from './shared/distinguishes-nullish-swap'
 import { isCanonicalFalsy } from './shared/is-canonical-falsy'

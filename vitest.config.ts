@@ -1,4 +1,4 @@
-import { defineConfig, mergeConfig } from 'vitest/config'
+import { configDefaults, defineConfig, mergeConfig } from 'vitest/config'
 
 import viteConfig from './vite.config.ts'
 
@@ -12,9 +12,10 @@ export default defineConfig(
           branches: 100,
           lines: 100,
         },
-        include: ['cli/**', 'core/**'],
+        include: ['adapters/**', 'cli/**', 'core/**'],
         provider: 'v8',
       },
+      exclude: [...configDefaults.exclude, 'test/fixtures/**'],
     },
   }),
 )

@@ -2,8 +2,8 @@ import type { Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
-import type { ParsedFile } from '../../../types/parsed-file'
-import type { NodeSlot } from '../../../types/node-slot'
+import type { ParsedFile } from '../../../types/source/parsed-file'
+import type { NodeSlot } from '../../../types/syntax/node-slot'
 
 import { createTestFile } from '../../helpers/create-test-file'
 import { walkTree } from '../../../core/tree/walk-tree'

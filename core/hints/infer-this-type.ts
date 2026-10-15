@@ -1,7 +1,7 @@
 import type { ThisExpression } from 'oxc-parser'
 
-import type { TypeInference } from '../../types/type-inference'
-import type { InferredType } from '../../types/inferred-type'
+import type { TypeInference } from '../../types/hints/type-inference'
+import type { InferredType } from '../../types/hints/inferred-type'
 
 import { createInferredType } from './create-inferred-type'
 

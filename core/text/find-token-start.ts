@@ -1,4 +1,4 @@
-import type { ParsedFile } from '../../types/parsed-file'
+import type { ParsedFile } from '../../types/source/parsed-file'
 
 /**
  * Characters that never start a token: ECMAScript white space and line

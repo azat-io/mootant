@@ -1,0 +1,148 @@
+import type { createVitest as CreateVitest, ForksPoolWorker } from 'vitest/node'
+
+import { pathToFileURL } from 'node:url'
+import path from 'node:path'
+
+import type {
+  VitestSessionState,
+  VitestHandle,
+} from './types/vitest-session-state'
+import type { VitestAdapterOptions } from './types/vitest-adapter-options'
+import type { AdapterSession } from '../../types/adapter/adapter-session'
+import type { AdapterContext } from '../../types/adapter/adapter-context'
+
+import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
+import { createInterleavedSequencer } from './create-interleaved-sequencer'
+import { createMootantPlugin } from './create-mootant-plugin'
+import { createForksPool } from './create-forks-pool'
+import { checkVitestCopy } from './check-vitest-copy'
+import { getRunnerPath } from './get-runner-path'
+import { detectVitest } from './detect-vitest'
+import { runIsolated } from './run-isolated'
+import { runBatch } from './run-batch'
+import { runDry } from './run-dry'
+
+/**
+ * Starts one Vitest instance for a mootant run: the project's own Vitest,
+ * resolved from the root, with the user's configuration, mootant's plugin and
+ * worker runner, no reporters, coverage, result cache or module cache on disk.
+ * Its sequencer spreads out the units of one test file
+ * (`createInterleavedSequencer`). The mutant runtime of this process records
+ * the mutant sites switched code evaluates here, outside the workers, such as
+ * in a `globalSetup` file, until the session closes.
+ *
+ * @param context - Switched files, work directory, concurrency and root.
+ * @param options - Options of the adapter.
+ * @returns Session whose methods run the tests.
+ * @throws {Error} When Vitest is missing or not version 5, when mootant would
+ *   load another copy of Vitest, or when a project uses an unsupported
+ *   setting.
+ */
+export async function startVitestSession(
+  context: AdapterContext,
+  options: VitestAdapterOptions,
+): Promise<AdapterSession> {
+  let { root } = context
+  let detection = await detectVitest(root)
+  if (!detection.available) {
+    throw new Error(
+      detection.version === null ?
+        `Vitest is not installed in ${root}.`
+      : `mootant runs Vitest 5, but ${root} has Vitest ${detection.version}.`,
+    )
+  }
+  let runnerPath = getRunnerPath()
+  let copy = checkVitestCopy(root, runnerPath)
+  if (copy !== null) {
+    throw new Error(copy)
+  }
+  let vitestNode = (await import(pathToFileURL(detection.node!).href)) as {
+    ForksPoolWorker: typeof ForksPoolWorker
+    createVitest: typeof CreateVitest
+  }
+  let state: VitestSessionState = {
+    pool: createForksPool(vitestNode.ForksPoolWorker),
+    mismatched: new Set(),
+    instrumented: true,
+    outside: new Set(),
+    served: new Set(),
+    keys: new Map(),
+    diagnostics: [],
+    error: null,
+    files: null,
+    runnerPath,
+  }
+  let vitest = await vitestNode.createVitest(
+    {
+      ...(options.config !== undefined && {
+        config: path.resolve(root, options.config),
+      }),
+      ...(context.concurrency !== null && { maxWorkers: context.concurrency }),
+      coverage: { enabled: false },
+      includeTaskLocation: true,
+      passWithNoTests: true,
+      fsModuleCache: false,
+      reporters: [],
+      watch: false,
+      cache: false,
+      bail: 0,
+      root,
+    },
+    { plugins: [createMootantPlugin(context, state)] },
+  )
+  if (state.error !== null) {
+    await vitest.close()
+    throw new Error(state.error)
+  }
+  let { sequence } = vitest.config
+  sequence.sequencer = createInterleavedSequencer(sequence.sequencer)
+  let runtime = installMutantRuntime()
+  let { coverage } = runtime
+  runtime.coverage = state.outside
+  let handle: VitestHandle = {
+    context,
+    vitest,
+    state,
+  }
+  let closed: Promise<void> | null = null
+  /**
+   * Closes Vitest, then gives the runtime of this process back its earlier
+   * coverage set, unless something else replaced it meanwhile.
+   *
+   * @returns Resolves when Vitest closed.
+   */
+  async function closeVitest(): Promise<void> {
+    try {
+      await vitest.close()
+    } finally {
+      if (runtime.coverage === state.outside) {
+        runtime.coverage = coverage
+      }
+    }
+  }
+  return {
+    listTestFiles: async () => {
+      let files = new Set(
+        (await vitest.globTestSpecifications()).map(({ moduleId }) => moduleId),
+      )
+      for (let project of vitest.projects) {
+        for (let file of [
+          ...project.config.setupFiles,
+          ...project.config.globalSetup,
+        ]) {
+          files.add(file)
+        }
+      }
+      return [...files]
+    },
+    close: () => {
+      closed ??= closeVitest()
+      return closed
+    },
+    runIsolated: plan => runIsolated(handle, plan),
+    dryRun: request => runDry(handle, request),
+    runBatch: plan => runBatch(handle, plan),
+    workers: vitest.config.maxWorkers,
+    diagnostics: state.diagnostics,
+  }
+}

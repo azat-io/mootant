@@ -1,4 +1,4 @@
-import type { NodeSlot } from '../../types/node-slot'
+import type { NodeSlot } from '../../types/syntax/node-slot'
 
 /**
  * Tells whether a slot holds a name that is never a value: a non-computed key

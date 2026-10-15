@@ -1,6 +1,6 @@
 import type { Node } from 'oxc-parser'
 
-import type { SkipNote } from '../../../types/skip-note'
+import type { SkipNote } from '../../../types/mutant/skip-note'
 import type { LiteralValue } from './get-literal-value'
 import type { RunContext } from './create-run-context'
 

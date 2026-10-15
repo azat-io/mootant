@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import path from 'node:path'
 
 import type { LoadedConfig } from '../../../core/config/load-config'
-import type { Plugin } from '../../../types/plugin'
+import type { Plugin } from '../../../types/config/plugin'
 
 import { prepareRun } from '../../../core/config/prepare-run'
 import { loadConfig } from '../../../core/config/load-config'
@@ -66,6 +66,7 @@ describe('prepareRun', () => {
       settings: { coarseMutants: false, timeouts: false },
       preset: 'recommended',
       root: '/work',
+      run: {},
     })
     expect(listIds(setup)).toContain('string-literal')
     expect(setup.knownMutatorIds.has('string-literal')).toBe(true)
@@ -102,6 +103,14 @@ describe('prepareRun', () => {
     expect(listIds(setup)).not.toContain('string-literal')
     expect(listIds(setup).at(-1)).toBe('acme/zero')
     expect(setup.knownMutatorIds.has('acme/zero')).toBe(true)
+  })
+
+  it('returns the run settings of the configuration', async () => {
+    useConfig({ run: { paths: ['src'], threshold: 80 } })
+
+    let setup = await prepareRun({ cwd: ROOT })
+
+    expect(setup.run).toStrictEqual({ paths: ['src'], threshold: 80 })
   })
 
   it('replaces the presets of the configuration with --preset', async () => {

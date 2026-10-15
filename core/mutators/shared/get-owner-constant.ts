@@ -1,6 +1,6 @@
 import type { Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { MutantSite, RunContext } from './create-run-context'
 
 import { createStaticRunContext } from './create-static-run-context'

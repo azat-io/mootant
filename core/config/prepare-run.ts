@@ -1,7 +1,8 @@
 import path from 'node:path'
 
-import type { PresetSettings } from '../../types/preset-settings'
-import type { ActiveMutator } from '../../types/active-mutator'
+import type { PresetSettings } from '../../types/config/preset-settings'
+import type { ActiveMutator } from '../../types/mutator/active-mutator'
+import type { RunConfig } from '../../types/config/run-config'
 
 import { createMutatorRegistry } from '../plugins/create-mutator-registry'
 import { findClosestName } from '../text/find-closest-name'
@@ -12,7 +13,7 @@ import { corePlugin } from '../plugins/core-plugin'
 import { loadConfig } from './load-config'
 
 /**
- * Mutators, settings and root of a run.
+ * Mutators, settings, root and run settings of a run.
  */
 interface RunSetup {
   /**
@@ -34,6 +35,11 @@ interface RunSetup {
    * Presets the run extends, joined for reports.
    */
   preset: string
+
+  /**
+   * Settings of `mootant run` from the configuration, or an empty object.
+   */
+  run: RunConfig
 
   /**
    * Directory that display paths and mutant ids are relative to: the directory
@@ -78,7 +84,8 @@ const RUN_PRESET_ID = 'mootant:run'
  * win.
  *
  * @param options - Configuration path, preset and working directory.
- * @returns Active mutators, settings, known ids, presets and root of the run.
+ * @returns Active mutators, settings, known ids, presets, root and run settings
+ *   of the run.
  * @throws Error - When the configuration or a plugin cannot be loaded or is
  *   invalid, or a preset or mutator id is unknown.
  */
@@ -125,6 +132,7 @@ export async function prepareRun(options: RunOptions): Promise<RunSetup> {
     knownMutatorIds: new Set(known),
     root: loaded?.directory ?? cwd,
     preset: extended.join(', '),
+    run: config.run ?? {},
     mutators,
     settings,
   }

@@ -6,9 +6,9 @@ import type {
   Node,
 } from 'oxc-parser'
 
-import type { ScopeAnalysis } from '../../types/scope-analysis'
-import type { NodeSlot } from '../../types/node-slot'
-import type { Binding } from '../../types/binding'
+import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
+import type { NodeSlot } from '../../types/syntax/node-slot'
+import type { Binding } from '../../types/syntax/binding'
 
 import { unwrapExpression } from '../tree/unwrap-expression'
 import { isNamePosition } from '../tree/is-name-position'

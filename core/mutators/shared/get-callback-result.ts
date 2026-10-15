@@ -1,6 +1,6 @@
 import type { Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { CallbackOwner } from './get-callback-owner'
 import type { ReturnSwitch } from './get-return-switch'
 

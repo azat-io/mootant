@@ -2,9 +2,9 @@ import type { Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
-import type { InferredType } from '../../../types/inferred-type'
-import type { ValueKind } from '../../../types/value-kind'
-import type { TypeHints } from '../../../types/type-hints'
+import type { InferredType } from '../../../types/hints/inferred-type'
+import type { ValueKind } from '../../../types/hints/value-kind'
+import type { TypeHints } from '../../../types/hints/type-hints'
 
 import { createTypeHints } from '../../../core/hints/create-type-hints'
 

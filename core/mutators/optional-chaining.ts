@@ -1,8 +1,8 @@
 import type { ChainExpression, Node } from 'oxc-parser'
 
-import type { Replacement } from '../../types/replacement'
-import type { TextEdit } from '../../types/text-edit'
-import type { Mutator } from '../../types/mutator'
+import type { Replacement } from '../../types/mutator/replacement'
+import type { TextEdit } from '../../types/source/text-edit'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { isNonNullable } from './shared/is-non-nullable'
 

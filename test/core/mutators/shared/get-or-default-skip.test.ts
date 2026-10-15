@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { LiteralValue } from '../../../../core/mutators/shared/get-literal-value'
 import type { TestContextSetup } from '../../../helpers/create-test-context'
-import type { SkipRuleId } from '../../../../types/skip-rule-id'
+import type { SkipRuleId } from '../../../../types/mutant/skip-rule-id'
 
 import { getOrDefaultSkip } from '../../../../core/mutators/shared/get-or-default-skip'
 import { createRunContext } from '../../../../core/mutators/shared/create-run-context'

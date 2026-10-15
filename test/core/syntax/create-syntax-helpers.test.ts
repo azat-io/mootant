@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { SyntaxHelpers } from '../../../types/syntax-helpers'
+import type { SyntaxHelpers } from '../../../types/syntax/syntax-helpers'
 
 import { createSyntaxHelpers } from '../../../core/syntax/create-syntax-helpers'
 import { createTestFile } from '../../helpers/create-test-file'

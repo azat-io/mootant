@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ListReportSummary } from '../../types/list-report-summary'
-import type { ListReportSkipped } from '../../types/list-report-skipped'
-import type { ListReportMutant } from '../../types/list-report-mutant'
-import type { ListReport } from '../../types/list-report'
+import type { ListReportSummary } from '../../types/report/list-report-summary'
+import type { ListReportSkipped } from '../../types/report/list-report-skipped'
+import type { ListReportMutant } from '../../types/report/list-report-mutant'
+import type { ListReport } from '../../types/report/list-report'
 
 import { formatTextReport } from '../../cli/format-text-report'
 

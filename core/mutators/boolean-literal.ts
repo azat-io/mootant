@@ -1,4 +1,4 @@
-import type { Mutator } from '../../types/mutator'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { createRunContext } from './shared/create-run-context'
 import { getLiteralSkip } from './shared/get-literal-skip'

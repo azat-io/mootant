@@ -1,8 +1,8 @@
 import type { Node } from 'oxc-parser'
 
-import type { ListExpression } from '../../types/list-expression'
-import type { SourceRange } from '../../types/source-range'
-import type { ParsedFile } from '../../types/parsed-file'
+import type { ListExpression } from '../../types/syntax/list-expression'
+import type { SourceRange } from '../../types/source/source-range'
+import type { ParsedFile } from '../../types/source/parsed-file'
 
 import { findTokenStart } from './find-token-start'
 

@@ -1,7 +1,7 @@
 import type { LogicalExpression, Node } from 'oxc-parser'
 
-import type { Replacement } from '../../../types/replacement'
-import type { SkipNote } from '../../../types/skip-note'
+import type { Replacement } from '../../../types/mutator/replacement'
+import type { SkipNote } from '../../../types/mutant/skip-note'
 import type { RunContext } from './create-run-context'
 
 import { distinguishesNullishSwap } from './distinguishes-nullish-swap'

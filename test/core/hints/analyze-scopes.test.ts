@@ -2,8 +2,8 @@ import type { Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
-import type { ScopeAnalysis } from '../../../types/scope-analysis'
-import type { Binding } from '../../../types/binding'
+import type { ScopeAnalysis } from '../../../types/syntax/scope-analysis'
+import type { Binding } from '../../../types/syntax/binding'
 
 import { analyzeScopes } from '../../../core/hints/analyze-scopes'
 import { createTestFile } from '../../helpers/create-test-file'

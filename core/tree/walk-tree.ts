@@ -2,7 +2,7 @@ import type { Node } from 'oxc-parser'
 
 import { visitorKeys } from 'oxc-parser'
 
-import type { NodeSlot } from '../../types/node-slot'
+import type { NodeSlot } from '../../types/syntax/node-slot'
 
 /**
  * Node waiting on the walk stack, with the slot it was found in.

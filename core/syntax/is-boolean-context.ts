@@ -1,8 +1,8 @@
 import type { Node } from 'oxc-parser'
 
-import type { ScopeAnalysis } from '../../types/scope-analysis'
-import type { TreeIndex } from '../../types/tree-index'
-import type { NodeSlot } from '../../types/node-slot'
+import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
+import type { TreeIndex } from '../../types/syntax/tree-index'
+import type { NodeSlot } from '../../types/syntax/node-slot'
 
 import { getEnclosingFunction } from './get-enclosing-function'
 import { unwrapExpression } from '../tree/unwrap-expression'

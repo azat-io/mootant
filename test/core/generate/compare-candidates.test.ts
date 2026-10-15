@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { RegisteredMutator } from '../../../types/registered-mutator'
-import type { MutantCandidate } from '../../../types/mutant-candidate'
+import type { RegisteredMutator } from '../../../types/mutator/registered-mutator'
+import type { MutantCandidate } from '../../../types/mutant/mutant-candidate'
 
 import { compareCandidates } from '../../../core/generate/compare-candidates'
 

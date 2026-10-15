@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { Mutant } from '../../../types/mutant'
+import type { Mutant } from '../../../types/mutant/mutant'
 
 import { getSyntaxFingerprint } from '../../helpers/get-syntax-fingerprint'
 import { getSourceBlocks } from '../../../core/parser/get-source-blocks'

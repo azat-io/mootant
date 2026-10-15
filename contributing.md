@@ -102,26 +102,44 @@ existing mutators miss.
 
 ```
 mootant/
+├── adapters/          # Test runner adapters
+│   └── vitest/        # Vitest: session, Vite plugin, worker runner
+│       ├── types/     # Types used only by the Vitest adapter
+│       └── worker/    # Code that runs inside Vitest workers
 ├── bin/               # CLI launcher pointing to dist
 ├── cli/               # CLI entry point (TypeScript)
 ├── core/              # Core logic
+│   ├── config/        # Configuration file loading and run setup
 │   ├── files/         # Expansion of paths into source files
 │   ├── generate/      # Mutant generation: candidates, filters, deduplication
 │   ├── hints/         # Scope analysis and syntactic type hints
 │   ├── identity/      # Stable mutant ids
 │   ├── ignore/        # mootant-ignore comments
+│   ├── instrument/    # Switched files that hold every mutant of a file
 │   ├── mutators/      # Built-in mutators, one per file
 │   │   └── shared/    # Helpers shared by mutators
 │   ├── parser/        # Parsing with oxc-parser
 │   ├── plugins/       # Mutator registry, core plugin, preset resolution
 │   ├── presets/       # recommended and strict presets
+│   ├── run/           # Runner-agnostic run: dry run, batch, isolated rounds
+│   ├── runtime/       # Runtime the switched files call inside test workers
+│   ├── skips/         # Rules that skip redundant or noisy mutants
 │   ├── syntax/        # Questions about the syntactic position of a node
 │   ├── text/          # Source text helpers: positions, operators, edits
 │   └── tree/          # Runtime tree: parents, slots, parentheses
 ├── test/              # Tests (Vitest), at the path of the file under test
-│   ├── fixtures/      # Acceptance fixture of the list command
+│   ├── fixtures/      # Acceptance fixtures of the list and run commands
 │   └── helpers/       # Test helpers
-└── types/             # Shared TypeScript types
+└── types/             # Shared TypeScript types, grouped by area
+    ├── adapter/       # Contract between the run and a test runner adapter
+    ├── config/        # Configuration, plugins and presets
+    ├── hints/         # Type hints
+    ├── mutant/        # Mutants, skips, ignore comments and diagnostics
+    ├── mutator/       # Mutator API
+    ├── report/        # List and run reports
+    ├── run/           # Run state, verdicts and results
+    ├── source/        # Source files, positions and edits
+    └── syntax/        # Syntax tree helpers and scope analysis
 ```
 
 ### Available Scripts
@@ -218,7 +236,8 @@ them, build first with `pnpm build`, then run
 - Use `let` for variables; `const` only for true constants such as
   `KEBAB_CASE_PATTERN`
 - One exported function per file, named after the file
-- Put shared types in `types/`, one per file
+- Put shared types in a subfolder of `types/`, one per file; types used by one
+  adapter only go in its own `types/` folder
 - Prefer early returns
 - Use meaningful variable names
 - Add JSDoc comments to functions, types and their fields

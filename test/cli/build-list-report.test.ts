@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ActiveMutator } from '../../types/active-mutator'
-import type { FileMutants } from '../../types/file-mutants'
-import type { ListResult } from '../../types/list-result'
-import type { Diagnostic } from '../../types/diagnostic'
-import type { Mutant } from '../../types/mutant'
+import type { ActiveMutator } from '../../types/mutator/active-mutator'
+import type { FileMutants } from '../../types/mutant/file-mutants'
+import type { ListResult } from '../../types/report/list-result'
+import type { Diagnostic } from '../../types/mutant/diagnostic'
+import type { Mutant } from '../../types/mutant/mutant'
 
 import { buildListReport } from '../../cli/build-list-report'
 
@@ -169,6 +169,7 @@ describe('buildListReport', () => {
       createResult([
         {
           mutants: [createMutant({ start, end })],
+          absolute: '/repo/example.ts',
           file: 'example.ts',
           diagnostics: [],
           parsed: true,
@@ -248,6 +249,7 @@ describe('buildListReport', () => {
               end: 27,
             }),
           ],
+          absolute: '/repo/example.ts',
           diagnostics: [],
           file: 'cart.ts',
           parsed: true,
@@ -255,6 +257,7 @@ describe('buildListReport', () => {
           source,
         },
         {
+          absolute: '/repo/example.ts',
           diagnostics: [parseError],
           source: 'let value = (',
           file: 'broken.ts',
@@ -263,6 +266,7 @@ describe('buildListReport', () => {
           mutants: [],
         },
         {
+          absolute: '/repo/example.ts',
           diagnostics: [readError],
           file: 'locked.ts',
           parsed: false,
@@ -271,6 +275,7 @@ describe('buildListReport', () => {
           mutants: [],
         },
         {
+          absolute: '/repo/example.ts',
           source: 'export {}',
           file: 'empty.ts',
           diagnostics: [],
@@ -451,12 +456,14 @@ describe('buildListReport', () => {
           },
         ],
         mutants: [createMutant({ start: 24, end: 28 })],
+        absolute: '/repo/example.ts',
         file: 'example.ts',
         diagnostics: [],
         parsed: true,
         source,
       },
       {
+        absolute: '/repo/example.ts',
         file: 'locked.ts',
         diagnostics: [],
         parsed: false,

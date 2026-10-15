@@ -1,4 +1,4 @@
-import type { Plugin } from '../../types/plugin'
+import type { Plugin } from '../../types/config/plugin'
 
 import { comparisonOperator } from '../mutators/comparison-operator'
 import { assignmentOperator } from '../mutators/assignment-operator'

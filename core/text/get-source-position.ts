@@ -1,4 +1,4 @@
-import type { SourcePosition } from '../../types/source-position'
+import type { SourcePosition } from '../../types/source/source-position'
 
 /**
  * Converts an offset into a 1-based line and UTF-16 column with a binary search

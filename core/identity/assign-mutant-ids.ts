@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 
-import type { MutantCandidate } from '../../types/mutant-candidate'
+import type { MutantCandidate } from '../../types/mutant/mutant-candidate'
 
 import { createMutantId } from './create-mutant-id'
 

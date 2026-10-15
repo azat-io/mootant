@@ -1,10 +1,8 @@
-import type { ListReportSummary } from '../types/list-report-summary'
-import type { ListReport } from '../types/list-report'
+import type { ListReportSummary } from '../types/report/list-report-summary'
+import type { ListReport } from '../types/report/list-report'
 
-/**
- * Longest fragment shown as is; longer fragments are cut.
- */
-const MAX_FRAGMENT_LENGTH = 60
+import { formatChange } from './format-change'
+import { pluralize } from './pluralize'
 
 /**
  * Line of a list before its columns are aligned.
@@ -116,29 +114,6 @@ function formatRows(rows: readonly Row[]): string {
 }
 
 /**
- * Shows a source fragment on one line: runs of whitespace become one space,
- * long texts are cut without splitting an astral character, and an empty text
- * is named.
- *
- * @param text - Original or replacement text of a mutant.
- * @returns Text that fits a report line.
- */
-function shortenFragment(text: string): string {
-  let collapsed = text.replaceAll(/\s+/gu, ' ').trim()
-  if (collapsed === '') {
-    return '(empty)'
-  }
-  if (collapsed.length <= MAX_FRAGMENT_LENGTH) {
-    return collapsed
-  }
-  let cut = MAX_FRAGMENT_LENGTH - 3
-  if (collapsed.codePointAt(cut - 1)! > 0xff_ff) {
-    cut -= 1
-  }
-  return `${collapsed.slice(0, cut)}...`
-}
-
-/**
  * Formats the line that counts skipped candidates, naming only the categories
  * that have some.
  *
@@ -151,29 +126,4 @@ function formatSkippedSummary(summary: ListReportSummary): string {
     .map(([category, count]) => `${count} ${category}`)
   let total = `${summary.totalSkipped} skipped`
   return counts.length === 0 ? total : `${total}: ${counts.join(', ')}`
-}
-
-/**
- * Formats the change of a mutant or skipped candidate as `original ->
- * replacement`.
- *
- * @param entry - Original and replacement texts.
- * @returns The change on one line.
- */
-function formatChange(entry: {
-  replacement: string
-  original: string
-}): string {
-  return `${shortenFragment(entry.original)} -> ${shortenFragment(entry.replacement)}`
-}
-
-/**
- * Joins a count and a noun, adding `s` unless the count is one.
- *
- * @param count - Number of things.
- * @param noun - Singular noun.
- * @returns Text such as `1 file` or `2 files`.
- */
-function pluralize(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? '' : 's'}`
 }

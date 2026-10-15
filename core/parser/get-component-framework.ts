@@ -1,4 +1,4 @@
-import type { ComponentFramework } from '../../types/component-framework'
+import type { ComponentFramework } from '../../types/source/component-framework'
 
 /**
  * Extension of a component file, which names its framework.

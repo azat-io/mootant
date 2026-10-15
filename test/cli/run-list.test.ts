@@ -2,8 +2,8 @@ import type { MockInstance } from 'vitest'
 
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { ListResult } from '../../types/list-result'
-import type { Diagnostic } from '../../types/diagnostic'
+import type { ListResult } from '../../types/report/list-result'
+import type { Diagnostic } from '../../types/mutant/diagnostic'
 
 import { listMutants } from '../../core/list-mutants'
 import { runList } from '../../cli/run-list'
@@ -72,6 +72,7 @@ function createResult(diagnostics: Diagnostic[]): ListResult {
             end: 15,
           },
         ],
+        absolute: '/repo/example.ts',
         source: "let unit = 'cm'",
         file: 'example.ts',
         diagnostics: [],

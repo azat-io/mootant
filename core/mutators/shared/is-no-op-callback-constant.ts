@@ -1,6 +1,6 @@
 import type { Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 import { getCallbackResult } from './get-callback-result'
 import { getLiteralValue } from './get-literal-value'

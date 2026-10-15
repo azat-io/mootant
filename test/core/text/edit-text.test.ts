@@ -6,8 +6,8 @@ import type {
 
 import { describe, expect, it } from 'vitest'
 
-import type { ParsedFile } from '../../../types/parsed-file'
-import type { TextEdit } from '../../../types/text-edit'
+import type { ParsedFile } from '../../../types/source/parsed-file'
+import type { TextEdit } from '../../../types/source/text-edit'
 
 import { createTestFile } from '../../helpers/create-test-file'
 import { editText } from '../../../core/text/edit-text'

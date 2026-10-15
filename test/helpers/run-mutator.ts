@@ -1,4 +1,4 @@
-import type { MutantStatus } from '../../types/mutant-status'
+import type { MutantStatus } from '../../types/mutant/mutant-status'
 import type { MutatorSetup } from './generate-candidates'
 
 import { getSourcePosition } from '../../core/text/get-source-position'

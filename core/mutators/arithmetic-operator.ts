@@ -1,9 +1,9 @@
 import type { PrivateInExpression, BinaryExpression, Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../types/mutator-context'
+import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { LiteralValue } from './shared/get-literal-value'
-import type { SkipNote } from '../../types/skip-note'
-import type { Mutator } from '../../types/mutator'
+import type { SkipNote } from '../../types/mutant/skip-note'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { getLiteralValue } from './shared/get-literal-value'
 import { isNumericPair } from './shared/is-numeric-pair'

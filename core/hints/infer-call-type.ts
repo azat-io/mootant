@@ -7,10 +7,10 @@ import type {
   Node,
 } from 'oxc-parser'
 
-import type { TypeInference } from '../../types/type-inference'
-import type { InferredType } from '../../types/inferred-type'
-import type { ValueKind } from '../../types/value-kind'
-import type { Binding } from '../../types/binding'
+import type { TypeInference } from '../../types/hints/type-inference'
+import type { InferredType } from '../../types/hints/inferred-type'
+import type { ValueKind } from '../../types/hints/value-kind'
+import type { Binding } from '../../types/syntax/binding'
 
 import { unwrapParentheses } from '../tree/unwrap-parentheses'
 import { inferAnnotationType } from './infer-annotation-type'

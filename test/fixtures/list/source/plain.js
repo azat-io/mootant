@@ -31,3 +31,5 @@ export function pick(flag) {
 export function memo(cache) {
   cache.value ||= compute() // ||= becomes =, and the assignment never happens
 }
+
+export let pages = import.meta.glob(['./pages/*.js', '!./pages/draft.js'], { eager: true }) // import.meta.glob: patterns and options stay literal

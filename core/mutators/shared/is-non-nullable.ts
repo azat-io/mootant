@@ -1,4 +1,4 @@
-import type { InferredType } from '../../../types/inferred-type'
+import type { InferredType } from '../../../types/hints/inferred-type'
 
 import { getTypeView } from './get-type-view'
 

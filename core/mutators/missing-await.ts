@@ -1,8 +1,8 @@
 import type { VariableDeclaration, AwaitExpression, Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../types/mutator-context'
-import type { SkipNote } from '../../types/skip-note'
-import type { Mutator } from '../../types/mutator'
+import type { MutatorContext } from '../../types/mutator/mutator-context'
+import type { SkipNote } from '../../types/mutant/skip-note'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { isBooleanModeOperand } from './shared/is-boolean-mode-operand'
 import { isTypedByMethodName } from './shared/is-typed-by-method-name'

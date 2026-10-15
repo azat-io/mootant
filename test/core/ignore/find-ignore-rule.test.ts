@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { IgnoreRule } from '../../../types/ignore-rule'
+import type { IgnoreRule } from '../../../types/mutant/ignore-rule'
 
 import { findIgnoreRule } from '../../../core/ignore/find-ignore-rule'
 

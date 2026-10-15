@@ -1,7 +1,7 @@
-import type { MutatorRegistry } from '../../types/mutator-registry'
-import type { PresetSettings } from '../../types/preset-settings'
-import type { MutatorSetting } from '../../types/mutator-setting'
-import type { ActiveMutator } from '../../types/active-mutator'
+import type { MutatorRegistry } from '../../types/mutator/mutator-registry'
+import type { MutatorSetting } from '../../types/mutator/mutator-setting'
+import type { PresetSettings } from '../../types/config/preset-settings'
+import type { ActiveMutator } from '../../types/mutator/active-mutator'
 
 import { findClosestName } from '../text/find-closest-name'
 import { compareCodeUnits } from '../compare-code-units'

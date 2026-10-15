@@ -1,5 +1,5 @@
-import type { FileMutants } from '../../types/file-mutants'
-import type { Mutant } from '../../types/mutant'
+import type { FileMutants } from '../../types/mutant/file-mutants'
+import type { Mutant } from '../../types/mutant/mutant'
 
 import { getSourcePosition } from '../text/get-source-position'
 import { getLineStarts } from '../text/get-line-starts'

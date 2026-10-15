@@ -1,7 +1,7 @@
 import type { Node } from 'oxc-parser'
 
-import type { TreeIndex } from '../../types/tree-index'
-import type { NodeSlot } from '../../types/node-slot'
+import type { TreeIndex } from '../../types/syntax/tree-index'
+import type { NodeSlot } from '../../types/syntax/node-slot'
 
 import { isValuePosition } from '../syntax/is-value-position'
 import { getReplacementKind } from './get-replacement-kind'

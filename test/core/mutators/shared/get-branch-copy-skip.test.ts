@@ -3,7 +3,7 @@ import type { Node } from 'oxc-parser'
 import { describe, expect, it } from 'vitest'
 
 import type { LiteralValue } from '../../../../core/mutators/shared/get-literal-value'
-import type { SkipRuleId } from '../../../../types/skip-rule-id'
+import type { SkipRuleId } from '../../../../types/mutant/skip-rule-id'
 
 import { getBranchCopySkip } from '../../../../core/mutators/shared/get-branch-copy-skip'
 import { createRunContext } from '../../../../core/mutators/shared/create-run-context'

@@ -1,9 +1,33 @@
 import { describe, expect, it } from 'vitest'
 
-import type { FileMutants } from '../../../types/file-mutants'
-import type { Mutant } from '../../../types/mutant'
+import type { FileMutants } from '../../../types/mutant/file-mutants'
+import type { Mutant } from '../../../types/mutant/mutant'
 
 import { assertUniqueIds } from '../../../core/identity/assert-unique-ids'
+
+/**
+ * Builds the result of a parsed file.
+ *
+ * @param file - Display path of the file.
+ * @param source - Text of the file.
+ * @param mutants - Ids and start offsets of its mutants.
+ * @returns Result of the file.
+ */
+function createResult(
+  file: string,
+  source: string,
+  mutants: [string, number][],
+): FileMutants {
+  return {
+    mutants: mutants.map(([id, start]) => createMutant(file, id, start)),
+    absolute: `/repo/${file}`,
+    diagnostics: [],
+    parsed: true,
+    skipped: [],
+    source,
+    file,
+  }
+}
 
 /**
  * Builds a pending mutant of a file.
@@ -29,29 +53,6 @@ function createMutant(file: string, id: string, start: number): Mutant {
   }
 }
 
-/**
- * Builds the result of a parsed file.
- *
- * @param file - Display path of the file.
- * @param source - Text of the file.
- * @param mutants - Ids and start offsets of its mutants.
- * @returns Result of the file.
- */
-function createResult(
-  file: string,
-  source: string,
-  mutants: [string, number][],
-): FileMutants {
-  return {
-    mutants: mutants.map(([id, start]) => createMutant(file, id, start)),
-    diagnostics: [],
-    parsed: true,
-    skipped: [],
-    source,
-    file,
-  }
-}
-
 describe('assertUniqueIds', () => {
   it('accepts mutants with distinct ids and files without mutants', () => {
     let files = [
@@ -60,6 +61,7 @@ describe('assertUniqueIds', () => {
         ['bbbbbbbbbbbb', 2],
       ]),
       {
+        absolute: '/repo/src/b.ts',
         file: 'src/b.ts',
         diagnostics: [],
         parsed: false,

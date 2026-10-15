@@ -1,11 +1,6 @@
-import { readFile } from 'node:fs/promises'
+import type { ListResult } from '../types/report/list-result'
 
-import type { FileMutants } from '../types/file-mutants'
-import type { ListResult } from '../types/list-result'
-
-import { generateFileMutants } from './generate/generate-file-mutants'
-import { assertUniqueIds } from './identity/assert-unique-ids'
-import { expandPaths } from './files/expand-paths'
+import { listFileMutants } from './files/list-file-mutants'
 import { prepareRun } from './config/prepare-run'
 
 /**
@@ -61,55 +56,21 @@ export async function listMutants(
 ): Promise<ListResult> {
   let { knownMutatorIds, mutators, settings, preset, root } =
     await prepareRun(options)
-  let { diagnostics, files } = await expandPaths(
-    options.paths,
-    options.cwd,
-    root,
-  )
   let skipped = options.skipped ?? false
-
-  let sources = await Promise.allSettled(
-    files.map(listed => readFile(listed.absolute, 'utf8')),
-  )
-
-  let results = files.map((listed, index): FileMutants => {
-    let read = sources[index]!
-    if (read.status === 'rejected') {
-      let { code } = read.reason as NodeJS.ErrnoException
-      return {
-        diagnostics: [
-          {
-            message: `Cannot read the file (${code}).`,
-            code: 'read-error',
-            file: listed.file,
-            severity: 'error',
-            column: null,
-            line: null,
-          },
-        ],
-        file: listed.file,
-        parsed: false,
-        source: null,
-        skipped: [],
-        mutants: [],
-      }
-    }
-    return generateFileMutants({
-      source: read.value,
-      file: listed.file,
-      knownMutatorIds,
-      settings,
-      mutators,
-      skipped,
-    })
+  let { diagnostics, files } = await listFileMutants({
+    paths: options.paths,
+    cwd: options.cwd,
+    knownMutatorIds,
+    settings,
+    mutators,
+    skipped,
+    root,
   })
-
-  assertUniqueIds(results)
   return {
-    files: results,
     diagnostics,
     mutators,
     skipped,
     preset,
+    files,
   }
 }

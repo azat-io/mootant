@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ActiveMutator } from '../../../types/active-mutator'
-import type { FileMutants } from '../../../types/file-mutants'
-import type { Mutator } from '../../../types/mutator'
+import type { ActiveMutator } from '../../../types/mutator/active-mutator'
+import type { FileMutants } from '../../../types/mutant/file-mutants'
+import type { Mutator } from '../../../types/mutator/mutator'
 
 import { generateFileMutants } from '../../../core/generate/generate-file-mutants'
 import { createMutantId } from '../../../core/identity/create-mutant-id'
@@ -91,7 +91,7 @@ function generate(
   lines: string[],
   mutators: ActiveMutator[],
   setup: { coarseMutants?: boolean; skipped?: boolean } = {},
-): FileMutants {
+): Omit<FileMutants, 'absolute'> {
   return generateFileMutants({
     settings: Object.freeze({
       coarseMutants: setup.coarseMutants ?? false,
@@ -112,7 +112,10 @@ function generate(
  * @param file - Display path of the component.
  * @returns Result of the file.
  */
-function generateComponent(lines: string[], file: string): FileMutants {
+function generateComponent(
+  lines: string[],
+  file: string,
+): Omit<FileMutants, 'absolute'> {
   return generateFileMutants({
     settings: Object.freeze({ coarseMutants: false, timeouts: false }),
     mutators: [activate('arithmetic', 0, ARITHMETIC)],

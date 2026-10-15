@@ -1,6 +1,6 @@
 import type { Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 import { WELL_KNOWN_CALLS } from '../../hints/well-known-calls'
 import { unwrapExpression } from '../../tree/unwrap-expression'

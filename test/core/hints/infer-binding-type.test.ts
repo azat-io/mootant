@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { TypeInference } from '../../../types/type-inference'
-import type { Binding } from '../../../types/binding'
+import type { TypeInference } from '../../../types/hints/type-inference'
+import type { Binding } from '../../../types/syntax/binding'
 
 import { createInferenceSnippet } from '../../helpers/create-inference-snippet'
 import { inferBindingType } from '../../../core/hints/infer-binding-type'

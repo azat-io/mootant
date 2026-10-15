@@ -1,7 +1,7 @@
 import type { Program, Node } from 'oxc-parser'
 
-import type { TreeIndex } from '../../types/tree-index'
-import type { NodeSlot } from '../../types/node-slot'
+import type { TreeIndex } from '../../types/syntax/tree-index'
+import type { NodeSlot } from '../../types/syntax/node-slot'
 
 import { isLoggingCall } from '../syntax/is-logging-call'
 import { isModuleCall } from '../syntax/is-module-call'
@@ -47,9 +47,9 @@ let skippedTypes = new Set<string>([
  * Builds the runtime tree of a program in one walk: the raw slot of every node
  * that holds runtime code, and the nodes that visitors receive in pre-order.
  * Type positions, type-only and ambient declarations, module specifiers,
- * directives and the callee and arguments of logging calls are left out. Names
- * that are never values, such as non-computed keys, are indexed but not
- * dispatched.
+ * directives, the callee and arguments of logging calls and the arguments of
+ * `import.meta.glob` are left out. Names that are never values, such as
+ * non-computed keys, are indexed but not dispatched.
  *
  * @param program - Root of the file.
  * @returns Slots and dispatch order of the runtime tree.
@@ -94,7 +94,9 @@ function isSkippedSlot(slot: NodeSlot): boolean {
        */
       return true
     case 'CallExpression':
-      return isLoggingCall(parent) || (index === 0 && isModuleCall(parent))
+      return (
+        isLoggingCall(parent) || (index !== null && isModuleCall(parent, index))
+      )
     default:
       return false
   }

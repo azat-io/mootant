@@ -1,4 +1,4 @@
-import type { ListReport } from '../types/list-report'
+import type { ListReport } from '../types/report/list-report'
 
 import { formatTextReport } from './format-text-report'
 

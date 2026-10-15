@@ -1,4 +1,4 @@
-import type { MutantCandidate } from '../../types/mutant-candidate'
+import type { MutantCandidate } from '../../types/mutant/mutant-candidate'
 
 /**
  * Fields of a candidate, accepted or skipped, that decide its order.

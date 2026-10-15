@@ -2,8 +2,8 @@ import type { ExpressionStatement } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
-import type { ListExpression } from '../../../types/list-expression'
-import type { ParsedFile } from '../../../types/parsed-file'
+import type { ListExpression } from '../../../types/syntax/list-expression'
+import type { ParsedFile } from '../../../types/source/parsed-file'
 
 import { removeListElement } from '../../../core/text/remove-list-element'
 import { unwrapExpression } from '../../../core/tree/unwrap-expression'

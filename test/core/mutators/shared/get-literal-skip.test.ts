@@ -2,9 +2,9 @@ import type { Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
-import type { LiteralChange } from '../../../../types/literal-change'
-import type { SkipRuleId } from '../../../../types/skip-rule-id'
-import type { SkipNote } from '../../../../types/skip-note'
+import type { LiteralChange } from '../../../../types/syntax/literal-change'
+import type { SkipRuleId } from '../../../../types/mutant/skip-rule-id'
+import type { SkipNote } from '../../../../types/mutant/skip-note'
 
 import { createRunContext } from '../../../../core/mutators/shared/create-run-context'
 import { getLiteralSkip } from '../../../../core/mutators/shared/get-literal-skip'

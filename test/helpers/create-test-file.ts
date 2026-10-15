@@ -1,11 +1,11 @@
 import type { Node } from 'oxc-parser'
 
-import type { ScopeAnalysis } from '../../types/scope-analysis'
-import type { SyntaxHelpers } from '../../types/syntax-helpers'
-import type { ParsedFile } from '../../types/parsed-file'
-import type { SourceCode } from '../../types/source-code'
-import type { TreeIndex } from '../../types/tree-index'
-import type { TypeHints } from '../../types/type-hints'
+import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
+import type { SyntaxHelpers } from '../../types/syntax/syntax-helpers'
+import type { ParsedFile } from '../../types/source/parsed-file'
+import type { SourceCode } from '../../types/source/source-code'
+import type { TreeIndex } from '../../types/syntax/tree-index'
+import type { TypeHints } from '../../types/hints/type-hints'
 
 import { createSyntacticTypeProvider } from '../../core/hints/create-syntactic-type-provider'
 import { createSyntaxHelpers } from '../../core/syntax/create-syntax-helpers'

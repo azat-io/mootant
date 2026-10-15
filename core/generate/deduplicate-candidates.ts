@@ -1,4 +1,4 @@
-import type { MutantCandidate } from '../../types/mutant-candidate'
+import type { MutantCandidate } from '../../types/mutant/mutant-candidate'
 
 /**
  * Candidates that deduplication keeps and drops.

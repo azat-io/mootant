@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ComponentFramework } from '../../../types/component-framework'
-import type { ScriptBlock } from '../../../types/script-block'
+import type { ComponentFramework } from '../../../types/source/component-framework'
+import type { ScriptBlock } from '../../../types/source/script-block'
 
 import { scanScriptBlocks } from '../../../core/parser/scan-script-blocks'
 

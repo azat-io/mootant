@@ -2,10 +2,12 @@ import type { MockInstance } from 'vitest'
 
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
+import { runMutation } from '../../cli/run-mutation'
 import { version } from '../../package.json'
 import { runList } from '../../cli/run-list'
 import { run } from '../../cli/index'
 
+vi.mock(import('../../cli/run-mutation'))
 vi.mock(import('../../cli/run-list'))
 
 describe('run', () => {
@@ -90,6 +92,22 @@ describe('run', () => {
       skipped: true,
       json: true,
     })
+    expect(consoleInfoSpy).not.toHaveBeenCalled()
+    expect(consoleErrorSpy).not.toHaveBeenCalled()
+    expect(processExitSpy).not.toHaveBeenCalled()
+  })
+
+  it('delegates the run command with the parsed options', async () => {
+    vi.mocked(runMutation).mockResolvedValue()
+
+    await runCli('run', 'src', '--mutant', 'k3m9x2p7q4w8', '--json')
+
+    expect(runMutation).toHaveBeenCalledExactlyOnceWith({
+      mutantIds: ['k3m9x2p7q4w8'],
+      paths: ['src'],
+      json: true,
+    })
+    expect(runList).not.toHaveBeenCalled()
     expect(consoleInfoSpy).not.toHaveBeenCalled()
     expect(consoleErrorSpy).not.toHaveBeenCalled()
     expect(processExitSpy).not.toHaveBeenCalled()

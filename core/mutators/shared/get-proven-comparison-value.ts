@@ -1,6 +1,6 @@
 import type { PrivateInExpression, BinaryExpression, Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
 import { isNullishConstant } from './is-nullish-constant'

@@ -1,4 +1,4 @@
-import type { Preset } from '../../types/preset'
+import type { Preset } from '../../types/config/preset'
 
 /**
  * Recommended preset with the noisier options of the built-in mutators, the

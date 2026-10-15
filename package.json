@@ -11,7 +11,8 @@
     "javascript",
     "cli",
     "agent-skills",
-    "ai-agents"
+    "ai-agents",
+    "vitest"
   ],
   "homepage": "https://github.com/azat-io/mootant",
   "repository": "azat-io/mootant",
@@ -23,7 +24,15 @@
       "types": "./dist/core/index.d.ts",
       "default": "./dist/core/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./runtime": {
+      "types": "./dist/core/runtime/index.d.ts",
+      "default": "./dist/core/runtime/index.js"
+    },
+    "./vitest": {
+      "types": "./dist/adapters/vitest/index.d.ts",
+      "default": "./dist/adapters/vitest/index.js"
+    }
   },
   "bin": {
     "mootant": "./bin/mootant.js"
@@ -85,10 +94,14 @@
     "vitest": "^5.0.4"
   },
   "peerDependencies": {
-    "jiti": "^2.0.0"
+    "jiti": "^2.0.0",
+    "vitest": "^5.0.0"
   },
   "peerDependenciesMeta": {
     "jiti": {
+      "optional": true
+    },
+    "vitest": {
       "optional": true
     }
   },

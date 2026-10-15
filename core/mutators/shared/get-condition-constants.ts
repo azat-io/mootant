@@ -1,9 +1,9 @@
 import type { Node } from 'oxc-parser'
 
+import type { Replacement } from '../../../types/mutator/replacement'
 import type { NullishDirection } from './get-nullish-directions'
-import type { Replacement } from '../../../types/replacement'
+import type { SkipNote } from '../../../types/mutant/skip-note'
 import type { ComparisonPlan } from './get-comparison-plan'
-import type { SkipNote } from '../../../types/skip-note'
 import type { RunContext } from './create-run-context'
 
 import { isNoOpCallbackConstant } from './is-no-op-callback-constant'

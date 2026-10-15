@@ -1,4 +1,4 @@
-import type { SkipRule } from '../../types/skip-rule'
+import type { SkipRule } from '../../types/mutant/skip-rule'
 
 /**
  * Registry of the rules that skip a candidate, keyed by rule id: the ownership

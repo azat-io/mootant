@@ -1,4 +1,4 @@
-import type { IgnoreRule } from '../../types/ignore-rule'
+import type { IgnoreRule } from '../../types/mutant/ignore-rule'
 
 /**
  * Mutant, or node about to be mutated, whose ignore rule is looked up.

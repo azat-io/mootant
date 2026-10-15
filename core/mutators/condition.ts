@@ -1,9 +1,9 @@
 import type { ForStatement, Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../types/mutator-context'
+import type { MutatorContext } from '../../types/mutator/mutator-context'
+import type { Replacement } from '../../types/mutator/replacement'
 import type { RunContext } from './shared/create-run-context'
-import type { Replacement } from '../../types/replacement'
-import type { Mutator } from '../../types/mutator'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { getConditionConstants } from './shared/get-condition-constants'
 import { createRunContext } from './shared/create-run-context'

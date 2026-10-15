@@ -1,4 +1,4 @@
-import type { Plugin } from '../../types/plugin'
+import type { Plugin } from '../../types/config/plugin'
 
 import { getSettingsProblem } from './get-settings-problem'
 import { isMutatorSetting } from './is-mutator-setting'

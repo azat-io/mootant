@@ -2,7 +2,7 @@ import { realpath, readFile, readdir, stat } from 'node:fs/promises'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FakeEntry } from '../helpers/create-fake-file-system'
-import type { Plugin } from '../../types/plugin'
+import type { Plugin } from '../../types/config/plugin'
 
 import { createFakeFileSystem } from '../helpers/create-fake-file-system'
 import { createMutantId } from '../../core/identity/create-mutant-id'
@@ -203,6 +203,7 @@ describe('listMutants', () => {
           line: null,
         },
       ],
+      absolute: '/repo/locked.ts',
       file: 'locked.ts',
       parsed: false,
       source: null,
@@ -210,6 +211,7 @@ describe('listMutants', () => {
       mutants: [],
     })
     expect(result.files[1]!.mutants).toHaveLength(1)
+    expect(result.files[1]!.absolute).toBe('/repo/open.ts')
   })
 
   it('reports a file that does not parse and lists the others', async () => {

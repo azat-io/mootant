@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ValueKind } from '../../../../types/value-kind'
+import type { ValueKind } from '../../../../types/hints/value-kind'
 
 import { isNonNumberType } from '../../../../core/mutators/shared/is-non-number-type'
 import { createInferredType } from '../../../../core/hints/create-inferred-type'

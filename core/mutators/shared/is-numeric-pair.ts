@@ -1,4 +1,4 @@
-import type { InferredType } from '../../../types/inferred-type'
+import type { InferredType } from '../../../types/hints/inferred-type'
 
 import { isNonNumberType } from './is-non-number-type'
 import { isNumberType } from './is-number-type'

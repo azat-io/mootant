@@ -1,4 +1,4 @@
-import type { Mutator } from '../../types/mutator'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { getComparisonPlan } from './shared/get-comparison-plan'
 import { isComparison } from './shared/is-comparison'

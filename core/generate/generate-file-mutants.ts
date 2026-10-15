@@ -1,17 +1,17 @@
 import type { Node } from 'oxc-parser'
 
-import type { SkippedCandidate } from '../../types/skipped-candidate'
-import type { MutantCandidate } from '../../types/mutant-candidate'
-import type { PresetSettings } from '../../types/preset-settings'
-import type { SkippedMutant } from '../../types/skipped-mutant'
-import type { ScopeAnalysis } from '../../types/scope-analysis'
-import type { ActiveMutator } from '../../types/active-mutator'
-import type { FileMutants } from '../../types/file-mutants'
-import type { ParsedFile } from '../../types/parsed-file'
-import type { IgnoreRule } from '../../types/ignore-rule'
-import type { Diagnostic } from '../../types/diagnostic'
-import type { TreeIndex } from '../../types/tree-index'
-import type { Mutant } from '../../types/mutant'
+import type { SkippedCandidate } from '../../types/mutant/skipped-candidate'
+import type { MutantCandidate } from '../../types/mutant/mutant-candidate'
+import type { PresetSettings } from '../../types/config/preset-settings'
+import type { ActiveMutator } from '../../types/mutator/active-mutator'
+import type { SkippedMutant } from '../../types/mutant/skipped-mutant'
+import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
+import type { FileMutants } from '../../types/mutant/file-mutants'
+import type { ParsedFile } from '../../types/source/parsed-file'
+import type { IgnoreRule } from '../../types/mutant/ignore-rule'
+import type { Diagnostic } from '../../types/mutant/diagnostic'
+import type { TreeIndex } from '../../types/syntax/tree-index'
+import type { Mutant } from '../../types/mutant/mutant'
 
 import { createSyntacticTypeProvider } from '../hints/create-syntactic-type-provider'
 import { parseIgnoreDirectives } from '../ignore/parse-ignore-directives'
@@ -151,9 +151,11 @@ interface PreparedProgram {
  * @param input - File, text, active mutators, preset settings and known mutator
  *   ids.
  * @returns Mutants in canonical order, skipped candidates and the problems of
- *   the file.
+ *   the file, without its absolute path, which the caller knows.
  */
-export function generateFileMutants(input: GenerateFileInput): FileMutants {
+export function generateFileMutants(
+  input: GenerateFileInput,
+): Omit<FileMutants, 'absolute'> {
   let { knownMutatorIds, source, file } = input
   let parseDiagnostics: Diagnostic[] = []
   let programs: PreparedProgram[] = []

@@ -1,6 +1,6 @@
-import type { OperatorExpression } from '../../types/operator-expression'
-import type { SourceRange } from '../../types/source-range'
-import type { ParsedFile } from '../../types/parsed-file'
+import type { OperatorExpression } from '../../types/syntax/operator-expression'
+import type { SourceRange } from '../../types/source/source-range'
+import type { ParsedFile } from '../../types/source/parsed-file'
 
 import { findTokenStart } from './find-token-start'
 

@@ -1,4 +1,4 @@
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { RunContext } from './create-run-context'
 
 /**

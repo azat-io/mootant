@@ -1,4 +1,4 @@
-import type { InferredType } from '../../../types/inferred-type'
+import type { InferredType } from '../../../types/hints/inferred-type'
 
 /**
  * Tells whether a type is known to exclude numbers and BigInts (catalog 3.3,

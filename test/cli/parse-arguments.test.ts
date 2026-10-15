@@ -10,21 +10,29 @@ const HELP_TEXT = [
   '  $ mootant <command> [options]',
   '',
   'Commands:',
-  '  list <paths...>  List the mutants of files and directories',
+  '  list <paths...>      List the mutants of files and directories',
+  '  run [paths...]       Run the tests against the mutants of files and',
+  '                       directories (default: run.paths of the configuration)',
   '',
   'Options:',
-  '  --config <path>  Configuration file (default: searched from the current',
-  '                   directory up: mootant.config.{js,ts,...}, .mootantrc or',
-  '                   the "mootant" key of package.json)',
-  '  --preset <name>  Mutator preset: recommended, strict or a plugin preset;',
-  '                   replaces the presets of the configuration',
-  '                   (default: recommended)',
-  '  --json           Print the list as JSON',
-  '  --skipped        Also list the mutants that were considered and skipped,',
-  '                   with the reason; code that is never mutated, such as',
-  '                   types, decorators and enums, is not listed',
-  '  -h, --help       Display this message',
-  '  -v, --version    Display version number',
+  '  --config <path>      Configuration file (default: searched from the current',
+  '                       directory up: mootant.config.{js,ts,...}, .mootantrc or',
+  '                       the "mootant" key of package.json)',
+  '  --preset <name>      Mutator preset: recommended, strict or a plugin preset;',
+  '                       replaces the presets of the configuration',
+  '                       (default: recommended)',
+  '  --json               Print the report as JSON',
+  '  --skipped            list: also list the mutants that were considered and',
+  '                       skipped, with the reason; code that is never mutated,',
+  '                       such as types, decorators and enums, is not listed',
+  '  --threshold <score>  run: lowest mutation score from 0 to 100 that passes;',
+  '                       below it the exit code is 1',
+  '  --concurrency <n>    run: most test files at once (default: CPU cores - 1)',
+  '  --fast               run: try many mutants in one test run; faster, but a',
+  '                       kill may be false (state left by earlier tries)',
+  '  --mutant <id>        run: run only this mutant; repeat for more',
+  '  -h, --help           Display this message',
+  '  -v, --version        Display version number',
 ].join('\n')
 
 /**
@@ -154,6 +162,109 @@ describe('parseArguments', () => {
       message: expect.stringContaining(expected) as string,
       kind: 'error',
     })
+  })
+
+  it('returns run options with defaults and no paths', () => {
+    let result = parseArguments(['run'], '1.0.0')
+
+    expect(result).toStrictEqual({
+      options: { mutantIds: [], json: false, paths: [] },
+      kind: 'run',
+    })
+  })
+
+  it('reads every run option', () => {
+    let result = parseArguments(
+      [
+        'run',
+        'src',
+        '--threshold',
+        '72.5',
+        '--concurrency',
+        '3',
+        '--fast',
+        '--mutant',
+        'k3m9x2p7q4w8',
+        '--mutant',
+        'v7m5k6j2r8s4',
+        '--json',
+        '--preset',
+        'strict',
+        '--config',
+        'mootant.config.ts',
+      ],
+      '1.0.0',
+    )
+
+    expect(result).toStrictEqual({
+      options: {
+        mutantIds: ['k3m9x2p7q4w8', 'v7m5k6j2r8s4'],
+        config: 'mootant.config.ts',
+        preset: 'strict',
+        threshold: 72.5,
+        concurrency: 3,
+        paths: ['src'],
+        fast: true,
+        json: true,
+      },
+      kind: 'run',
+    })
+  })
+
+  it.each(['0', '100', '0.5'])('accepts the threshold %s', threshold => {
+    let result = parseArguments(['run', '--threshold', threshold], '1.0.0')
+
+    expect(result).toMatchObject({
+      options: { threshold: Number(threshold) },
+      kind: 'run',
+    })
+  })
+
+  it.each([
+    {
+      message: '--threshold expects a number from 0 to 100.',
+      argv: ['run', '--threshold', '101'],
+    },
+    {
+      message: '--threshold expects a number from 0 to 100.',
+      argv: ['run', '--threshold=-1'],
+    },
+    {
+      message: '--threshold expects a number from 0 to 100.',
+      argv: ['run', '--threshold', 'high'],
+    },
+    {
+      message: '--threshold expects a number from 0 to 100.',
+      argv: ['run', '--threshold', ' '],
+    },
+    {
+      message: '--concurrency expects a positive integer.',
+      argv: ['run', '--concurrency', '0'],
+    },
+    {
+      message: '--concurrency expects a positive integer.',
+      argv: ['run', '--concurrency', '1.5'],
+    },
+    {
+      message: '--skipped applies to the list command only.',
+      argv: ['run', 'src', '--skipped'],
+    },
+    {
+      message: '--threshold applies to the run command only.',
+      argv: ['list', 'src', '--threshold', '50'],
+    },
+    {
+      message: '--fast applies to the run command only.',
+      argv: ['list', 'src', '--fast'],
+    },
+    {
+      message: '--mutant applies to the run command only.',
+      argv: ['list', 'src', '--mutant', 'k3m9x2p7q4w8'],
+    },
+  ])('returns "$message" for $argv', ({ message, argv }) => {
+    let result = parseArguments(argv, '1.0.0')
+
+    expect(result).toStrictEqual({ kind: 'error', message })
   })
 
   it('returns an error naming an unknown option', () => {

@@ -1,7 +1,7 @@
 import type { ArrayExpression } from 'oxc-parser'
 
-import type { MutatorContext } from '../../types/mutator-context'
-import type { Mutator } from '../../types/mutator'
+import type { MutatorContext } from '../../types/mutator/mutator-context'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { getCalleeName } from '../tree/get-callee-name'
 

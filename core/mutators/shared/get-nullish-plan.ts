@@ -1,8 +1,8 @@
 import type { LogicalExpression, Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
-import type { Replacement } from '../../../types/replacement'
-import type { SkipNote } from '../../../types/skip-note'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
+import type { Replacement } from '../../../types/mutator/replacement'
+import type { SkipNote } from '../../../types/mutant/skip-note'
 
 import { distinguishesNullishSwap } from './distinguishes-nullish-swap'
 import { isTruthFlippingLiteral } from './is-truth-flipping-literal'

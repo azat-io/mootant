@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ValueKind } from '../../../../types/value-kind'
+import type { ValueKind } from '../../../../types/hints/value-kind'
 
 import { isAlwaysNullish } from '../../../../core/mutators/shared/is-always-nullish'
 import { createInferredType } from '../../../../core/hints/create-inferred-type'

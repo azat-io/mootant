@@ -5,7 +5,7 @@ import type {
   Node,
 } from 'oxc-parser'
 
-import type { TreeIndex } from '../../types/tree-index'
+import type { TreeIndex } from '../../types/syntax/tree-index'
 
 import { unwrapExpression } from '../tree/unwrap-expression'
 import { isNamePosition } from '../tree/is-name-position'

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { visitorKeys } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 import { createMutatorRegistry } from '../../../core/plugins/create-mutator-registry'
 import { isKebabCaseName } from '../../../core/plugins/is-kebab-case-name'

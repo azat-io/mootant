@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import type { RegisteredMutator } from '../../../types/registered-mutator'
-import type { MutantCandidate } from '../../../types/mutant-candidate'
-import type { IgnoreRule } from '../../../types/ignore-rule'
+import type { RegisteredMutator } from '../../../types/mutator/registered-mutator'
+import type { MutantCandidate } from '../../../types/mutant/mutant-candidate'
+import type { IgnoreRule } from '../../../types/mutant/ignore-rule'
 
 import { deduplicateCandidates } from '../../../core/generate/deduplicate-candidates'
 

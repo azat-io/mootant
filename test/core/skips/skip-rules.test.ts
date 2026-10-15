@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { SkipRuleId } from '../../../types/skip-rule-id'
-import type { SkipRule } from '../../../types/skip-rule'
+import type { SkipRuleId } from '../../../types/mutant/skip-rule-id'
+import type { SkipRule } from '../../../types/mutant/skip-rule'
 
 import { skipRules } from '../../../core/skips/skip-rules'
 

@@ -6,9 +6,9 @@ import type {
   Node,
 } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
-import type { Replacement } from '../../../types/replacement'
-import type { SkipNote } from '../../../types/skip-note'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
+import type { Replacement } from '../../../types/mutator/replacement'
+import type { SkipNote } from '../../../types/mutant/skip-note'
 import type { RunningValue } from './get-running-value'
 
 import { getProvenComparisonValue } from './get-proven-comparison-value'

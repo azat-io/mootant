@@ -4,7 +4,7 @@ import type {
   Node,
 } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 /**
  * Tells whether an expression sits where its annotation expects a boolean

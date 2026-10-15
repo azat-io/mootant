@@ -1,4 +1,4 @@
-import type { MutatorSetting } from '../../types/mutator-setting'
+import type { MutatorSetting } from '../../types/mutator/mutator-setting'
 
 import { isRecord } from './is-record'
 

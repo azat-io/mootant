@@ -1,8 +1,8 @@
 import type { Node } from 'oxc-parser'
 
-import type { TypeHintProvider } from '../../types/type-hint-provider'
-import type { TypeHints } from '../../types/type-hints'
-import type { ValueKind } from '../../types/value-kind'
+import type { TypeHintProvider } from '../../types/hints/type-hint-provider'
+import type { TypeHints } from '../../types/hints/type-hints'
+import type { ValueKind } from '../../types/hints/value-kind'
 
 /**
  * Builds the type questions mutators ask on top of a provider. Every question

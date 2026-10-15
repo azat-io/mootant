@@ -1,5 +1,5 @@
-import type { MutantCandidate } from '../../types/mutant-candidate'
-import type { SourceRange } from '../../types/source-range'
+import type { MutantCandidate } from '../../types/mutant/mutant-candidate'
+import type { SourceRange } from '../../types/source/source-range'
 
 import { compareCandidates } from './compare-candidates'
 

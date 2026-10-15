@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { NodeSlot } from '../../../types/node-slot'
+import type { NodeSlot } from '../../../types/syntax/node-slot'
 
 import { isNamePosition } from '../../../core/tree/is-name-position'
 import { createTestFile } from '../../helpers/create-test-file'

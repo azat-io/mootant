@@ -1,5 +1,5 @@
-import type { SkipJustifier } from '../../types/skip-justifier'
-import type { SkipCategory } from '../../types/skip-category'
+import type { SkipJustifier } from '../../types/mutant/skip-justifier'
+import type { SkipCategory } from '../../types/mutant/skip-category'
 import type { Probe } from './find-weak-mutants'
 
 /**

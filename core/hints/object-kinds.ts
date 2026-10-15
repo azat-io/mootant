@@ -1,4 +1,4 @@
-import type { ValueKind } from '../../types/value-kind'
+import type { ValueKind } from '../../types/hints/value-kind'
 
 /**
  * Kinds of objects, which every non-primitive value has: the kinds of the

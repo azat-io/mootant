@@ -12,8 +12,7 @@ weak. Mootant aims for mutants that are worth fixing: it skips mutants that
 cannot change behavior, that duplicate another mutant or that only a timeout can
 catch.
 
-> **Early development.** For now Mootant only lists the mutants it would run;
-> running tests against them is not implemented yet.
+> **Early development.** The runner currently supports Vitest 5.
 
 ## Usage
 
@@ -52,13 +51,42 @@ emitter.emit('change', value)
 `mootant-ignore-file` the whole file. Without a list of mutators, every mutator
 is ignored.
 
+## Running
+
+```sh
+mootant run src
+mootant run src --json --threshold 80
+```
+
+Uses the project's [Vitest](https://vitest.dev) 5 installation and
+configuration, selecting tests related to the mutated files. The report lists
+surviving and uncovered mutants; `--json` includes every verdict and its
+covering tests. Tests must pass without mutants first.
+
+Options:
+
+- `--config <path>` and `--preset <name>`: as for `list`
+- `--threshold <score>`: lowest mutation score, from 0 to 100, that passes
+- `--concurrency <n>`: most test files at once (default: Vitest's `maxWorkers`)
+- `--fast`: try many mutants in one test run; faster, but a kill may be false
+  and concurrent tests run one at a time
+- `--mutant <id>`: run only this mutant; repeat for more
+
+The score is killed and timed-out mutants over all scored mutants; `Ignored` and
+`Error` are excluded. The exit code is 1 on errors or a score below the
+threshold. Snapshots are never updated.
+
+Vue, Svelte and Astro components can be listed but not run yet. Tests that load
+a mutated file only through a computed `import()` may not be selected.
+
 ## Configuration
 
 Mootant looks for a configuration from the current directory up: a
 `mootant.config.js` (also `.mjs`, `.cjs`, `.ts`, `.mts` and `.cts`),
 `.mootantrc`, `.mootantrc.json` or the `mootant` key of `package.json`. The
-directory of the configuration is the project root: paths and mutant ids are
-relative to it, so they stay the same wherever Mootant runs in the project.
+directory of the configuration is the project root: reported paths and mutant
+ids are relative to it, so they stay the same wherever Mootant runs in the
+project. Paths on the command line are relative to the current directory.
 
 ```ts
 // mootant.config.ts
@@ -91,6 +119,17 @@ export default defineConfig({
   plugins: { acme },
 })
 ```
+
+- `run`: settings of `mootant run`; command line options win:
+  - `paths`: default source paths, relative to the configuration directory
+  - `threshold`, `concurrency`, `fast`: as the options of the same names
+  - `runner`: auto-detected, `'vitest'`, or an imported adapter object. For a
+    custom Vitest config, import `vitestAdapter` from `mootant/vitest` and use
+    `vitestAdapter({ config: 'vitest.unit.config.ts' })`
+  - `timeout`: `factor × baseline duration + constant` milliseconds; defaults to
+    `{ factor: 3, constant: 250 }`
+  - `hitLimit`: `max(floor, factor × baseline site evaluations)`; defaults to
+    `{ factor: 100, floor: 100000 }`
 
 TypeScript configuration files need Node.js 22.18 or later, which strips types
 itself, or the [`jiti`](https://github.com/unjs/jiti) package.

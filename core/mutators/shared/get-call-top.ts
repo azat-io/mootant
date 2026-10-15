@@ -1,6 +1,6 @@
 import type { CallExpression, Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 /**
  * Finds the node where the value of a call goes (catalog 4.9 and 4.16, the

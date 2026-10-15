@@ -8,9 +8,9 @@ import type {
   Node,
 } from 'oxc-parser'
 
-import type { TypeInference } from '../../types/type-inference'
-import type { InferredType } from '../../types/inferred-type'
-import type { ValueKind } from '../../types/value-kind'
+import type { TypeInference } from '../../types/hints/type-inference'
+import type { InferredType } from '../../types/hints/inferred-type'
+import type { ValueKind } from '../../types/hints/value-kind'
 
 import { inferExpressionType } from './infer-expression-type'
 import { unionInferredTypes } from './union-inferred-types'

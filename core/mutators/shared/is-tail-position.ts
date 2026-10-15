@@ -1,6 +1,6 @@
 import type { SwitchStatement, SwitchCase, Node } from 'oxc-parser'
 
-import type { MutatorContext } from '../../../types/mutator-context'
+import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 import { isFunction } from '../../syntax/is-function'
 

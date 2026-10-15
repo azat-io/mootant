@@ -1,4 +1,4 @@
-import type { Config } from '../../types/config'
+import type { Config } from '../../types/config/config'
 
 /**
  * Types a configuration in a `mootant.config.ts` or `mootant.config.js` file.

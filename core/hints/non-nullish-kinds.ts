@@ -1,4 +1,4 @@
-import type { ValueKind } from '../../types/value-kind'
+import type { ValueKind } from '../../types/hints/value-kind'
 
 /**
  * Kinds of a value about which nothing is known except that it is not nullish.

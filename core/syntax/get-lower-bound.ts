@@ -1,6 +1,6 @@
 import type { VariableDeclarator, MemberExpression, Node } from 'oxc-parser'
 
-import type { ScopeAnalysis } from '../../types/scope-analysis'
+import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
 
 import { unwrapExpression } from '../tree/unwrap-expression'
 

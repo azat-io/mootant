@@ -1,6 +1,6 @@
 import type { Node } from 'oxc-parser'
 
-import type { TreeIndex } from '../../types/tree-index'
+import type { TreeIndex } from '../../types/syntax/tree-index'
 
 import { getSlot } from '../tree/get-slot'
 

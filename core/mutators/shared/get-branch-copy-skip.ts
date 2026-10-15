@@ -1,7 +1,7 @@
 import type { Node } from 'oxc-parser'
 
-import type { LiteralChange } from '../../../types/literal-change'
-import type { SkipNote } from '../../../types/skip-note'
+import type { LiteralChange } from '../../../types/syntax/literal-change'
+import type { SkipNote } from '../../../types/mutant/skip-note'
 import type { RunContext } from './create-run-context'
 
 import { isExpectedBoolean } from './is-expected-boolean'

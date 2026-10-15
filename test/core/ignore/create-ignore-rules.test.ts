@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ParsedFile } from '../../../types/parsed-file'
-import type { IgnoreRule } from '../../../types/ignore-rule'
-import type { Diagnostic } from '../../../types/diagnostic'
+import type { ParsedFile } from '../../../types/source/parsed-file'
+import type { IgnoreRule } from '../../../types/mutant/ignore-rule'
+import type { Diagnostic } from '../../../types/mutant/diagnostic'
 
 import { parseIgnoreDirectives } from '../../../core/ignore/parse-ignore-directives'
 import { createIgnoreRules } from '../../../core/ignore/create-ignore-rules'

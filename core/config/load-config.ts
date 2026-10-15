@@ -1,7 +1,7 @@
 import { lilconfig } from 'lilconfig'
 import path from 'node:path'
 
-import type { Config } from '../../types/config'
+import type { Config } from '../../types/config/config'
 
 import { loadTypescriptConfig } from './load-typescript-config'
 import { validateConfig } from './validate-config'

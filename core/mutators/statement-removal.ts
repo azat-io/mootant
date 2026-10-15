@@ -7,10 +7,10 @@ import type {
   Node,
 } from 'oxc-parser'
 
-import type { MutatorContext } from '../../types/mutator-context'
-import type { Replacement } from '../../types/replacement'
-import type { SkipNote } from '../../types/skip-note'
-import type { Mutator } from '../../types/mutator'
+import type { MutatorContext } from '../../types/mutator/mutator-context'
+import type { Replacement } from '../../types/mutator/replacement'
+import type { SkipNote } from '../../types/mutant/skip-note'
+import type { Mutator } from '../../types/mutator/mutator'
 
 import { isPlainReturnValue } from './shared/is-plain-return-value'
 import { getOwnerConstant } from './shared/get-owner-constant'

@@ -1,6 +1,6 @@
 import type { LogicalExpression } from 'oxc-parser'
 
-import type { SkipNote } from '../../../types/skip-note'
+import type { SkipNote } from '../../../types/mutant/skip-note'
 import type { RunContext } from './create-run-context'
 
 import { isConstantEligibleGroup } from './is-constant-eligible-group'

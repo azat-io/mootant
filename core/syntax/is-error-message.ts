@@ -1,6 +1,6 @@
 import type { CallExpression, NewExpression, Node } from 'oxc-parser'
 
-import type { TreeIndex } from '../../types/tree-index'
+import type { TreeIndex } from '../../types/syntax/tree-index'
 
 import { isExpressionWrapper } from '../tree/is-expression-wrapper'
 import { unwrapExpression } from '../tree/unwrap-expression'

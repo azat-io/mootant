@@ -199,6 +199,21 @@ describe('indexTree', () => {
       "Literal './a'",
     ],
     [
+      'an import.meta.glob pattern',
+      "import.meta.glob('./pages/*.ts')",
+      "Literal './pages/*.ts'",
+    ],
+    [
+      'an import.meta.glob pattern list',
+      "import.meta.glob(['./a/*.ts', '!./a/b.ts'])",
+      "Literal '!./a/b.ts'",
+    ],
+    [
+      'import.meta.glob options',
+      "import.meta.glob('./a/*.ts', { eager: true })",
+      'Literal true',
+    ],
+    [
       'the callee of a logging call',
       "console.log('a', b)",
       'Identifier console',
@@ -222,6 +237,11 @@ describe('indexTree', () => {
     ],
     ['a require call', "require('./a')", "CallExpression require('./a')"],
     ['a second require argument', "require('./a', b)", 'Identifier b'],
+    [
+      'an import.meta.glob call',
+      "import.meta.glob('./a/*.ts')",
+      "CallExpression import.meta.glob('./a/*.ts')",
+    ],
     ['an argument of another call', "load('./a')", "Literal './a'"],
     ['an argument of log.push', 'log.push(x)', 'Identifier x'],
     ['a parenthesized string', "('use strict')", "Literal 'use strict'"],

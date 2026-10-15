@@ -1,7 +1,7 @@
 import type { Node } from 'oxc-parser'
 
-import type { ParsedFile } from '../../types/parsed-file'
-import type { TextEdit } from '../../types/text-edit'
+import type { ParsedFile } from '../../types/source/parsed-file'
+import type { TextEdit } from '../../types/source/text-edit'
 
 import { needsSeparator } from './needs-separator'
 

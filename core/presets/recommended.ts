@@ -1,4 +1,4 @@
-import type { Preset } from '../../types/preset'
+import type { Preset } from '../../types/config/preset'
 
 /**
  * Default preset: every built-in mutator with its default options, without

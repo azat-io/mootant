@@ -1,5 +1,5 @@
-import type { OperatorExpression } from '../../types/operator-expression'
-import type { ParsedFile } from '../../types/parsed-file'
+import type { OperatorExpression } from '../../types/syntax/operator-expression'
+import type { ParsedFile } from '../../types/source/parsed-file'
 
 import { getOperatorRange } from './get-operator-range'
 import { needsSeparator } from './needs-separator'
