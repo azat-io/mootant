@@ -5,7 +5,7 @@ import type { Replacement } from '../../types/replacement'
 import type { SkipNote } from '../../types/skip-note'
 import type { Mutator } from '../../types/mutator'
 
-import { getCallbackOwner } from './shared/get-callback-owner'
+import { isComparatorResult } from './shared/is-comparator-result'
 import { createRunContext } from './shared/create-run-context'
 import { getLiteralValue } from './shared/get-literal-value'
 import { getLiteralSkip } from './shared/get-literal-skip'
@@ -188,32 +188,6 @@ function isIdentityArgument(node: Node, context: MutatorContext): boolean {
     type === 'string' ||
     (type === 'array' && parent.callee.property.name === 'slice')
   )
-}
-
-/**
- * Tells whether a node is a result of a sort comparator that method-call can
- * remove (catalog 4.11, EQ): its concise body, the argument of one of its
- * `return` statements, or a branch of a conditional expression that is one.
- * Only the sign of a comparator's result matters.
- *
- * @param node - Numeric constant.
- * @param context - Mutator context of the file.
- * @returns Whether the node is a result of a no-op callback's comparator.
- */
-function isComparatorResult(node: Node, context: MutatorContext): boolean {
-  let { syntax } = context
-  let slot = syntax.getContextSlot(node)
-  while (slot.parent?.type === 'ConditionalExpression' && slot.key !== 'test') {
-    slot = syntax.getContextSlot(slot.parent)
-  }
-  let { parent, key } = slot
-  let callback: Node | null = null
-  if (key === 'body' && parent?.type === 'ArrowFunctionExpression') {
-    callback = parent
-  } else if (parent?.type === 'ReturnStatement') {
-    callback = syntax.getEnclosingFunction(parent)
-  }
-  return callback !== null && getCallbackOwner(callback, context) !== null
 }
 
 /**

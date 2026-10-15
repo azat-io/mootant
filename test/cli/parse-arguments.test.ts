@@ -13,7 +13,12 @@ const HELP_TEXT = [
   '  list <paths...>  List the mutants of files and directories',
   '',
   'Options:',
-  '  --preset <name>  Mutator preset: recommended or strict (default: recommended)',
+  '  --config <path>  Configuration file (default: searched from the current',
+  '                   directory up: mootant.config.{js,ts,...}, .mootantrc or',
+  '                   the "mootant" key of package.json)',
+  '  --preset <name>  Mutator preset: recommended, strict or a plugin preset;',
+  '                   replaces the presets of the configuration',
+  '                   (default: recommended)',
   '  --json           Print the list as JSON',
   '  --skipped        Also list the mutants that were considered and skipped,',
   '                   with the reason; code that is never mutated, such as',
@@ -84,7 +89,6 @@ describe('parseArguments', () => {
     expect(result).toStrictEqual({
       options: {
         paths: ['src', 'lib/a.ts'],
-        preset: 'recommended',
         skipped: false,
         json: false,
       },
@@ -92,14 +96,29 @@ describe('parseArguments', () => {
     })
   })
 
-  it('reads --json, --skipped and --preset wherever they appear', () => {
+  it('reads --json, --skipped, --preset and --config wherever they appear', () => {
     let result = parseArguments(
-      ['--json', 'list', '--preset', 'strict', 'src', '--skipped'],
+      [
+        '--json',
+        'list',
+        '--preset',
+        'strict',
+        'src',
+        '--skipped',
+        '--config',
+        'mootant.config.ts',
+      ],
       '1.0.0',
     )
 
     expect(result).toStrictEqual({
-      options: { preset: 'strict', paths: ['src'], skipped: true, json: true },
+      options: {
+        config: 'mootant.config.ts',
+        preset: 'strict',
+        paths: ['src'],
+        skipped: true,
+        json: true,
+      },
       kind: 'list',
     })
   })
@@ -110,7 +129,6 @@ describe('parseArguments', () => {
     expect(result).toStrictEqual({
       options: {
         paths: ['--json', 'src'],
-        preset: 'recommended',
         skipped: false,
         json: false,
       },

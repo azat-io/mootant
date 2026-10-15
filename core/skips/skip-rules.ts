@@ -67,6 +67,10 @@ export let skipRules = {
     category: 'subsumed',
     heuristic: false,
   },
+  'comparator-sign-flip': {
+    category: 'owned',
+    heuristic: true,
+  },
   'comparator-sign': {
     category: 'equivalent',
     heuristic: true,
@@ -86,6 +90,10 @@ export let skipRules = {
   'literal-truth': {
     category: 'equivalent',
     heuristic: false,
+  },
+  'reference-equality': {
+    category: 'noise',
+    heuristic: true,
   },
   'settled-value': {
     category: 'equivalent',
@@ -125,10 +133,6 @@ export let skipRules = {
   },
   'tail-return': {
     category: 'equivalent',
-    heuristic: false,
-  },
-  'negative-literal': {
-    category: 'owned',
     heuristic: false,
   },
   'numeric-plus': {

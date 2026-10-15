@@ -14,6 +14,7 @@ export default defineConfig({
     'changelogen',
     'changelogithub',
     'mootant',
+    'mootantrc',
     'quasis',
     'rolldown',
   ],

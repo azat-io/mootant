@@ -213,11 +213,12 @@ interface Shift {
  * entries that the context rules skip: regions a lower bound makes impossible,
  * constants that logical-operator owns, timeout-only entries in loop
  * conditions, constants proven by `null` or `typeof` comparisons, the equal
- * entry of a min/max idiom, a first exit test's leave-now constant, and entries
- * that make a no-op callback. A swap or shifted literal that the lower bound
- * leaves constant is skipped like that constant, except for the constants that
- * logical-operator owns. Skipped entries are returned with the rule that skips
- * them. The plan is pure: other mutators read it without running
+ * entry of a min/max idiom, the `!=` or `==` swap of two operands hinted to be
+ * objects (it compares references), a first exit test's leave-now constant, and
+ * entries that make a no-op callback. A swap or shifted literal that the lower
+ * bound leaves constant is skipped like that constant, except for the constants
+ * that logical-operator owns. Skipped entries are returned with the rule that
+ * skips them. The plan is pure: other mutators read it without running
  * comparison-operator.
  *
  * @param node - Comparison of the runtime tree.
@@ -267,6 +268,19 @@ export function getComparisonPlan(
         'a counter that steps over the bound would keep the loop running, so only a timeout could kill it',
       rule: 'loop-running',
     })
+  }
+  if (
+    orderedPlans.has(operator) &&
+    getTypeView(hints.getType(left)).type === 'object' &&
+    getTypeView(hints.getType(right)).type === 'object'
+  ) {
+    let reference: SkipNote = {
+      reason:
+        'both operands are objects, so it compares references instead of order',
+      rule: 'reference-equality',
+    }
+    operatorSkips.set('!=', operatorSkips.get('!=') ?? reference)
+    operatorSkips.set('==', operatorSkips.get('==') ?? reference)
   }
   let minMax = isMinMaxIdiom(node, context)
 

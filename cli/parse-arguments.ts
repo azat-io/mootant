@@ -10,7 +10,12 @@ Commands:
   list <paths...>  List the mutants of files and directories
 
 Options:
-  --preset <name>  Mutator preset: recommended or strict (default: recommended)
+  --config <path>  Configuration file (default: searched from the current
+                   directory up: mootant.config.{js,ts,...}, .mootantrc or
+                   the "mootant" key of package.json)
+  --preset <name>  Mutator preset: recommended, strict or a plugin preset;
+                   replaces the presets of the configuration
+                   (default: recommended)
   --json           Print the list as JSON
   --skipped        Also list the mutants that were considered and skipped,
                    with the reason; code that is never mutated, such as
@@ -25,6 +30,7 @@ let parserOptions = {
   version: { type: 'boolean', short: 'v' },
   help: { type: 'boolean', short: 'h' },
   skipped: { type: 'boolean' },
+  config: { type: 'string' },
   preset: { type: 'string' },
   json: { type: 'boolean' },
 } as const
@@ -44,9 +50,14 @@ export interface ListOptions {
   paths: string[]
 
   /**
-   * Preset id; `recommended` unless `--preset` is given.
+   * Path of the configuration file, when `--config` is given.
    */
-  preset: string
+  config?: string
+
+  /**
+   * Preset id, when `--preset` is given.
+   */
+  preset?: string
 
   /**
    * Whether to print the report as JSON.
@@ -120,7 +131,8 @@ export function parseArguments(
 
     return {
       options: {
-        preset: values.preset ?? 'recommended',
+        ...(values.config !== undefined && { config: values.config }),
+        ...(values.preset !== undefined && { preset: values.preset }),
         skipped: values.skipped ?? false,
         json: values.json ?? false,
         paths,

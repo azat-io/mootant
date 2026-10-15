@@ -34,8 +34,8 @@ describe('unaryOperator', () => {
       ],
       line: 'y = -(~x)',
     },
-    { line: 'y = -1', expected: [] },
-    { line: 'y = -1n', expected: [] },
+    { expected: [{ replacement: '1', original: '-1' }], line: 'y = -1' },
+    { expected: [{ replacement: '1n', original: '-1n' }], line: 'y = -1n' },
     {
       expected: [{ replacement: '(a + b)', original: '-(a + b)' }],
       line: 'y = -(a + b)',
@@ -93,13 +93,15 @@ describe('unaryOperator', () => {
     expect(runMutator('unary-operator', source)).toMatchObject(expected)
   })
 
-  it('leaves a negative number literal to number-literal', () => {
+  it('flips the sign of a negative number literal, which number-literal moves by one', () => {
     let source = 'y = -1'
 
     expect(runMutator('number-literal', source)).toMatchObject([
       { replacement: '0', original: '-1' },
     ])
-    expect(runMutator('unary-operator', source)).toEqual([])
+    expect(runMutator('unary-operator', source)).toMatchObject([
+      { replacement: '1', original: '-1' },
+    ])
   })
 
   it.each(['if (!x) run()', 'y = !x', 'y = !!x'])(
@@ -115,12 +117,12 @@ describe('unaryOperator', () => {
 
   it.each<[string, string[]]>([
     [
-      "declare let n: number; a = -1; b = +n; c = +'3'; d = ~~n; e = +x; g = +(2)",
+      "declare let n: number; a = -1; b = +n; c = +'3'; d = ~~n; e = +x; g = +(2); h = rows.sort(() => -1)",
       [
-        '-1 -> 1 (owned negative-literal)',
         '+n -> n (equivalent numeric-plus)',
         "+'3' -> '3' (noise literal-coercion)",
         '+(2) -> (2) (equivalent number-literal-plus)',
+        '-1 -> 1 (owned comparator-sign-flip)',
       ],
     ],
   ])('lists the skipped mutants of %s', (source, expected) => {

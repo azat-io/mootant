@@ -312,7 +312,7 @@ describe('statementRemoval', () => {
           '}',
         ],
         {
-          mutators: { 'number-literal': 'off' },
+          mutators: { 'number-literal': 'off', 'unary-operator': 'off' },
         },
       ),
     ).toContain('return -1 -> ;')

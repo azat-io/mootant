@@ -3,12 +3,10 @@ import { readFile } from 'node:fs/promises'
 import type { FileMutants } from '../types/file-mutants'
 import type { ListResult } from '../types/list-result'
 
-import { createMutatorRegistry } from './plugins/create-mutator-registry'
 import { generateFileMutants } from './generate/generate-file-mutants'
 import { assertUniqueIds } from './identity/assert-unique-ids'
-import { resolvePreset } from './plugins/resolve-preset'
 import { expandPaths } from './files/expand-paths'
-import { corePlugin } from './plugins/core-plugin'
+import { prepareRun } from './config/prepare-run'
 
 /**
  * Options of a list run.
@@ -26,9 +24,16 @@ interface ListMutantsOptions {
   paths: string[]
 
   /**
-   * Id of the preset that turns mutators on.
+   * Path of the configuration file given with `--config`; the configuration is
+   * searched for when omitted.
    */
-  preset: string
+  config?: string
+
+  /**
+   * Id of the preset that replaces the presets of the configuration; the
+   * configuration's `extends`, or `recommended`, when omitted.
+   */
+  preset?: string
 
   /**
    * Working directory that display paths are relative to.
@@ -37,24 +42,30 @@ interface ListMutantsOptions {
 }
 
 /**
- * Lists the mutants of the given files and directories: resolves the preset,
- * expands the paths, reads every file and generates its mutants one file at a
- * time. A file that cannot be read or parsed is reported and the others are
- * still listed. Skipped candidates are collected only on request and never
- * change the mutants.
+ * Lists the mutants of the given files and directories: loads the configuration
+ * and its plugins, resolves the presets, expands the paths with display paths
+ * relative to the project root, reads every file and generates its mutants one
+ * file at a time. A file that cannot be read or parsed is reported and the
+ * others are still listed. Skipped candidates are collected only on request and
+ * never change the mutants.
  *
- * @param options - Paths, preset and working directory of the run.
+ * @param options - Paths, configuration, preset and working directory of the
+ *   run.
  * @returns Result of the run, before it is formatted.
- * @throws Error - When the preset is unknown or broken, when paths are missing
- *   or hold no source file, or when two mutants share an id.
+ * @throws Error - When the configuration or a plugin cannot be loaded or is
+ *   invalid, when a preset or mutator is unknown, when paths are missing or
+ *   hold no source file, or when two mutants share an id.
  */
 export async function listMutants(
   options: ListMutantsOptions,
 ): Promise<ListResult> {
-  let registry = createMutatorRegistry(corePlugin, {})
-  let { mutators, settings } = resolvePreset(registry, options.preset)
-  let { diagnostics, files } = await expandPaths(options.paths, options.cwd)
-  let knownMutatorIds = new Set(registry.mutators.keys())
+  let { knownMutatorIds, mutators, settings, preset, root } =
+    await prepareRun(options)
+  let { diagnostics, files } = await expandPaths(
+    options.paths,
+    options.cwd,
+    root,
+  )
   let skipped = options.skipped ?? false
 
   let sources = await Promise.allSettled(
@@ -95,10 +106,10 @@ export async function listMutants(
 
   assertUniqueIds(results)
   return {
-    preset: options.preset,
     files: results,
     diagnostics,
     mutators,
     skipped,
+    preset,
   }
 }

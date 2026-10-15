@@ -4,6 +4,7 @@ import type { MutatorContext } from '../../types/mutator-context'
 import type { SkipNote } from '../../types/skip-note'
 import type { Mutator } from '../../types/mutator'
 
+import { isComparatorResult } from './shared/is-comparator-result'
 import { getLiteralValue } from './shared/get-literal-value'
 import { getTypeView } from './shared/get-type-view'
 
@@ -11,11 +12,13 @@ import { getTypeView } from './shared/get-type-view'
  * Removes a numeric unary operator (-x, +x, ~x) (catalog 4.17): the mutant is
  * the argument with its parentheses. `~~x` is one unit, also as `~(~x)`: the
  * outer `~` gives `x` and the inner one nothing. Any other operator removes
- * only itself: `-~x` gives `~x`. Skipped: `-` applied to a number literal
- * (number-literal owns it), `+x` when `x` is a number literal or hinted to be
- * only a number, never nullish or a BigInt (EQ), and `+x` of any other literal
- * (NOISE: `+'3'` is a number, `+1n` throws). The inner `~` of `~~x` and `!`,
- * `typeof`, `void` and `delete` are never mutated.
+ * only itself: `-~x` gives `~x`, and `-1` gives `1`, which number-literal's `-1
+ * -> 0` does not cover. Skipped: `-1` as a sort comparator result, where `1`
+ * and number-literal's `0` both stop the result from being negative; `+x` when
+ * `x` is a number literal or hinted to be only a number, never nullish or a
+ * BigInt (EQ); and `+x` of any other literal (NOISE: `+'3'` is a number, `+1n`
+ * throws). The inner `~` of `~~x` and `!`, `typeof`, `void` and `delete` are
+ * never mutated.
  */
 export let unaryOperator: Mutator = {
   create(context) {
@@ -56,15 +59,17 @@ function getSkip(
   node: UnaryExpression,
   context: MutatorContext,
 ): SkipNote | null {
-  if (node.operator === '-') {
-    let value = getLiteralValue(node)
-    return typeof value === 'number' || typeof value === 'bigint' ?
-        {
-          reason: 'number-literal owns the sign of a number literal',
-          by: { mutator: 'number-literal', node },
-          rule: 'negative-literal',
-        }
-      : null
+  if (
+    node.operator === '-' &&
+    getLiteralValue(node) === -1 &&
+    isComparatorResult(node, context)
+  ) {
+    return {
+      reason:
+        "a sort comparator result that is no longer negative behaves like number-literal's -1 -> 0",
+      by: { mutator: 'number-literal', node },
+      rule: 'comparator-sign-flip',
+    }
   }
   if (node.operator === '+') {
     let argument = context.syntax.unwrapParentheses(node.argument)

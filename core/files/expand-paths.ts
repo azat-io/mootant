@@ -100,7 +100,9 @@ const GLOB_PATTERN = /[*?[{]/u
  *
  * @param paths - Paths as given on the command line.
  * @param cwd - Working directory the paths are relative to.
- * @returns Files sorted by display path, the real path relative to the working
+ * @param base - Directory display paths are relative to; the working directory
+ *   when omitted.
+ * @returns Files sorted by display path, the real path relative to the base
  *   directory with `/` separators, and warnings about skipped paths.
  * @throws Error - When a path is missing or cannot be accessed, or no source
  *   file is found.
@@ -108,8 +110,9 @@ const GLOB_PATTERN = /[*?[{]/u
 export async function expandPaths(
   paths: readonly string[],
   cwd: string,
+  base: string = cwd,
 ): Promise<ExpandedPaths> {
-  let root = await realpath(cwd)
+  let root = await realpath(base)
   let resolutions = await Promise.all(
     paths.map(input => resolveInput(cwd, input)),
   )

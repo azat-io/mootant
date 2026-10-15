@@ -6,6 +6,7 @@ import type { Plugin } from '../../types/plugin'
 
 import { createFakeFileSystem } from '../helpers/create-fake-file-system'
 import { createMutantId } from '../../core/identity/create-mutant-id'
+import { loadConfig } from '../../core/config/load-config'
 import { listMutants } from '../../core/list-mutants'
 
 vi.mock(import('node:fs/promises'), () => ({
@@ -22,6 +23,10 @@ vi.mock(
     return { createMutantId: vi.fn(actual.createMutantId) }
   },
 )
+
+vi.mock(import('../../core/config/load-config'), () => ({
+  loadConfig: vi.fn().mockResolvedValue(null),
+}))
 
 vi.mock(import('../../core/plugins/core-plugin'), () => {
   let corePlugin: Plugin = {
@@ -116,6 +121,21 @@ describe('listMutants', () => {
         parsed: true,
       },
     ])
+  })
+
+  it('writes paths and ids relative to the directory of the configuration', async () => {
+    installFileSystem({ '/repo/src/a.ts': 'x = 1' })
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: { extends: ['recommended'] },
+      file: '/repo/mootant.config.js',
+      directory: '/repo',
+    })
+
+    let result = await listMutants({ cwd: '/repo/src', paths: ['a.ts'] })
+
+    expect(loadConfig).toHaveBeenCalledExactlyOnceWith(undefined, '/repo/src')
+    expect(result.preset).toBe('recommended')
+    expect(result.files.map(({ file }) => file)).toStrictEqual(['src/a.ts'])
   })
 
   it.each([

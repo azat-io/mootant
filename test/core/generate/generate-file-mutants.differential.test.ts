@@ -326,9 +326,6 @@ const IDIOMS: Idiom[] = [
       '  return value',
       '}',
     ],
-    unsoundSkips: {
-      owned: ['unary-operator -1 -> 1 (negative-literal)'],
-    },
     name: 'an || default of a number',
     inputs: [[0], [1], [-1], [5]],
     file: 'example.ts',
@@ -340,9 +337,6 @@ const IDIOMS: Idiom[] = [
       '  return value',
       '}',
     ],
-    unsoundSkips: {
-      owned: ['unary-operator -1 -> 1 (negative-literal)'],
-    },
     inputs: [[undefined], [0], [1], [-1], [5]],
     name: 'an || default of a nullable number',
     file: 'example.ts',
@@ -429,6 +423,7 @@ const IDIOMS: Idiom[] = [
     gaps: {
       subsumed: [
         "comparison-operator path.slice(-1) === '/' -> false < method-call path.slice(-1) -> path",
+        "comparison-operator path.slice(-1) === '/' -> false < unary-operator -1 -> 1",
       ],
     },
     lines: [
@@ -436,9 +431,6 @@ const IDIOMS: Idiom[] = [
       "  return path.slice(-1) === '/'",
       '}',
     ],
-    unsoundSkips: {
-      owned: ['unary-operator -1 -> 1 (negative-literal)'],
-    },
     inputs: STRINGS.map(text => [text]),
     name: 'a comparison of slice(-1)',
     file: 'example.ts',
@@ -449,9 +441,7 @@ const IDIOMS: Idiom[] = [
       '  return parts.slice(-1)[0]',
       '}',
     ],
-    unsoundSkips: {
-      owned: ['unary-operator -1 -> 1 (negative-literal)'],
-    },
+    gaps: { subsumed: ['number-literal 0 -> 1 < unary-operator -1 -> 1'] },
     inputs: [[[]], [['a']], [['a', 'b']]],
     name: 'an element of slice(-1)',
     file: 'example.ts',
@@ -748,19 +738,20 @@ const IDIOMS: Idiom[] = [
     file: 'example.ts',
   },
   {
-    gaps: {
-      subsumed: [
-        'comparison-operator start < end -> start != end < comparison-operator start < end -> start <= end',
-      ],
-    },
+    inputs: [
+      ...combine(TIMES, TIMES).map(times =>
+        times.map(time => new Date(time as number)),
+      ),
+      ...TIMES.map(time => {
+        let date = new Date(time)
+        return [date, date]
+      }),
+    ],
     lines: [
       'function f(start: Date, end: Date) {',
       '  return start < end',
       '}',
     ],
-    inputs: combine(TIMES, TIMES).map(times =>
-      times.map(time => new Date(time as number)),
-    ),
     name: 'a comparison of dates',
     file: 'example.ts',
   },

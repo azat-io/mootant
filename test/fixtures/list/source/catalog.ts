@@ -98,7 +98,7 @@ export async function awaits(id: string) {
 export function numbers(items: string[], price: number) {
   let rate = 0.2 // 1.2
   let last = items[items.length - 1] // - becomes +, and 1 becomes 2
-  let negative = -1 // 0
+  let negative = -1 // 0, and unary-operator flips the sign
   let big = 10n // 11n
   let hex = 0xff // 0x100
   if (1) run() // stays truthy: no literal mutant, so the call is removed
@@ -205,7 +205,7 @@ export function more(ok: boolean, a: boolean, b: boolean, c: boolean, s: string,
   if (ok && true) run() // a literal operand is fixed: dropping it would be equivalent
   if (a && b || c) run() // the root's true is subsumed by the inner drops
   const at = s.indexOf(':') // value context: the needle is kept
-  if (at === -1) run() // the lower bound follows the const: no <=
+  if (at === -1) run() // the lower bound follows the const: no <=; -1 -> 1
   let shown = text || '' // canonical default: no ?? swap
   let fallback = label ?? null // only the swap; dropping ?? null is strict
 }

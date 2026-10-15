@@ -69,6 +69,20 @@ describe('expandPaths', () => {
     })
   })
 
+  it('writes display paths relative to the base directory', async () => {
+    installFileSystem({ '/repo/src/a.ts': '', '/other/b.ts': '' })
+
+    await expect(
+      expandPaths(['a.ts', '../../other/b.ts'], '/repo/src', '/repo'),
+    ).resolves.toStrictEqual({
+      files: [
+        { absolute: '/other/b.ts', file: '../other/b.ts' },
+        { absolute: '/repo/src/a.ts', file: 'src/a.ts' },
+      ],
+      diagnostics: [],
+    })
+  })
+
   it('walks a directory and keeps only source files', async () => {
     installFileSystem({
       '/repo/src/node_modules/package/index.js': '',

@@ -86,7 +86,6 @@ describe('run', () => {
     await runCli('list', 'src', '--json', '--skipped')
 
     expect(runList).toHaveBeenCalledExactlyOnceWith({
-      preset: 'recommended',
       paths: ['src'],
       skipped: true,
       json: true,

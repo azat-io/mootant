@@ -29,8 +29,10 @@ not mutated.
 
 Options:
 
-- `--preset <name>`: `recommended` (default) or `strict`, which adds noisier
-  mutants
+- `--config <path>`: configuration file to use instead of the one Mootant finds
+  (see [Configuration](#configuration))
+- `--preset <name>`: `recommended` (default), `strict`, which adds noisier
+  mutants, or a plugin preset; it replaces the presets of the configuration
 - `--json`: print the list as JSON for tools and AI agents
 - `--skipped`: also list the mutants Mootant considered and did not emit, each
   with a category (`equivalent`, `noise`, `timeout`, `owned`, `subsumed`,
@@ -49,6 +51,49 @@ emitter.emit('change', value)
 `mootant-ignore-start` / `mootant-ignore-end` cover a region and
 `mootant-ignore-file` the whole file. Without a list of mutators, every mutator
 is ignored.
+
+## Configuration
+
+Mootant looks for a configuration from the current directory up: a
+`mootant.config.js` (also `.mjs`, `.cjs`, `.ts`, `.mts` and `.cts`),
+`.mootantrc`, `.mootantrc.json` or the `mootant` key of `package.json`. The
+directory of the configuration is the project root: paths and mutant ids are
+relative to it, so they stay the same wherever Mootant runs in the project.
+
+```ts
+// mootant.config.ts
+import { defineConfig } from 'mootant'
+
+export default defineConfig({
+  extends: ['recommended'],
+  mutators: {
+    'string-literal': 'off',
+  },
+  settings: {
+    timeouts: false,
+  },
+})
+```
+
+- `extends`: presets applied first, in order (`['recommended']` by default)
+- `mutators`: `'on'`, `'off'` or `['on', options]` for each mutator id, over the
+  presets
+- `settings`: `coarseMutants` and `timeouts`, over the presets
+- `plugins`: plugin objects by namespace, imported by the configuration file.
+  Their mutators and presets get ids like `acme/name`:
+
+```ts
+import { defineConfig } from 'mootant'
+import acme from 'mootant-plugin-acme'
+
+export default defineConfig({
+  extends: ['recommended', 'acme/recommended'],
+  plugins: { acme },
+})
+```
+
+TypeScript configuration files need Node.js 22.18 or later, which strips types
+itself, or the [`jiti`](https://github.com/unjs/jiti) package.
 
 ## Contributing
 
