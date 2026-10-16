@@ -1,5 +1,23 @@
 # Mootant
 
+<picture>
+  <source
+    srcset="https://raw.githubusercontent.com/azat-io/mootant/main/assets/logo-light.webp"
+    media="(prefers-color-scheme: light)"
+  />
+  <source
+    srcset="https://raw.githubusercontent.com/azat-io/mootant/main/assets/logo-dark.webp"
+    media="(prefers-color-scheme: dark)"
+  />
+  <img
+    src="https://raw.githubusercontent.com/azat-io/mootant/main/assets/logo-light.webp"
+    alt="Mootant Logo"
+    align="right"
+    height="160"
+    width="160"
+  />
+</picture>
+
 [![Version](https://img.shields.io/npm/v/mootant.svg?color=b8f12a&labelColor=f4f2ec)](https://npmjs.com/package/mootant)
 [![Code Coverage](https://img.shields.io/codecov/c/github/azat-io/mootant.svg?color=b8f12a&labelColor=f4f2ec)](https://codecov.io/gh/azat-io/mootant)
 [![GitHub License](https://img.shields.io/badge/license-MIT-232428.svg?color=b8f12a&labelColor=f4f2ec)](https://github.com/azat-io/mootant/blob/main/license.md)
