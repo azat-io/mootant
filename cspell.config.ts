@@ -1,6 +1,16 @@
 import { defineConfig } from 'cspell'
 
 export default defineConfig({
+  words: [
+    'azat',
+    'cmder',
+    'changelogen',
+    'changelogithub',
+    'mootant',
+    'mootantrc',
+    'quasis',
+    'rolldown',
+  ],
   ignorePaths: [
     '.github',
     'changelog.md',
@@ -8,15 +18,6 @@ export default defineConfig({
     'pnpm-lock.yaml',
     'test/fixtures',
     'tsconfig.json',
-  ],
-  words: [
-    'azat',
-    'changelogen',
-    'changelogithub',
-    'mootant',
-    'mootantrc',
-    'quasis',
-    'rolldown',
   ],
   dictionaries: ['css', 'html', 'node', 'npm', 'typescript'],
   useGitignore: true,

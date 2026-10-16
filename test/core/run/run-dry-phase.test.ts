@@ -25,18 +25,20 @@ const SOURCES: Record<string, string[]> = {
  *
  * @param world - Simulated project.
  * @param repeat - Whether every test is tried twice, as in fast mode.
+ * @param progress - Receives the reasons of dry runs that run again, and the
+ *   other events as JSON.
  * @returns Outcome of the phase, the switched files left and the adapter.
  */
 async function run(
   world: FakeWorld,
   repeat = true,
+  progress: string[] = [],
 ): Promise<{
   phase: Awaited<ReturnType<typeof runDryPhase>>
   switched: SwitchedFile[]
   progress: string[]
   fake: FakeAdapter
 }> {
-  let progress: string[] = []
   let fake = createFakeAdapter(world)
   let switched: SwitchedFile[] = Object.entries(SOURCES).map(([file, ids]) => ({
     switched: ids.map(id => `hit("${id}")`).join(';'),
@@ -55,13 +57,15 @@ async function run(
         ids.map(id => [id, file] as const),
       ),
     ),
+    report: event => {
+      progress.push(
+        event.kind === 'dry-again' ? event.message : JSON.stringify(event),
+      )
+    },
     displays: new Map([
       ['/src/a.ts', 'src/a.ts'],
       ['/src/b.ts', 'src/b.ts'],
     ]),
-    progress: message => {
-      progress.push(message)
-    },
     root: '/',
     switched,
     repeat,
@@ -83,7 +87,7 @@ describe('runDryPhase', () => {
       runDryPhase(session, {
         mutantFiles: new Map(),
         displays: new Map(),
-        progress: () => {},
+        report: () => {},
         repeat: false,
         switched: [],
         root: '/',
@@ -111,9 +115,7 @@ describe('runDryPhase', () => {
       tests: [],
     })
 
-    expect(progress).toStrictEqual([
-      'Dry run: tests related to 2 mutated files.',
-    ])
+    expect(progress).toStrictEqual(['{"files":2,"kind":"dry-start"}'])
     expect(phase.runs).toBe(1)
     expect(phase.dry.tests).toStrictEqual([])
     expect(
@@ -200,8 +202,9 @@ describe('runDryPhase', () => {
       tests: [...tests, { file: '/t/a.test.ts', covers: ['a1'], id: 'ok' }],
       files: [{ file: '/t/a.test.ts', loadCovers: ['a1'], broken: true }],
     }
+    let progress: string[] = []
 
-    await expect(run(world)).rejects.toThrow(
+    await expect(run(world, true, progress)).rejects.toThrow(
       [
         'Tests fail without mutants; fix them first (11 tests, 1 test file):',
         '  t/a.test.ts: fails to load: unknown error',
@@ -217,6 +220,9 @@ describe('runDryPhase', () => {
         '  and 2 more',
         'Snapshots may be missing: mootant never writes them, so write them with the test runner first.',
       ].join('\n'),
+    )
+    expect(progress.at(-1)).toBe(
+      JSON.stringify({ files: ['t/a.test.ts'], kind: 'dry-failed' }),
     )
   })
 
@@ -246,7 +252,7 @@ describe('runDryPhase', () => {
       runDryPhase(session, {
         displays: new Map([['/src/a.ts', 'src/a.ts']]),
         mutantFiles: new Map([['a1', '/src/a.ts']]),
-        progress: () => {},
+        report: () => {},
         repeat: true,
         root: '/',
         switched,
@@ -284,10 +290,10 @@ describe('runDryPhase', () => {
 
     expect(phase.runs).toBe(4)
     expect(progress).toStrictEqual([
-      'Dry run: tests related to 2 mutated files.',
-      'Dry run again with each test once: 2 test files failed with each test twice.',
-      'Dry run without switched files: checking the tests that failed.',
-      'Dry run again without 1 file that broke tests.',
+      '{"files":2,"kind":"dry-start"}',
+      '2 test files failed with each test run twice; running them again with each test once.',
+      'Some tests failed; running them again without mutants to check.',
+      'Running the dry run again without 1 file that broke tests.',
     ])
     let files = [
       { file: '/t/a.test.ts', project: '' },
@@ -355,9 +361,9 @@ describe('runDryPhase', () => {
     )
 
     expect(progress).toStrictEqual([
-      'Dry run: tests related to 2 mutated files.',
-      'Dry run without switched files: checking the tests that failed.',
-      'Dry run again without 1 file that broke tests.',
+      '{"files":2,"kind":"dry-start"}',
+      'Some tests failed; running them again without mutants to check.',
+      'Running the dry run again without 1 file that broke tests.',
     ])
     expect(fake.calls.dry.map(request => request.repeat)).toStrictEqual([
       false,
@@ -390,8 +396,8 @@ describe('runDryPhase', () => {
     })
 
     expect(progress).toStrictEqual([
-      'Dry run: tests related to 2 mutated files.',
-      'Dry run again with each test once: 1 test file failed with each test twice.',
+      '{"files":2,"kind":"dry-start"}',
+      '1 test file failed with each test run twice; running them again with each test once.',
     ])
     expect(fake.calls.dry[1]).toStrictEqual({
       files: [{ file: '/t/a.test.ts', project: '' }],
@@ -520,6 +526,39 @@ describe('runDryPhase', () => {
 
     expect(phase.runs).toBe(2)
     expect(phase.dry.outside).toStrictEqual(['a1', 'b1', 'c1'])
+  })
+
+  it('reports the test files of tests that still fail after dropping files', async () => {
+    let progress: string[] = []
+
+    await expect(
+      run(
+        {
+          onDry: (result, request) => ({
+            ...result,
+            files: result.files.map(file => ({
+              ...file,
+              loadFailed: request.instrumented,
+              errors: ['boom'],
+            })),
+            tests: [],
+          }),
+          tests: [
+            { file: '/t/b.test.ts', covers: ['b1'], id: 't1' },
+            { file: '/t/a.test.ts', id: 't2' },
+          ],
+          files: [{ file: '/t/a.test.ts', loadCovers: ['a1'] }],
+        },
+        true,
+        progress,
+      ),
+    ).rejects.toThrow('Tests still fail')
+    expect(progress.at(-1)).toBe(
+      JSON.stringify({
+        files: ['t/a.test.ts', 't/b.test.ts'],
+        kind: 'dry-failed',
+      }),
+    )
   })
 
   it('stops when a test hangs without mutants', async () => {

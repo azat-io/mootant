@@ -23,7 +23,11 @@ Options:
   --preset <name>      Mutator preset: recommended, strict or a plugin preset;
                        replaces the presets of the configuration
                        (default: recommended)
-  --json               Print the report as JSON
+  --json               Print the report as JSON; for run, only the mutants to
+                       act on (survived, no coverage, error)
+  --all                run: with --json, list every mutant
+  --no-color           Print without colors (also NO_COLOR=1); --color forces
+                       them
   --skipped            list: also list the mutants that were considered and
                        skipped, with the reason; code that is never mutated,
                        such as types, decorators and enums, is not listed
@@ -32,7 +36,11 @@ Options:
   --concurrency <n>    run: most test files at once (default: CPU cores - 1)
   --fast               run: try many mutants in one test run; faster, but a
                        kill may be false (state left by earlier tries)
-  --mutant <id>        run: run only this mutant; repeat for more
+  --mutant <id>        run: run only this mutant, by its id or a unique prefix
+                       of 4 characters or more, as reports print it; repeat
+                       for more
+  --verbose            run: show what the tests print, the covering test of
+                       each survivor and the runs of the test runner
   -h, --help           Display this message
   -v, --version        Display version number`
 
@@ -45,17 +53,27 @@ let parserOptions = {
   help: { type: 'boolean', short: 'h' },
   concurrency: { type: 'string' },
   threshold: { type: 'string' },
+  verbose: { type: 'boolean' },
   skipped: { type: 'boolean' },
+  color: { type: 'boolean' },
   config: { type: 'string' },
   preset: { type: 'string' },
   fast: { type: 'boolean' },
   json: { type: 'boolean' },
+  all: { type: 'boolean' },
 } as const
 
 /**
  * Options that only the `run` command reads.
  */
-let runOnlyOptions = ['threshold', 'concurrency', 'fast', 'mutant'] as const
+let runOnlyOptions = [
+  'threshold',
+  'concurrency',
+  'fast',
+  'mutant',
+  'verbose',
+  'all',
+] as const
 
 /**
  * Options of the `run` command. Settings left out come from the configuration.
@@ -75,6 +93,11 @@ export interface RunOptions {
    * Lowest total score that passes, when `--threshold` is given.
    */
   threshold?: number
+
+  /**
+   * Whether to show what the tests print, covering tests and runs.
+   */
+  verbose: boolean
 
   /**
    * Files and directories to mutate, as given on the command line; empty to use
@@ -101,6 +124,11 @@ export interface RunOptions {
    * Whether to print the report as JSON.
    */
   json: boolean
+
+  /**
+   * Whether the JSON report lists every mutant, not only the ones to act on.
+   */
+  all: boolean
 }
 
 /**
@@ -169,6 +197,7 @@ export function parseArguments(
     let { positionals, values } = parseArgs({
       allowPositionals: true,
       options: parserOptions,
+      allowNegative: true,
       strict: true,
       args: argv,
     })
@@ -272,6 +301,12 @@ function parseRunOptions(
       kind: 'error',
     }
   }
+  if (values.all === true && values.json !== true) {
+    return {
+      message: '--all applies to the JSON report only; add --json.',
+      kind: 'error',
+    }
+  }
   return {
     options: {
       ...(values.concurrency !== undefined && {
@@ -281,8 +316,10 @@ function parseRunOptions(
       ...(values.fast !== undefined && { fast: values.fast }),
       ...(values.config !== undefined && { config: values.config }),
       ...(values.preset !== undefined && { preset: values.preset }),
+      verbose: values.verbose ?? false,
       mutantIds: values.mutant ?? [],
       json: values.json ?? false,
+      all: values.all ?? false,
       paths,
     },
     kind: 'run',

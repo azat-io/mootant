@@ -20,8 +20,12 @@ async function run(
 ): Promise<Awaited<ReturnType<typeof createTestRun>> & { progress: string[] }> {
   let test = await createTestRun(world, { workers, mutants })
   let progress: string[] = []
-  test.state.progress = message => {
-    progress.push(message)
+  test.state.report = event => {
+    if (event.kind === 'run-start') {
+      progress.push(
+        `${event.run} ${event.round}: ${event.mutants} mutants, ${event.units} units`,
+      )
+    }
   }
   await runBatchPhases(test.session, test.state)
   return { ...test, progress }
@@ -186,8 +190,8 @@ describe('runBatchPhases', () => {
 
     expect(state.runs).toStrictEqual({ confirmation: 1, batch: 1 })
     expect(progress).toStrictEqual([
-      'Batch run: 4 mutants in 1 unit.',
-      'Confirmation run: 4 mutants in 1 unit.',
+      'batch 1: 4 mutants, 1 units',
+      'confirmation 1: 4 mutants, 1 units',
     ])
     expect(fake.calls.batch.map(plan => plan.concurrency)).toStrictEqual([4, 2])
     expect(fake.calls.batch[1]!.units[0]!.tests[0]!.timeout).toBe(506)

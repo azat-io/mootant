@@ -38,6 +38,12 @@ export interface FakeWorld {
   onDry?(result: DryRunResult, request: DryRunRequest): DryRunResult
 
   /**
+   * Texts the tests print in every dry run, each with the absolute path of its
+   * test file or null; nothing when omitted.
+   */
+  output?: { file: string | null; text: string }[]
+
+  /**
    * Warnings the session reports at start.
    */
   diagnostics?: Diagnostic[]
@@ -76,6 +82,11 @@ export interface FakeWorld {
    * Test files the session runs at once; not reported when omitted.
    */
   workers?: number
+
+  /**
+   * Version of the test runner the session reports; none when omitted.
+   */
+  version?: string
 
   /**
    * Whether the adapter has batch mode; true when omitted.
@@ -248,8 +259,14 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
   let session: AdapterSession = {
     ...(world.diagnostics && { diagnostics: world.diagnostics }),
     ...(world.workers && { workers: world.workers }),
+    ...(world.version && { version: world.version }),
     dryRun: request => {
       fake.calls.dry.push(request)
+      if (world.output !== undefined) {
+        for (let { file, text } of world.output) {
+          fake.context!.onOutput?.(text, file)
+        }
+      }
       let active = getActive()
       let tests =
         request.files === null ?
@@ -316,6 +333,9 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
         hung: [],
         files,
       }
+      for (let _file of files) {
+        fake.context!.onUnitEnd?.()
+      }
       return Promise.resolve(world.onDry?.(result, request) ?? result)
     },
     runBatch: plan => {
@@ -368,6 +388,9 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
     runIsolated: plan => {
       fake.calls.isolated.push(plan)
       let result = { units: plan.units.map(runIsolatedUnit) }
+      for (let _unit of plan.units) {
+        fake.context!.onUnitEnd?.()
+      }
       return Promise.resolve(
         world.onIsolated?.(result, plan, fake.calls.isolated.length) ?? result,
       )

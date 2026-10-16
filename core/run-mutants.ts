@@ -11,12 +11,14 @@ import type { RunConfig } from '../types/config/run-config'
 import type { RunResult } from '../types/run/run-result'
 import type { DryFile } from '../types/adapter/dry-file'
 import type { RunState } from '../types/run/run-state'
+import type { RunEvent } from '../types/run/run-event'
 
 import { createSwitchedFiles } from './instrument/create-switched-files'
 import { getComponentFramework } from './parser/get-component-framework'
 import { loadSvelteCompiler } from './parser/load-svelte-compiler'
 import { getPackageDirectory } from './run/get-package-directory'
 import { createWorkDirectory } from './run/create-work-directory'
+import { resolveMutantIds } from './identity/resolve-mutant-ids'
 import { markOutsideMutants } from './run/mark-outside-mutants'
 import { runIsolatedRounds } from './run/run-isolated-rounds'
 import { computeStaticCost } from './run/compute-static-cost'
@@ -39,11 +41,11 @@ import { readDryRun } from './run/read-dry-run'
  */
 interface RunMutantsOptions {
   /**
-   * Receives notes worth printing while the run goes on: one line as each run
-   * of the test runner starts, and in fast mode how many tests are not
-   * repeatable.
+   * Receives the events of the run as it goes on (see `RunEvent`): counts of
+   * mutants, the start and end of the dry phase, the start of every later run
+   * of the test runner, finished units, what the tests write and notes.
    */
-  onProgress?(message: string): void
+  onProgress?(event: RunEvent): void
 
   /**
    * Adapters that come with mootant; the command line passes them, so the core
@@ -134,11 +136,36 @@ export async function runMutants(
     root,
   })
   let files = selectMutants(listing.files, options.mutantIds)
+  let mutants = files.flatMap(file => file.mutants)
+  /**
+   * Passes an event of the run on, when someone listens.
+   *
+   * @param event - Event to pass on.
+   */
+  function report(event: RunEvent): void {
+    options.onProgress?.(event)
+  }
+  report({
+    ignored: mutants.filter(mutant => mutant.status === 'Ignored').length,
+    files: files.filter(file => file.mutants.length > 0).length,
+    total: mutants.length,
+    kind: 'mutants',
+  })
   let adapter = await resolveAdapter(run.runner, root, options.builtIns)
   let work = await createWorkDirectory()
   try {
     let switched: SwitchedFile[] = []
     let session = await adapter.start({
+      onOutput: (text, file) => {
+        report({
+          file: file === null ? null : getDisplayPath(file, root),
+          kind: 'output',
+          text,
+        })
+      },
+      onUnitEnd: () => {
+        report({ kind: 'unit-end' })
+      },
       concurrency: options.concurrency ?? run.concurrency ?? null,
       workDirectory: work.path,
       files: switched,
@@ -146,6 +173,9 @@ export async function runMutants(
     })
     try {
       return await execute({
+        listedIds: listing.files.flatMap(file =>
+          file.mutants.map(mutant => mutant.id),
+        ),
         diagnostics: listing.diagnostics,
         switched,
         session,
@@ -175,6 +205,7 @@ export async function runMutants(
  * @param context.options - Options of the run.
  * @param context.started - Start time of the run.
  * @param context.files - Listed files with the selected mutants.
+ * @param context.listedIds - Ids of every listed mutant of the paths.
  * @param context.setup - Prepared configuration.
  * @param context.run - Run settings of the configuration.
  * @returns Result of the run.
@@ -187,6 +218,7 @@ async function execute(context: {
   session: AdapterSession
   adapter: TestAdapter
   files: FileMutants[]
+  listedIds: string[]
   started: number
   run: RunConfig
 }): Promise<RunResult> {
@@ -228,11 +260,16 @@ async function execute(context: {
     mutantFiles: new Map(
       pending.map(mutant => [mutant.id, absolutes.get(mutant.file)!]),
     ),
-    progress: message => options.onProgress?.(message),
+    report: event => options.onProgress?.(event),
     switched: context.switched,
     repeat: fast,
     displays,
     root,
+  })
+  options.onProgress?.({
+    duration: performance.now() - dryStarted,
+    tests: dryPhase.dry.tests.length,
+    kind: 'dry-end',
   })
   diagnostics.push(...dryPhase.diagnostics)
   for (let [file, message] of dryPhase.errors) {
@@ -265,7 +302,7 @@ async function execute(context: {
       options.concurrency ??
       run.concurrency ??
       Math.max(1, availableParallelism() - 1),
-    progress: message => options.onProgress?.(message),
+    report: event => options.onProgress?.(event),
     batch: context.adapter.batch,
     mutants: pending,
     analysis,
@@ -277,7 +314,7 @@ async function execute(context: {
     state.runs.dry = dryPhase.runs
   }
   if (fast && analysis.unrepeatable.size > 0) {
-    options.onProgress?.(describeUnrepeatable(state))
+    options.onProgress?.({ message: describeUnrepeatable(state), kind: 'note' })
   }
 
   let batchStarted = performance.now()
@@ -302,8 +339,10 @@ async function execute(context: {
       fast ? [...analysis.unrepeatable].toSorted(compareCodeUnits) : null,
     threshold: options.threshold ?? run.threshold ?? null,
     results: decideResults(state, mutants),
+    runnerVersion: session.version ?? null,
     staticCost: computeStaticCost(state),
     mode: fast ? 'fast' : 'isolated',
+    listedIds: context.listedIds,
     runner: context.adapter.name,
     tests: dryPhase.dry.tests,
     mutators: setup.mutators,
@@ -370,36 +409,6 @@ function reportFastLimits(input: {
 }
 
 /**
- * Keeps only the mutants given with `--mutant`, and only the files that still
- * have mutants.
- *
- * @param files - Listed files.
- * @param ids - Ids to keep, or undefined or empty to keep every mutant.
- * @returns Files with the selected mutants.
- * @throws Error - When an id is not among the listed mutants.
- */
-function selectMutants(
-  files: FileMutants[],
-  ids: undefined | string[],
-): FileMutants[] {
-  if (ids === undefined || ids.length === 0) {
-    return files
-  }
-  let known = new Set(files.flatMap(file => file.mutants.map(({ id }) => id)))
-  let unknown = ids.find(id => !known.has(id))
-  if (unknown !== undefined) {
-    throw new Error(`Unknown mutant id "${unknown}".`)
-  }
-  let wanted = new Set(ids)
-  return files
-    .map(file => ({
-      ...file,
-      mutants: file.mutants.filter(mutant => wanted.has(mutant.id)),
-    }))
-    .filter(file => file.mutants.length > 0)
-}
-
-/**
  * Describes how many tests are not repeatable and how many mutants they send to
  * the isolated path.
  *
@@ -416,4 +425,36 @@ function describeUnrepeatable(state: RunState): string {
   return mutants === 1 ?
       `${counted} not repeatable; the 1 mutant ${reach} runs isolated.`
     : `${counted} not repeatable; the ${mutants} mutants ${reach} run isolated.`
+}
+
+/**
+ * Keeps only the mutants given with `--mutant`, and only the files that still
+ * have mutants.
+ *
+ * @param files - Listed files.
+ * @param ids - Ids or unique id prefixes to keep, or undefined or empty to keep
+ *   every mutant.
+ * @returns Files with the selected mutants.
+ * @throws Error - When an id or id prefix does not name exactly one listed
+ *   mutant.
+ */
+function selectMutants(
+  files: FileMutants[],
+  ids: undefined | string[],
+): FileMutants[] {
+  if (ids === undefined || ids.length === 0) {
+    return files
+  }
+  let wanted = new Set(
+    resolveMutantIds(
+      ids,
+      files.flatMap(file => file.mutants),
+    ),
+  )
+  return files
+    .map(file => ({
+      ...file,
+      mutants: file.mutants.filter(mutant => wanted.has(mutant.id)),
+    }))
+    .filter(file => file.mutants.length > 0)
 }

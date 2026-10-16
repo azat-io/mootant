@@ -1,6 +1,7 @@
 import type { IgnoreSource } from '../mutant/ignore-source'
 import type { MutantStatus } from '../mutant/mutant-status'
 import type { ListReportFocus } from './list-report-focus'
+import type { ListReportDiff } from './list-report-diff'
 
 /**
  * Mutant as an agent needs it, without reading the file.
@@ -40,19 +41,14 @@ export interface ListReportMutant {
   status: MutantStatus
 
   /**
-   * One sentence describing the fault the mutator models.
+   * Source lines of the mutant before and after it is applied.
    */
-  description: string
+  diff: ListReportDiff
 
   /**
    * Text written in place of `original`.
    */
   replacement: string
-
-  /**
-   * Full text of the line where the mutant starts, without its line break.
-   */
-  sourceLine: string
 
   /**
    * 1-based UTF-16 column just past the last replaced character.

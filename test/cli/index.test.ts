@@ -30,6 +30,7 @@ describe('run', () => {
 
   beforeEach(() => {
     originalArgv = process.argv
+    vi.stubEnv('NO_COLOR', '1')
 
     consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -45,6 +46,8 @@ describe('run', () => {
   afterEach(() => {
     process.argv = originalArgv
     process.exitCode = undefined
+    /* Cspell:disable-next-line */
+    vi.unstubAllEnvs()
     vi.restoreAllMocks()
   })
 
@@ -76,8 +79,7 @@ describe('run', () => {
 
     expect(process.exitCode).toBe(1)
     expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
-      '\nError:',
-      expect.stringContaining("'--bogus'"),
+      expect.stringMatching(/^Error: .*'--bogus'/u),
     )
     expect(consoleInfoSpy).not.toHaveBeenCalled()
   })
@@ -104,8 +106,10 @@ describe('run', () => {
 
     expect(runMutation).toHaveBeenCalledExactlyOnceWith({
       mutantIds: ['k3m9x2p7q4w8'],
+      verbose: false,
       paths: ['src'],
       json: true,
+      all: false,
     })
     expect(runList).not.toHaveBeenCalled()
     expect(consoleInfoSpy).not.toHaveBeenCalled()

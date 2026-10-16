@@ -402,6 +402,12 @@ export default class MootantRunner extends TestRunner {
   private unitIndex = 0
 
   /**
+   * Name of the out file without its extension, which also names the file that
+   * marks the unit as finished; empty when the worker claimed no unit.
+   */
+  private outName = ''
+
+  /**
    * Number of the last heartbeat.
    */
   private sequence = 0
@@ -481,7 +487,8 @@ export default class MootantRunner extends TestRunner {
     let out = path.join(options.directory, 'out')
     if (options.mode === 'dry') {
       runtime.coverage = this.loadCovers
-      this.out = openSync(path.join(out, `${hash}-${process.pid}.jsonl`), 'a')
+      this.outName = `${hash}-${process.pid}`
+      this.out = openSync(path.join(out, `${this.outName}.jsonl`), 'a')
       this.beat(options.timeouts!.file, null)
       return
     }
@@ -498,7 +505,8 @@ export default class MootantRunner extends TestRunner {
     await waitForTurn(options.directory, { index, hash }, clock)
     this.started = clock.now()
     this.unitIndex = plan!.indexes[index]!
-    this.out = openSync(path.join(out, `${this.unitName}.jsonl`), 'a')
+    this.outName = this.unitName
+    this.out = openSync(path.join(out, `${this.outName}.jsonl`), 'a')
     let hookTimeout =
       this.config.hookTimeout > 0 ? this.config.hookTimeout : Infinity
     if (options.mode === 'isolated') {
@@ -517,9 +525,9 @@ export default class MootantRunner extends TestRunner {
       this.budget = unit.limits.total
       this.config.hookTimeout = Math.min(
         hookTimeout,
-        Math.max(
+        unit.tests.reduce(
+          (longest, test) => Math.max(longest, test.timeout),
           unit.limits.load.timeout,
-          ...unit.tests.map(test => test.timeout),
         ),
       )
     }
@@ -839,6 +847,49 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
+   * Writes the end record of the unit once its test files ran and marks the
+   * unit as finished for the progress of the main process, removes the
+   * heartbeat file, and returns the runtime to its idle state.
+   */
+  private finishUnit(): void {
+    let { runtime } = this
+    let { mode } = this.options
+    if (this.out !== null && this.filesEnded) {
+      let { hits } = runtime
+      if (mode === 'batch') {
+        hits += this.outsideHits
+      } else if (mode === 'dry') {
+        hits -= this.inside.hits
+      }
+      writeOutRecord(this.out, {
+        covers: [...this.loadCovers].toSorted(),
+        duration: clock.now() - this.started,
+        loadDuration: this.loadDuration,
+        concurrent: this.concurrent,
+        loadError: this.loadError,
+        hookError: this.hookError,
+        abandoned: this.abandoned,
+        reached: runtime.reached,
+        strays: this.loadStrays,
+        unit: this.unitIndex,
+        kind: 'end',
+        hits,
+      })
+      closeSync(
+        openSync(path.join(this.options.directory, 'done', this.outName), 'w'),
+      )
+    }
+    if (this.beatDescriptor !== null) {
+      closeSync(this.beatDescriptor)
+      this.beatDescriptor = null
+    }
+    rmSync(this.beatFile, { force: true })
+    runtime.hitLimit = Infinity
+    runtime.coverage = null
+    runtime.active = null
+  }
+
+  /**
    * Runs one attempt from the outermost `aroundEach` hook. A retry continues
    * the repetition its failed attempt belonged to, and drops that attempt's
    * errors, as Vitest only counts the last attempt. Otherwise the attempt ends
@@ -885,45 +936,6 @@ export default class MootantRunner extends TestRunner {
     await new Promise<void>(resolve => {
       clock.setImmediate(resolve)
     })
-  }
-
-  /**
-   * Writes the end record of the unit once its test files ran, removes the
-   * heartbeat file, and returns the runtime to its idle state.
-   */
-  private finishUnit(): void {
-    let { runtime } = this
-    let { mode } = this.options
-    if (this.out !== null && this.filesEnded) {
-      let { hits } = runtime
-      if (mode === 'batch') {
-        hits += this.outsideHits
-      } else if (mode === 'dry') {
-        hits -= this.inside.hits
-      }
-      writeOutRecord(this.out, {
-        covers: [...this.loadCovers].toSorted(),
-        duration: clock.now() - this.started,
-        loadDuration: this.loadDuration,
-        concurrent: this.concurrent,
-        loadError: this.loadError,
-        hookError: this.hookError,
-        abandoned: this.abandoned,
-        reached: runtime.reached,
-        strays: this.loadStrays,
-        unit: this.unitIndex,
-        kind: 'end',
-        hits,
-      })
-    }
-    if (this.beatDescriptor !== null) {
-      closeSync(this.beatDescriptor)
-      this.beatDescriptor = null
-    }
-    rmSync(this.beatFile, { force: true })
-    runtime.hitLimit = Infinity
-    runtime.coverage = null
-    runtime.active = null
   }
 
   /**

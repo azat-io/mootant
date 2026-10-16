@@ -16,6 +16,7 @@ describe('resetRunDirectory', () => {
     expect((await readdir(directory)).toSorted()).toStrictEqual([
       'beat',
       'claim',
+      'done',
       'keep.txt',
       'out',
       'plan',

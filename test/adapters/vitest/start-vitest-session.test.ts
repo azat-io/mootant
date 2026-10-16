@@ -1,4 +1,5 @@
 import type { TestSequencerConstructor } from 'vitest/node'
+import type { Writable } from 'node:stream'
 
 import {
   beforeEach,
@@ -65,8 +66,10 @@ describe('startVitestSession', () => {
       maxWorkers: number
     }
     projects: { config: { globalSetup: string[]; setupFiles: string[] } }[]
+    state?: { idMap: Map<string, { file: { filepath: string } }> }
     globTestSpecifications(): Promise<{ moduleId: string }[]>
     close(): Promise<void>
+    version: string
   }
   let createVitest = vi.fn()
 
@@ -90,6 +93,7 @@ describe('startVitestSession', () => {
         Promise.resolve([{ moduleId: '/test/a.test.ts' }]),
       config: { sequence: { sequencer: BaseSequencer }, maxWorkers: 2 },
       close: vi.fn(() => Promise.resolve()),
+      version: '5.0.4',
     }
     createVitest.mockReset().mockResolvedValue(vitest)
     vi.mocked(detectVitest).mockResolvedValue({
@@ -107,9 +111,10 @@ describe('startVitestSession', () => {
 
   it('starts Vitest with mootant settings and exposes the session', async () => {
     let session = await startVitestSession(context, {})
-    let [options, overrides] = createVitest.mock.calls[0] as [
+    let [options, overrides, streams] = createVitest.mock.calls[0] as [
       Record<string, unknown>,
       { plugins: { name: string }[] },
+      object,
     ]
 
     expect(options).toStrictEqual({
@@ -126,6 +131,7 @@ describe('startVitestSession', () => {
     expect(overrides.plugins.map(plugin => plugin.name)).toStrictEqual([
       'mootant',
     ])
+    expect(streams).toStrictEqual({})
     await expect(session.listTestFiles()).resolves.toStrictEqual([
       '/test/a.test.ts',
       '/setup.ts',
@@ -133,6 +139,7 @@ describe('startVitestSession', () => {
     ])
     expect(session.diagnostics).toStrictEqual([])
     expect(session.workers).toBe(2)
+    expect(session.version).toBe('5.0.4')
 
     let request = {
       timeouts: { file: 100, test: 50 },
@@ -162,6 +169,48 @@ describe('startVitestSession', () => {
 
     expect(vitest.close).toHaveBeenCalledExactlyOnceWith()
     expect(installMutantRuntime().coverage).toBeNull()
+  })
+
+  it('hands console calls with their test files and what Vitest and its workers write to onOutput', async () => {
+    let output: [string, string | null][] = []
+    vitest.state = {
+      idMap: new Map([
+        ['t1', { file: { filepath: '/project/test/a.test.ts' } }],
+      ]),
+    }
+    await startVitestSession(
+      {
+        ...context,
+        onOutput: (text, file) => {
+          output.push([text, file])
+        },
+      },
+      {},
+    )
+    let [options, , streams] = createVitest.mock.calls[0] as [
+      {
+        reporters: {
+          onUserConsoleLog(log: { content: string; taskId?: string }): void
+        }[]
+      },
+      unknown,
+      { stderr: Writable; stdout: Writable },
+    ]
+    options.reporters[0]!.onUserConsoleLog({ content: 'log\n', taskId: 't1' })
+    options.reporters[0]!.onUserConsoleLog({ content: 'top\n' })
+    streams.stdout.write('out\n')
+    streams.stderr.write(Buffer.from('Warning: x\n'))
+    await new Promise(resolve => {
+      setImmediate(resolve)
+    })
+
+    expect(options.reporters).toHaveLength(1)
+    expect(output).toStrictEqual([
+      ['log\n', '/project/test/a.test.ts'],
+      ['top\n', null],
+      ['out\n', null],
+      ['Warning: x\n', null],
+    ])
   })
 
   it('leaves a coverage set it did not install when it closes', async () => {

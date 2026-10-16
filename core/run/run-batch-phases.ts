@@ -17,9 +17,12 @@ const RECOVERY_RUNS = 2
 /**
  * Kinds of the runs of one phase: the phase run and its recovery runs.
  */
-const PHASE_RUNS: RunKind[] = [
+const PHASE_RUNS: Exclude<RunKind, 'dry'>[] = [
   'batch',
-  ...Array.from({ length: RECOVERY_RUNS }, (): RunKind => 'recovery'),
+  ...Array.from(
+    { length: RECOVERY_RUNS },
+    (): Exclude<RunKind, 'dry'> => 'recovery',
+  ),
 ]
 
 /**
@@ -144,7 +147,11 @@ async function runPhase(
 async function runBatchOnce(
   session: AdapterSession,
   state: RunState,
-  work: { messages: Map<string, string>; tries: PlannedTry[]; kind: RunKind },
+  work: {
+    kind: Exclude<RunKind, 'dry'>
+    messages: Map<string, string>
+    tries: PlannedTry[]
+  },
 ): Promise<PlannedTry[]> {
   let plan = planBatch(state, work.tries, 1)
   let mutants = new Set(work.tries.map(({ mutant }) => mutant))

@@ -103,6 +103,7 @@ describe('runList', () => {
   let consoleWarnSpy: MockInstance<typeof console.warn>
 
   beforeEach(() => {
+    vi.stubEnv('NO_COLOR', '1')
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -110,6 +111,8 @@ describe('runList', () => {
 
   afterEach(() => {
     process.exitCode = undefined
+    /* Cspell:disable-next-line */
+    vi.unstubAllEnvs()
     vi.restoreAllMocks()
   })
 
@@ -143,9 +146,12 @@ describe('runList', () => {
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
       [
-        "example.ts:1:12  000000000001  string-literal  'cm' -> ''",
+        `● mootant list src --preset recommended${' '.repeat(3)}preset recommended`,
         '',
-        '1 mutant in 1 file: 1 pending, 0 ignored (preset: recommended)',
+        'mutants         1 in 1 file',
+        '',
+        'example.ts',
+        "  1:12  string-literal  'cm' → ''  0000",
       ].join('\n'),
     )
     expect(consoleErrorSpy).not.toHaveBeenCalled()
@@ -167,15 +173,19 @@ describe('runList', () => {
 
     expect(consoleWarnSpy.mock.calls).toStrictEqual([
       [
-        'warning: Skipped notes.md: not a JavaScript or TypeScript source file. [skipped-path]',
+        '▲ Skipped notes.md: not a JavaScript or TypeScript source file. [skipped-path]',
       ],
       [
         // spell-checker: disable-next-line
-        'example.ts:1:1: warning: Unknown mutator "strng-literal" in mootant-ignore-next-line. [unknown-mutator]',
+        '▲ example.ts:1:1: Unknown mutator "strng-literal" in mootant-ignore-next-line. [unknown-mutator]',
       ],
+      [''],
     ])
     expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
-      'locked.ts: error: Cannot read the file (EACCES). [read-error]',
+      '✖ locked.ts: Cannot read the file (EACCES). [read-error]',
+    )
+    expect(consoleWarnSpy.mock.invocationCallOrder.at(-1)).toBeLessThan(
+      consoleInfoSpy.mock.invocationCallOrder[0]!,
     )
     expect(process.exitCode).toBe(1)
   })
@@ -195,12 +205,12 @@ describe('runList', () => {
     let [[output]] = consoleInfoSpy.mock.calls as [[string]]
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
-      expect.stringMatching(/^\{\n {2}"/u),
+      expect.stringMatching(/^\{"[^\n]+\}$/u),
     )
     expect(JSON.parse(output)).toMatchObject({
       summary: { totalWarnings: 1, totalErrors: 1 },
       diagnostics: [skippedPath, readError],
-      schemaVersion: 1,
+      schemaVersion: 2,
     })
     expect(consoleErrorSpy).not.toHaveBeenCalled()
     expect(consoleWarnSpy).not.toHaveBeenCalled()
@@ -220,8 +230,7 @@ describe('runList', () => {
     })
 
     expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
-      '\nError:',
-      'Paths not found: src/missing.ts, lib.',
+      'Error: Paths not found: src/missing.ts, lib.',
     )
     expect(consoleInfoSpy).not.toHaveBeenCalled()
     expect(process.exitCode).toBe(1)

@@ -5,6 +5,7 @@ import type { SwitchedFile } from '../../types/adapter/switched-file'
 import type { Diagnostic } from '../../types/mutant/diagnostic'
 import type { DryFile } from '../../types/adapter/dry-file'
 import type { DryTest } from '../../types/adapter/dry-test'
+import type { RunEvent } from '../../types/run/run-event'
 
 import { compareCodeUnits } from '../compare-code-units'
 import { getTestFileKey } from './get-test-file-key'
@@ -20,9 +21,10 @@ interface DryPhaseInput {
   mutantFiles: Map<string, string>
 
   /**
-   * Receives one line as each dry run starts.
+   * Receives `dry-start` as the dry phase starts and a `note` as each later dry
+   * run starts.
    */
-  progress(message: string): void
+  report(event: RunEvent): void
 
   /**
    * Display paths of the mutated files, by absolute path.
@@ -138,9 +140,7 @@ export async function runDryPhase(
     return { unrepeatableFiles: new Set(), diagnostics, runs: 0, errors, dry }
   }
   let related = switched.map(entry => entry.file)
-  input.progress(
-    `Dry run: tests related to ${countFiles(related.length, 'mutated file')}.`,
-  )
+  input.report({ files: related.length, kind: 'dry-start' })
   let checked = await runCheckedDry(session, related, input)
   ;({ dry } = checked)
   let { unrepeatableFiles, runs } = checked
@@ -150,9 +150,11 @@ export async function runDryPhase(
   if (failing.length > 0 || unloaded.length > 0) {
     let failingIds = new Set(failing.map(test => test.id))
     let unloadedFiles = new Set(unloaded.map(file => file.file))
-    input.progress(
-      'Dry run without switched files: checking the tests that failed.',
-    )
+    input.report({
+      message:
+        'Some tests failed; running them again without mutants to check.',
+      kind: 'dry-again',
+    })
     let plain = await runDry(
       session,
       {
@@ -168,6 +170,7 @@ export async function runDryPhase(
     let realTests = real.failing.filter(test => failingIds.has(test.id))
     let realFiles = real.unloaded.filter(file => unloadedFiles.has(file.file))
     if (realTests.length > 0 || realFiles.length > 0) {
+      reportFailedFiles(input, [...realTests, ...realFiles])
       throw new Error(
         formatFailures(
           'Tests fail without mutants; fix them first',
@@ -206,9 +209,10 @@ export async function runDryPhase(
     }
     unrepeatableFiles = new Set()
     if (kept.length > 0) {
-      input.progress(
-        `Dry run again without ${countFiles(broken.size, 'file')} that broke tests.`,
-      )
+      input.report({
+        message: `Running the dry run again without ${countFiles(broken.size, 'file')} that broke tests.`,
+        kind: 'dry-again',
+      })
       let again = await runCheckedDry(
         session,
         kept.map(entry => entry.file),
@@ -224,6 +228,7 @@ export async function runDryPhase(
       }
       let left = findFailures(dry)
       if (left.failing.length > 0 || left.unloaded.length > 0) {
+        reportFailedFiles(input, [...left.failing, ...left.unloaded])
         throw new Error(
           formatFailures(
             "Tests still fail with mootant's switched files after the files that broke them were dropped",
@@ -287,9 +292,10 @@ async function runCheckedDry(
     return { unrepeatableFiles: new Set(), runs: 1, dry }
   }
   let files = listTestFiles([...failing, ...unloaded])
-  input.progress(
-    `Dry run again with each test once: ${countFiles(files.length, 'test file')} failed with each test twice.`,
-  )
+  input.report({
+    message: `${countFiles(files.length, 'test file')} failed with each test run twice; running them again with each test once.`,
+    kind: 'dry-again',
+  })
   let once = await runDry(
     session,
     { instrumented: true, repeat: false, related, files },
@@ -444,6 +450,25 @@ function listTestFiles(
     ]),
   )
   return [...files.values()]
+}
+
+/**
+ * Reports the test files of tests that fail without mutants, so the command
+ * line can show what they wrote.
+ *
+ * @param input - Progress and the directory display paths are relative to.
+ * @param failures - Failed tests and test files.
+ */
+function reportFailedFiles(
+  input: DryPhaseInput,
+  failures: { file: string }[],
+): void {
+  input.report({
+    files: [
+      ...new Set(failures.map(({ file }) => getDisplayPath(file, input.root))),
+    ].toSorted(compareCodeUnits),
+    kind: 'dry-failed',
+  })
 }
 
 /**

@@ -113,6 +113,11 @@ export interface RunReportSummary {
   totalErrors: number
 
   /**
+   * Tests the dry run ran.
+   */
+  totalTests: number
+
+  /**
    * Mutated files.
    */
   totalFiles: number
@@ -144,15 +149,27 @@ export interface RunReportMutant extends Omit<ListReportMutant, 'status'> {
   path: 'isolated' | 'batch' | null
 
   /**
-   * Id of the killing test (see `tests`), or null.
+   * Tests that reach the mutant, cheapest first; null for a mutant killed or
+   * timed out, which `killedBy` tells about.
    */
-  killedBy: string | null
+  coveredBy: RunReportTest[] | null
+
+  /**
+   * Test that failed on the mutant, or null.
+   */
+  killedBy: RunReportTest | null
 
   /**
    * Path of the test file of the verdict, relative to the project root with `/`
    * separators, or null.
    */
   killedIn: string | null
+
+  /**
+   * Command line that runs only this mutant again, with the paths and the
+   * options that pick mutants of the run; null for an ignored mutant.
+   */
+  recheck: string | null
 
   /**
    * First line of the failure or of the reason of `Error`, or null.
@@ -163,11 +180,6 @@ export interface RunReportMutant extends Omit<ListReportMutant, 'status'> {
    * How it was detected, or null when it was not.
    */
   cause: TryCause | null
-
-  /**
-   * Ids of the covering tests (see `tests`), cheapest first.
-   */
-  coveredBy: string[]
 
   /**
    * Final state.
@@ -190,7 +202,20 @@ export interface RunReport {
   mutators: ListReportMutator[]
 
   /**
-   * Every mutant of the mutated files, in file and canonical order.
+   * Version of the test runner, or null when the adapter does not tell.
+   */
+  runnerVersion: string | null
+
+  /**
+   * Which mutants `mutants` holds: `actionable`, the default, or `all` with
+   * `--all`. The summary counts every mutant either way.
+   */
+  listed: 'actionable' | 'all'
+
+  /**
+   * Mutants of the mutated files, in file and canonical order: the ones to act
+   * on (`Survived`, `NoCoverage`, `Error`), or every mutant when `listed` is
+   * `all`.
    */
   mutants: RunReportMutant[]
 
@@ -210,14 +235,10 @@ export interface RunReport {
   files: ListReportFile[]
 
   /**
-   * Tests that some mutant refers to, sorted by file and line.
+   * Version of the report shape. It changes when a field changes meaning or is
+   * removed; new fields do not change it.
    */
-  tests: RunReportTest[]
-
-  /**
-   * Version of the report shape.
-   */
-  schemaVersion: 1
+  schemaVersion: 2
 
   /**
    * Command that produced the report.
@@ -244,25 +265,13 @@ export interface RunReport {
 }
 
 /**
- * Test referenced by a mutant of the report.
+ * Test that covers or kills a mutant.
  */
 export interface RunReportTest {
-  /**
-   * In fast mode, false when two dry tries without a mutant differed in
-   * pass/fail or stray errors, so its mutants ran isolated; null outside fast
-   * mode, where tests are tried once and not checked.
-   */
-  repeatable: boolean | null
-
   /**
    * 1-based line, or null.
    */
   line: number | null
-
-  /**
-   * Milliseconds of the slower dry try, rounded.
-   */
-  duration: number
 
   /**
    * Path relative to the project root, `/` separators.
@@ -273,9 +282,4 @@ export interface RunReportTest {
    * Full name, suites joined by `>`.
    */
   name: string
-
-  /**
-   * Id the mutants refer to.
-   */
-  id: string
 }

@@ -45,7 +45,7 @@ export interface ListReport {
    * Version of this schema. It changes when a field changes meaning or is
    * removed; new fields do not change it.
    */
-  schemaVersion: 1
+  schemaVersion: 2
 
   /**
    * Command that produced the report.

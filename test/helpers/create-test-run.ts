@@ -82,8 +82,8 @@ export async function createTestRun(
     batch: fake.adapter.batch,
     analysis: readDryRun(dry),
     limits: TEST_LIMITS,
-    progress: () => {},
     errors: new Map(),
+    report: () => {},
     root: '/',
   })
   return { session, state, fake }

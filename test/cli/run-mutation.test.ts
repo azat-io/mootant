@@ -1,15 +1,21 @@
-import type { MockInstance } from 'vitest'
+import type { MockInstance, Mock } from 'vitest'
 
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
-import { formatRunTextReport } from '../../cli/format-run-text-report'
+import type { RunProgress } from '../../cli/create-run-progress'
+import type { RunReport } from '../../types/report/run-report'
+
+import { formatRunTextReport } from '../../cli/report/format-run-text-report'
+import { buildRunReport } from '../../cli/report/build-run-report'
+import { createRunProgress } from '../../cli/create-run-progress'
 import { getBuiltInAdapters } from '../../cli/built-in-adapters'
+import { createTextStyle } from '../helpers/create-text-style'
 import { createRunResult } from '../helpers/create-run-result'
-import { buildRunReport } from '../../cli/build-run-report'
 import { runMutation } from '../../cli/run-mutation'
 import { runMutants } from '../../core/run-mutants'
 
 vi.mock(import('../../core/run-mutants'))
+vi.mock(import('../../cli/create-run-progress'))
 
 /**
  * Builds a run result that passes: its mutant without a verdict is killed.
@@ -26,15 +32,25 @@ describe('runMutation', () => {
   let consoleErrorSpy: MockInstance<typeof console.error>
   let consoleInfoSpy: MockInstance<typeof console.info>
   let consoleWarnSpy: MockInstance<typeof console.warn>
+  let progress: { [Key in keyof RunProgress]: Mock<RunProgress[Key]> }
 
   beforeEach(() => {
+    vi.stubEnv('NO_COLOR', '1')
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    progress = {
+      output: vi.fn<RunProgress['output']>(() => ''),
+      handle: vi.fn<RunProgress['handle']>(),
+      finish: vi.fn<RunProgress['finish']>(),
+    }
+    vi.mocked(createRunProgress).mockReturnValue(progress)
   })
 
   afterEach(() => {
     process.exitCode = undefined
+    /* Cspell:disable-next-line */
+    vi.unstubAllEnvs()
     vi.restoreAllMocks()
   })
 
@@ -47,8 +63,10 @@ describe('runMutation', () => {
       preset: 'strict',
       paths: ['src'],
       concurrency: 2,
+      verbose: true,
       threshold: 40,
       json: false,
+      all: false,
       fast: true,
     })
 
@@ -66,13 +84,51 @@ describe('runMutation', () => {
       threshold: 40,
       fast: true,
     })
+    expect(createRunProgress).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ width: Infinity }),
+      true,
+    )
     expect(Object.keys(getBuiltInAdapters())).toStrictEqual(['vitest'])
+  })
+
+  it('shows the flags in the header and keeps the paths, the configuration and the mode in the hint', async () => {
+    let result = createRunResult()
+    result.listedIds = [...result.listedIds, 'survivor-twin']
+    vi.mocked(runMutants).mockResolvedValue(result)
+
+    await runMutation({
+      config: 'my config.ts',
+      mutantIds: ['surv'],
+      preset: 'strict',
+      paths: ['src'],
+      verbose: false,
+      threshold: 40,
+      json: false,
+      all: false,
+      fast: true,
+    })
+
+    let text = consoleInfoSpy.mock.calls[0]![0] as string
+
+    expect(text.split('\n', 1)[0]).toBe(
+      "● mootant run src --config 'my config.ts' --preset strict --fast --threshold 40 --mutant surv  vitest 5.0.4",
+    )
+    expect(text).toContain('  4:10  comparison-operator  survive\n')
+    expect(text.split('\n').at(-1)).toBe(
+      "re-check one: mootant run src --config 'my config.ts' --preset strict --fast --mutant survive",
+    )
   })
 
   it('leaves out the settings the command line does not give', async () => {
     vi.mocked(runMutants).mockResolvedValue(createPassingResult())
 
-    await runMutation({ mutantIds: [], json: false, paths: [] })
+    await runMutation({
+      verbose: false,
+      mutantIds: [],
+      json: false,
+      all: false,
+      paths: [],
+    })
 
     expect(Object.keys(vi.mocked(runMutants).mock.calls[0]![0])).toStrictEqual([
       'onProgress',
@@ -83,30 +139,62 @@ describe('runMutation', () => {
     ])
   })
 
-  it('prints notes of the run to stderr', async () => {
+  it('hands the events of the run to the progress and ends it before the report', async () => {
     vi.mocked(runMutants).mockImplementation(options => {
-      options.onProgress!('1 test is not repeatable.')
+      options.onProgress!({ message: 'note', kind: 'note' })
       return Promise.resolve(createPassingResult())
     })
 
-    await runMutation({ paths: ['src'], mutantIds: [], json: true })
+    await runMutation({
+      paths: ['src'],
+      verbose: false,
+      mutantIds: [],
+      all: false,
+      json: true,
+    })
 
-    expect(consoleWarnSpy).toHaveBeenCalledExactlyOnceWith(
-      '1 test is not repeatable.',
+    expect(progress.handle).toHaveBeenCalledExactlyOnceWith({
+      message: 'note',
+      kind: 'note',
+    })
+    expect(progress.finish.mock.invocationCallOrder[0]).toBeLessThan(
+      consoleInfoSpy.mock.invocationCallOrder[0]!,
     )
   })
 
-  it('prints the text report and diagnostics and leaves the exit code alone', async () => {
+  it('prints the diagnostics, then the text report, and leaves the exit code alone', async () => {
     let result = createPassingResult()
     vi.mocked(runMutants).mockResolvedValue(result)
 
-    await runMutation({ paths: ['src'], mutantIds: [], json: false })
+    await runMutation({
+      paths: ['src'],
+      verbose: false,
+      mutantIds: [],
+      json: false,
+      all: false,
+    })
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
-      formatRunTextReport(buildRunReport(createPassingResult())),
+      formatRunTextReport(
+        buildRunReport(createPassingResult(), {
+          recheck: 'mootant run src',
+          all: false,
+        }),
+        {
+          command: 'mootant run src',
+          recheck: 'mootant run src',
+          style: createTextStyle(),
+          verbose: false,
+          idLength: 4,
+        },
+      ),
     )
-    expect(consoleWarnSpy).toHaveBeenCalledExactlyOnceWith(
-      'warning: pool "threads" changed to "forks". [config-overridden]',
+    expect(consoleWarnSpy.mock.calls).toStrictEqual([
+      ['▲ pool "threads" changed to "forks". [config-overridden]'],
+      [''],
+    ])
+    expect(consoleWarnSpy.mock.invocationCallOrder[1]).toBeLessThan(
+      consoleInfoSpy.mock.invocationCallOrder[0]!,
     )
     expect(consoleErrorSpy).not.toHaveBeenCalled()
     expect(process.exitCode).toBeUndefined()
@@ -115,10 +203,21 @@ describe('runMutation', () => {
   it('prints only the JSON document in JSON mode', async () => {
     vi.mocked(runMutants).mockResolvedValue(createPassingResult())
 
-    await runMutation({ paths: ['src'], mutantIds: [], json: true })
+    await runMutation({
+      paths: ['src'],
+      verbose: false,
+      mutantIds: [],
+      all: false,
+      json: true,
+    })
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
-      JSON.stringify(buildRunReport(createPassingResult()), null, 2),
+      JSON.stringify(
+        buildRunReport(createPassingResult(), {
+          recheck: 'mootant run src',
+          all: false,
+        }),
+      ),
     )
     expect(consoleWarnSpy).not.toHaveBeenCalled()
   })
@@ -126,12 +225,46 @@ describe('runMutation', () => {
   it('sets exit code 1 when the run does not pass', async () => {
     vi.mocked(runMutants).mockResolvedValue(createRunResult())
 
-    await runMutation({ paths: ['src'], mutantIds: [], json: true })
+    await runMutation({
+      paths: ['src'],
+      verbose: false,
+      mutantIds: [],
+      all: false,
+      json: true,
+    })
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
-      JSON.stringify(buildRunReport(createRunResult()), null, 2),
+      JSON.stringify(
+        buildRunReport(createRunResult(), {
+          recheck: 'mootant run src',
+          all: false,
+        }),
+      ),
     )
     expect(process.exitCode).toBe(1)
+  })
+
+  it('lists every mutant in the JSON report with --all', async () => {
+    vi.mocked(runMutants).mockResolvedValue(createRunResult())
+
+    await runMutation({
+      preset: 'strict',
+      paths: ['src'],
+      verbose: false,
+      mutantIds: [],
+      fast: false,
+      json: true,
+      all: true,
+    })
+
+    let report = JSON.parse(
+      consoleInfoSpy.mock.calls[0]![0] as string,
+    ) as RunReport
+
+    expect(report.mutants).toHaveLength(6)
+    expect(report.mutants[2]!.recheck).toBe(
+      'mootant run src --preset strict --no-fast --mutant survived0001',
+    )
   })
 
   it('reports a failed run and sets exit code 1', async () => {
@@ -140,14 +273,40 @@ describe('runMutation', () => {
     )
 
     await expect(
-      runMutation({ mutantIds: ['nope'], paths: ['src'], json: false }),
+      runMutation({
+        mutantIds: ['nope'],
+        verbose: false,
+        paths: ['src'],
+        json: false,
+        all: false,
+      }),
     ).resolves.toBeUndefined()
 
+    expect(progress.finish).toHaveBeenCalledExactlyOnceWith()
     expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
-      '\nError:',
-      'Unknown mutant id "nope".',
+      'Error: Unknown mutant id "nope".',
     )
     expect(consoleInfoSpy).not.toHaveBeenCalled()
     expect(process.exitCode).toBe(1)
+  })
+
+  it('shows what the tests wrote when the run fails', async () => {
+    progress.output.mockReturnValue('(node) Warning: x\nlog\n')
+    vi.mocked(runMutants).mockRejectedValue(
+      new Error('Tests fail without mutants; fix them first.'),
+    )
+
+    await runMutation({
+      verbose: false,
+      paths: ['src'],
+      mutantIds: [],
+      json: false,
+      all: false,
+    })
+
+    expect(consoleErrorSpy.mock.calls).toStrictEqual([
+      ['Output of the tests:\n(node) Warning: x\nlog\n'],
+      ['Error: Tests fail without mutants; fix them first.'],
+    ])
   })
 })

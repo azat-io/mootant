@@ -1,4 +1,8 @@
-import type { createVitest as CreateVitest, ForksPoolWorker } from 'vitest/node'
+import type {
+  createVitest as CreateVitest,
+  ForksPoolWorker,
+  Vitest,
+} from 'vitest/node'
 
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
@@ -13,7 +17,9 @@ import type { AdapterContext } from '../../types/adapter/adapter-context'
 
 import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
 import { createInterleavedSequencer } from './create-interleaved-sequencer'
+import { createOutputReporter } from './create-output-reporter'
 import { createMootantPlugin } from './create-mootant-plugin'
+import { createOutputStream } from './create-output-stream'
 import { createForksPool } from './create-forks-pool'
 import { checkVitestCopy } from './check-vitest-copy'
 import { getRunnerPath } from './get-runner-path'
@@ -25,11 +31,13 @@ import { runDry } from './run-dry'
 /**
  * Starts one Vitest instance for a mootant run: the project's own Vitest,
  * resolved from the root, with the user's configuration, mootant's plugin and
- * worker runner, no reporters, coverage, result cache or module cache on disk.
- * Its sequencer spreads out the units of one test file
- * (`createInterleavedSequencer`). The mutant runtime of this process records
- * the mutant sites switched code evaluates here, outside the workers, such as
- * in a `globalSetup` file, until the session closes.
+ * worker runner, no coverage, result cache or module cache on disk, and no
+ * reporters: what the tests print, their console calls with their test file and
+ * what Vitest and its workers write, such as process warnings, goes to the
+ * context's `onOutput` when there is one. Its sequencer spreads out the units
+ * of one test file (`createInterleavedSequencer`). The mutant runtime of this
+ * process records the mutant sites switched code evaluates here, outside the
+ * workers, such as in a `globalSetup` file, until the session closes.
  *
  * @param context - Switched files, work directory, concurrency and root.
  * @param options - Options of the adapter.
@@ -72,24 +80,36 @@ export async function startVitestSession(
     files: null,
     runnerPath,
   }
+  let { onOutput } = context
+  let instance: Vitest | null = null
   let vitest = await vitestNode.createVitest(
     {
       ...(options.config !== undefined && {
         config: path.resolve(root, options.config),
       }),
       ...(context.concurrency !== null && { maxWorkers: context.concurrency }),
+      reporters:
+        onOutput === undefined ?
+          []
+        : [createOutputReporter(onOutput, () => instance)],
       coverage: { enabled: false },
       includeTaskLocation: true,
       passWithNoTests: true,
       fsModuleCache: false,
-      reporters: [],
       watch: false,
       cache: false,
       bail: 0,
       root,
     },
     { plugins: [createMootantPlugin(context, state)] },
+    onOutput === undefined ?
+      {}
+    : {
+        stderr: createOutputStream(text => onOutput(text, null)),
+        stdout: createOutputStream(text => onOutput(text, null)),
+      },
   )
+  instance = vitest
   if (state.error !== null) {
     await vitest.close()
     throw new Error(state.error)
@@ -144,5 +164,6 @@ export async function startVitestSession(
     runBatch: plan => runBatch(handle, plan),
     workers: vitest.config.maxWorkers,
     diagnostics: state.diagnostics,
+    version: vitest.version,
   }
 }

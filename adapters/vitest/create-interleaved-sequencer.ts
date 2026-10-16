@@ -52,7 +52,10 @@ export function createInterleavedSequencer(
         group.push(specification)
       }
       let lists = [...groups.values()]
-      let longest = Math.max(0, ...lists.map(list => list.length))
+      let longest = lists.reduce(
+        (widest, list) => Math.max(widest, list.length),
+        0,
+      )
       return Array.from({ length: longest }, (_, index) =>
         lists.flatMap(list => list.slice(index, index + 1)),
       ).flat()

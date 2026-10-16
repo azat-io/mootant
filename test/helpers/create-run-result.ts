@@ -154,8 +154,10 @@ export function createRunResult(): RunResult {
     staticCost: [
       { file: 'src/cart.ts', duration: 600.4, mutants: 1, units: 2 },
     ],
+    listedIds: mutants.map(mutant => mutant.id),
     runs: { isolated: 2, batch: 2, dry: 1 },
     unrepeatable: ['fits-small'],
+    runnerVersion: '5.0.4',
     preset: 'recommended',
     runner: 'vitest',
     threshold: null,

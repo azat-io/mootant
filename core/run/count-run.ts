@@ -2,19 +2,8 @@ import type { RunState } from '../../types/run/run-state'
 import type { RunKind } from '../../types/run/run-kind'
 
 /**
- * Names of the run kinds in progress lines.
- */
-const LABELS: Record<RunKind, string> = {
-  confirmation: 'Confirmation run',
-  recovery: 'Recovery run',
-  isolated: 'Isolated run',
-  batch: 'Batch run',
-  dry: 'Dry run',
-}
-
-/**
- * Counts one run of the test runner and reports it as it starts, such as "Batch
- * run: 38 mutants in 4 units.".
+ * Counts one run of the test runner and reports its start with the number of
+ * the run among the runs of its kind.
  *
  * @param state - State of the run, updated in place.
  * @param kind - What the run does, such as `batch` or `isolated`.
@@ -24,11 +13,16 @@ const LABELS: Record<RunKind, string> = {
  */
 export function countRun(
   state: RunState,
-  kind: RunKind,
+  kind: Exclude<RunKind, 'dry'>,
   work: { mutants: number; units: number },
 ): void {
-  state.runs[kind] = (state.runs[kind] ?? 0) + 1
-  let mutants = work.mutants === 1 ? '1 mutant' : `${work.mutants} mutants`
-  let units = work.units === 1 ? '1 unit' : `${work.units} units`
-  state.progress(`${LABELS[kind]}: ${mutants} in ${units}.`)
+  let round = (state.runs[kind] ?? 0) + 1
+  state.runs[kind] = round
+  state.report({
+    mutants: work.mutants,
+    units: work.units,
+    kind: 'run-start',
+    run: kind,
+    round,
+  })
 }

@@ -506,7 +506,7 @@ describe('mootantRunner', () => {
     workerState.ctx.traces = traces
     directory = await mkdtemp(path.join(tmpdir(), 'mootant-runner-'))
     await Promise.all(
-      ['beat', 'claim', 'out', 'plan', 'worker'].map(folder =>
+      ['beat', 'claim', 'done', 'out', 'plan', 'worker'].map(folder =>
         mkdir(path.join(directory, folder)),
       ),
     )
@@ -598,6 +598,9 @@ describe('mootantRunner', () => {
       [2050, 'a', 'suite > a'],
     ])
     expect(Object.keys(records)).toStrictEqual([`${hash}-${process.pid}`])
+    await expect(readdir(path.join(directory, 'done'))).resolves.toStrictEqual([
+      `${hash}-${process.pid}`,
+    ])
     expect(records[`${hash}-${process.pid}`]).toMatchObject([
       {
         tries: [
@@ -877,6 +880,9 @@ describe('mootantRunner', () => {
     expect(
       existsSync(path.join(directory, 'worker', String(process.pid))),
     ).toBe(true)
+    expect(
+      (await readdir(path.join(directory, 'done'))).toSorted(),
+    ).toStrictEqual([`${hash}-0`, `${hash}-1`])
   })
 
   it('ends a unit after the cleanup of the worker-scoped fixtures', async () => {

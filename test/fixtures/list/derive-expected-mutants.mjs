@@ -2,9 +2,10 @@
  * The oracle of the list acceptance test (architecture 13.5). It reads the
  * hand-written expectations.json next to it and the listed source files, adds
  * only the mechanical, spec-defined arithmetic (offsets, positions, source
- * lines, canonical order, ids, descriptions, counts) and writes the whole
- * expected `--json` report once per preset: expected-mutants.json for
- * `recommended` and expected-mutants-strict.json for `strict`.
+ * lines before and after each mutant, canonical order, ids, descriptions,
+ * counts) and writes the whole expected `--json` report once per preset:
+ * expected-mutants.json for `recommended` and expected-mutants-strict.json for
+ * `strict`.
  *
  * It never imports the implementation; which mutants exist is decided by the
  * expectations alone. Run it by hand from any directory, as `node
@@ -319,6 +320,55 @@ function getSourceLine(text, lineStarts, line) {
 }
 
 /**
+ * Returns the lines from the line of a start offset to the line of an end
+ * offset, as read and with the range replaced, without line terminators, the
+ * unchanged text before and after the range cut to 80 code units, a cut moved
+ * past a low surrogate so a surrogate pair stays whole.
+ *
+ * @param {{ text: string; lineStarts: number[] }} source - The source file.
+ * @param {number} start - UTF-16 offset of the first replaced code unit.
+ * @param {number} end - UTF-16 offset just past the last replaced code unit.
+ * @param {string} replacement - Text written in place of the range.
+ * @returns {{
+ *   before: string[]
+ *   after: string[]
+ *   cutStart: number
+ *   cutEnd: number
+ * }}
+ *   Lines before and after, and the code units cut from them.
+ */
+function getDiff(source, start, end, replacement) {
+  let { lineStarts, text } = source
+  let first = getPosition(lineStarts, start).line
+  let last = getPosition(lineStarts, end).line
+  let lineEnd =
+    lineStarts[last - 1] + getSourceLine(text, lineStarts, last).length
+  let from = lineStarts[first - 1]
+  if (start - from > 80) {
+    from = start - 80
+    if (/[\uDC00-\uDFFF]/u.test(text[from])) {
+      from += 1
+    }
+  }
+  let to = lineEnd
+  if (lineEnd - end > 80) {
+    to = end + 80
+    if (/[\uDC00-\uDFFF]/u.test(text[to])) {
+      to += 1
+    }
+  }
+  let lineBreak = /\r\n|[\n\r\u{2028}\u{2029}]/u
+  return {
+    after: (text.slice(from, start) + replacement + text.slice(end, to)).split(
+      lineBreak,
+    ),
+    before: text.slice(from, to).split(lineBreak),
+    cutStart: from - lineStarts[first - 1],
+    cutEnd: lineEnd - to,
+  }
+}
+
+/**
  * Finds the start of an expectation: the start of the `nth` match of its
  * original text whose start lies on its line. The text may span several lines.
  *
@@ -547,7 +597,6 @@ function buildReport(expectations, sources, preset) {
         scope,
       }),
       mutator: expectation.mutator,
-      description: DESCRIPTIONS[expectation.mutator],
       file,
       line: position.line,
       column: position.column,
@@ -559,7 +608,7 @@ function buildReport(expectations, sources, preset) {
       kind: expectation.kind,
       original: source.text.slice(start, end),
       replacement: expectation.replacement,
-      sourceLine: getSourceLine(source.text, source.lineStarts, position.line),
+      diff: getDiff(source, start, end, expectation.replacement),
       status: expectation.status,
       reason: expectation.reason,
       ignoredBy:
@@ -585,7 +634,7 @@ function buildReport(expectations, sources, preset) {
     .toSorted(compareDiagnostics)
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     command: 'list',
     preset,
     summary: {

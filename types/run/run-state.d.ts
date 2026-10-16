@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../mutant/diagnostic'
 import type { DryAnalysis } from './dry-analysis'
 import type { MutantState } from './mutant-state'
+import type { RunEvent } from './run-event'
 import type { RunKind } from './run-kind'
 
 /**
@@ -18,9 +19,10 @@ export interface RunState {
   mutants: Map<string, MutantState>
 
   /**
-   * Receives one line as each run of the test runner starts.
+   * Receives the events of the run, such as the start of each run of the test
+   * runner.
    */
-  progress(message: string): void
+  report(event: RunEvent): void
 
   /**
    * Problems found while running, such as hung or crashed workers.

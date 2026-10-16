@@ -1,0 +1,172 @@
+import type { ListReportFocus } from '../../types/report/list-report-focus'
+import type { ListReportDiff } from '../../types/report/list-report-diff'
+import type { TextStyle } from '../../types/cli/text-style'
+
+import { getDisplayWidth } from '../terminal/get-display-width'
+import { padToWidth } from '../terminal/pad-to-width'
+import { cutToWidth } from '../terminal/cut-to-width'
+import { getSymbols } from '../terminal/get-symbols'
+import { formatDiff } from './format-diff'
+import { markDiff } from './mark-diff'
+
+/**
+ * Mutant of a report printed as a diff, with what goes under it.
+ */
+export interface DiffEntry {
+  /**
+   * Mutant with its position and source lines.
+   */
+  mutant: {
+    focus?: ListReportFocus
+    diff: ListReportDiff
+    endColumn: number
+    mutator: string
+    column: number
+    file: string
+    line: number
+  }
+
+  /**
+   * Lines under the diff, such as the reason of an error, without indentation.
+   */
+  details: string[]
+
+  /**
+   * Id as printed, cut to the length that tells mutants apart.
+   */
+  id: string
+}
+
+/**
+ * Space between two columns of a heading.
+ */
+const GAP = '  '
+
+/**
+ * Indentation of the heading of a mutant under its file.
+ */
+const INDENT = '  '
+
+/**
+ * Indentation of the diff and the details under the heading.
+ */
+const BODY_INDENT = ' '.repeat(4)
+
+/**
+ * Most columns of a diff line with its indentation, even when the output has no
+ * width, such as a file, so a long line such as a minified one does not fill
+ * the report.
+ */
+const MAX_DIFF_WIDTH = 160
+
+/**
+ * Fewest columns a mutator id or a diff line keeps however narrow the output
+ * is.
+ */
+const MIN_WIDTH = 8
+
+/**
+ * Formats mutants grouped by file, each as a diff: the path in bold, cut from
+ * its start when wider than the line, then for each mutant a heading with the
+ * `line:column` of the change, the mutator and the id, columns aligned within
+ * the file, the source lines before and after the mutant under it (see
+ * `formatDiff`), at most 160 columns wide, and the detail lines in gray, cut to
+ * the width. Mutants are separated by an empty line; files keep the order their
+ * first mutant has.
+ *
+ * @param entries - Mutants in the order to print.
+ * @param style - Colors, width and symbols of the output.
+ * @returns Groups separated by an empty line, or an empty text without entries.
+ */
+export function formatDiffGroups(
+  entries: readonly DiffEntry[],
+  style: TextStyle,
+): string {
+  let { ellipsis } = getSymbols(style.unicode)
+  let groups = new Map<string, DiffEntry[]>()
+  for (let entry of entries) {
+    let group = groups.get(entry.mutant.file)
+    if (group === undefined) {
+      groups.set(entry.mutant.file, [entry])
+    } else {
+      group.push(entry)
+    }
+  }
+  return [...groups]
+    .map(([file, group]) =>
+      [
+        style.colors.bold(
+          cutToWidth(file, { width: style.width, side: 'start', ellipsis }),
+        ),
+        formatGroup(group, style),
+      ].join('\n'),
+    )
+    .join('\n\n')
+}
+
+/**
+ * Formats the mutants of one file.
+ *
+ * @param entries - Mutants of the file.
+ * @param style - Colors, width and symbols of the output.
+ * @returns Lines of the group without its heading.
+ */
+function formatGroup(entries: readonly DiffEntry[], style: TextStyle): string {
+  let { colors, width } = style
+  let { ellipsis } = getSymbols(style.unicode)
+  let locations = entries.map(entry => {
+    let position = entry.mutant.focus ?? entry.mutant
+    return `${position.line}:${position.column}`
+  })
+  let locationWidth = getWidest(locations)
+  let idWidth = getWidest(entries.map(entry => entry.id))
+  let mutatorWidth = Math.min(
+    getWidest(entries.map(entry => entry.mutant.mutator)),
+    Math.max(
+      MIN_WIDTH,
+      width - INDENT.length - locationWidth - GAP.length * 2 - idWidth,
+    ),
+  )
+  let bodyWidth = Math.max(MIN_WIDTH, width - BODY_INDENT.length)
+  let diffStyle = {
+    ...style,
+    width: Math.min(bodyWidth, MAX_DIFF_WIDTH - BODY_INDENT.length),
+  }
+  return entries
+    .map((entry, index) => {
+      let mutator = cutToWidth(entry.mutant.mutator, {
+        width: mutatorWidth,
+        ellipsis,
+      })
+      let heading = [
+        `${INDENT}${colors.gray(padToWidth(locations[index]!, locationWidth))}`,
+        colors.gray(padToWidth(mutator, mutatorWidth)),
+        entry.id,
+      ].join(GAP)
+      return [
+        heading,
+        ...formatDiff(markDiff(entry.mutant), diffStyle),
+        ...entry.details.map(detail =>
+          colors.gray(cutToWidth(detail, { width: bodyWidth, ellipsis })),
+        ),
+      ]
+        .map((line, lineIndex) =>
+          lineIndex === 0 ? line : `${BODY_INDENT}${line}`,
+        )
+        .join('\n')
+    })
+    .join('\n\n')
+}
+
+/**
+ * Finds the widest of the texts of a column.
+ *
+ * @param texts - Texts of the column.
+ * @returns Columns of the widest text.
+ */
+function getWidest(texts: readonly string[]): number {
+  return texts.reduce(
+    (widest, text) => Math.max(widest, getDisplayWidth(text)),
+    0,
+  )
+}

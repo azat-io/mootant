@@ -7,6 +7,7 @@ import type { ListReport } from '../../types/report/list-report'
 
 import expectedStrictSkipped from '../fixtures/list/expected-skipped-strict.json'
 import expectedStrictReport from '../fixtures/list/expected-mutants-strict.json'
+import { getShortIdLength } from '../../cli/report/get-short-id-length'
 import { getSourceBlocks } from '../../core/parser/get-source-blocks'
 import expectedSkipped from '../fixtures/list/expected-skipped.json'
 import expectedReport from '../fixtures/list/expected-mutants.json'
@@ -47,6 +48,7 @@ describe('run', () => {
     originalArgv = process.argv
     originalExitCode = process.exitCode
     process.exitCode = undefined
+    vi.stubEnv('NO_COLOR', '1')
 
     consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -56,6 +58,8 @@ describe('run', () => {
   afterEach(() => {
     process.argv = originalArgv
     process.exitCode = originalExitCode
+    /* Cspell:disable-next-line */
+    vi.unstubAllEnvs()
     vi.restoreAllMocks()
   })
 
@@ -127,25 +131,35 @@ describe('run', () => {
     await runCli('list', 'test/fixtures/list/source')
 
     let text = consoleInfoSpy.mock.calls[0]![0] as string
-    let [list = '', summary] = text.split('\n\n', 2)
-    let printed = list
-      .split('\n')
-      .map(line => line.split(/\s+/u).slice(0, 2).join(' '))
-    expect(printed).toStrictEqual(
-      expected.mutants.map(
-        mutant => `${mutant.file}:${mutant.line}:${mutant.column} ${mutant.id}`,
+    let [, summary = '', ...groups] = text.split('\n\n')
+    let body = groups.join('\n\n')
+    let length = getShortIdLength(expected.mutants.map(mutant => mutant.id))
+    let file = ''
+    let printed: string[] = []
+    for (let line of body.split('\n')) {
+      if (line.startsWith('  ')) {
+        let [location, mutator] = line.trim().split(/\s+/u, 2)
+        printed.push(`${file}:${location} ${mutator} ${line}`)
+      } else if (line !== '') {
+        file = line
+      }
+    }
+    expect(printed.map(row => row.split(' ', 2).join(' '))).toStrictEqual(
+      expected.mutants.map(mutant => {
+        let { column, line } = mutant.focus ?? mutant
+        return `${mutant.file}:${line}:${column} ${mutant.mutator}`
+      }),
+    )
+    expect(
+      printed.every((row, index) =>
+        row.includes(`  ${expected.mutants[index]!.id.slice(0, length)}`),
       ),
-    )
-    let {
-      totalWarnings,
-      totalPending,
-      totalIgnored,
-      totalMutants,
-      totalFiles,
-    } = expected.summary
-    expect(summary).toBe(
-      `${totalMutants} mutants in ${totalFiles} files: ${totalPending} pending, ${totalIgnored} ignored, ${totalWarnings} warnings (preset: recommended)`,
-    )
+    ).toBe(true)
+    let { totalIgnored, totalMutants, totalFiles } = expected.summary
+    expect(summary.split('\n')).toStrictEqual([
+      `${'mutants'.padEnd(16)}${totalMutants} in ${totalFiles} files, ${totalIgnored} ignored`,
+      `${'warnings'.padEnd(16)}${expected.summary.totalWarnings}`,
+    ])
     expect(process.exitCode).toBeUndefined()
   })
 
@@ -199,11 +213,9 @@ describe('run', () => {
     await runCli('list', 'test/fixtures/list/source', '--skipped')
     let withSkipped = consoleInfoSpy.mock.calls[1]![0] as string
 
-    let [list] = plain.split('\n\n', 1)
-    let sections = withSkipped.split('\n\n')
-    expect(sections[0]).toBe(list)
-    expect(sections[1]!.startsWith('Skipped:\n')).toBe(true)
-    expect(sections[2]!.split('\n', 1)[0]).toBe(plain.split('\n\n', 2)[1])
-    expect(sections[2]!.split('\n', 2)[1]).toMatch(/^\d+ skipped: /u)
+    let body = plain.split('\n\n').slice(2).join('\n\n')
+    let [, summary = '', ...rest] = withSkipped.split('\n\n')
+    expect(rest.join('\n\n').startsWith(`${body}\n\nskipped:\n\n`)).toBe(true)
+    expect(summary.split('\n', 2)[1]).toMatch(/^skipped {9}\d+: /u)
   })
 })

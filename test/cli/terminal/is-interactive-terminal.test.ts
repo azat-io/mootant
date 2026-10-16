@@ -1,0 +1,42 @@
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
+import { isatty } from 'node:tty'
+
+import { isInteractiveTerminal } from '../../../cli/terminal/is-interactive-terminal'
+
+vi.mock(import('node:tty'), () => ({ isatty: vi.fn() }))
+
+describe('isInteractiveTerminal', () => {
+  beforeEach(() => {
+    vi.mocked(isatty).mockReturnValue(true)
+    vi.stubEnv('TERM', 'xterm-256color')
+    vi.stubEnv('CI', undefined)
+  })
+
+  afterEach(() => {
+    /* Cspell:disable-next-line */
+    vi.unstubAllEnvs()
+  })
+
+  it('accepts a terminal on standard error', () => {
+    expect(isInteractiveTerminal()).toBe(true)
+    expect(isatty).toHaveBeenCalledExactlyOnceWith(2)
+  })
+
+  it('rejects standard error that is not a terminal', () => {
+    vi.mocked(isatty).mockReturnValue(false)
+
+    expect(isInteractiveTerminal()).toBe(false)
+  })
+
+  it('rejects a dumb terminal', () => {
+    vi.stubEnv('TERM', 'dumb')
+
+    expect(isInteractiveTerminal()).toBe(false)
+  })
+
+  it('rejects CI, even when the variable is empty', () => {
+    vi.stubEnv('CI', '')
+
+    expect(isInteractiveTerminal()).toBe(false)
+  })
+})

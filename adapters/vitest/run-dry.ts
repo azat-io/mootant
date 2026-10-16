@@ -14,6 +14,7 @@ import { runSpecifications } from './run-specifications'
 import { getFileHash } from './worker/get-file-hash'
 import { watchHeartbeats } from './watch-heartbeats'
 import { stopHungWorker } from './stop-hung-worker'
+import { watchUnitEnds } from './watch-unit-ends'
 import { readOutFiles } from './read-out-files'
 
 /**
@@ -26,7 +27,8 @@ import { readOutFiles } from './read-out-files'
  * stops a worker whose try runs past the request's test budget plus the test's
  * own timeout and the timeouts of its hooks, or whose work outside tries runs
  * past the file budget plus the timeouts of the file's suite hooks, and reports
- * it in `hung`. Mutant sites the main process evaluated since the session
+ * it in `hung`. Each test file that ends is reported to the context's
+ * `onUnitEnd`. Mutant sites the main process evaluated since the session
  * started, such as in a `globalSetup` file, are reported in `outside`.
  *
  * @param handle - Live Vitest instance of the session.
@@ -64,6 +66,7 @@ export async function runDry(
         hung.push(beat)
       }
     })
+    let ends = watchUnitEnds(context.workDirectory, context.onUnitEnd)
     let error: string | null
     try {
       error = await runSpecifications(
@@ -72,6 +75,7 @@ export async function runDry(
         specifications,
       )
     } finally {
+      ends.stop()
       await watch.stop()
     }
     return {

@@ -1,5 +1,5 @@
 import type { TestProject } from 'vitest/node'
-import type { Plugin } from 'vite'
+import type { Plugin } from 'vitest/config'
 
 import type { AdapterContext } from '../../types/adapter/adapter-context'
 import type { VitestSessionState } from './types/vitest-session-state'

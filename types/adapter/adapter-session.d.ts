@@ -55,6 +55,11 @@ export interface AdapterSession {
   close(): Promise<void>
 
   /**
+   * Version of the test runner, such as `5.0.4`. Optional; shown in reports.
+   */
+  version?: string
+
+  /**
    * Most test files the runner runs at once, as it resolved its settings; the
    * core plans for this many workers. Optional; the context's `concurrency`,
    * else the available parallelism minus one, when omitted.

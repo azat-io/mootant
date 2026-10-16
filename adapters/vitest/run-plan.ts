@@ -11,6 +11,7 @@ import { runSpecifications } from './run-specifications'
 import { watchHeartbeats } from './watch-heartbeats'
 import { stopHungWorker } from './stop-hung-worker'
 import { writePlanFiles } from './write-plan-files'
+import { watchUnitEnds } from './watch-unit-ends'
 import { readOutFiles } from './read-out-files'
 
 /**
@@ -36,10 +37,11 @@ interface UnitOutcome {
 /**
  * Runs the units of a batch or isolated plan in one Vitest run: writes the plan
  * files, creates one specification per unit in the unit's project, and stops
- * hung workers while the run goes on. Several workers may get the same test
- * file; each claims the next unit of the file and waits until the unit before
- * it finished (`waitForTurn`), so a test file never runs twice at once. A
- * concurrency lowers every project's `maxWorkers` for this run.
+ * hung workers and counts finished units while the run goes on. Several workers
+ * may get the same test file; each claims the next unit of the file and waits
+ * until the unit before it finished (`waitForTurn`), so a test file never runs
+ * twice at once. A concurrency lowers every project's `maxWorkers` for this
+ * run.
  *
  * @param handle - Live Vitest instance of the session.
  * @param plan - Kind of the run, units in plan order and the most units at
@@ -80,6 +82,7 @@ export async function runPlan(
       hung.set(beat.unit, beat)
     }
   })
+  let ends = watchUnitEnds(directory, handle.context.onUnitEnd)
   let error: string | null
   try {
     error = await runSpecifications(
@@ -88,6 +91,7 @@ export async function runPlan(
       specifications,
     )
   } finally {
+    ends.stop()
     await watch.stop()
     for (let [index, config] of settings.entries()) {
       config.maxWorkers = maxWorkers[index]!

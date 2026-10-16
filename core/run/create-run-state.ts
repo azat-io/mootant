@@ -1,5 +1,6 @@
 import type { LimitSettings, RunState } from '../../types/run/run-state'
 import type { DryAnalysis } from '../../types/run/dry-analysis'
+import type { RunEvent } from '../../types/run/run-event'
 import type { Mutant } from '../../types/mutant/mutant'
 
 import { classifyMutants } from './classify-mutants'
@@ -10,9 +11,10 @@ import { routeIsolated } from './route-isolated'
  */
 interface RunStateInput {
   /**
-   * Receives one line as each run of the test runner starts.
+   * Receives the events of the run, such as the start of each run of the test
+   * runner.
    */
-  progress(message: string): void
+  report(event: RunEvent): void
 
   /**
    * Messages of the files whose mutants get no verdict, by display path.
@@ -67,8 +69,8 @@ interface RunStateInput {
 export function createRunState(input: RunStateInput): RunState {
   let { analysis, mutants, errors } = input
   let state: RunState = {
-    progress: input.progress,
     workers: input.workers,
+    report: input.report,
     limits: input.limits,
     mutants: new Map(),
     root: input.root,

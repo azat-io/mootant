@@ -25,6 +25,11 @@ export interface RunResult {
   unrepeatable: string[] | null
 
   /**
+   * Version of the test runner, or null when the adapter does not tell.
+   */
+  runnerVersion: string | null
+
+  /**
    * Problems of the run beyond those of listing a file: skipped paths, files
    * left out, instrumentation, unrepeatable tests and workers.
    */
@@ -60,6 +65,12 @@ export interface RunResult {
    * Mutated files with their mutants and diagnostics, sorted by path.
    */
   files: FileMutants[]
+
+  /**
+   * Ids of every listed mutant of the paths, the ones `--mutant` left out
+   * included, so short ids stay unique among them.
+   */
+  listedIds: string[]
 
   /**
    * Tests the dry run saw.

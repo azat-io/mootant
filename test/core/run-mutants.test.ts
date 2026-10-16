@@ -14,6 +14,7 @@ import path from 'node:path'
 import type { FakeWorld } from '../helpers/create-fake-adapter'
 import type { Diagnostic } from '../../types/mutant/diagnostic'
 import type { RunConfig } from '../../types/config/run-config'
+import type { RunEvent } from '../../types/run/run-event'
 
 import { createSwitchedFiles } from '../../core/instrument/create-switched-files'
 import { createFakeAdapter } from '../helpers/create-fake-adapter'
@@ -258,7 +259,7 @@ describe('runMutants', () => {
     expect(result.unrepeatable).toStrictEqual([])
   })
 
-  it('reports the warnings of the session first and plans for its workers', async () => {
+  it('selects a mutant by a prefix of its id, reports the warnings of the session first and plans for its workers', async () => {
     let [add] = ids['src/math.ts']!
     let warning: Diagnostic = {
       message: 'pool "threads" changed to "forks".',
@@ -278,11 +279,17 @@ describe('runMutants', () => {
           },
         ],
         diagnostics: [warning],
+        version: '5.0.4',
         workers: 4,
       },
-      { mutantIds: [add!], concurrency: 2, fast: true },
+      { mutantIds: [add!.slice(0, 6)], concurrency: 2, fast: true },
     )
 
+    expect(result.results.map(({ mutant }) => mutant.id)).toStrictEqual([add])
+    expect(result.listedIds).toStrictEqual(
+      expect.arrayContaining([add, ...ids['src/flag.ts']!]),
+    )
+    expect(result.runnerVersion).toBe('5.0.4')
     expect(result.diagnostics).toStrictEqual([warning])
     expect(fake.calls.batch[0]!.concurrency).toBe(4)
   })
@@ -378,7 +385,7 @@ describe('runMutants', () => {
 
   it('reports unrepeatable tests before the batch phases', async () => {
     let [ratio, two] = ids['src/flag.ts']!
-    let notes: string[] = []
+    let events: RunEvent[] = []
     let file = path.join(root, 'test/flag.test.ts')
     let { result } = await run(
       {
@@ -386,20 +393,39 @@ describe('runMutants', () => {
           { covers: [ratio!, two!], dry: 'flaky', id: 'flaky', file },
           { covers: [ratio!], id: 'steady', file },
         ],
+        output: [
+          { text: 'log\n', file },
+          { text: 'warning\n', file: null },
+        ],
       },
       {
-        onProgress: note => {
-          notes.push(note)
+        onProgress: event => {
+          events.push(event)
         },
         paths: ['src/flag.ts'],
         fast: true,
       },
     )
 
-    expect(notes).toStrictEqual([
-      'Dry run: tests related to 1 mutated file.',
-      '1 test is not repeatable; the 2 mutants it reaches run isolated.',
-      'Isolated run: 2 mutants in 2 units.',
+    expect(
+      events.map(event =>
+        event.kind === 'dry-end' ? { ...event, duration: 0 } : event,
+      ),
+    ).toStrictEqual([
+      { kind: 'mutants', ignored: 3, total: 6, files: 1 },
+      { kind: 'dry-start', files: 1 },
+      { file: 'test/flag.test.ts', kind: 'output', text: 'log\n' },
+      { text: 'warning\n', kind: 'output', file: null },
+      { kind: 'unit-end' },
+      { kind: 'dry-end', duration: 0, tests: 2 },
+      {
+        message:
+          '1 test is not repeatable; the 2 mutants it reaches run isolated.',
+        kind: 'note',
+      },
+      { kind: 'run-start', run: 'isolated', mutants: 2, round: 1, units: 2 },
+      { kind: 'unit-end' },
+      { kind: 'unit-end' },
     ])
     expect(result.unrepeatable).toStrictEqual(['flaky'])
     expect(result.diagnostics).toStrictEqual([
@@ -479,8 +505,10 @@ describe('runMutants', () => {
         ],
       },
       {
-        onProgress: note => {
-          notes.push(note)
+        onProgress: event => {
+          if (event.kind === 'note') {
+            notes.push(event.message)
+          }
         },
         paths: ['src/flag.ts'],
         fast: true,

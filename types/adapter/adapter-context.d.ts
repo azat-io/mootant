@@ -5,6 +5,13 @@ import type { SwitchedFile } from './switched-file'
  */
 export interface AdapterContext {
   /**
+   * Receives what the tests write, such as console output and process warnings,
+   * instead of the terminal, with the absolute path of the test file that wrote
+   * it, or null when unknown. Optional; an adapter may print it when omitted.
+   */
+  onOutput?(text: string, file: string | null): void
+
+  /**
    * Files to serve switched. A module whose loaded text differs from `original`
    * (see `resolveSwitchedText`) is served as is and reported in
    * `DryRunResult.mismatched`. Any module with a query in its id, and any file
@@ -25,6 +32,12 @@ export interface AdapterContext {
    * creates it and removes it after `close`.
    */
   workDirectory: string
+
+  /**
+   * Called each time a unit of a run finishes: a test file of a dry run, a unit
+   * of a batch or isolated plan. Optional; only drives progress.
+   */
+  onUnitEnd?(): void
 
   /**
    * Project root: the directory of the mootant configuration, else the working
