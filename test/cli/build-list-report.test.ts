@@ -538,4 +538,51 @@ describe('buildListReport', () => {
       'totalErrors',
     ])
   })
+
+  it('reports the focus of a mutant and of a skipped candidate', () => {
+    let source = 'x = /^a$/'
+    let focus = { start: 5, text: '', end: 6 }
+    let report = buildListReport({
+      ...createResult([
+        {
+          skipped: [
+            {
+              reason: 'the new regular expression would not compile',
+              mutator: 'string-literal',
+              rule: 'invalid-regex',
+              category: 'invalid',
+              replacement: '/a$/',
+              file: 'example.ts',
+              kind: 'expression',
+              heuristic: false,
+              start: 4,
+              by: null,
+              end: 9,
+              focus,
+            },
+          ],
+          mutants: [
+            createMutant({ replacement: '/a$/', start: 4, end: 9, focus }),
+          ],
+          absolute: '/repo/example.ts',
+          file: 'example.ts',
+          diagnostics: [],
+          parsed: true,
+          source,
+        },
+      ]),
+      skipped: true,
+    })
+    let expected = {
+      replacement: '',
+      original: '^',
+      column: 6,
+      start: 5,
+      line: 1,
+      end: 6,
+    }
+
+    expect(report.mutants[0]).toMatchObject({ focus: expected, column: 5 })
+    expect(report.skipped![0]).toMatchObject({ focus: expected, column: 5 })
+  })
 })

@@ -2327,6 +2327,26 @@
     },
     {
       "by": {
+        "column": 32,
+        "id": null,
+        "line": 2,
+        "mutator": "string-literal"
+      },
+      "original": "label + '!'",
+      "replacement": "label",
+      "heuristic": false,
+      "category": "owned",
+      "mutator": "arithmetic-operator",
+      "reason": "dropping a string operand is string-literal's emptying of it",
+      "column": 24,
+      "start": 34,
+      "file": "test/fixtures/list/source/component.vue",
+      "rule": "O11",
+      "line": 2,
+      "end": 45
+    },
+    {
+      "by": {
         "column": 17,
         "line": 3,
         "mutator": "logical-operator",
@@ -2629,15 +2649,30 @@
       "rule": "duplicate",
       "line": 94,
       "end": 1976
+    },
+    {
+      "by": null,
+      "original": "value++",
+      "replacement": "++value",
+      "heuristic": false,
+      "category": "equivalent",
+      "mutator": "update-operator",
+      "reason": "the value of the update is unused, so prefix and postfix do the same",
+      "column": 25,
+      "start": 266,
+      "file": "test/fixtures/list/source/widget.svelte",
+      "rule": "unused-result",
+      "line": 16,
+      "end": 273
     }
   ],
   "summary": {
-    "totalSkipped": 145,
+    "totalSkipped": 147,
     "skippedByCategory": {
-      "equivalent": 29,
+      "equivalent": 30,
       "noise": 9,
       "timeout": 0,
-      "owned": 49,
+      "owned": 50,
       "subsumed": 57,
       "duplicate": 1,
       "invalid": 0

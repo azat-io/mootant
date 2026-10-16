@@ -105,8 +105,15 @@ describe('runMutants', () => {
       'export let ratio = 2 * 3\n// mootant-ignore-next-line: shown elsewhere\nexport let size = 4 - 1\n',
     )
     await writeFile(
-      path.join(root, 'src/card.vue'),
-      '<script setup>\nlet n = 1 + 2\n</script>\n',
+      path.join(root, 'src/card.astro'),
+      '---\nlet n = 1 + 2\n---\n',
+    )
+    await mkdir(path.join(root, 'ui'))
+    await writeFile(path.join(root, 'ui/badge.svelte'), '<p>{1 + 2}</p>\n')
+    await mkdir(path.join(root, 'view'))
+    await writeFile(
+      path.join(root, 'view/badge.vue'),
+      '<template><p>{{ 1 + 2 }}</p></template>\n',
     )
     vi.mocked(loadConfig).mockResolvedValue(null)
     let listed = await listMutants({ paths: ['src'], cwd: root })
@@ -239,9 +246,9 @@ describe('runMutants', () => {
     expect(result.diagnostics).toStrictEqual([
       {
         message:
-          'src/card.vue is a Vue component; mootant run does not run components yet.',
+          'src/card.astro is an Astro component; mootant run does not run Astro components yet.',
         code: 'unsupported-file',
-        file: 'src/card.vue',
+        file: 'src/card.astro',
         severity: 'warning',
         column: null,
         line: null,
@@ -506,6 +513,26 @@ describe('runMutants', () => {
     expect(result.runs).toStrictEqual({})
     expect(result.results).toMatchObject([
       { message: 'Cannot host the mutants of src/math.ts.', status: 'Error' },
+    ])
+  })
+
+  it('checks switched components with the compiler of their framework', async () => {
+    await run({ tests: [] }, { paths: ['ui'] })
+    await run({ tests: [] }, { paths: ['view'] })
+    await run({ tests: [] }, { paths: ['src/math.ts'] })
+
+    expect(
+      vi
+        .mocked(createSwitchedFiles)
+        .mock.calls.map(([files, compilers]) => [
+          files.map(file => file.file),
+          typeof compilers?.svelte?.compile,
+          typeof compilers?.vue?.compile,
+        ]),
+    ).toStrictEqual([
+      [['ui/badge.svelte'], 'function', 'undefined'],
+      [['view/badge.vue'], 'undefined', 'function'],
+      [['src/math.ts'], 'undefined', 'undefined'],
     ])
   })
 

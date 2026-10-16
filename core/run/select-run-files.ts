@@ -28,14 +28,10 @@ const SELF_RUNTIME_PATTERN =
   /^(?:dist\/)?(?:core\/runtime\/|adapters\/[^/]+\/(?:worker\/|runner\.))/u
 
 /**
- * Names of component frameworks in messages.
- */
-const FRAMEWORK_NAMES = { svelte: 'Svelte', astro: 'Astro', vue: 'Vue' }
-
-/**
- * Leaves out the listed files a run must not mutate: test and setup files, Vue,
- * Svelte and Astro components, which runs do not support yet, and the files of
- * mootant's own worker runtime.
+ * Leaves out the listed files a run must not mutate: test and setup files,
+ * Astro components, which runs do not support yet, and the files of mootant's
+ * own worker runtime. Vue and Svelte components run: the plugin of the session
+ * switches their text before the plugin of the framework compiles it.
  *
  * @param listed - Listed files with their mutants.
  * @param testFiles - Absolute paths of the test and setup files.
@@ -52,7 +48,6 @@ export function selectRunFiles(
   let files: FileMutants[] = []
   for (let entry of listed) {
     let { absolute, file } = entry
-    let framework = getComponentFramework(file)
     let relative = path
       .relative(packageDirectory, absolute)
       .replaceAll(path.sep, '/')
@@ -62,9 +57,9 @@ export function selectRunFiles(
         message: `${file} is a test or setup file; mootant run does not mutate it.`,
         code: 'test-file-excluded',
       }
-    } else if (framework !== null) {
+    } else if (getComponentFramework(file) === 'astro') {
       problem = {
-        message: `${file} is a ${FRAMEWORK_NAMES[framework]} component; mootant run does not run components yet.`,
+        message: `${file} is an Astro component; mootant run does not run Astro components yet.`,
         code: 'unsupported-file',
       }
     } else if (SELF_RUNTIME_PATTERN.test(relative)) {

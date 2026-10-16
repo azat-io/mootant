@@ -331,4 +331,51 @@ describe('stringLiteral', () => {
       }),
     ).toStrictEqual(['"x" -> "" (noise jsx-attribute)'])
   })
+  it.each<[string, string[]]>([
+    [
+      "x = new RegExp('^a', 'g')",
+      ["'^a' -> '' (noise regex-argument)", "'g' -> '' (noise regex-argument)"],
+    ],
+    [`x = RegExp(\`^\${a}$\`)`, []],
+    [`x = RegExp(\`\${a}a$\`)`, []],
+    ["x = RegExp(('a' as string))", ["'a' -> '' (noise regex-argument)"]],
+    [
+      `x = RegExp(\`^\${a}\`, 'g')`,
+      [`\`^\${a}\` -> \`\${a}\` (duplicate duplicate)`],
+    ],
+    ["x = RegExp('(', 'g')", ["'(' -> '' (noise regex-argument)"]],
+    ["x = RegExp('a', flags)", []],
+    ["let RegExp = f\nx = RegExp('a')", []],
+  ])('skips the RegExp arguments of %s', (source, expected) => {
+    expect(listSkipped('string-literal', source)).toStrictEqual(expected)
+  })
+
+  it.each<[string, string[]]>([
+    [`x = RegExp(\`^\${a}\`, 'g')`, ["'g' -> ''"]],
+    [`x = RegExp(\`\${a}a$\`)`, [`\`\${a}a$\` -> \`\${a}\``]],
+    ["x = RegExp('(', 'g')", ["'g' -> ''"]],
+    ["x = RegExp('a', flags)", ["'a' -> ''"]],
+    ["x = f('a', 'g')", ["'a' -> ''", "'g' -> ''"]],
+  ])('keeps the strings of %s', (source, expected) => {
+    expect(
+      runMutator('string-literal', source).map(formatMutant),
+    ).toStrictEqual(expected)
+  })
+
+  it('keeps the flags of a RegExp call when regex-flag is off', () => {
+    expect(
+      runMutator('string-literal', "x = new RegExp('^a$', 'mi')", {
+        mutators: { 'regex-flag': 'off' },
+      }).map(formatMutant),
+    ).toStrictEqual(["'mi' -> ''"])
+  })
+
+  it('keeps the flags of a RegExp call whose regex-flag mutants are ignored', () => {
+    expect(
+      runMutator(
+        'string-literal',
+        "// mootant-ignore-next-line regex-flag\nx = new RegExp('^a$', 'mi')",
+      ).map(formatMutant),
+    ).toStrictEqual(["'mi' -> ''"])
+  })
 })

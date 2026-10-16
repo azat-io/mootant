@@ -36,6 +36,38 @@ describe('instrumentFile', () => {
     )
   })
 
+  it('reaches the runtime through Math in a Vue template', () => {
+    let source = [
+      '<script setup>let a = 1 + 2</script>',
+      '<template><p :title="a > 1">{{ a - 1 }}</p></template>',
+    ].join('\n')
+
+    expect(
+      instrumentFile({
+        mutants: [
+          createMutant({ replacement: 'a >= 1', start: 58, end: 63 }),
+          createMutant({ replacement: '1 - 2', start: 22, id: 'm2', end: 27 }),
+        ],
+        file: 'card.vue',
+        source,
+      }),
+    ).toBe(
+      [
+        '<script setup>let a = (globalThis.__mootant?.hit("m2") ? (1 - 2) : (1 + 2))</script>',
+        '<template><p :title="(Math[Symbol.for(`mootant`)]?.hit(`m1`) ? (a >= 1) : (a > 1))">{{ a - 1 }}</p></template>',
+      ].join('\n'),
+    )
+    expect(
+      instrumentFile({
+        mutants: [createMutant({ replacement: '0', start: 13, end: 14 })],
+        source: '<template>{{ 1 }}</template>',
+        file: 'card.vue',
+      }),
+    ).toBe(
+      '<template>{{ (Math[Symbol.for(`mootant`)]?.hit(`m1`) ? (0) : (1)) }}</template>',
+    )
+  })
+
   it('throws when the text does not parse', () => {
     expect(() =>
       instrumentFile({
@@ -57,7 +89,9 @@ describe('instrumentFile', () => {
       let mutants = generateMutants(source, { preset, file })
       let pending = mutants.filter(mutant => mutant.status === 'Pending')
       let switched = instrumentFile({ mutants: pending, source, file })
-      let sites = [...switched.matchAll(/__mootant\?\.hit\("(?<id>\w+)"\)/gu)]
+      let sites = [
+        ...switched.matchAll(/\?\.hit\((?<quote>["`])(?<id>\w+)\k<quote>\)/gu),
+      ]
 
       expect(pending.length).toBeGreaterThan(0)
       expect(getSyntaxFingerprint(file, switched)).not.toBeNull()

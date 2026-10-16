@@ -1,5 +1,6 @@
 import type { RegisteredMutator } from '../mutator/registered-mutator'
 import type { SourceRange } from '../source/source-range'
+import type { TextEdit } from '../source/text-edit'
 import type { IgnoreRule } from './ignore-rule'
 
 /**
@@ -32,6 +33,12 @@ export interface MutantCandidate {
    * Dotted names of the declarations around the replaced node.
    */
   scope: string | null
+
+  /**
+   * Edit inside the replaced range that the mutant amounts to, which reports
+   * show in place of the whole range; absent when the mutator names none.
+   */
+  focus?: TextEdit
 
   /**
    * Position in the order in which visitors returned replacements.

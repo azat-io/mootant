@@ -1,3 +1,6 @@
+import * as svelte from 'svelte/compiler'
+import * as vue from '@vue/compiler-dom'
+
 import type { MutatorSetting } from '../../types/mutator/mutator-setting'
 import type { PresetSettings } from '../../types/config/preset-settings'
 import type { FileMutants } from '../../types/mutant/file-mutants'
@@ -42,7 +45,8 @@ const TEST_PRESET = 'test-run'
  * Runs the whole pipeline with every built-in mutator over a snippet, as
  * `mootant list --skipped` would, and returns the mutants and the skipped
  * candidates of the run with their offsets, so a property test can apply and
- * execute each of them.
+ * execute each of them. Svelte and Vue templates are read with the compilers of
+ * the repository unless the `templates` setting is off.
  *
  * @param source - Text of the snippet.
  * @param setup - Preset, mutator settings, preset settings and file name of the
@@ -65,6 +69,7 @@ export function generateCandidates(
   let result = generateFileMutants({
     knownMutatorIds: new Set(registry.mutators.keys()),
     file: setup.file ?? 'example.ts',
+    compilers: { svelte, vue },
     skipped: true,
     settings,
     mutators,

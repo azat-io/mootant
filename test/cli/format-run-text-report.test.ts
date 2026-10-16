@@ -185,4 +185,23 @@ describe('formatRunTextReport', () => {
       'Time: 1.3 s (start 0.2 s, dry run 0.2 s, isolated 0.7 s for 3 mutants)',
     ])
   })
+
+  it('prints the focus of a mutant', () => {
+    let report = createReport()
+    report.mutants = report.mutants.map(mutant => ({
+      ...mutant,
+      focus: {
+        replacement: '<=',
+        original: '<',
+        column: 15,
+        start: 50,
+        line: 4,
+        end: 51,
+      },
+    }))
+
+    expect(formatRunTextReport(report).split('\n', 1)[0]).toBe(
+      'src/cart.ts:4:15  survived0001  Survived    comparison-operator  < -> <=',
+    )
+  })
 })

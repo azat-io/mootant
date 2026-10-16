@@ -1,3 +1,6 @@
+import * as svelte from 'svelte/compiler'
+import * as vue from '@vue/compiler-dom'
+
 import type { Mutant } from '../../types/mutant/mutant'
 
 import { findStatementStarts } from '../../core/instrument/find-statement-starts'
@@ -8,9 +11,9 @@ import { findStatementStarts } from '../../core/instrument/find-statement-starts
  */
 interface ListedStatements {
   /**
-   * Offsets where those statements start.
+   * Guards by the offsets where those statements start.
    */
-  starts: Set<number>
+  starts: Map<number, string>
 
   /**
    * Text the starts were found in.
@@ -37,8 +40,9 @@ let listedStatements = new Map<string, ListedStatements>()
  * Applies a mutant the way the mutant switch will host it: an expression
  * replacement is written inside parentheses and a block replacement inside
  * braces. An expression that starts an expression statement of a statement list
- * gets a `;` in front, so a previous line without a semicolon does not take the
- * parentheses as call arguments.
+ * gets the guard of that statement in front, so a previous line without a
+ * semicolon does not take the parentheses as call arguments; the statements of
+ * Svelte and Vue templates count too.
  *
  * @param source - Text of the file the mutant belongs to.
  * @param mutant - Mutant with its range, replacement, kind and file name.
@@ -53,7 +57,7 @@ export function applyMutant(source: string, mutant: AppliedMutant): string {
     return `${before}{${replacement}}${after}`
   }
   let starts = getListedStatementStarts(source, mutant.file)
-  let guard = starts.has(start) ? ';' : ''
+  let guard = starts.get(start) ?? ''
   return `${before}${guard}(${replacement})${after}`
 }
 
@@ -63,15 +67,19 @@ export function applyMutant(source: string, mutant: AppliedMutant): string {
  *
  * @param source - Text of the file the mutant belongs to.
  * @param file - Name of the file, whose extension selects the language.
- * @returns Offsets where expression statements of statement lists start.
+ * @returns Guards by the offsets where expression statements of statement lists
+ *   start.
  * @throws Error - When the text does not parse.
  */
-function getListedStatementStarts(source: string, file: string): Set<number> {
+function getListedStatementStarts(
+  source: string,
+  file: string,
+): Map<number, string> {
   let cached = listedStatements.get(file)
   if (cached?.source === source) {
     return cached.starts
   }
-  let starts = findStatementStarts(file, source)
+  let starts = findStatementStarts(file, source, { svelte, vue })
   listedStatements.set(file, { starts, source })
   return starts
 }

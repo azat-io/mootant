@@ -2,6 +2,7 @@ import {
   writeFile,
   readFile,
   realpath,
+  symlink,
   mkdtemp,
   cp,
   rm,
@@ -72,6 +73,17 @@ process.exit(0)
 `
 
 /**
+ * Vitest configuration of the shared run of the copies, without plugins.
+ */
+const DEFAULT_CONFIG =
+  "export default { test: { include: ['*/test/**/*.test.ts'] } }\n"
+
+/**
+ * Packages of the repository, which the copies resolve their imports from.
+ */
+let modules = path.resolve(import.meta.dirname, '../../node_modules')
+
+/**
  * Fields of a mutant that the reference run needs.
  */
 type ReferenceMutant = Pick<
@@ -94,6 +106,9 @@ type ReferenceMutant = Pick<
  * @param options - Files of the untouched copy and how to run the copies.
  * @param options.sources - Files of the project, relative to the root, that the
  *   untouched copy relates its tests to.
+ * @param options.config - Text of the Vitest configuration of the shared run,
+ *   such as one with the plugin of a component framework; it must include
+ *   `*\/test/**\/*.test.ts`. The copies resolve packages from the repository.
  * @param options.separate - Whether every copy runs every test in its own
  *   Vitest instance, and fails on any error of the run, including errors Vitest
  *   catches only after the run, such as in the cleanup of a worker-scoped
@@ -105,7 +120,7 @@ type ReferenceMutant = Pick<
 export async function runReferenceMutants(
   root: string,
   mutants: ReferenceMutant[],
-  options: { separate?: boolean; sources: string[] },
+  options: { separate?: boolean; sources: string[]; config?: string },
 ): Promise<ReferenceVerdicts> {
   let { sources } = options
   let directory = await realpath(
@@ -116,6 +131,7 @@ export async function runReferenceMutants(
       ...sources.map(file => path.join('original', file)),
       ...mutants.map((mutant, index) => path.join(`m${index}`, mutant.file)),
     ]
+    await symlink(modules, path.join(directory, 'node_modules'), 'dir')
     await cp(root, path.join(directory, 'original'), { recursive: true })
     await Promise.all(
       mutants.map(async (mutant, index) => {
@@ -138,7 +154,7 @@ export async function runReferenceMutants(
     }
     await writeFile(
       path.join(directory, 'vitest.config.mjs'),
-      "export default { test: { include: ['*/test/**/*.test.ts'] } }\n",
+      options.config ?? DEFAULT_CONFIG,
     )
     let report = path.join(directory, 'report.json')
     await runVitest(directory, [

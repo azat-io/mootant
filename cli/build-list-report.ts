@@ -1,10 +1,12 @@
 import type { ListReportSkipped } from '../types/report/list-report-skipped'
 import type { ListReportMutant } from '../types/report/list-report-mutant'
+import type { ListReportFocus } from '../types/report/list-report-focus'
 import type { SkippedMutant } from '../types/mutant/skipped-mutant'
 import type { SkipCategory } from '../types/mutant/skip-category'
 import type { ListResult } from '../types/report/list-result'
 import type { ListReport } from '../types/report/list-report'
 import type { Diagnostic } from '../types/mutant/diagnostic'
+import type { TextEdit } from '../types/source/text-edit'
 
 import { getSourcePosition } from '../core/text/get-source-position'
 import { compareCodeUnits } from '../core/compare-code-units'
@@ -78,6 +80,7 @@ export function buildListReport(result: ListResult): ListReport {
         kind: mutant.kind,
         end: mutant.end,
         id: mutant.id,
+        ...createFocusEntry(mutant, source, lineStarts),
       })
     }
     for (let candidate of fileMutants.skipped) {
@@ -170,6 +173,39 @@ function createSkippedEntry(
     rule: candidate.rule,
     line: position.line,
     end: candidate.end,
+    ...createFocusEntry(candidate, source, lineStarts),
+  }
+}
+
+/**
+ * Builds the report focus of a mutant or skipped candidate, as an object to
+ * spread, so an entry without a focus gets no `focus` key.
+ *
+ * @param entry - Mutant or skipped candidate.
+ * @param entry.focus - Edit inside its range, if any.
+ * @param source - Text of the file as read.
+ * @param lineStarts - Line start offsets of the text.
+ * @returns An object with the focus, or an empty object.
+ */
+function createFocusEntry(
+  entry: { focus?: TextEdit },
+  source: string,
+  lineStarts: number[],
+): { focus?: ListReportFocus } {
+  let { focus } = entry
+  if (!focus) {
+    return {}
+  }
+  let position = getSourcePosition(lineStarts, focus.start)
+  return {
+    focus: {
+      original: source.slice(focus.start, focus.end),
+      replacement: focus.text,
+      column: position.column,
+      line: position.line,
+      start: focus.start,
+      end: focus.end,
+    },
   }
 }
 

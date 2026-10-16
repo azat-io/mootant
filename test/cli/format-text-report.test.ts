@@ -416,4 +416,94 @@ describe('formatTextReport', () => {
       ].join('\n'),
     )
   })
+
+  it('prints the focus of a mutant and of a skipped candidate', () => {
+    let focus = {
+      replacement: '',
+      original: '^',
+      column: 6,
+      start: 5,
+      line: 1,
+      end: 6,
+    }
+    let text = formatTextReport({
+      ...createReport(
+        [
+          createMutant({
+            mutator: 'regex-pattern',
+            replacement: '/a$/',
+            original: '/^a$/',
+            column: 5,
+            focus,
+          }),
+        ],
+        {
+          skippedByCategory: {
+            equivalent: 1,
+            duplicate: 0,
+            subsumed: 0,
+            timeout: 0,
+            invalid: 0,
+            owned: 0,
+            noise: 0,
+          },
+          totalSkipped: 1,
+        },
+      ),
+      skipped: [
+        createSkipped({
+          mutator: 'regex-pattern',
+          replacement: '/a$/',
+          original: '/^a$/',
+          column: 5,
+          focus,
+        }),
+      ],
+    })
+
+    expect(text.split('\n').slice(0, 4)).toStrictEqual([
+      'example.ts:1:6  000000000001  regex-pattern  ^ -> (empty)',
+      '',
+      'Skipped:',
+      'example.ts:1:6  regex-pattern  ^ -> (empty) (skipped: equivalent proven-comparison: the type hints prove the comparison is always false)',
+    ])
+  })
+
+  it('sorts the mutants of a file by the position they show', () => {
+    let text = formatTextReport(
+      createReport([
+        createMutant({
+          focus: {
+            replacement: 'i',
+            original: '',
+            column: 21,
+            start: 20,
+            line: 1,
+            end: 20,
+          },
+          mutator: 'regex-flag',
+          id: 'flag',
+          column: 14,
+        }),
+        createMutant({
+          focus: {
+            replacement: '',
+            original: '^',
+            column: 15,
+            start: 14,
+            line: 1,
+            end: 15,
+          },
+          mutator: 'regex-pattern',
+          id: 'pattern',
+          column: 14,
+        }),
+      ]),
+    )
+
+    expect(text.split('\n').slice(0, 2)).toStrictEqual([
+      'example.ts:1:15  pattern  regex-pattern  ^ -> (empty)',
+      'example.ts:1:21  flag  regex-flag     (empty) -> i',
+    ])
+  })
 })

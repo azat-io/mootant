@@ -21,8 +21,10 @@ export let recommended: Preset = {
     'unary-operator': 'on',
     'array-element': 'on',
     'missing-await': 'on',
+    'regex-pattern': 'on',
     'return-value': 'on',
     'method-call': 'on',
+    'regex-flag': 'on',
     condition: 'on',
   },
   description:

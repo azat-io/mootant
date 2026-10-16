@@ -89,14 +89,14 @@ describe('prepareRun', () => {
   it('applies the presets, mutators and settings of the configuration', async () => {
     useConfig({
       mutators: { 'string-literal': 'off', 'acme/zero': 'on' },
-      settings: { timeouts: true },
+      settings: { templates: false, timeouts: true },
       plugins: { acme: ACME },
       extends: ['strict'],
     })
     let setup = await prepareRun({ cwd: path.join(ROOT, 'src') })
 
     expect(setup).toMatchObject({
-      settings: { coarseMutants: true, timeouts: true },
+      settings: { coarseMutants: true, templates: false, timeouts: true },
       preset: 'strict',
       root: ROOT,
     })

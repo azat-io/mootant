@@ -1,6 +1,7 @@
 import type { Node } from 'oxc-parser'
 
 import type { TreeIndex } from '../../types/syntax/tree-index'
+import type { TextEdit } from '../../types/source/text-edit'
 import type { NodeSlot } from '../../types/syntax/node-slot'
 
 import { isValuePosition } from '../syntax/is-value-position'
@@ -36,16 +37,19 @@ let statementSlotKeys = new Map<string, string[]>([
  * Checks that the mutant switch can wrap the node a replacement targets: the
  * node holds runtime code, is a statement or an expression, sits in a value
  * position when it is an expression, and sits in a statement position other
- * than the body of a labeled statement when it is a statement.
+ * than the body of a labeled statement when it is a statement. A focus, when
+ * given, must lie inside the node.
  *
  * @param tree - Runtime tree of the file.
  * @param node - Node the replacement targets.
+ * @param focus - Edit inside the node that reports show, if any.
  * @returns The violation, worded to follow `Mutator "<id>" `, or null when the
  *   target is valid.
  */
 export function validateReplacement(
   tree: TreeIndex,
   node: Node,
+  focus?: TextEdit,
 ): string | null {
   let slot = tree.slots.get(node)
   if (!slot) {
@@ -67,6 +71,14 @@ export function validateReplacement(
     slot.key === 'body'
   ) {
     return 'cannot replace the body of a labeled statement; replace the LabeledStatement.'
+  }
+  if (
+    focus &&
+    (focus.start < node.start ||
+      focus.end < focus.start ||
+      node.end < focus.end)
+  ) {
+    return 'returned a focus outside the node it replaces.'
   }
   return null
 }

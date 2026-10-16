@@ -1,5 +1,6 @@
 import type { Node } from 'oxc-parser'
 
+import type { TemplateExpression } from '../../types/source/template-expression'
 import type { RegisteredMutator } from '../../types/mutator/registered-mutator'
 import type { SkippedCandidate } from '../../types/mutant/skipped-candidate'
 import type { MutantCandidate } from '../../types/mutant/mutant-candidate'
@@ -17,11 +18,66 @@ import type { TypeHints } from '../../types/hints/type-hints'
 import type { SkipNote } from '../../types/mutant/skip-note'
 
 import { getSourcePosition } from '../text/get-source-position'
+import { findCompilerPins } from '../syntax/find-compiler-pins'
 import { validateReplacement } from './validate-replacement'
 import { findIgnoreRule } from '../ignore/find-ignore-rule'
 import { getReplacementKind } from './get-replacement-kind'
 import { getScopePath } from '../identity/get-scope-path'
+import { fitTemplateText } from './fit-template-text'
 import { getSlot } from '../tree/get-slot'
+import { pickFocus } from './pick-focus'
+
+/**
+ * Scope path of every candidate of a template.
+ */
+const TEMPLATE_SCOPE = '<template>'
+
+/**
+ * What the candidates of one file are collected from.
+ */
+interface CollectInput {
+  /**
+   * Code of a template in source order, or null for a script; null when
+   * omitted.
+   */
+  expressions?: readonly TemplateExpression[] | null
+
+  /**
+   * Active mutators in canonical order.
+   */
+  mutators: readonly ActiveMutator[]
+
+  /**
+   * Nodes that only the synthetic module of a template has, or null for a
+   * script; null when omitted.
+   */
+  hosts?: ReadonlySet<Node> | null
+
+  /**
+   * Ignore rules of the file, which decide the status of each candidate.
+   */
+  rules: readonly IgnoreRule[]
+
+  /**
+   * Shared parts of the mutator contexts.
+   */
+  services: MutatorServices
+
+  /**
+   * Parsed file.
+   */
+  parsed: ParsedFile
+
+  /**
+   * Whether skipped replacements are collected.
+   */
+  skipped: boolean
+
+  /**
+   * Runtime tree of the file.
+   */
+  tree: TreeIndex
+}
 
 /**
  * Parts of every mutator context that all mutators of a file share.
@@ -82,41 +138,6 @@ interface CandidateCollection {
 }
 
 /**
- * What the candidates of one file are collected from.
- */
-interface CollectInput {
-  /**
-   * Active mutators in canonical order.
-   */
-  mutators: readonly ActiveMutator[]
-
-  /**
-   * Ignore rules of the file, which decide the status of each candidate.
-   */
-  rules: readonly IgnoreRule[]
-
-  /**
-   * Shared parts of the mutator contexts.
-   */
-  services: MutatorServices
-
-  /**
-   * Parsed file.
-   */
-  parsed: ParsedFile
-
-  /**
-   * Whether skipped replacements are collected.
-   */
-  skipped: boolean
-
-  /**
-   * Runtime tree of the file.
-   */
-  tree: TreeIndex
-}
-
-/**
  * Visitor of one mutator for one node type.
  */
 interface VisitorEntry {
@@ -138,11 +159,18 @@ interface VisitorEntry {
  * replacement is validated and becomes a candidate with its kind, scope path,
  * solitary ranges and ignore rule. A throwing `create` or visitor and an
  * invalid replacement become mutator errors and cost only that mutator, visit
- * or replacement. Without the `timeouts` setting, a replacement of the value
- * that advances a loop is dropped. A replacement that a visitor marks as
- * skipped is never validated and never becomes a candidate; on request it is
- * collected with its rule, like dropped and invalid replacements, so that
- * skipped replacements never change the candidates.
+ * or replacement. A replacement that would move code its framework compiler
+ * reads where it stands, such as a Svelte rune call or a Vue compiler macro, is
+ * dropped. Without the `timeouts` setting, a replacement of the value that
+ * advances a loop is dropped. A replacement that a visitor marks as skipped is
+ * never validated and never becomes a candidate; on request it is collected
+ * with its rule, like dropped and invalid replacements, so that skipped
+ * replacements never change the candidates. In a template only expressions are
+ * replaced: a replacement of a statement, a declaration or a node of the
+ * synthetic module around the template code is dropped without a trace, and
+ * every candidate has the scope `<template>`. A replacement in a Vue template
+ * is fitted into the attribute value or the interpolation around it, or skipped
+ * when it cannot be.
  *
  * @param input - Mutators, parsed file, runtime tree, ignore rules and shared
  *   context services.
@@ -181,10 +209,13 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
         reason: note.reason,
         rule: note.rule,
         registered,
+        ...pickFocus(replacement),
       })
     }
   }
   let table = new Map<string, VisitorEntry[]>()
+  let pins = findCompilerPins(tree, parsed.file)
+  let hosts = input.hosts ?? null
 
   for (let registered of mutators) {
     let visitors: Record<string, VisitorEntry['visit']>
@@ -236,11 +267,22 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
         continue
       }
       for (let replacement of replacements) {
+        if (
+          hosts !== null &&
+          (hosts.has(replacement.node) ||
+            getReplacementKind(replacement.node) !== 'expression')
+        ) {
+          continue
+        }
         if (replacement.skip) {
           skip(registered, replacement, replacement.skip)
           continue
         }
-        let violation = validateReplacement(tree, replacement.node)
+        let violation = validateReplacement(
+          tree,
+          replacement.node,
+          replacement.focus,
+        )
         if (violation !== null) {
           diagnostics.push(
             createMutatorError(
@@ -255,6 +297,39 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
           })
           continue
         }
+        let { start, end } = replacement.node
+        let pin = pins.find(
+          entry =>
+            start <= entry.start &&
+            entry.end <= end &&
+            entry.region.start <= start &&
+            end <= entry.region.end,
+        )
+        if (pin) {
+          skip(registered, replacement, {
+            rule: 'compiler-macro',
+            reason: pin.reason,
+          })
+          continue
+        }
+        let delimiter = input.expressions?.findLast(
+          expression => expression.start <= start,
+        )?.delimiter
+        let fit =
+          delimiter === undefined ?
+            { text: replacement.text, kind: 'fit' as const }
+          : fitTemplateText(
+              replacement.text,
+              delimiter,
+              parsed.language === 'typescript' ? 'ts' : 'js',
+            )
+        if (fit.kind === 'unfit') {
+          skip(registered, replacement, {
+            rule: 'template-text',
+            reason: fit.reason,
+          })
+          continue
+        }
         if (
           !services.settings.timeouts &&
           services.syntax.isLoopAdvanceValue(replacement.node)
@@ -266,21 +341,24 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
           })
           continue
         }
-        let { start, end } = replacement.node
         candidates.push({
           ignoreRule: findIgnoreRule(rules, {
             line: getSourcePosition(parsed.lineStarts, start).line,
             mutator: registered.id,
             start,
           }),
+          scope:
+            hosts === null ?
+              getScopePath(tree, replacement.node)
+            : TEMPLATE_SCOPE,
           solitary: getSolitaryRanges(replacement.solitary),
           kind: getReplacementKind(replacement.node)!,
-          scope: getScopePath(tree, replacement.node),
           emission: candidates.length,
-          text: replacement.text,
+          text: fit.text,
           registered,
           start,
           end,
+          ...pickFocus(replacement),
         })
       }
     }

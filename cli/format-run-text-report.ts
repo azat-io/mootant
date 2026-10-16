@@ -5,6 +5,8 @@ import type {
 } from '../types/report/run-report'
 import type { RunKind } from '../types/run/run-kind'
 
+import { sortByLocation } from './sort-by-location'
+import { formatLocation } from './format-location'
 import { formatChange } from './format-change'
 import { pluralize } from './pluralize'
 
@@ -42,25 +44,25 @@ const STATIC_COST_MODULES = 3
 
 /**
  * Formats a run report as plain text: one aligned line per mutant to act on
- * (`Survived`, `NoCoverage`, `Error`), with the covering test of a survivor or
- * the reason of an error on the next line, then the summary: counts, score, in
- * fast mode how many verdicts came from batch tries and may be false, time,
- * test runner runs and, when isolated units took more than a quarter of the
- * time, the source files whose mutants cost the most. Killed, timed-out and
- * ignored mutants are only counted.
+ * (`Survived`, `NoCoverage`, `Error`), sorted by the position it shows, with
+ * the covering test of a survivor or the reason of an error on the next line,
+ * then the summary: counts, score, in fast mode how many verdicts came from
+ * batch tries and may be false, time, test runner runs and, when isolated units
+ * took more than a quarter of the time, the source files whose mutants cost the
+ * most. Killed, timed-out and ignored mutants are only counted.
  *
  * @param report - Report of a run.
  * @returns Plain text without colors.
  */
 export function formatRunTextReport(report: RunReport): string {
   let tests = new Map(report.tests.map(test => [test.id, test]))
-  let listed = report.mutants.filter(mutant =>
-    LISTED_STATUSES.has(mutant.status),
+  let listed = sortByLocation(
+    report.mutants.filter(mutant => LISTED_STATUSES.has(mutant.status)),
   )
   let rows = listed.map(mutant => ({
-    location: `${mutant.file}:${mutant.line}:${mutant.column}`,
+    change: formatChange(mutant.focus ?? mutant),
     details: getDetails(mutant, tests),
-    change: formatChange(mutant),
+    location: formatLocation(mutant),
     mutator: mutant.mutator,
     status: mutant.status,
     id: mutant.id,

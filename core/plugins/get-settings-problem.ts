@@ -4,7 +4,7 @@ import { isRecord } from './is-record'
 /**
  * Names of the preset settings.
  */
-let settingNames = ['coarseMutants', 'timeouts']
+let settingNames = ['coarseMutants', 'templates', 'timeouts']
 
 /**
  * Finds what is wrong with preset settings read at runtime: they must be an

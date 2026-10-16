@@ -16,6 +16,7 @@ export interface Diagnostic {
     | 'config-overridden'
     | 'unrepeatable-test'
     | 'self-runtime-file'
+    | 'template-skipped'
     | 'instrument-error'
     | 'unsupported-file'
     | 'outside-workers'

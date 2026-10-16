@@ -12,6 +12,13 @@ export interface PresetSettings {
   coarseMutants: boolean
 
   /**
+   * Whether the expressions of Svelte and Vue templates are mutated, when the
+   * `svelte` or `@vue/compiler-dom` package can be loaded. True unless a preset
+   * or the configuration turns it off.
+   */
+  templates: boolean
+
+  /**
    * Whether mutants that only a timeout can kill are emitted, such as a loop
    * test forced to `true`. False unless a preset turns it on.
    */

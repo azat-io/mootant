@@ -30,8 +30,13 @@ function createFile(absolute: string, file: string): FileMutants {
 }
 
 describe('selectRunFiles', () => {
-  it('leaves out test files, components and the worker runtime', () => {
+  it('leaves out test files, Astro components and the worker runtime', () => {
     let kept = createFile(path.resolve('/project/src/a.ts'), 'src/a.ts')
+    let vue = createFile(path.resolve('/project/src/Card.vue'), 'src/Card.vue')
+    let svelte = createFile(
+      path.resolve('/project/src/Card.svelte'),
+      'src/Card.svelte',
+    )
     let own = createFile(
       path.join(PACKAGE, 'core/run/plan-batch.ts'),
       'core/run/plan-batch.ts',
@@ -40,8 +45,9 @@ describe('selectRunFiles', () => {
       [
         kept,
         createFile(path.resolve('/project/src/a.test.ts'), 'src/a.test.ts'),
-        createFile(path.resolve('/project/src/Card.vue'), 'src/Card.vue'),
-        createFile(path.resolve('/project/src/Card.svelte'), 'src/Card.svelte'),
+        vue,
+        svelte,
+        createFile(path.resolve('/project/src/Card.astro'), 'src/Card.astro'),
         createFile(
           path.join(PACKAGE, 'core/runtime/index.ts'),
           'core/runtime/index.ts',
@@ -60,7 +66,7 @@ describe('selectRunFiles', () => {
       PACKAGE,
     )
 
-    expect(result.files).toStrictEqual([kept, own])
+    expect(result.files).toStrictEqual([kept, vue, svelte, own])
     expect(
       result.diagnostics.map(({ message, code }) => [code, message]),
     ).toStrictEqual([
@@ -70,11 +76,7 @@ describe('selectRunFiles', () => {
       ],
       [
         'unsupported-file',
-        'src/Card.vue is a Vue component; mootant run does not run components yet.',
-      ],
-      [
-        'unsupported-file',
-        'src/Card.svelte is a Svelte component; mootant run does not run components yet.',
+        'src/Card.astro is an Astro component; mootant run does not run Astro components yet.',
       ],
       [
         'self-runtime-file',

@@ -13,11 +13,14 @@ import type { DryFile } from '../types/adapter/dry-file'
 import type { RunState } from '../types/run/run-state'
 
 import { createSwitchedFiles } from './instrument/create-switched-files'
+import { getComponentFramework } from './parser/get-component-framework'
+import { loadSvelteCompiler } from './parser/load-svelte-compiler'
 import { getPackageDirectory } from './run/get-package-directory'
 import { createWorkDirectory } from './run/create-work-directory'
 import { markOutsideMutants } from './run/mark-outside-mutants'
 import { runIsolatedRounds } from './run/run-isolated-rounds'
 import { computeStaticCost } from './run/compute-static-cost'
+import { loadVueCompiler } from './parser/load-vue-compiler'
 import { listFileMutants } from './files/list-file-mutants'
 import { getTestFileKey } from './run/get-test-file-key'
 import { compareCodeUnits } from './compare-code-units'
@@ -95,14 +98,14 @@ interface RunMutantsOptions {
 /**
  * Runs the mutants of the given paths against the project's tests: lists the
  * mutants, starts the test runner through its adapter, switches the mutated
- * files, runs the related tests without a mutant, then decides every covered
- * mutant on the isolated path, where each mutant gets a fresh module graph and
- * its whole covering test files. In fast mode, runtime mutants first take the
- * batch path, where one test run tries many mutants and kills are accepted as
- * heuristic verdicts; its survivors and doubtful tries still run isolated.
- * Mutants the test runner ran outside its workers end with `Error` unless a
- * test killed them. The adapter is closed and the work directory removed
- * whatever happens.
+ * files, checking that switched Svelte and Vue components compile, runs the
+ * related tests without a mutant, then decides every covered mutant on the
+ * isolated path, where each mutant gets a fresh module graph and its whole
+ * covering test files. In fast mode, runtime mutants first take the batch path,
+ * where one test run tries many mutants and kills are accepted as heuristic
+ * verdicts; its survivors and doubtful tries still run isolated. Mutants the
+ * test runner ran outside its workers end with `Error` unless a test killed
+ * them. The adapter is closed and the work directory removed whatever happens.
  *
  * @param options - Paths, configuration, adapters and run settings.
  * @returns Verdicts, diagnostics and timings, before they are formatted.
@@ -200,7 +203,13 @@ async function execute(context: {
     ...(session.diagnostics ?? []),
     ...selected.diagnostics,
   ]
-  let built = createSwitchedFiles(selected.files)
+  let frameworks = new Set(
+    selected.files.map(file => getComponentFramework(file.file)),
+  )
+  let built = createSwitchedFiles(selected.files, {
+    svelte: frameworks.has('svelte') ? await loadSvelteCompiler() : null,
+    vue: frameworks.has('vue') ? await loadVueCompiler() : null,
+  })
   context.switched.push(...built.switched)
   diagnostics.push(...built.diagnostics)
   let errors = new Map<string, string>()

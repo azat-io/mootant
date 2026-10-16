@@ -13,3 +13,4 @@
 </script>
 
 <button on:click={bump}>{value * 2}</button>
+<button on:click={() => value++}>+</button>

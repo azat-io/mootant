@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import * as svelte from 'svelte/compiler'
+import * as vue from '@vue/compiler-dom'
 
 import { createSwitchedFiles } from '../../../core/instrument/create-switched-files'
 import { createMutant } from '../../helpers/create-mutant'
@@ -90,6 +92,110 @@ describe('createSwitchedFiles', () => {
           switched: ';(globalThis.__mootant?.hit("m1") ? (x) : (a))',
           file: '/root/b.ts',
           original: 'a',
+        },
+      ],
+    })
+  })
+  it('reports a Svelte component whose switched text does not compile', () => {
+    let source = '<script>let a = $state(1)</script><input bind:value={a} />'
+
+    expect(
+      createSwitchedFiles(
+        [
+          {
+            mutants: [createMutant({ file: 'a.svelte', start: 53, end: 54 })],
+            absolute: '/root/a.svelte',
+            file: 'a.svelte',
+            source,
+          },
+          {
+            mutants: [createMutant({ file: 'b.svelte', start: 4, end: 5 })],
+            absolute: '/root/b.svelte',
+            source: '<p>{b}</p>',
+            file: 'b.svelte',
+          },
+        ],
+        { vue: null, svelte },
+      ),
+    ).toStrictEqual({
+      diagnostics: [
+        {
+          message:
+            'Cannot host the mutants of a.svelte. Svelte does not compile the switched file: Can only bind to an Identifier or MemberExpression or a `{get, set}` pair https://svelte.dev/e/bind_invalid_expression',
+          code: 'instrument-error',
+          severity: 'error',
+          file: 'a.svelte',
+          column: null,
+          line: null,
+        },
+      ],
+      switched: [
+        {
+          switched: '<p>{(globalThis.__mootant?.hit("m1") ? (x) : (b))}</p>',
+          original: '<p>{b}</p>',
+          file: '/root/b.svelte',
+        },
+      ],
+    })
+  })
+
+  it('does not compile Svelte components without a compiler', () => {
+    let source = '<script>let a = $state(1)</script><input bind:value={a} />'
+
+    expect(
+      createSwitchedFiles([
+        {
+          mutants: [createMutant({ file: 'a.svelte', start: 53, end: 54 })],
+          absolute: '/root/a.svelte',
+          file: 'a.svelte',
+          source,
+        },
+      ]).diagnostics,
+    ).toStrictEqual([])
+  })
+
+  it('reports a Vue component whose switched template does not compile', () => {
+    let source = '<template><p @click="go(); n++">{{ a }}</p></template>'
+    let compilers = { svelte: null, vue }
+    let broken = createMutant({
+      replacement: 'a +',
+      file: 'a.vue',
+      start: 35,
+      end: 36,
+    })
+    let update = createMutant({
+      replacement: 'n--',
+      file: 'b.vue',
+      start: 27,
+      end: 30,
+    })
+
+    expect(
+      createSwitchedFiles(
+        [
+          { absolute: '/root/a.vue', mutants: [broken], file: 'a.vue', source },
+          { absolute: '/root/b.vue', mutants: [update], file: 'b.vue', source },
+        ],
+        compilers,
+      ),
+    ).toStrictEqual({
+      diagnostics: [
+        {
+          message:
+            'Cannot host the mutants of a.vue. Vue does not compile the switched template: Error parsing JavaScript expression: Unexpected token (1:47)',
+          code: 'instrument-error',
+          severity: 'error',
+          file: 'a.vue',
+          column: null,
+          line: null,
+        },
+      ],
+      switched: [
+        {
+          switched:
+            '<template><p @click="go(); {}(Math[Symbol.for(`mootant`)]?.hit(`m1`) ? (n--) : (n++))">{{ a }}</p></template>',
+          file: '/root/b.vue',
+          original: source,
         },
       ],
     })

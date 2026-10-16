@@ -7,6 +7,7 @@ import type { MutantResult } from '../../../types/run/mutant-result'
 import type { Diagnostic } from '../../../types/mutant/diagnostic'
 
 import { runReferenceMutants } from '../../helpers/run-reference-mutants'
+import { compareCodeUnits } from '../../../core/compare-code-units'
 import { vitestAdapter } from '../../../adapters/vitest/index'
 import { runMutants } from '../../../core/run-mutants'
 
@@ -27,6 +28,7 @@ let sources = [
   'src/counter.ts',
   'src/lazy.ts',
   'src/ready.ts',
+  'src/slug.ts',
   'src/threshold.ts',
   'src/tick.ts',
 ]
@@ -65,6 +67,8 @@ interface Row {
  * @param options - How the reference runs.
  * @param options.separate - Whether the reference runs every copy in its own
  *   Vitest run and counts every error of that run, teardown included.
+ * @param options.config - Text of the Vitest configuration of the shared
+ *   reference run, for a project that needs a plugin.
  * @param options.hangs - Tells the mutants a plain run never finishes with,
  *   such as a synchronous endless loop; the reference leaves them out as
  *   `hangs`.
@@ -76,6 +80,7 @@ async function runAllPaths(
   options: {
     hangs?(result: MutantResult): boolean
     separate?: boolean
+    config?: string
   } = {},
 ): Promise<{
   isolated: Awaited<ReturnType<typeof runMutants>>
@@ -83,7 +88,7 @@ async function runAllPaths(
   original: boolean
   rows: Row[]
 }> {
-  let { hangs = () => false, separate = false } = options
+  let { hangs = () => false, separate = false, config } = options
   let builtIns = createBuiltIns(vitestAdapter())
   let isolated = await runMutants({
     cwd: directory,
@@ -103,7 +108,7 @@ async function runAllPaths(
     isolated.results
       .filter(result => !hangs(result))
       .map(result => result.mutant),
-    { sources: files, separate },
+    { sources: files, separate, config },
   )
   let fastById = new Map(fast.results.map(result => [result.mutant.id, result]))
   return {
@@ -213,6 +218,20 @@ function createBuiltIns(adapter: TestAdapter): BuiltInAdapters {
       detect: () => Promise.resolve(true),
     },
   }
+}
+
+/**
+ * Lists the files with a mutant the reference kills.
+ *
+ * @param rows - Verdicts per mutant.
+ * @returns Paths of the files.
+ */
+function getKilledFiles(rows: Row[]): Set<string> {
+  return new Set(
+    rows
+      .filter(row => row.reference === 'killed')
+      .map(row => row.mutant.split(' | ', 1)[0]!),
+  )
 }
 
 /**
@@ -529,6 +548,197 @@ describe('verdict equivalence', () => {
 
     expect(result.results.map(classify)).toStrictEqual(['killed'])
   }, 30_000)
+
+  it('agrees with mutants applied by hand in Vue components and templates', async () => {
+    // Scripts reach the Vue plugin in every form: inlined into the component
+    // module, as the `?vue&type=script` request of a `tsx` script, and as an
+    // external `<script src>` file. The card and the buttons are mounted in a
+    // DOM, where their event handlers run.
+    let { original, isolated, fast, rows } = await runAllPaths(
+      path.join(root, 'vue'),
+      [
+        'src/badge.vue',
+        'src/card.vue',
+        'src/counter.vue',
+        'src/price.ts',
+        'src/save.vue',
+        'src/toggle.vue',
+        'src/total.vue',
+      ],
+      {
+        config: [
+          "import vue from '@vitejs/plugin-vue'",
+          '',
+          'export default {',
+          "  test: { include: ['*/test/**/*.test.ts'] },",
+          '  plugins: [vue()],',
+          '}',
+          '',
+        ].join('\n'),
+      },
+    )
+
+    expect(original).toBe(true)
+    expect(isolated.diagnostics).toStrictEqual([])
+    expect(fast.diagnostics).toStrictEqual([])
+    expectAgreement(rows)
+    expect(getKilledFiles(rows)).toStrictEqual(
+      new Set([
+        'src/counter.vue',
+        'src/toggle.vue',
+        'src/badge.vue',
+        'src/total.vue',
+        'src/card.vue',
+        'src/save.vue',
+        'src/price.ts',
+      ]),
+    )
+    // Template mutants are switched and attributed to the tests that render
+    // them: the `v-if` branch renders only after the clicks, and each handler
+    // runs only in the test that clicks its button.
+    let names = new Map(isolated.tests.map(test => [test.id, test.name]))
+    let coverage = new Map(
+      isolated.results
+        .filter(result => result.mutant.scope === '<template>')
+        .map(result => [
+          result.mutant.replacement,
+          [
+            result.status,
+            result.coveredBy
+              .map(id => names.get(id)!)
+              .toSorted(compareCodeUnits),
+          ],
+        ]),
+    )
+
+    expect(coverage.get('count / 2')).toStrictEqual([
+      'Killed',
+      ['counts clicks'],
+    ])
+    expect(coverage.get('count--')).toStrictEqual(['Killed', ['counts clicks']])
+    expect(coverage.get('count++')).toStrictEqual([
+      'Killed',
+      ['adds one with the second button'],
+    ])
+    expect(coverage.get('""')).toStrictEqual([
+      'Killed',
+      [
+        'adds one with the second button',
+        'counts clicks',
+        'lists the items without the skipped one',
+      ],
+    ])
+    // No template mutant of the buttons is an Error: the rejected save still
+    // reaches the error handler, the function handler compiles, and the
+    // guard of its second statement leaves the condition whole.
+    expect(
+      isolated.results
+        .filter(
+          result =>
+            result.mutant.file === 'src/save.vue' &&
+            result.mutant.scope === '<template>',
+        )
+        .map(result => `${result.mutant.replacement} ${result.status}`),
+    ).toStrictEqual([
+      'save() Survived',
+      'ready Killed',
+      'count >= 0 Killed',
+      'count != 0 Killed',
+      'count > 1 Survived',
+      'count += 2 NoCoverage',
+      '3 NoCoverage',
+      'count += 1 Killed',
+      '2 Killed',
+    ])
+    // The compiler hoists the defaults of `withDefaults` out of `setup`, so
+    // the mutant runs while the component module loads.
+    expect(
+      isolated.results.find(
+        result =>
+          describeMutant(result) === 'src/counter.vue | number-literal | 2',
+      ),
+    ).toMatchObject({ isolatedBecause: 'static', status: 'Killed' })
+    // The compiler reads the model name as written, so only the labels of
+    // the toggle are emptied.
+    expect(
+      rows.filter(row => row.mutant === "src/toggle.vue | string-literal | ''"),
+    ).toHaveLength(2)
+  }, 60_000)
+
+  it('agrees with mutants applied by hand in Svelte components, templates and modules', async () => {
+    let { original, isolated, fast, rows } = await runAllPaths(
+      path.join(root, 'svelte'),
+      [
+        'src/badge.svelte',
+        'src/greeting.svelte',
+        'src/stars.svelte',
+        'src/tally.svelte.ts',
+      ],
+      {
+        config: [
+          "import { svelte } from '@sveltejs/vite-plugin-svelte'",
+          '',
+          'export default {',
+          "  test: { include: ['*/test/**/*.test.ts'] },",
+          '  plugins: [svelte({ configFile: false })],',
+          '}',
+          '',
+        ].join('\n'),
+      },
+    )
+
+    expect(original).toBe(true)
+    expect(isolated.diagnostics).toStrictEqual([])
+    expect(fast.diagnostics).toStrictEqual([])
+    expectAgreement(rows)
+    expect(getKilledFiles(rows)).toStrictEqual(
+      new Set([
+        'src/greeting.svelte',
+        'src/tally.svelte.ts',
+        'src/stars.svelte',
+        'src/badge.svelte',
+      ]),
+    )
+    // Template mutants are switched and attributed to the tests that render
+    // them: each branch of the `{#if}` renders in one test only.
+    let names = new Map(isolated.tests.map(test => [test.id, test.name]))
+    let coverage = new Map(
+      isolated.results
+        .filter(result => result.mutant.scope === '<template>')
+        .map(result => [
+          `${result.mutant.file} ${result.mutant.replacement}`,
+          [
+            result.status,
+            result.coveredBy
+              .map(id => names.get(id)!)
+              .toSorted(compareCodeUnits),
+          ],
+        ]),
+    )
+
+    expect(coverage.get('src/badge.svelte label.toLowerCase()')).toStrictEqual([
+      'Killed',
+      ['shows the label without a count'],
+    ])
+    expect(coverage.get('src/badge.svelte count == 10')).toStrictEqual([
+      'Killed',
+      ['shows the count'],
+    ])
+    expect(coverage.get('src/badge.svelte count >= 0')).toStrictEqual([
+      'Killed',
+      ['shows the count', 'shows the label without a count'],
+    ])
+    expect(coverage.get("src/stars.svelte ''")).toStrictEqual([
+      'Killed',
+      ['draws a star per point'],
+    ])
+    // Svelte accepts the rune only at the top level of the constructor.
+    expect(
+      rows.filter(row =>
+        row.mutant.startsWith('src/tally.svelte.ts | statement-removal'),
+      ),
+    ).toStrictEqual([])
+  }, 60_000)
 
   it('gives Error to mutants that only a global setup runs', async () => {
     let result = await runMutants({

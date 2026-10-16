@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import type { UnsoundSkips } from '../../helpers/find-unsound-skips'
+import type {
+  UnsoundSkips,
+  MutantProbe,
+  SkipProbe,
+} from '../../helpers/find-unsound-skips'
 import type { WeakMutants } from '../../helpers/find-weak-mutants'
 
 import { generateCandidates } from '../../helpers/generate-candidates'
@@ -46,6 +50,44 @@ interface Idiom {
    * File name, whose extension selects the language.
    */
   file: string
+
+  /**
+   * Name of the idiom.
+   */
+  name: string
+}
+
+/**
+ * Regular expression idiom of the differential run: a function `f`, the inputs
+ * it is called with, and the rules of the regex skips it checks.
+ */
+interface RegexIdiom {
+  /**
+   * Preset settings over those of the preset, such as `timeouts: false` for an
+   * idiom whose empty matches would hang.
+   */
+  settings?: { timeouts: boolean }
+
+  /**
+   * Arguments of `f`, one list per input.
+   */
+  inputs: unknown[][]
+
+  /**
+   * Rules of the skipped regex candidates of `f` whose claims the run checks,
+   * in canonical order.
+   */
+  skips: string[]
+
+  /**
+   * Source lines of `f`.
+   */
+  lines: string[]
+
+  /**
+   * Name of the file, `example.ts` when not given.
+   */
+  file?: string
 
   /**
    * Name of the idiom.
@@ -159,6 +201,44 @@ const STRINGS = [
   'ß',
   'aß',
   'İ',
+]
+
+/**
+ * Strings that tell apart anchors, cases, line breaks, digits, word boundaries
+ * and repeated matches of the regular expression idioms.
+ */
+const REGEX_STRINGS = [
+  '',
+  'a',
+  'A',
+  'aa',
+  'ba',
+  'abab',
+  'ab\nab',
+  '\nab',
+  'xab',
+  'abx',
+  'a1',
+  '123',
+  '123-ab',
+  '123-AB',
+  '12-ab',
+  '1234-ab',
+  ' 123-ab',
+  '123-ab ',
+  '123-',
+  '1x3-ab',
+  'foo',
+  'foobar',
+  'a foo',
+  '_foo',
+  'foo.',
+  'x1y22',
+  'a\nb',
+  'a.b',
+  'acb',
+  'bc',
+  'b',
 ]
 
 /**
@@ -833,6 +913,301 @@ const IDIOMS: Idiom[] = [
 ]
 
 /**
+ * Regular expression idioms: anchors, edge wildcards, global replaces and
+ * matches, unused flags, assertions and a loop over global matches. Mutants of
+ * regex patterns often subsume each other, so only the equivalence of regex
+ * mutants and the claims of skips are checked.
+ */
+const REGEX_IDIOMS: RegexIdiom[] = [
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return /^\d{3}-[a-z]+$/i.test(s)`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, '123-z', '123-Z', '123-a']),
+    name: 'a regular expression test with anchors',
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return /^[^]*ab[\s\S]*$/.exec(s)?.[0]`,
+      '}',
+    ],
+    skips: ['edge-wildcard', 'any-character', 'edge-wildcard'],
+    name: 'a regular expression with edge wildcards',
+    inputs: combine([...REGEX_STRINGS, 'ab12']),
+  },
+  {
+    lines: ['function f(s: string) {', "  return s.replace(/^a+/g, '-')", '}'],
+    name: 'a global replace anchored at the start',
+    inputs: combine(REGEX_STRINGS),
+    skips: ['anchored-global'],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return s.replace(/\s+$/g, '!')`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, 'a  ', ' a \n ', '\n\n']),
+    name: 'a global replace anchored at the end',
+    skips: ['anchored-global'],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return s.replace(/\s*$/g, '!')`,
+      '}',
+    ],
+    name: 'a global replace anchored at the end that matches empty',
+    inputs: combine([...REGEX_STRINGS, 'a  ', ' a \n ']),
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return s.replace(/[\q{ab|}--\q{z}]$/gv, '!')`,
+      '}',
+    ],
+    name: 'a global replace anchored after a set operation',
+    inputs: combine([...REGEX_STRINGS, 'ab', 'zab']),
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return /a[\s\S\q{}]$/v.test(s)`,
+      '}',
+    ],
+    name: 'a class of any character and the empty string',
+    inputs: combine([...REGEX_STRINGS, 'ab', 'a ', 'b ']),
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return s.match(/\d/g) ? 1 : 2`,
+      '}',
+    ],
+    name: 'a global match used as a condition',
+    inputs: combine(REGEX_STRINGS),
+    skips: ['unused-flag'],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return s.replace(/\d+/gims, '#')`,
+      '}',
+    ],
+    skips: ['unused-flag', 'unused-flag', 'unused-flag'],
+    name: 'a global replace with unused flags',
+    inputs: combine(REGEX_STRINGS),
+  },
+  {
+    lines: ['function f(s: string) {', '  return s.match(/^a.|bc?$/gms)', '}'],
+    name: 'a global match with line flags',
+    inputs: combine(REGEX_STRINGS),
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return s.replace(/\bfoo(?!bar)/g, 'X')`,
+      '}',
+    ],
+    name: 'a replace with a word boundary and a lookahead',
+    inputs: combine([...REGEX_STRINGS, 'FOO', 'foo foo']),
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      '  let pattern = /a+b?/g',
+      '  let found = []',
+      '  let match',
+      '  while ((match = pattern.exec(s))) {',
+      '    found.push(match.index)',
+      '  }',
+      '  return found',
+      '}',
+    ],
+    inputs: combine(['', 'b', 'Ab', 'aab', 'ab aa']),
+    name: 'a loop over global matches',
+    settings: { timeouts: false },
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return new RegExp('^\\d{3}-[a-z]+$', 'i').test(s)`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, '123-z', '123-Z', '123-a']),
+    name: 'a RegExp call with an escaped string pattern',
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return RegExp("\\\\|\"|b").test(s)`,
+      '}',
+    ],
+    name: 'a RegExp call with escaped quotes and backslashes',
+    inputs: combine([...REGEX_STRINGS, '\\', '"', 'b']),
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      "  return s.replace(new RegExp(String.raw`\\s+(?=\\d)`, 'g'), '_')",
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, 'a 1', 'a  1 b', ' 1 2']),
+    name: 'a RegExp call with a String.raw pattern',
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      "  return s.replace(RegExp(`^a+`, 'g'), '-')",
+      '}',
+    ],
+    name: 'a RegExp call with a template pattern anchored at the start',
+    inputs: combine(REGEX_STRINGS),
+    skips: ['anchored-global'],
+  },
+  {
+    lines: [
+      'function f(s: string, word: string) {',
+      `  return new RegExp(\`^\${word}$\`).test(s)`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, 'b', '$'], ['a', 'ab', '\\']),
+    name: 'a RegExp call with a template that has an expression',
+    skips: [],
+  },
+  {
+    inputs: combine(
+      [
+        ...REGEX_STRINGS,
+        'b',
+        '1.a',
+        '11.a',
+        '.a',
+        'x.a',
+        '1.A',
+        'z1.a',
+        '1.az',
+        '1xa',
+      ],
+      ['a', 'ab'],
+    ),
+    lines: [
+      'function f(s, word) {',
+      `  return new RegExp(\`^\${word}$\`).test(s) ||`,
+      '    new RegExp(String.raw`^\\d+\\.a$`).test(s)',
+      '}',
+    ],
+    name: 'RegExp calls with templates in JavaScript',
+    file: 'example.js',
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return new RegExp('^\0?1').test(s)`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, '\u{0}1', '1', '\u{0}', '2']),
+    name: 'a RegExp call with a null escape before a digit',
+    skips: [],
+  },
+]
+
+/**
+ * Mutants and checked skipped candidates of `f` in a snippet, with the outputs
+ * of each and of the original.
+ */
+interface IdiomProbes {
+  /**
+   * Skipped candidates of `f` whose category the outputs can check.
+   */
+  skipProbes: ({ mutator: string; rule: string } & SkipProbe)[]
+
+  /**
+   * Mutants of `f` with their outputs.
+   */
+  probes: MutantProbe[]
+
+  /**
+   * Outputs of the original snippet.
+   */
+  original: string[]
+}
+
+/**
+ * Generates the mutants and skipped candidates of a snippet without coarse
+ * mutants, and runs the original and every mutant and checked skipped candidate
+ * of `f` on every input.
+ *
+ * @param source - Snippet; only the code from `function f(` on is checked.
+ * @param inputs - Arguments of `f`, one list per input.
+ * @param setup - File name, whose extension selects the language, preset of the
+ *   run and preset settings over those of the preset.
+ * @returns Outputs of the original, the mutants and the skipped candidates.
+ */
+async function probeIdiom(
+  source: string,
+  inputs: unknown[][],
+  setup: { settings?: { timeouts: boolean }; preset: string; file: string },
+): Promise<IdiomProbes> {
+  let { settings, preset, file } = setup
+  let start = source.indexOf('function f(')
+  let { mutants, skipped } = generateCandidates(source, {
+    settings: { ...settings, coarseMutants: false },
+    preset,
+    file,
+  })
+  let probes = await Promise.all(
+    mutants
+      .filter(mutant => mutant.start >= start)
+      .map(async mutant => ({
+        label: `${mutant.mutator} ${source.slice(mutant.start, mutant.end)} -> ${mutant.replacement}`,
+        outputs: await runProgram(applyMutant(source, mutant), file, inputs),
+        mutator: mutant.mutator,
+        start: mutant.start,
+        id: mutant.id,
+      })),
+  )
+  let skipProbes = await Promise.all(
+    skipped
+      .filter(
+        candidate =>
+          candidate.start >= start &&
+          candidate.kind !== null &&
+          CHECKED_CATEGORIES.has(candidate.category) &&
+          !UNCHECKED_RULES.has(candidate.rule),
+      )
+      .map(async candidate => ({
+        outputs: await runProgram(
+          applyMutant(source, { ...candidate, kind: candidate.kind! }),
+          file,
+          inputs,
+        ),
+        label: `${candidate.mutator} ${source.slice(candidate.start, candidate.end)} -> ${candidate.replacement} (${candidate.rule})`,
+        category: candidate.category,
+        mutator: candidate.mutator,
+        rule: candidate.rule,
+        by: candidate.by,
+      })),
+  )
+  let original = await runProgram(source, file, inputs)
+  return { skipProbes, original, probes }
+}
+
+/**
  * Lists every combination of one value from each list.
  *
  * @param lists - Values of each argument.
@@ -949,49 +1324,11 @@ describe('generateFileMutants', () => {
   )(
     'keeps no weak mutant and no unsound skip in $name under $preset',
     async ({ unsoundSkips, expected, inputs, preset, lines, file }) => {
-      let source = lines.join('\n')
-      let start = source.indexOf('function f(')
-      let { mutants, skipped } = generateCandidates(source, {
-        settings: { coarseMutants: false },
-        preset,
-        file,
-      })
-      let probes = await Promise.all(
-        mutants
-          .filter(mutant => mutant.start >= start)
-          .map(async mutant => ({
-            outputs: await runProgram(
-              applyMutant(source, mutant),
-              file,
-              inputs,
-            ),
-            label: `${mutant.mutator} ${source.slice(mutant.start, mutant.end)} -> ${mutant.replacement}`,
-            mutator: mutant.mutator,
-            start: mutant.start,
-            id: mutant.id,
-          })),
+      let { skipProbes, original, probes } = await probeIdiom(
+        lines.join('\n'),
+        inputs,
+        { preset, file },
       )
-      let skipProbes = await Promise.all(
-        skipped
-          .filter(
-            candidate =>
-              candidate.start >= start &&
-              candidate.kind !== null &&
-              CHECKED_CATEGORIES.has(candidate.category) &&
-              !UNCHECKED_RULES.has(candidate.rule),
-          )
-          .map(async candidate => ({
-            outputs: await runProgram(
-              applyMutant(source, { ...candidate, kind: candidate.kind! }),
-              file,
-              inputs,
-            ),
-            label: `${candidate.mutator} ${source.slice(candidate.start, candidate.end)} -> ${candidate.replacement} (${candidate.rule})`,
-            category: candidate.category,
-            by: candidate.by,
-          })),
-      )
-      let original = await runProgram(source, file, inputs)
 
       expect(probes.length).toBeGreaterThan(0)
       expect(findWeakMutants(original, probes)).toStrictEqual(expected)
@@ -999,6 +1336,39 @@ describe('generateFileMutants', () => {
         ...SOUND,
         ...unsoundSkips,
       })
+    },
+  )
+
+  it.each(
+    REGEX_IDIOMS.flatMap(idiom => [
+      { preset: 'recommended', ...idiom },
+      { preset: 'strict', ...idiom },
+    ]),
+  )(
+    'keeps no equivalent regex mutant and no unsound skip in $name under $preset',
+    async ({ file = 'example.ts', settings, inputs, preset, skips, lines }) => {
+      let { skipProbes, original, probes } = await probeIdiom(
+        lines.join('\n'),
+        inputs,
+        { settings, preset, file },
+      )
+
+      expect(
+        probes.filter(probe => probe.mutator.startsWith('regex-')).length,
+      ).toBeGreaterThan(0)
+      expect(
+        findWeakMutants(original, probes).equivalent.filter(label =>
+          label.startsWith('regex-'),
+        ),
+      ).toStrictEqual([])
+      expect(
+        skipProbes
+          .filter(probe => probe.mutator.startsWith('regex-'))
+          .map(probe => probe.rule),
+      ).toStrictEqual(skips)
+      expect(findUnsoundSkips(original, probes, skipProbes)).toStrictEqual(
+        SOUND,
+      )
     },
   )
 })

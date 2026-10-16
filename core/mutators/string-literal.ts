@@ -5,9 +5,11 @@ import type { Replacement } from '../../types/mutator/replacement'
 import type { SkipNote } from '../../types/mutant/skip-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
+import { readRegexArgument } from '../regex/read-regex-argument'
 import { createRunContext } from './shared/create-run-context'
 import { isLookupPosition } from './shared/is-lookup-position'
 import { getLiteralSkip } from './shared/get-literal-skip'
+import { readRegexCall } from '../regex/read-regex-call'
 
 /**
  * Options of the string-literal mutator.
@@ -46,9 +48,10 @@ let lookupMethods = new Set([
  * Empties a string or the static text of a template literal, or fills an empty
  * one (catalog 4.16, T8). Keys, comparison, boolean-mode and `void` operands,
  * `Symbol` descriptions, error messages, lookup keys whose call is only tested,
- * JSX attribute strings, bare string statements, tagged templates, templates
- * without static text and (unless the `caseTests` option is set) case labels
- * are skipped, and so are mutants that another mutant owns or subsumes (branch
+ * JSX attribute strings, the pattern and flags of `RegExp` calls the regex
+ * mutators read, bare string statements, tagged templates, templates without
+ * static text and (unless the `caseTests` option is set) case labels are
+ * skipped, and so are mutants that another mutant owns or subsumes (branch
  * pairs, no-op callbacks, emptied `||` defaults). A skipped change follows as a
  * skipped replacement; a template without static text has nothing to change.
  */
@@ -115,8 +118,8 @@ interface StringChange {
  * Decides whether string-literal skips the change of a string (catalog 4.16):
  * tagged templates, keys, case labels unless the `caseTests` option is set,
  * bare string statements, JSX attribute strings, `Symbol` descriptions, the
- * rules all literal mutators share, and an emptied lookup key whose call is
- * only tested (O8).
+ * arguments of `RegExp` calls the regex mutators read, the rules all literal
+ * mutators share, and an emptied lookup key whose call is only tested (O8).
  *
  * @param node - String literal or template literal.
  * @param change - New text and value.
@@ -167,6 +170,10 @@ function getStringSkip(
       rule: 'symbol-description',
     }
   }
+  let regexSkip = getRegexArgumentSkip(node, context)
+  if (regexSkip) {
+    return regexSkip
+  }
   let runContext = createRunContext(context)
   if (value === null) {
     return getLiteralSkip(node, { change: { text } }, runContext)
@@ -188,6 +195,55 @@ function getStringSkip(
     return null
   }
   return getLiteralSkip(node, { change: { value }, getOwnSkip }, runContext)
+}
+
+/**
+ * Skips the pattern and the flags of a call of `RegExp` that the regex mutators
+ * read (catalog 4.16): an emptied pattern matches everything, which the mutants
+ * of the conditions that test the match already cover, and the flags of a known
+ * pattern belong to regex-flag when it runs (catalog 2.7). A template pattern
+ * with expressions stays mutated: emptying it keeps the expressions, so the
+ * pattern is not empty and regex-pattern changes only its edge anchors. The
+ * flags of such a template, whose flags regex-flag does not change, stay
+ * mutated too.
+ *
+ * @param node - String literal or template literal.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null.
+ */
+function getRegexArgumentSkip(
+  node: TemplateLiteral | StringLiteral,
+  context: MutatorContext,
+): SkipNote | null {
+  let { parent, index, key } = context.syntax.getContextSlot(node)
+  let call =
+    key === 'arguments' && parent ? readRegexCall(parent, context) : null
+  if (call === null) {
+    return null
+  }
+  if (index === 0) {
+    if (node.type === 'TemplateLiteral' && node.expressions.length > 0) {
+      return null
+    }
+    return {
+      reason:
+        'an empty RegExp pattern matches everything, which the conditions that test the match cover',
+      rule: 'regex-argument',
+    }
+  }
+  let source = readRegexArgument(call, context.sourceCode.text)
+  let owner = { mutator: 'regex-flag', node: call.flagsNode! }
+  if (
+    source &&
+    !source.dynamic &&
+    createRunContext(context).runs(owner, { mutator: 'string-literal', node })
+  ) {
+    return {
+      reason: 'regex-flag changes the flags of RegExp',
+      rule: 'regex-argument',
+    }
+  }
+  return null
 }
 
 /**

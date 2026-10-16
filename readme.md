@@ -23,8 +23,9 @@ mootant list src
 Mootant reads JavaScript and TypeScript files (`.js`, `.jsx`, `.mjs`, `.cjs`,
 `.ts`, `.tsx`, `.mts`, `.cts`) and the scripts of Vue, Svelte and Astro
 components (`.vue`, `.svelte`, `.astro`): `<script>` blocks and the code between
-the leading `---` lines of an Astro file. Expressions in component templates are
-not mutated.
+the leading `---` lines of an Astro file. Expressions in Svelte templates are
+mutated too when Svelte 5 or later is installed, and in Vue templates when
+`@vue/compiler-dom` 3.5 or later is; Astro templates are not.
 
 Options:
 
@@ -49,7 +50,8 @@ emitter.emit('change', value)
 
 `mootant-ignore-start` / `mootant-ignore-end` cover a region and
 `mootant-ignore-file` the whole file. Without a list of mutators, every mutator
-is ignored.
+is ignored. In a Svelte or Vue template, write them as HTML comments:
+`<!-- mootant-ignore-next-line -->`.
 
 ## Running
 
@@ -76,8 +78,13 @@ The score is killed and timed-out mutants over all scored mutants; `Ignored` and
 `Error` are excluded. The exit code is 1 on errors or a score below the
 threshold. Snapshots are never updated.
 
-Vue, Svelte and Astro components can be listed but not run yet. Tests that load
-a mutated file only through a computed `import()` may not be selected.
+Vue and Svelte components run through the project's Vite plugin of the
+framework; code their compilers read as written, such as `defineProps()` or a
+rune call, is not mutated. A Svelte component or Vue template that does not
+compile with its mutants gives them `Error` with the compiler's message. Vue
+templates reach mutants through `Math[Symbol.for('mootant')]`, so tests that
+freeze `Math` break them. Astro components can be listed but not run yet. Tests
+that load a mutated file only through a computed `import()` may not be selected.
 
 ## Configuration
 
@@ -106,7 +113,8 @@ export default defineConfig({
 - `extends`: presets applied first, in order (`['recommended']` by default)
 - `mutators`: `'on'`, `'off'` or `['on', options]` for each mutator id, over the
   presets
-- `settings`: `coarseMutants` and `timeouts`, over the presets
+- `settings`: `coarseMutants`, `timeouts` and `templates` (`false` leaves Svelte
+  and Vue templates alone), over the presets
 - `plugins`: plugin objects by namespace, imported by the configuration file.
   Their mutators and presets get ids like `acme/name`:
 

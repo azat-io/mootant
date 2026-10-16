@@ -1,5 +1,6 @@
 import type { RegisteredMutator } from '../mutator/registered-mutator'
 import type { SkipJustifier } from './skip-justifier'
+import type { TextEdit } from '../source/text-edit'
 import type { SkipRuleId } from './skip-rule-id'
 
 /**
@@ -26,6 +27,12 @@ export interface SkippedCandidate {
    * Whether the skip rests on a guess beyond its rule.
    */
   heuristic: boolean
+
+  /**
+   * Edit inside the replaced range that the mutant amounts to, which reports
+   * show in place of the whole range; absent when the mutator names none.
+   */
+  focus?: TextEdit
 
   /**
    * Position in the order in which skipped replacements were found.

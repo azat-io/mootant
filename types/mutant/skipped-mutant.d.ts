@@ -1,5 +1,6 @@
 import type { SkipJustifier } from './skip-justifier'
 import type { SkipCategory } from './skip-category'
+import type { TextEdit } from '../source/text-edit'
 import type { SkipRuleId } from './skip-rule-id'
 
 /**
@@ -32,6 +33,12 @@ export interface SkippedMutant {
    * Whether the skip rests on a guess rather than on a proof.
    */
   heuristic: boolean
+
+  /**
+   * Edit inside the replaced range that the mutant amounts to, which reports
+   * show in place of the whole range; absent when the mutator names none.
+   */
+  focus?: TextEdit
 
   /**
    * Id of the skip rule.

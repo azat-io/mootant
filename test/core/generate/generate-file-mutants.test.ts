@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import * as svelte from 'svelte/compiler'
+import * as vue from '@vue/compiler-dom'
 
 import type { ActiveMutator } from '../../../types/mutator/active-mutator'
 import type { FileMutants } from '../../../types/mutant/file-mutants'
@@ -6,6 +8,7 @@ import type { Mutator } from '../../../types/mutator/mutator'
 
 import { generateFileMutants } from '../../../core/generate/generate-file-mutants'
 import { createMutantId } from '../../../core/identity/create-mutant-id'
+import { updateOperator } from '../../../core/mutators/update-operator'
 
 /**
  * Ids that ignore directives of the snippets may list.
@@ -79,6 +82,36 @@ const SKIPPER: Mutator = {
 }
 
 /**
+ * Generates the `arithmetic` and `removal` mutants of a Svelte component with
+ * the Svelte compiler.
+ *
+ * @param lines - Lines of the component, joined with line feeds.
+ * @param templates - Whether the `templates` setting is on; true when omitted.
+ * @returns Result of the file.
+ */
+function generateSvelte(
+  lines: string[],
+  templates = true,
+): Omit<FileMutants, 'absolute'> {
+  return generateFileMutants({
+    mutators: [
+      activate('arithmetic', 0, ARITHMETIC),
+      activate('removal', 1, REMOVAL),
+    ],
+    settings: Object.freeze({
+      coarseMutants: true,
+      timeouts: false,
+      templates,
+    }),
+    compilers: { vue: null, svelte },
+    source: lines.join('\n'),
+    file: 'src/Card.svelte',
+    knownMutatorIds,
+    skipped: true,
+  })
+}
+
+/**
  * Generates the mutants of a snippet without timeouts.
  *
  * @param lines - Source lines, joined with line feeds.
@@ -95,6 +128,7 @@ function generate(
   return generateFileMutants({
     settings: Object.freeze({
       coarseMutants: setup.coarseMutants ?? false,
+      templates: true,
       timeouts: false,
     }),
     skipped: setup.skipped ?? false,
@@ -117,7 +151,11 @@ function generateComponent(
   file: string,
 ): Omit<FileMutants, 'absolute'> {
   return generateFileMutants({
-    settings: Object.freeze({ coarseMutants: false, timeouts: false }),
+    settings: Object.freeze({
+      coarseMutants: false,
+      templates: true,
+      timeouts: false,
+    }),
     mutators: [activate('arithmetic', 0, ARITHMETIC)],
     source: lines.join('\n'),
     knownMutatorIds,
@@ -465,6 +503,283 @@ describe('generateFileMutants', () => {
 
     expect(result).toMatchObject({ mutants: [], parsed })
     expect(result.diagnostics).toHaveLength(parseErrors)
+  })
+
+  it('mutates the expressions of a Svelte template with the scope <template>', () => {
+    let result = generateSvelte([
+      '<script lang="ts">',
+      '  function f(n: number) { log(n + 1) }',
+      '</script>',
+      '<p>{(a as number) + b}</p>',
+      '<!-- mootant-ignore-next-line arithmetic: shown as is -->',
+      '{#if c + d}<button onclick={() => { f(e + g) }}>x</button>{/if}',
+    ])
+
+    expect(
+      result.mutants.map(mutant => [
+        mutant.mutator,
+        mutant.replacement,
+        mutant.scope,
+        mutant.status,
+      ]),
+    ).toStrictEqual([
+      ['removal', '', 'f', 'Pending'],
+      ['arithmetic', 'n - 1', 'f', 'Pending'],
+      ['arithmetic', '(a as number) - b', '<template>', 'Pending'],
+      ['arithmetic', 'c - d', '<template>', 'Ignored'],
+      ['arithmetic', 'e - g', '<template>', 'Ignored'],
+    ])
+    expect(result.skipped).toStrictEqual([])
+    expect(result.diagnostics).toStrictEqual([])
+  })
+
+  it('skips the position swap of an update an event handler returns', () => {
+    let result = generateFileMutants({
+      source: [
+        '<script>let { Comp } = $props(); let count = 0; let f = () => count++</script>',
+        '<button onclick={() => count++} on:blur={() => (count--)}>{count++}</button>',
+        '<Comp onchange={() => count++} />',
+      ].join('\n'),
+      settings: Object.freeze({
+        coarseMutants: false,
+        templates: true,
+        timeouts: false,
+      }),
+      mutators: [activate('update-operator', 0, updateOperator)],
+      compilers: { vue: null, svelte },
+      file: 'src/Card.svelte',
+      knownMutatorIds,
+      skipped: true,
+    })
+
+    expect(result.mutants.map(mutant => mutant.replacement)).toStrictEqual([
+      'count--',
+      '++count',
+      'count--',
+      'count++',
+      'count--',
+      '++count',
+      'count--',
+      '++count',
+    ])
+    expect(
+      result.skipped.map(mutant => [mutant.replacement, mutant.rule]),
+    ).toStrictEqual([
+      ['++count', 'unused-result'],
+      ['--count', 'unused-result'],
+    ])
+  })
+
+  it('mutates the expressions of a Vue template in the forms Vue compiles', () => {
+    let result = generateFileMutants({
+      source: [
+        '<script setup>let count = 0; let save = () => count + 1</script>',
+        '<template>',
+        '  <p :title="count + 1">{{ count - 1 }}</p>',
+        '  <!-- mootant-ignore-next-line -->',
+        '  <i v-if="count + 2" />',
+        '  <button @click="count++" @input="save" @blur="() => count++">x</button>',
+        '</template>',
+      ].join('\n'),
+      mutators: [
+        activate('arithmetic', 0, ARITHMETIC),
+        activate('update-operator', 1, updateOperator),
+      ],
+      settings: Object.freeze({
+        coarseMutants: false,
+        templates: true,
+        timeouts: false,
+      }),
+      compilers: { svelte: null, vue },
+      file: 'src/Card.vue',
+      knownMutatorIds,
+      skipped: true,
+    })
+
+    expect(
+      result.mutants.map(mutant => [
+        mutant.replacement,
+        mutant.scope,
+        mutant.status,
+      ]),
+    ).toStrictEqual([
+      ['count - 1', 'save', 'Pending'],
+      ['count - 1', '<template>', 'Pending'],
+      ['count - 2', '<template>', 'Ignored'],
+      ['count--', '<template>', 'Pending'],
+      ['count--', '<template>', 'Pending'],
+    ])
+    expect(
+      result.skipped.map(mutant => [mutant.replacement, mutant.rule]),
+    ).toStrictEqual([
+      ['++count', 'unused-result'],
+      ['++count', 'unused-result'],
+    ])
+    expect(
+      generateFileMutants({
+        settings: Object.freeze({
+          coarseMutants: false,
+          templates: true,
+          timeouts: false,
+        }),
+        mutators: [activate('arithmetic', 0, ARITHMETIC)],
+        source: '<template>{{ a + b }}</template>',
+        compilers: { vue: null, svelte },
+        file: 'src/Card.vue',
+        knownMutatorIds,
+      }).mutants,
+    ).toStrictEqual([])
+  })
+
+  it('reads a Svelte template that follows a byte order mark', () => {
+    let source = `${String.fromCodePoint(0xfe_ff)}<p>{a + 12}</p>`
+    let result = generateSvelte([source])
+
+    expect(
+      result.mutants.map(mutant => source.slice(mutant.start, mutant.end)),
+    ).toStrictEqual(['a + 12'])
+    expect(result.diagnostics).toStrictEqual([])
+  })
+
+  it('says an unclosed start in a template covers the rest of the template', () => {
+    let result = generateSvelte([
+      '<script>x = a + b</script>',
+      '<!-- mootant-ignore-start -->',
+      '<p>{a + 1}</p>',
+    ])
+
+    expect(
+      result.diagnostics.map(diagnostic => diagnostic.message),
+    ).toStrictEqual([
+      'mootant-ignore-start has no matching mootant-ignore-end; it covers the rest of the template.',
+    ])
+    expect(result.mutants.map(mutant => mutant.status)).toStrictEqual([
+      'Pending',
+      'Pending',
+      'Ignored',
+    ])
+  })
+
+  it.each([
+    { name: 'the templates setting is off', templates: false },
+    { name: 'the template has no expressions', templates: true },
+  ])('mutates only the scripts when $name', ({ templates }) => {
+    let lines = [
+      '<script>x = a + b</script>',
+      templates ? '<p><!-- a + b --></p>' : '<p>{a + b}</p>',
+    ]
+
+    expect(
+      generateSvelte(lines, templates).mutants.map(mutant => mutant.scope),
+    ).toStrictEqual([null, null])
+  })
+
+  it.each([
+    {
+      lines: [
+        '<script>x = a + b</script>',
+        '<template><!-- mootant-ignore-file --><p>a</p></template>',
+      ],
+      file: 'src/Card.vue',
+    },
+    {
+      lines: [
+        '<script>x = a + b</script>',
+        '<!-- mootant-ignore-file -->',
+        '<p>a</p>',
+      ],
+      file: 'src/Card.svelte',
+    },
+  ])(
+    'applies a file directive of a template without expressions in $file',
+    ({ lines, file }) => {
+      let result = generateFileMutants({
+        settings: Object.freeze({
+          coarseMutants: false,
+          templates: true,
+          timeouts: false,
+        }),
+        mutators: [activate('arithmetic', 0, ARITHMETIC)],
+        compilers: { svelte, vue },
+        source: lines.join('\n'),
+        knownMutatorIds,
+        file,
+      })
+
+      expect(
+        result.mutants.map(mutant => [mutant.replacement, mutant.status]),
+      ).toStrictEqual([['a - b', 'Ignored']])
+      expect(result.diagnostics).toStrictEqual([])
+    },
+  )
+
+  it('warns about an unclosed start in a template without expressions', () => {
+    let result = generateSvelte([
+      '<script>x = a + b</script>',
+      '<!-- mootant-ignore-start -->',
+      '<p>a</p>',
+    ])
+
+    expect(result.diagnostics.map(diagnostic => diagnostic.code)).toStrictEqual(
+      ['unclosed-ignore-start'],
+    )
+    expect(result.mutants.map(mutant => mutant.status)).toStrictEqual([
+      'Pending',
+      'Pending',
+    ])
+  })
+
+  it('warns about a template that does not parse and mutates the scripts', () => {
+    let result = generateSvelte([
+      '<script>x = a + b</script>',
+      '<p>{#if a}</p>',
+    ])
+
+    expect(result.mutants.map(mutant => mutant.replacement)).toStrictEqual([
+      '',
+      'a - b',
+    ])
+    expect(result.parsed).toBe(true)
+    expect(
+      result.diagnostics.map(diagnostic => [diagnostic.code, diagnostic.line]),
+    ).toStrictEqual([['template-skipped', 2]])
+  })
+
+  it('applies a file directive of a Vue template whose expression oxc rejects', () => {
+    let result = generateFileMutants({
+      source: [
+        '<script setup>x = a + b</script>',
+        '<template><!-- mootant-ignore-file --><p>{{ a + }}</p></template>',
+      ].join('\n'),
+      settings: Object.freeze({
+        coarseMutants: false,
+        templates: true,
+        timeouts: false,
+      }),
+      mutators: [activate('arithmetic', 0, ARITHMETIC)],
+      compilers: { svelte, vue },
+      file: 'src/Card.vue',
+      knownMutatorIds,
+    })
+
+    expect(
+      result.mutants.map(mutant => [mutant.replacement, mutant.status]),
+    ).toStrictEqual([['a - b', 'Ignored']])
+    expect(
+      result.diagnostics.map(diagnostic => [diagnostic.code, diagnostic.line]),
+    ).toStrictEqual([['template-skipped', 2]])
+  })
+
+  it('warns about the template of a component whose scripts do not parse', () => {
+    let result = generateSvelte([
+      '<script>let a = (</script>',
+      '<p>{a + b}</p>',
+    ])
+
+    expect(result).toMatchObject({ parsed: false, mutants: [] })
+    expect(result.diagnostics.map(diagnostic => diagnostic.code)).toStrictEqual(
+      ['parse-error', 'template-skipped'],
+    )
   })
 
   it('lists skipped candidates in canonical order with their rules', () => {

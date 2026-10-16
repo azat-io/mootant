@@ -5,7 +5,11 @@ import { getSettingsProblem } from '../../../core/plugins/get-settings-problem'
 describe('getSettingsProblem', () => {
   it.each<[unknown, string | null]>([
     [{}, null],
-    [{ coarseMutants: true, timeouts: false }, null],
+    [{ coarseMutants: true, templates: false, timeouts: false }, null],
+    [
+      { template: false },
+      '"template" is not a setting (did you mean "templates"?)',
+    ],
     [[], 'they are not an object'],
     [
       { timeout: true },

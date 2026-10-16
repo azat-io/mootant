@@ -78,10 +78,14 @@ export function createTestContext(
           }) === null
         )
       },
+      settings: {
+        timeouts: setup.timeouts ?? false,
+        coarseMutants: false,
+        templates: true,
+      },
       isEnabled(id: string): boolean {
         return enabled.has(id)
       },
-      settings: { timeouts: setup.timeouts ?? false, coarseMutants: false },
       sourceCode: file.sourceCode,
       syntax: file.syntax,
       file: parsed.file,

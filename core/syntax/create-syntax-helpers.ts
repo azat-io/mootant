@@ -1,3 +1,5 @@
+import type { Node } from 'oxc-parser'
+
 import type { SyntaxHelpers } from '../../types/syntax/syntax-helpers'
 import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
 import type { TreeIndex } from '../../types/syntax/tree-index'
@@ -31,15 +33,19 @@ import { isLoopTest } from './is-loop-test'
  *
  * @param tree - Runtime tree of the file.
  * @param scopes - Scope analysis of the file.
+ * @param discarded - Arrow functions whose result nothing reads, such as the
+ *   event handlers of a component template; none when omitted.
  * @returns Questions about the syntactic position of nodes of the file.
  */
 export function createSyntaxHelpers(
   tree: TreeIndex,
   scopes: ScopeAnalysis,
+  discarded: ReadonlySet<Node> = new Set(),
 ): SyntaxHelpers {
   return {
     isBooleanContext: node => isBooleanContext(tree, scopes, node),
     getEnclosingFunction: node => getEnclosingFunction(tree, node),
+    isResultUnused: node => isResultUnused(tree, node, discarded),
     isLoopAdvanceValue: node => isLoopAdvanceValue(tree, node),
     getStatementList: node => getStatementList(tree, node),
     isLogicalOperand: node => isLogicalOperand(tree, node),
@@ -49,7 +55,6 @@ export function createSyntaxHelpers(
     getLowerBound: node => getLowerBound(scopes, node),
     getContextSlot: node => getContextSlot(tree, node),
     isErrorMessage: node => isErrorMessage(tree, node),
-    isResultUnused: node => isResultUnused(tree, node),
     getExitedLoops: node => getExitedLoops(tree, node),
     isPropertyKey: node => isPropertyKey(tree, node),
     getChainRoot: node => getChainRoot(tree, node),

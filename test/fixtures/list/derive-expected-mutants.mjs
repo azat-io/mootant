@@ -61,6 +61,10 @@ const DESCRIPTIONS = {
   'object-property': 'Removes one property or spread from an object literal.',
   'optional-chaining':
     'Replaces ?. with ., as if the value could never be nullish.',
+  'regex-flag':
+    'Removes a flag of a regular expression (i, m, s, or g where it picks all matches).',
+  'regex-pattern':
+    'Removes an anchor, assertion or alternative of a regular expression, makes an optional part required, or widens a class to any character.',
   'return-value':
     "Replaces a returned value with an empty default ('', 0, false and true, [] or undefined).",
   'statement-removal':
@@ -73,7 +77,7 @@ const DESCRIPTIONS = {
 }
 
 /**
- * The 18 core mutator ids, copied from the catalog (section 0.1).
+ * The 20 core mutator ids, copied from the catalog (section 0.1).
  */
 const CORE_MUTATOR_IDS = [
   'arithmetic-operator',
@@ -89,6 +93,8 @@ const CORE_MUTATOR_IDS = [
   'number-literal',
   'object-property',
   'optional-chaining',
+  'regex-flag',
+  'regex-pattern',
   'return-value',
   'statement-removal',
   'string-literal',

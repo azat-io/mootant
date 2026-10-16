@@ -55,14 +55,17 @@ interface RuleCreation {
  *
  * @param parsed - Parsed file the directives belong to.
  * @param directives - Directives of the file in source order.
+ * @param program - Whether the file is a script or the template of a component;
+ *   a script when omitted.
  * @returns Rules in directive order and warnings about an end without a
  *   matching start and a start that is never closed, which then covers the rest
- *   of the file, or of its script block in a component, whose other blocks have
- *   their own rules.
+ *   of the file, or of its script block or template in a component, whose other
+ *   programs have their own rules.
  */
 export function createIgnoreRules(
   parsed: ParsedFile,
   directives: readonly IgnoreDirective[],
+  program: 'template' | 'script' = 'script',
 ): RuleCreation {
   let fileEnd = parsed.text.length
   let diagnostics: Diagnostic[] = []
@@ -124,8 +127,11 @@ export function createIgnoreRules(
     }
   }
 
-  let scope =
-    getComponentFramework(parsed.file) === null ? 'file' : 'script block'
+  let scope = 'template'
+  if (program === 'script') {
+    scope =
+      getComponentFramework(parsed.file) === null ? 'file' : 'script block'
+  }
   for (let start of open) {
     diagnostics.push({
       message: `mootant-ignore-start has no matching mootant-ignore-end; it covers the rest of the ${scope}.`,

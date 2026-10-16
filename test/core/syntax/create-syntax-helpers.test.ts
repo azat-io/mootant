@@ -149,4 +149,14 @@ describe('createSyntaxHelpers', () => {
 
     expect(call(syntax)).toStrictEqual(expected)
   })
+  it('binds the discarded arrow functions to isResultUnused', () => {
+    let file = createTestFile('f(() => a)')
+    let syntax = createSyntaxHelpers(
+      file.tree,
+      file.scopes,
+      new Set([file.find('ArrowFunctionExpression')]),
+    )
+
+    expect(syntax.isResultUnused(file.find('Identifier', 'a'))).toBe(true)
+  })
 })

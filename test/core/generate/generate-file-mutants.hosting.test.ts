@@ -354,9 +354,13 @@ describe('generateFileMutants', () => {
     ({ preset, lines, file }) => {
       let source = lines.join('\n')
       let statements = getStatementStarts(file, source)
-      let hosted = generateMutants(source, { preset, file }).map(mutant =>
-        hostMutant({ source, file }, statements, mutant),
-      )
+      // The fingerprint covers the scripts; template mutants are hosted by
+      // the compile test of instrumentFile.
+      let hosted = generateMutants(source, {
+        settings: { templates: false },
+        preset,
+        file,
+      }).map(mutant => hostMutant({ source, file }, statements, mutant))
       let fingerprints = hosted.map(mutant => mutant.fingerprint)
 
       expect(hosted.length).toBeGreaterThan(0)

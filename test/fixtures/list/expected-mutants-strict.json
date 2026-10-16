@@ -4,8 +4,8 @@
   "preset": "strict",
   "summary": {
     "totalFiles": 8,
-    "totalMutants": 390,
-    "totalPending": 364,
+    "totalMutants": 395,
+    "totalPending": 369,
     "totalIgnored": 26,
     "totalErrors": 0,
     "totalWarnings": 3
@@ -14,7 +14,7 @@
     {
       "id": "arithmetic-operator",
       "description": "Swaps an arithmetic operator, or drops the right operand of a + that is not known to be numeric.",
-      "mutants": 34
+      "mutants": 35
     },
     {
       "id": "array-element",
@@ -64,7 +64,7 @@
     {
       "id": "number-literal",
       "description": "Adds one to a numeric constant.",
-      "mutants": 33
+      "mutants": 34
     },
     {
       "id": "object-property",
@@ -77,9 +77,19 @@
       "mutants": 11
     },
     {
+      "id": "regex-flag",
+      "description": "Removes a flag of a regular expression (i, m, s, or g where it picks all matches).",
+      "mutants": 0
+    },
+    {
+      "id": "regex-pattern",
+      "description": "Removes an anchor, assertion or alternative of a regular expression, makes an optional part required, or widens a class to any character.",
+      "mutants": 0
+    },
+    {
       "id": "return-value",
       "description": "Replaces a returned value with an empty default ('', 0, false and true, [] or undefined).",
-      "mutants": 32
+      "mutants": 33
     },
     {
       "id": "statement-removal",
@@ -89,7 +99,7 @@
     {
       "id": "string-literal",
       "description": "Empties a string or the static text of a template literal, or fills an empty one.",
-      "mutants": 37
+      "mutants": 38
     },
     {
       "id": "unary-operator",
@@ -99,7 +109,7 @@
     {
       "id": "update-operator",
       "description": "Swaps ++ and --, or prefix and postfix when the value is used.",
-      "mutants": 6
+      "mutants": 7
     }
   ],
   "files": [
@@ -116,7 +126,7 @@
     {
       "file": "test/fixtures/list/source/component.vue",
       "parsed": true,
-      "mutants": 5
+      "mutants": 6
     },
     {
       "file": "test/fixtures/list/source/page.astro",
@@ -141,7 +151,7 @@
     {
       "file": "test/fixtures/list/source/widget.svelte",
       "parsed": true,
-      "mutants": 5
+      "mutants": 9
     }
   ],
   "diagnostics": [
@@ -5240,6 +5250,26 @@
       "ignoredBy": null
     },
     {
+      "id": "w1g2jp51wjv0",
+      "mutator": "string-literal",
+      "description": "Empties a string or the static text of a template literal, or fills an empty one.",
+      "file": "test/fixtures/list/source/component.vue",
+      "line": 2,
+      "column": 32,
+      "endLine": 2,
+      "endColumn": 35,
+      "start": 42,
+      "end": 45,
+      "scope": "<template>",
+      "kind": "expression",
+      "original": "'!'",
+      "replacement": "''",
+      "sourceLine": "  <p :title=\"label\">{{ label + '!' }}</p>",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
       "id": "ft4anw1esans",
       "mutator": "object-property",
       "description": "Removes one property or spread from an object literal.",
@@ -8071,6 +8101,86 @@
       "original": "notify(value)",
       "replacement": ";",
       "sourceLine": "    notify(value)",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "9ev7bmypmgp1",
+      "mutator": "arithmetic-operator",
+      "description": "Swaps an arithmetic operator, or drops the right operand of a + that is not known to be numeric.",
+      "file": "test/fixtures/list/source/widget.svelte",
+      "line": 15,
+      "column": 26,
+      "endLine": 15,
+      "endColumn": 35,
+      "start": 222,
+      "end": 231,
+      "scope": "<template>",
+      "kind": "expression",
+      "original": "value * 2",
+      "replacement": "value / 2",
+      "sourceLine": "<button on:click={bump}>{value * 2}</button>",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "61ndyrnrxw2d",
+      "mutator": "number-literal",
+      "description": "Adds one to a numeric constant.",
+      "file": "test/fixtures/list/source/widget.svelte",
+      "line": 15,
+      "column": 34,
+      "endLine": 15,
+      "endColumn": 35,
+      "start": 230,
+      "end": 231,
+      "scope": "<template>",
+      "kind": "expression",
+      "original": "2",
+      "replacement": "3",
+      "sourceLine": "<button on:click={bump}>{value * 2}</button>",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "stahb60xpx06",
+      "mutator": "return-value",
+      "description": "Replaces a returned value with an empty default ('', 0, false and true, [] or undefined).",
+      "file": "test/fixtures/list/source/widget.svelte",
+      "line": 16,
+      "column": 25,
+      "endLine": 16,
+      "endColumn": 32,
+      "start": 266,
+      "end": 273,
+      "scope": "<template>",
+      "kind": "expression",
+      "original": "value++",
+      "replacement": "0",
+      "sourceLine": "<button on:click={() => value++}>+</button>",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "336924frmwe9",
+      "mutator": "update-operator",
+      "description": "Swaps ++ and --, or prefix and postfix when the value is used.",
+      "file": "test/fixtures/list/source/widget.svelte",
+      "line": 16,
+      "column": 25,
+      "endLine": 16,
+      "endColumn": 32,
+      "start": 266,
+      "end": 273,
+      "scope": "<template>",
+      "kind": "expression",
+      "original": "value++",
+      "replacement": "value--",
+      "sourceLine": "<button on:click={() => value++}>+</button>",
       "status": "Pending",
       "reason": null,
       "ignoredBy": null

@@ -23,6 +23,15 @@ describe('isResultUnused', () => {
     expect(isResultUnused(tree, find('Identifier', 'a'))).toBe(expected)
   })
 
+  it('tells that the body of a discarded arrow function is unused', () => {
+    let { find, tree } = createTestFile('f(() => (a), () => b)')
+    let discarded = new Set([find('ArrowFunctionExpression', '() => (a)')])
+
+    expect(isResultUnused(tree, find('Identifier', 'a'), discarded)).toBe(true)
+    expect(isResultUnused(tree, find('Identifier', 'b'), discarded)).toBe(false)
+    expect(isResultUnused(tree, find('Identifier', 'a'))).toBe(false)
+  })
+
   it('returns false for the program', () => {
     let { find, tree } = createTestFile('a')
 

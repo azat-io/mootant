@@ -29,6 +29,19 @@ describe('installMutantRuntime', () => {
     expect(installMutantRuntime()).toBe(runtime)
   })
 
+  it('puts the runtime on Math under a symbol that walks of Math miss', () => {
+    let key = Symbol.for('mootant')
+    Reflect.set(Math, key, 'stale')
+    let runtime = installMutantRuntime()
+
+    expect(Reflect.get(Math, key)).toBe(runtime)
+    expect(Object.getOwnPropertyNames(Math)).not.toContain('mootant')
+    expect(Object.getOwnPropertyDescriptor(Math, key)).toMatchObject({
+      configurable: true,
+      enumerable: false,
+    })
+  })
+
   it('tells the active site and records that it was reached', () => {
     let runtime = installMutantRuntime()
     runtime.active = 'b'

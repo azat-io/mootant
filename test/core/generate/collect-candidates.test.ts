@@ -2,6 +2,7 @@ import type { Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
+import type { TemplateExpression } from '../../../types/source/template-expression'
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { ActiveMutator } from '../../../types/mutator/active-mutator'
 import type { Mutator } from '../../../types/mutator/mutator'
@@ -16,6 +17,11 @@ import { createTestFile } from '../../helpers/create-test-file'
  */
 interface CollectSetup {
   /**
+   * Template code the snippet stands for, if any.
+   */
+  expressions?: TemplateExpression[]
+
+  /**
    * Whether mutants that only a timeout can kill are kept.
    */
   timeouts?: boolean
@@ -24,6 +30,11 @@ interface CollectSetup {
    * Whether skipped replacements are collected.
    */
   skipped?: boolean
+
+  /**
+   * Path of the snippet; `example.ts` when omitted.
+   */
+  file?: string
 }
 
 /**
@@ -53,6 +64,7 @@ function collect(
 ): Collection {
   let { sourceCode, parsed, syntax, hints, tree } = createTestFile(
     lines.join('\n'),
+    setup.file,
   )
   let { directives } = parseIgnoreDirectives(parsed, knownMutatorIds)
   let { rules } = createIgnoreRules(parsed, directives)
@@ -72,6 +84,7 @@ function collect(
       settings: Object.freeze({
         timeouts: setup.timeouts ?? false,
         coarseMutants: false,
+        templates: true,
       }),
       isEnabled: () => true,
       isActive: () => true,
@@ -79,6 +92,7 @@ function collect(
       syntax,
       hints,
     },
+    expressions: setup.expressions ?? null,
     skipped: setup.skipped ?? false,
     mutators: recorded,
     parsed,
@@ -499,6 +513,69 @@ describe('collectCandidates', () => {
         'loop-advance',
         'it changes the value that advances a loop, so only a timeout could kill it',
       ],
+    ])
+  })
+
+  it('lists a replacement that would move a rune call as skipped', () => {
+    let lines = [
+      'class Box {',
+      '  constructor() {',
+      '    this.count = $state(0)',
+      '    this.log = []',
+      '  }',
+      '}',
+    ]
+    let mutator = activate('first', 0, () => ({
+      ExpressionStatement: node => [{ text: ';', node }],
+    }))
+    let { diagnostics, candidates, skipped } = collect(lines, [mutator], {
+      file: 'box.svelte.js',
+      skipped: true,
+    })
+
+    expect(candidates.map(candidate => candidate.start)).toStrictEqual([61])
+    expect(diagnostics).toStrictEqual([])
+    expect(
+      skipped.map(candidate => [
+        candidate.rule,
+        candidate.start,
+        candidate.reason,
+      ]),
+    ).toStrictEqual([
+      [
+        'compiler-macro',
+        34,
+        'it would move a Svelte rune call out of the place the compiler accepts it in',
+      ],
+    ])
+    expect(
+      collect(lines, [mutator], { file: 'box.js' }).candidates,
+    ).toHaveLength(2)
+  })
+
+  it('fits replacements into the Vue template code around them', () => {
+    let mutator = activate('first', 0, () => ({
+      Identifier: node => [{ text: node.name === 'b' ? "`'`" : "''", node }],
+    }))
+    let { candidates, skipped } = collect(['f(a, b)'], [mutator], {
+      expressions: [{ delimiter: "'", wrap: 'value', start: 2, end: 6 }],
+      skipped: true,
+    })
+
+    expect(
+      candidates.map(candidate => [candidate.start, candidate.text]),
+    ).toStrictEqual([
+      [0, "''"],
+      [2, '""'],
+    ])
+    expect(
+      skipped.map(candidate => [
+        candidate.rule,
+        candidate.start,
+        candidate.reason,
+      ]),
+    ).toStrictEqual([
+      ['template-text', 5, "it would write ', which ends the attribute value"],
     ])
   })
 })

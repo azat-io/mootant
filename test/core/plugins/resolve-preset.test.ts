@@ -274,16 +274,16 @@ describe('resolvePreset', () => {
     let registry = createRegistry({})
 
     expect(resolvePreset(registry, 'acme/extra')).toStrictEqual({
-      settings: { coarseMutants: false, timeouts: false },
+      settings: { coarseMutants: false, templates: true, timeouts: false },
       mutators: [],
     })
   })
 
   it.each<SettingsCase>([
     {
+      name: 'defaults timeouts and coarse mutants to false and templates to true',
+      expected: { coarseMutants: false, templates: true, timeouts: false },
       presets: { base: { description: 'No settings.', mutators: {} } },
-      name: 'defaults timeouts and coarse mutants to false',
-      expected: { coarseMutants: false, timeouts: false },
       presetId: 'base',
     },
     {
@@ -295,7 +295,7 @@ describe('resolvePreset', () => {
         },
         child: { description: 'Child.', extends: ['base'], mutators: {} },
       },
-      expected: { coarseMutants: false, timeouts: true },
+      expected: { coarseMutants: false, templates: true, timeouts: true },
       name: 'inherits settings through extends',
       presetId: 'child',
     },
@@ -313,7 +313,7 @@ describe('resolvePreset', () => {
           mutators: {},
         },
       },
-      expected: { coarseMutants: false, timeouts: false },
+      expected: { coarseMutants: false, templates: true, timeouts: false },
       name: 'lets the extending settings win',
       presetId: 'child',
     },
@@ -331,8 +331,8 @@ describe('resolvePreset', () => {
           mutators: {},
         },
       },
+      expected: { coarseMutants: false, templates: true, timeouts: true },
       name: 'keeps inherited keys the extending preset does not set',
-      expected: { coarseMutants: false, timeouts: true },
       presetId: 'child',
     },
   ])('$name', ({ presetId, expected, presets }) => {

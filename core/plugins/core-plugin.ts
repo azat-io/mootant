@@ -15,9 +15,11 @@ import { stringLiteral } from '../mutators/string-literal'
 import { numberLiteral } from '../mutators/number-literal'
 import { missingAwait } from '../mutators/missing-await'
 import { arrayElement } from '../mutators/array-element'
+import { regexPattern } from '../mutators/regex-pattern'
 import { returnValue } from '../mutators/return-value'
 import { methodCall } from '../mutators/method-call'
 import { recommended } from '../presets/recommended'
+import { regexFlag } from '../mutators/regex-flag'
 import { condition } from '../mutators/condition'
 import { strict } from '../presets/strict'
 
@@ -42,8 +44,10 @@ export let corePlugin: Plugin = {
     'unary-operator': unaryOperator,
     'array-element': arrayElement,
     'missing-await': missingAwait,
+    'regex-pattern': regexPattern,
     'return-value': returnValue,
     'method-call': methodCall,
+    'regex-flag': regexFlag,
     condition,
   },
   presets: { recommended, strict },

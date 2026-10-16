@@ -118,9 +118,10 @@ mootant/
 │   ├── instrument/    # Switched files that hold every mutant of a file
 │   ├── mutators/      # Built-in mutators, one per file
 │   │   └── shared/    # Helpers shared by mutators
-│   ├── parser/        # Parsing with oxc-parser
+│   ├── parser/        # Parsing with oxc-parser, Svelte and Vue templates
 │   ├── plugins/       # Mutator registry, core plugin, preset resolution
 │   ├── presets/       # recommended and strict presets
+│   ├── regex/         # Regular expression parsing, checks and pattern changes
 │   ├── run/           # Runner-agnostic run: dry run, batch, isolated rounds
 │   ├── runtime/       # Runtime the switched files call inside test workers
 │   ├── skips/         # Rules that skip redundant or noisy mutants
@@ -136,6 +137,7 @@ mootant/
     ├── hints/         # Type hints
     ├── mutant/        # Mutants, skips, ignore comments and diagnostics
     ├── mutator/       # Mutator API
+    ├── regex/         # Regular expression literals, calls and pattern changes
     ├── report/        # List and run reports
     ├── run/           # Run state, verdicts and results
     ├── source/        # Source files, positions and edits

@@ -38,8 +38,10 @@ function setup(): {
     error: null,
   }
   let plugin = createMootantPlugin(context, state)
-  let transform = plugin.transform as (code: string, id: string) => unknown
-  return { transform, context, state }
+  let { handler } = plugin.transform as {
+    handler(code: string, id: string): unknown
+  }
+  return { transform: handler, context, state }
 }
 
 describe('createMootantPlugin', () => {
@@ -53,6 +55,23 @@ describe('createMootantPlugin', () => {
     expect(transform('changed', '/project/src/a.ts')).toBeNull()
     expect([...state.served]).toStrictEqual(['/project/src/a.ts'])
     expect([...state.mismatched]).toStrictEqual(['/project/src/a.ts'])
+  })
+
+  it('serves the switched text of the external script of a Vue component', () => {
+    let { transform, state } = setup()
+
+    expect(
+      transform('A', '/project/src/a.ts?vue&type=script&src=true&lang.ts'),
+    ).toStrictEqual({ code: 'B', map: null })
+    expect([...state.served]).toStrictEqual(['/project/src/a.ts'])
+  })
+
+  it('runs before the transforms of other pre plugins', () => {
+    let { context, state } = setup()
+
+    expect(createMootantPlugin(context, state).transform).toMatchObject({
+      order: 'pre',
+    })
   })
 
   it('leaves other modules alone', () => {

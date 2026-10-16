@@ -1,5 +1,6 @@
 import type { IgnoreSource } from './ignore-source'
 import type { MutantStatus } from './mutant-status'
+import type { TextEdit } from '../source/text-edit'
 
 /**
  * Change to the source code that tests are expected to detect.
@@ -38,6 +39,12 @@ export interface Mutant {
    * Text written in place of the range from `start` to `end`.
    */
   replacement: string
+
+  /**
+   * Edit inside the replaced range that the mutant amounts to, which reports
+   * show in place of the whole range; absent when the mutator names none.
+   */
+  focus?: TextEdit
 
   /**
    * Id of the mutator that produced the mutant: `name` or `plugin/name`.

@@ -305,6 +305,20 @@ describe('createIgnoreRules', () => {
     ])
   })
 
+  it('says an unclosed start in a template covers the rest of it', () => {
+    let { parsed } = createTestFile('/* mootant-ignore-start */ a + 1')
+    let component = { ...parsed, file: 'widget.svelte' }
+    let { directives } = parseIgnoreDirectives(component, knownMutatorIds)
+
+    expect(
+      createIgnoreRules(component, directives, 'template').diagnostics.map(
+        ({ message }) => message,
+      ),
+    ).toStrictEqual([
+      'mootant-ignore-start has no matching mootant-ignore-end; it covers the rest of the template.',
+    ])
+  })
+
   it('lists rules in the order of the directives they are credited to', () => {
     let { rules } = createSnippetRules([
       '// mootant-ignore-start: first',

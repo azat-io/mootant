@@ -1,14 +1,9 @@
 import type { SourceBlock } from '../../types/source/source-block'
-import type { ScriptBlock } from '../../types/source/script-block'
 
 import { getComponentFramework } from './get-component-framework'
 import { getParserOptions } from './get-parser-options'
 import { scanScriptBlocks } from './scan-script-blocks'
-
-/**
- * Runs of code units other than line terminators.
- */
-const BLANKED_PATTERN = /[^\n\r\u{2028}\u{2029}]+/gu
+import { blankOutside } from '../text/blank-outside'
 
 /**
  * Splits a file into the programs mootant parses. A JavaScript or TypeScript
@@ -35,36 +30,8 @@ export function getSourceBlocks(file: string, source: string): SourceBlock[] {
   }
   return scanScriptBlocks(source, framework).map(block => ({
     options: { sourceType: 'module', lang: block.lang },
+    text: blankOutside(source, [block]),
     topLevelReturn: block.frontmatter,
-    text: blankOutside(source, block),
     length: block.end,
   }))
-}
-
-/**
- * Blanks the text around a block.
- *
- * @param source - Text of the file.
- * @param block - Block to keep.
- * @returns Text of the same length with only the block, the line terminators
- *   and a leading byte order mark left.
- */
-function blankOutside(source: string, block: ScriptBlock): string {
-  let start = source.codePointAt(0) === 0xfe_ff ? 1 : 0
-  return (
-    source.slice(0, start) +
-    blank(source.slice(start, block.start)) +
-    source.slice(block.start, block.end) +
-    blank(source.slice(block.end))
-  )
-}
-
-/**
- * Replaces every code unit of a text except line terminators with a space.
- *
- * @param text - Text to blank.
- * @returns Blank text of the same length and lines.
- */
-function blank(text: string): string {
-  return text.replaceAll(BLANKED_PATTERN, run => ' '.repeat(run.length))
 }

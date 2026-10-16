@@ -1,5 +1,6 @@
 import type { IgnoreSource } from '../mutant/ignore-source'
 import type { MutantStatus } from '../mutant/mutant-status'
+import type { ListReportFocus } from './list-report-focus'
 
 /**
  * Mutant as an agent needs it, without reading the file.
@@ -15,6 +16,12 @@ export interface ListReportMutant {
    * replacement in parentheses for `expression`, in braces for `block`.
    */
   kind: 'expression' | 'block'
+
+  /**
+   * Part of the range the change amounts to, present when the mutator names
+   * one; text reports show its position and texts.
+   */
+  focus?: ListReportFocus
 
   /**
    * Reason of the ignore directive, or null while pending.

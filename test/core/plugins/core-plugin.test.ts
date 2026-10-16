@@ -50,7 +50,11 @@ function createSampleContext(id: string, options: object): MutatorContext {
     ].join('\n'),
   )
   return {
-    settings: Object.freeze({ coarseMutants: false, timeouts: false }),
+    settings: Object.freeze({
+      coarseMutants: false,
+      templates: true,
+      timeouts: false,
+    }),
     isEnabled: () => true,
     isActive: () => true,
     file: 'example.ts',
@@ -119,7 +123,11 @@ describe('corePlugin', () => {
           JSON.stringify(active.mutator.meta.defaultOptions ?? {}),
       ),
     ).toStrictEqual([])
-    expect(settings).toStrictEqual({ coarseMutants: false, timeouts: false })
+    expect(settings).toStrictEqual({
+      coarseMutants: false,
+      templates: true,
+      timeouts: false,
+    })
   })
 
   it('turns on in strict every mutator recommended turns on, with timeouts and coarse mutants', () => {
@@ -131,6 +139,7 @@ describe('corePlugin', () => {
     )
     expect(strict.settings).toStrictEqual({
       coarseMutants: true,
+      templates: true,
       timeouts: true,
     })
   })
@@ -152,6 +161,12 @@ describe('corePlugin', () => {
           .map(active => [active.id, active.options]),
       ),
     ).toStrictEqual({
+      'regex-pattern': {
+        largeAlternations: true,
+        classMembers: true,
+        quantifiers: true,
+        negations: true,
+      },
       'logical-operator': {
         nullishNormalization: true,
         nullishSwap: 'always',
@@ -162,6 +177,7 @@ describe('corePlugin', () => {
       'string-literal': { caseTests: true },
       'statement-removal': { jumps: true },
       'method-call': { anyReceiver: true },
+      'regex-flag': { additions: true },
     })
   })
 })

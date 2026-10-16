@@ -31,6 +31,10 @@ export let skipRules = {
     category: 'equivalent',
     heuristic: true,
   },
+  'regex-capturing-group': {
+    category: 'noise',
+    heuristic: false,
+  },
   'identity-operand': {
     category: 'equivalent',
     heuristic: false,
@@ -55,6 +59,10 @@ export let skipRules = {
     category: 'equivalent',
     heuristic: false,
   },
+  'anchored-global': {
+    category: 'equivalent',
+    heuristic: false,
+  },
   'numeric-identity': {
     category: 'equivalent',
     heuristic: true,
@@ -75,6 +83,14 @@ export let skipRules = {
     category: 'equivalent',
     heuristic: true,
   },
+  'any-character': {
+    category: 'equivalent',
+    heuristic: false,
+  },
+  'edge-wildcard': {
+    category: 'equivalent',
+    heuristic: false,
+  },
   'unused-result': {
     category: 'equivalent',
     heuristic: false,
@@ -89,6 +105,10 @@ export let skipRules = {
   },
   'literal-truth': {
     category: 'equivalent',
+    heuristic: false,
+  },
+  'large-alternation': {
+    category: 'noise',
     heuristic: false,
   },
   'reference-equality': {
@@ -127,6 +147,10 @@ export let skipRules = {
     category: 'equivalent',
     heuristic: true,
   },
+  'unused-flag': {
+    category: 'equivalent',
+    heuristic: false,
+  },
   'non-nullable': {
     category: 'equivalent',
     heuristic: true,
@@ -144,6 +168,18 @@ export let skipRules = {
     heuristic: false,
   },
   'invalid-target': {
+    category: 'invalid',
+    heuristic: false,
+  },
+  'compiler-macro': {
+    category: 'invalid',
+    heuristic: false,
+  },
+  'template-text': {
+    category: 'invalid',
+    heuristic: false,
+  },
+  'invalid-regex': {
     category: 'invalid',
     heuristic: false,
   },
@@ -175,6 +211,10 @@ export let skipRules = {
     category: 'timeout',
     heuristic: false,
   },
+  'regex-argument': {
+    category: 'noise',
+    heuristic: false,
+  },
   'constant-test': {
     category: 'noise',
     heuristic: false,
@@ -186,6 +226,10 @@ export let skipRules = {
   'jsx-attribute': {
     category: 'noise',
     heuristic: false,
+  },
+  'empty-match': {
+    category: 'timeout',
+    heuristic: true,
   },
   'receiver-type': {
     category: 'noise',

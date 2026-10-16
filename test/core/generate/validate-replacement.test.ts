@@ -37,6 +37,30 @@ describe('validateReplacement', () => {
   })
 
   it.each([
+    { focus: { start: 3, text: '', end: 9 }, place: 'past the node end' },
+    { focus: { start: 3, text: '', end: 4 }, place: 'before the node start' },
+    { focus: { start: 6, text: '', end: 5 }, place: 'with its end first' },
+  ])('rejects a focus $place', ({ focus }) => {
+    let { find, tree } = createTestFile('x = /ab/')
+
+    expect(validateReplacement(tree, find('Literal'), focus)).toBe(
+      'returned a focus outside the node it replaces.',
+    )
+  })
+
+  it('accepts a focus inside the node', () => {
+    let { find, tree } = createTestFile('x = /ab/')
+
+    expect(
+      validateReplacement(tree, find('Literal'), {
+        start: 5,
+        text: '',
+        end: 6,
+      }),
+    ).toBeNull()
+  })
+
+  it.each([
     { source: 'function f() { a() }', slot: 'a function body', nth: 0 },
     { source: 'let f = () => { a() }', slot: 'an arrow body', nth: 0 },
     { source: 'try { a() } catch {}', slot: 'a try block', nth: 0 },

@@ -2772,6 +2772,26 @@
     },
     {
       "by": {
+        "column": 32,
+        "id": null,
+        "line": 2,
+        "mutator": "string-literal"
+      },
+      "original": "label + '!'",
+      "replacement": "label",
+      "heuristic": false,
+      "category": "owned",
+      "mutator": "arithmetic-operator",
+      "reason": "dropping a string operand is string-literal's emptying of it",
+      "column": 24,
+      "start": 34,
+      "file": "test/fixtures/list/source/component.vue",
+      "rule": "O11",
+      "line": 2,
+      "end": 45
+    },
+    {
+      "by": {
         "column": 24,
         "line": 6,
         "mutator": "string-literal",
@@ -3729,16 +3749,51 @@
       "rule": "solitary",
       "line": 10,
       "end": 163
+    },
+    {
+      "by": {
+        "column": 25,
+        "line": 16,
+        "mutator": "update-operator",
+        "id": "336924frmwe9"
+      },
+      "original": "value++",
+      "replacement": "0",
+      "heuristic": true,
+      "category": "subsumed",
+      "mutator": "return-value",
+      "reason": "a finer update-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
+      "column": 25,
+      "start": 266,
+      "file": "test/fixtures/list/source/widget.svelte",
+      "rule": "solitary",
+      "line": 16,
+      "end": 273
+    },
+    {
+      "by": null,
+      "original": "value++",
+      "replacement": "++value",
+      "heuristic": false,
+      "category": "equivalent",
+      "mutator": "update-operator",
+      "reason": "the value of the update is unused, so prefix and postfix do the same",
+      "column": 25,
+      "start": 266,
+      "file": "test/fixtures/list/source/widget.svelte",
+      "rule": "unused-result",
+      "line": 16,
+      "end": 273
     }
   ],
   "summary": {
-    "totalSkipped": 205,
+    "totalSkipped": 208,
     "skippedByCategory": {
-      "equivalent": 31,
+      "equivalent": 32,
       "noise": 16,
       "timeout": 11,
-      "owned": 46,
-      "subsumed": 100,
+      "owned": 47,
+      "subsumed": 101,
       "duplicate": 1,
       "invalid": 0
     }

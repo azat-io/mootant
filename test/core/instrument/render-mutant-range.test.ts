@@ -22,9 +22,9 @@ describe('renderMutantRange', () => {
       createMutant({ replacement: 'a > b', start: 0, id: 'm2', end: 5 }),
     ])
 
-    expect(renderMutantRange(range!, source, new Set())).toBe(
-      `(${check('m1')} ? (a <= b) : ${check('m2')} ? (a > b) : (a < b))`,
-    )
+    expect(
+      renderMutantRange(range!, source, { statementStarts: new Map() }),
+    ).toBe(`(${check('m1')} ? (a <= b) : ${check('m2')} ? (a > b) : (a < b))`)
   })
 
   it('chains the mutants of a block range', () => {
@@ -40,7 +40,11 @@ describe('renderMutantRange', () => {
       }),
     ])
 
-    expect(renderMutantRange(range!, source, new Set([0]))).toBe(
+    expect(
+      renderMutantRange(range!, source, {
+        statementStarts: new Map([[0, ';']]),
+      }),
+    ).toBe(
       `{ if (${check('m1')}) {;} else if (${check('m2')}) {go()} else {run()} }`,
     )
   })
@@ -48,9 +52,21 @@ describe('renderMutantRange', () => {
   it('guards an expression at a statement start', () => {
     let [range] = groupMutantRanges([createMutant({ start: 0, end: 3 })])
 
-    expect(renderMutantRange(range!, 'a++', new Set([0]))).toBe(
-      `;(${check('m1')} ? (x) : (a++))`,
-    )
+    expect(
+      renderMutantRange(range!, 'a++', {
+        statementStarts: new Map([[0, ';']]),
+      }),
+    ).toBe(`;(${check('m1')} ? (x) : (a++))`)
+  })
+
+  it('writes the guard given for the statement start', () => {
+    let [range] = groupMutantRanges([createMutant({ start: 0, end: 3 })])
+
+    expect(
+      renderMutantRange(range!, 'a++', {
+        statementStarts: new Map([[0, '{}']]),
+      }),
+    ).toBe(`{}(${check('m1')} ? (x) : (a++))`)
   })
 
   it('hosts nested ranges in the original branch', () => {
@@ -61,7 +77,11 @@ describe('renderMutantRange', () => {
       createMutant({ replacement: '1', id: 'zero', start: 20, end: 21 }),
     ])
 
-    expect(renderMutantRange(range!, source, new Set([0]))).toBe(
+    expect(
+      renderMutantRange(range!, source, {
+        statementStarts: new Map([[0, ';']]),
+      }),
+    ).toBe(
       `;(${check('outer')} ? (true) : ((${check('inner')} ? (a) : (a.trim())).length === (${check('zero')} ? (1) : (0))))`,
     )
   })
@@ -72,8 +92,26 @@ describe('renderMutantRange', () => {
       createMutant({ replacement: 'a--', start: 0, id: 'm2', end: 3 }),
     ])
 
-    expect(renderMutantRange(range!, 'a++', new Set([0]))).toBe(
+    expect(
+      renderMutantRange(range!, 'a++', {
+        statementStarts: new Map([[0, ';']]),
+      }),
+    ).toBe(
       `{ if (${check('m1')}) {;} else {;(${check('m2')} ? (a--) : (a++))} }`,
     )
+  })
+
+  it('builds the checks with the given function', () => {
+    let [range] = groupMutantRanges([
+      createMutant({ replacement: ';', kind: 'block', start: 0, end: 3 }),
+      createMutant({ replacement: 'a--', start: 0, id: 'm2', end: 3 }),
+    ])
+
+    expect(
+      renderMutantRange(range!, 'a++', {
+        getCheck: id => `on(${id})`,
+        statementStarts: new Map(),
+      }),
+    ).toBe('{ if (on(m1)) {;} else {(on(m2) ? (a--) : (a++))} }')
   })
 })

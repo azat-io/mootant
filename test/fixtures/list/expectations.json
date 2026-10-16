@@ -4713,6 +4713,18 @@
     },
     {
       "file": "test/fixtures/list/source/component.vue",
+      "line": 2,
+      "original": "'!'",
+      "mutator": "string-literal",
+      "replacement": "''",
+      "kind": "expression",
+      "scope": "<template>",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "file": "test/fixtures/list/source/component.vue",
       "line": 6,
       "original": "{ name: 'Greeting' }",
       "mutator": "object-property",
@@ -4844,6 +4856,55 @@
       "status": "Pending",
       "reason": null,
       "ignoredBy": null
+    },
+    {
+      "file": "test/fixtures/list/source/widget.svelte",
+      "line": 15,
+      "original": "value * 2",
+      "mutator": "arithmetic-operator",
+      "replacement": "value / 2",
+      "kind": "expression",
+      "scope": "<template>",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "file": "test/fixtures/list/source/widget.svelte",
+      "line": 15,
+      "original": "2",
+      "mutator": "number-literal",
+      "replacement": "3",
+      "kind": "expression",
+      "scope": "<template>",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "file": "test/fixtures/list/source/widget.svelte",
+      "line": 16,
+      "original": "value++",
+      "mutator": "update-operator",
+      "replacement": "value--",
+      "kind": "expression",
+      "scope": "<template>",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "file": "test/fixtures/list/source/widget.svelte",
+      "line": 16,
+      "original": "value++",
+      "mutator": "return-value",
+      "replacement": "0",
+      "kind": "expression",
+      "scope": "<template>",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null,
+      "presets": ["strict"]
     },
     {
       "file": "test/fixtures/list/source/page.astro",

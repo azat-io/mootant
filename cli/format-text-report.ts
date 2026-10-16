@@ -1,6 +1,8 @@
 import type { ListReportSummary } from '../types/report/list-report-summary'
 import type { ListReport } from '../types/report/list-report'
 
+import { sortByLocation } from './sort-by-location'
+import { formatLocation } from './format-location'
 import { formatChange } from './format-change'
 import { pluralize } from './pluralize'
 
@@ -31,11 +33,11 @@ interface Row {
 }
 
 /**
- * Formats a report as one aligned line per mutant, an empty line and a summary
- * line. With no mutants only the summary line is returned. A report with
- * skipped candidates also gets a `Skipped:` section after the mutants, one
- * aligned line per candidate with its category, rule and reason, and a second
- * summary line that counts them by category.
+ * Formats a report as one aligned line per mutant, sorted by the position it
+ * shows, an empty line and a summary line. With no mutants only the summary
+ * line is returned. A report with skipped candidates also gets a `Skipped:`
+ * section after the mutants, one aligned line per candidate with its category,
+ * rule and reason, and a second summary line that counts them by category.
  *
  * @param report - Report of a list run.
  * @returns Plain text without colors.
@@ -46,9 +48,9 @@ export function formatTextReport(report: ListReport): string {
   if (report.mutants.length > 0) {
     sections.push(
       formatRows(
-        report.mutants.map(mutant => ({
-          change: `${formatChange(mutant)}${mutant.status === 'Ignored' ? ` (ignored: ${mutant.reason})` : ''}`,
-          location: `${mutant.file}:${mutant.line}:${mutant.column}`,
+        sortByLocation(report.mutants).map(mutant => ({
+          change: `${formatChange(mutant.focus ?? mutant)}${mutant.status === 'Ignored' ? ` (ignored: ${mutant.reason})` : ''}`,
+          location: formatLocation(mutant),
           middle: `${mutant.id}  `,
           mutator: mutant.mutator,
         })),
@@ -58,9 +60,9 @@ export function formatTextReport(report: ListReport): string {
   if (report.skipped) {
     if (report.skipped.length > 0) {
       let rows = formatRows(
-        report.skipped.map(candidate => ({
-          change: `${formatChange(candidate)} (skipped: ${candidate.category} ${candidate.rule}: ${candidate.reason})`,
-          location: `${candidate.file}:${candidate.line}:${candidate.column}`,
+        sortByLocation(report.skipped).map(candidate => ({
+          change: `${formatChange(candidate.focus ?? candidate)} (skipped: ${candidate.category} ${candidate.rule}: ${candidate.reason})`,
+          location: formatLocation(candidate),
           mutator: candidate.mutator,
           middle: '',
         })),

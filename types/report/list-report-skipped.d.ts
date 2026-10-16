@@ -1,5 +1,6 @@
 import type { ListReportJustifier } from './list-report-justifier'
 import type { SkipCategory } from '../mutant/skip-category'
+import type { ListReportFocus } from './list-report-focus'
 
 /**
  * Candidate that mootant considered and did not emit, as `--skipped` lists it.
@@ -9,6 +10,12 @@ export interface ListReportSkipped {
    * Mutant that justifies the skip, or null when no single mutant does.
    */
   by: ListReportJustifier | null
+
+  /**
+   * Part of the range the change amounts to, present when the mutator names
+   * one; text reports show its position and texts.
+   */
+  focus?: ListReportFocus
 
   /**
    * Category of the skip: `equivalent`, `noise`, `timeout`, `owned`,

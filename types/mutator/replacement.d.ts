@@ -1,6 +1,7 @@
 import type { Node } from 'oxc-parser'
 
 import type { SkipNote } from '../mutant/skip-note'
+import type { TextEdit } from '../source/text-edit'
 
 /**
  * Proposal of a mutator: replace one node of the file with new text.
@@ -13,6 +14,13 @@ export interface Replacement {
    * (the solitary rule).
    */
   solitary?: readonly Node[]
+
+  /**
+   * Edit inside the replaced node that the mutant amounts to, such as the
+   * changed part of a regular expression pattern. Reports show it in place of
+   * the whole node; the mutant still replaces the whole node.
+   */
+  focus?: TextEdit
 
   /**
    * Why the mutator does not emit the replacement. A skipped replacement never
