@@ -573,6 +573,33 @@ describe('statementRemoval', () => {
     ).toStrictEqual(['await flush() -> ;'])
   })
 
+  it.each([
+    "import { setTimeout } from 'node:timers/promises'\nawait setTimeout(1000)",
+    "import { setTimeout } from 'node:timers/promises'\nawait (setTimeout(delay * 2) as Promise<void>)",
+    'await scheduler.wait(500)',
+    "import { setTimeout as sleep } from 'node:timers/promises'\nawait sleep(100, 'done')",
+  ])('skips a statement that only waits for a timer in %s', code => {
+    expect(
+      listMutantTexts('statement-removal', [code], {
+        mutators: { 'missing-await': 'off' },
+      }),
+    ).toStrictEqual([])
+  })
+
+  it.each([
+    "import { setTimeout } from 'node:timers/promises'\nawait setTimeout(1000, load())",
+    "import { setTimeout } from 'node:timers/promises'\nawait setTimeout(1000, () => {})",
+    "import { setInterval } from 'node:timers/promises'\nawait setInterval(1000)",
+    'await load(delay)',
+    "import { setTimeout as sleep } from 'node:timers/promises'\nawait sleep(100, pendingOperation)",
+  ])('removes an awaited statement that does more than wait in %s', code => {
+    expect(
+      listMutantTexts('statement-removal', [code], {
+        mutators: { 'missing-await': 'off' },
+      }),
+    ).toHaveLength(1)
+  })
+
   it('keeps a statement that advances a loop to the timeouts setting', () => {
     let lines = ['while (queue.length) handle(queue.shift())']
 
@@ -677,6 +704,18 @@ describe('statementRemoval', () => {
     ['function f() { go(); return }', ['return -> ; (equivalent tail-return)']],
     ['while (i < n) { i++ }', ['i++ -> ; (timeout loop-advance)']],
     ['go()', []],
+    [
+      "import { setTimeout } from 'node:timers/promises'\nawait setTimeout(1000)",
+      ['await setTimeout(1000) -> ; (noise timer-delay)'],
+    ],
+    [
+      'await scheduler.wait(1000, { signal })',
+      ['await scheduler.wait(1000, { signal }) -> ; (subsumed solitary)'],
+    ],
+    [
+      "import { setTimeout } from 'node:timers/promises'\nawait setTimeout(1000, undefined, options)",
+      ['await setTimeout(1000, undefined, options) -> ; (subsumed solitary)'],
+    ],
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('statement-removal', source)).toStrictEqual(expected)
   })

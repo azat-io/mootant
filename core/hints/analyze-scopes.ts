@@ -327,11 +327,11 @@ function recordDeclarations(
       }
       break
     case 'ImportDeclaration':
-      if (node.importKind === 'value') {
+      if (node.importKind !== 'type') {
         for (let specifier of node.specifiers) {
           if (
             specifier.type !== 'ImportSpecifier' ||
-            specifier.importKind === 'value'
+            specifier.importKind !== 'type'
           ) {
             declareNames(
               specifier.local,

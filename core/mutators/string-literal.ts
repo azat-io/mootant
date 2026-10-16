@@ -10,6 +10,7 @@ import { createRunContext } from './shared/create-run-context'
 import { isLookupPosition } from './shared/is-lookup-position'
 import { getLiteralSkip } from './shared/get-literal-skip'
 import { readRegexCall } from '../regex/read-regex-call'
+import { isReadChain } from '../syntax/is-read-chain'
 
 /**
  * Options of the string-literal mutator.
@@ -46,14 +47,18 @@ let lookupMethods = new Set([
 
 /**
  * Empties a string or the static text of a template literal, or fills an empty
- * one (catalog 4.16, T8). Keys, comparison, boolean-mode and `void` operands,
- * `Symbol` descriptions, error messages, lookup keys whose call is only tested,
- * JSX attribute strings, the pattern and flags of `RegExp` calls the regex
- * mutators read, bare string statements, tagged templates, templates without
- * static text and (unless the `caseTests` option is set) case labels are
- * skipped, and so are mutants that another mutant owns or subsumes (branch
- * pairs, no-op callbacks, emptied `||` defaults). A skipped change follows as a
- * skipped replacement; a template without static text has nothing to change.
+ * one (catalog 4.16, T8). A template whose expressions are all plain reads
+ * (`a`, `a.b`, `a?.b`, `a[0]`, `this.x`) becomes `''`, since its expressions
+ * glued together are rarely a value of their own; other expressions are kept,
+ * and so are those of a tagged template, which a string cannot replace. Keys,
+ * comparison, boolean-mode and `void` operands, `Symbol` descriptions, error
+ * messages, lookup keys whose call is only tested, JSX attribute strings, the
+ * pattern and flags of `RegExp` calls the regex mutators read, bare string
+ * statements, tagged templates, templates without static text and (unless the
+ * `caseTests` option is set) case labels are skipped, and so are mutants that
+ * another mutant owns or subsumes (branch pairs, no-op callbacks, emptied `||`
+ * defaults). A skipped change follows as a skipped replacement; a template
+ * without static text has nothing to change.
  */
 export let stringLiteral: Mutator<StringLiteralOptions> = {
   create(context) {
@@ -68,6 +73,12 @@ export let stringLiteral: Mutator<StringLiteralOptions> = {
         }
         if (!hasText) {
           return []
+        }
+        if (
+          expressions.every(isReadChain) &&
+          sourceCode.getSlot(node).key !== 'quasi'
+        ) {
+          return mutateString(node, { value: null, text: "''" }, context)
         }
         let parts = expressions.map(
           expression => `\${${sourceCode.getText(expression)}}`,
@@ -104,7 +115,8 @@ export let stringLiteral: Mutator<StringLiteralOptions> = {
  */
 interface StringChange {
   /**
-   * New string value, or null for a template that keeps its expressions.
+   * New string value, or null for a template with expressions, whose change is
+   * judged by its text.
    */
   value: string | null
 
@@ -202,10 +214,10 @@ function getStringSkip(
  * read (catalog 4.16): an emptied pattern matches everything, which the mutants
  * of the conditions that test the match already cover, and the flags of a known
  * pattern belong to regex-flag when it runs (catalog 2.7). A template pattern
- * with expressions stays mutated: emptying it keeps the expressions, so the
- * pattern is not empty and regex-pattern changes only its edge anchors. The
- * flags of such a template, whose flags regex-flag does not change, stay
- * mutated too.
+ * with an expression other than a plain read stays mutated: emptying it keeps
+ * the expressions, so the pattern is not empty and regex-pattern changes only
+ * its edge anchors. The flags of such a template, whose flags regex-flag does
+ * not change, stay mutated too.
  *
  * @param node - String literal or template literal.
  * @param context - Mutator context of the file.
@@ -222,7 +234,10 @@ function getRegexArgumentSkip(
     return null
   }
   if (index === 0) {
-    if (node.type === 'TemplateLiteral' && node.expressions.length > 0) {
+    if (
+      node.type === 'TemplateLiteral' &&
+      !node.expressions.every(isReadChain)
+    ) {
       return null
     }
     return {

@@ -23,6 +23,7 @@ let { scopes, find, tree } = createTestFile(
     '}',
     'x = { key: 1 }',
     "console.log('x')",
+    'setTimeout(run, 100)',
   ].join('\n'),
 )
 
@@ -130,9 +131,20 @@ describe('createSyntaxHelpers', () => {
       false,
     ],
     [
+      'isTimerDelay',
+      syntax => syntax.isTimerDelay(find('Literal', '100')),
+      true,
+    ],
+    [
       'isValuePosition',
       syntax => syntax.isValuePosition(find('Identifier', 'key')),
       false,
+    ],
+    [
+      'readTimerCall',
+      syntax =>
+        syntax.readTimerCall(find('CallExpression', 'setTimeout(run, 100)')),
+      { waits: false, delay: 1 },
     ],
     [
       'unwrapExpression',
@@ -151,12 +163,24 @@ describe('createSyntaxHelpers', () => {
   })
   it('binds the discarded arrow functions to isResultUnused', () => {
     let file = createTestFile('f(() => a)')
-    let syntax = createSyntaxHelpers(
-      file.tree,
-      file.scopes,
-      new Set([file.find('ArrowFunctionExpression')]),
-    )
+    let syntax = createSyntaxHelpers(file.tree, file.scopes, {
+      discarded: new Set([file.find('ArrowFunctionExpression')]),
+    })
 
     expect(syntax.isResultUnused(file.find('Identifier', 'a'))).toBe(true)
+  })
+
+  it('binds the names of the loggers setting to isLoggingCall', () => {
+    let file = createTestFile("consola.info('x')")
+    let call = file.find('CallExpression')
+
+    expect(
+      createSyntaxHelpers(file.tree, file.scopes).isLoggingCall(call),
+    ).toBe(false)
+    expect(
+      createSyntaxHelpers(file.tree, file.scopes, {
+        loggers: ['consola'],
+      }).isLoggingCall(call),
+    ).toBe(true)
   })
 })

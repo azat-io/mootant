@@ -64,8 +64,33 @@ describe('numberLiteral', () => {
     { source: 'while (2) run()', expected: [] },
     { source: 'for (;;) { if (-1) break }', expected: [] },
     { source: 'window.setInterval(run, 100)', expected: [] },
-    { source: 'getWindow().setTimeout(run, 100)', expected: [] },
+    { source: 'getWindow().setTimeout(run, 100)', expected: ['100 -> 101'] },
+    { source: "window['setTimeout'](run, 100)", expected: [] },
     { source: "timers['setTimeout'](run, 100)", expected: ['100 -> 101'] },
+    { source: 'setTimeout(run, quick ? 1 : 4000)', expected: [] },
+    { source: 'setTimeout(run, options ? options.delay : 1000)', expected: [] },
+    { source: 'setTimeout(run, delays[0].ms)', expected: ['0 -> 1'] },
+    { source: 'setInterval(tick, seconds * 1000)', expected: [] },
+    { source: 'setTimeout(run, f(100))', expected: ['100 -> 101'] },
+    {
+      source: 'let setTimeout = f\nsetTimeout(run, 100)',
+      expected: ['100 -> 101'],
+    },
+    {
+      source: "import { setTimeout } from 'node:timers'\nsetTimeout(run, 100)",
+      expected: [],
+    },
+    {
+      source:
+        "import { setTimeout } from 'node:timers/promises'\nsetTimeout(100, 5)",
+      expected: ['5 -> 6'],
+    },
+    {
+      source:
+        "import * as timers from 'timers/promises'\ntimers.setInterval(100)",
+      expected: [],
+    },
+    { source: 'scheduler.wait(100)', expected: [] },
     { source: 'x = -(0) ? a : b', expected: ['0 -> 1'] },
     { source: 'x = -x', expected: [] },
     { source: "x = -'a'", expected: [] },

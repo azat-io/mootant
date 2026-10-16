@@ -1,4 +1,4 @@
-import type { Node } from 'oxc-parser'
+import type { VariableDeclaration, Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
@@ -85,6 +85,7 @@ function collect(
         timeouts: setup.timeouts ?? false,
         coarseMutants: false,
         templates: true,
+        loggers: [],
       }),
       isEnabled: () => true,
       isActive: () => true,
@@ -304,6 +305,83 @@ describe('collectCandidates', () => {
       expect(candidates).toHaveLength(count)
     },
   )
+
+  it('skips a replacement in a timer delay unless it can unguard a read', () => {
+    let { candidates, skipped } = collect(
+      [
+        'setTimeout(run, seconds * 1000)',
+        'setTimeout(run, options?.delay)',
+        'setTimeout(seconds * 1000)',
+        'setTimeout(run, options && options.delay)',
+        'setTimeout(run, options.delay * 2)',
+      ],
+      [
+        activate('first', 0, context => ({
+          BinaryExpression(node) {
+            return [{ text: context.sourceCode.getText(node.left), node }]
+          },
+        })),
+        activate('second', 1, context => ({
+          LogicalExpression(node) {
+            return [{ text: context.sourceCode.getText(node.right), node }]
+          },
+          ChainExpression(node) {
+            return [{ text: 'options.delay', node }]
+          },
+        })),
+      ],
+      { skipped: true },
+    )
+
+    expect(
+      candidates.map(candidate => [candidate.registered.id, candidate.text]),
+    ).toStrictEqual([
+      ['second', 'options.delay'],
+      ['first', 'seconds'],
+      ['second', 'options.delay'],
+    ])
+    expect(
+      skipped.map(candidate => [
+        candidate.registered.id,
+        candidate.rule,
+        candidate.text,
+      ]),
+    ).toStrictEqual([
+      ['first', 'timer-delay', 'seconds'],
+      ['first', 'timer-delay', 'options.delay'],
+    ])
+    expect(skipped[0]!.reason).toBe('a timer delay is not worth a test')
+  })
+
+  it('lists a replacement its visitor skipped in a timer delay as a timer delay', () => {
+    let { skipped } = collect(
+      ['let n: number = 1', 'setTimeout(run, 100)'],
+      [
+        activate('first', 0, context => ({
+          Literal(node) {
+            let [declaration] = context.sourceCode.program
+              .body as VariableDeclaration[]
+            let { typeAnnotation } = declaration!.declarations[0]!.id as {
+              typeAnnotation: Node
+            }
+            let note = { reason: 'Own.', rule: 'O11' } as const
+            return [
+              { skip: note, text: '2', node },
+              { node: typeAnnotation, text: 'string', skip: note },
+            ]
+          },
+        })),
+      ],
+      { skipped: true },
+    )
+
+    expect(skipped.map(candidate => candidate.rule)).toStrictEqual([
+      'O11',
+      'O11',
+      'timer-delay',
+      'O11',
+    ])
+  })
 
   it('reports a throwing create and runs the other mutators', () => {
     let { diagnostics, candidates } = collect(

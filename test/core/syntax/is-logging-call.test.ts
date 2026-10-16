@@ -22,9 +22,9 @@ describe('isLoggingCall', () => {
     "log(('found'))",
     "(console.log as Function)('a')",
   ])('accepts %s', source => {
-    expect(isLoggingCall(createTestFile(source).find('CallExpression'))).toBe(
-      true,
-    )
+    expect(
+      isLoggingCall(createTestFile(source).find('CallExpression'), []),
+    ).toBe(true)
   })
 
   it.each([
@@ -44,9 +44,33 @@ describe('isLoggingCall', () => {
     'console(message)',
     'f()(message)',
     'loggers[0].info(message)',
+    "consola.info('found')",
   ])('rejects %s', source => {
-    expect(isLoggingCall(createTestFile(source).find('CallExpression'))).toBe(
-      false,
-    )
+    expect(
+      isLoggingCall(createTestFile(source).find('CallExpression'), []),
+    ).toBe(false)
   })
+
+  it.each(["consola.info('found')", 'this.signale.warn(message)'])(
+    'accepts %s with the loggers setting',
+    source => {
+      expect(
+        isLoggingCall(createTestFile(source).find('CallExpression'), [
+          'consola',
+          'signale',
+        ]),
+      ).toBe(true)
+    },
+  )
+
+  it.each(['consola.push(entry)', "myConsola.info('found')"])(
+    'rejects %s with the loggers setting',
+    source => {
+      expect(
+        isLoggingCall(createTestFile(source).find('CallExpression'), [
+          'consola',
+        ]),
+      ).toBe(false)
+    },
+  )
 })

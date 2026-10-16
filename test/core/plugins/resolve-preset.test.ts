@@ -274,15 +274,25 @@ describe('resolvePreset', () => {
     let registry = createRegistry({})
 
     expect(resolvePreset(registry, 'acme/extra')).toStrictEqual({
-      settings: { coarseMutants: false, templates: true, timeouts: false },
+      settings: {
+        coarseMutants: false,
+        templates: true,
+        timeouts: false,
+        loggers: [],
+      },
       mutators: [],
     })
   })
 
   it.each<SettingsCase>([
     {
+      expected: {
+        coarseMutants: false,
+        templates: true,
+        timeouts: false,
+        loggers: [],
+      },
       name: 'defaults timeouts and coarse mutants to false and templates to true',
-      expected: { coarseMutants: false, templates: true, timeouts: false },
       presets: { base: { description: 'No settings.', mutators: {} } },
       presetId: 'base',
     },
@@ -295,7 +305,12 @@ describe('resolvePreset', () => {
         },
         child: { description: 'Child.', extends: ['base'], mutators: {} },
       },
-      expected: { coarseMutants: false, templates: true, timeouts: true },
+      expected: {
+        coarseMutants: false,
+        templates: true,
+        timeouts: true,
+        loggers: [],
+      },
       name: 'inherits settings through extends',
       presetId: 'child',
     },
@@ -313,7 +328,12 @@ describe('resolvePreset', () => {
           mutators: {},
         },
       },
-      expected: { coarseMutants: false, templates: true, timeouts: false },
+      expected: {
+        coarseMutants: false,
+        templates: true,
+        timeouts: false,
+        loggers: [],
+      },
       name: 'lets the extending settings win',
       presetId: 'child',
     },
@@ -331,8 +351,36 @@ describe('resolvePreset', () => {
           mutators: {},
         },
       },
-      expected: { coarseMutants: false, templates: true, timeouts: true },
+      expected: {
+        coarseMutants: false,
+        templates: true,
+        timeouts: true,
+        loggers: [],
+      },
       name: 'keeps inherited keys the extending preset does not set',
+      presetId: 'child',
+    },
+    {
+      presets: {
+        child: {
+          settings: { loggers: ['signale'] },
+          description: 'Child.',
+          extends: ['base'],
+          mutators: {},
+        },
+        base: {
+          settings: { loggers: ['consola'] },
+          description: 'Base.',
+          mutators: {},
+        },
+      },
+      expected: {
+        loggers: ['signale'],
+        coarseMutants: false,
+        templates: true,
+        timeouts: false,
+      },
+      name: 'replaces inherited loggers with the extending ones',
       presetId: 'child',
     },
   ])('$name', ({ presetId, expected, presets }) => {
@@ -341,6 +389,7 @@ describe('resolvePreset', () => {
 
     expect(settings).toStrictEqual(expected)
     expect(Object.isFrozen(settings)).toBe(true)
+    expect(Object.isFrozen(settings.loggers)).toBe(true)
   })
 
   it.each([

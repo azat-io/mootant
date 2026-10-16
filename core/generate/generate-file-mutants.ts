@@ -186,7 +186,7 @@ interface Selection {
 export function generateFileMutants(
   input: GenerateFileInput,
 ): Omit<FileMutants, 'absolute'> {
-  let { knownMutatorIds, source, file } = input
+  let { source, file } = input
   let templateDiagnostics: Diagnostic[] = []
   let parseDiagnostics: Diagnostic[] = []
   let programs: PreparedProgram[] = []
@@ -196,7 +196,7 @@ export function generateFileMutants(
     if (outcome.kind === 'failed') {
       parseDiagnostics.push(...outcome.diagnostics)
     } else {
-      programs.push(prepareProgram(outcome.parsed, knownMutatorIds))
+      programs.push(prepareProgram(outcome.parsed, input))
     }
   }
   if (input.compilers && input.settings.templates) {
@@ -209,7 +209,7 @@ export function generateFileMutants(
       file,
     })
     if (template.kind === 'parsed') {
-      programs.push(prepareProgram(template.parsed, knownMutatorIds, template))
+      programs.push(prepareProgram(template.parsed, input, template))
     }
     if (template.kind !== 'empty' && template.diagnostic) {
       templateDiagnostics.push(template.diagnostic)
@@ -396,11 +396,14 @@ function collectProgramCandidates(
           }) === null
         )
       },
+      syntax: createSyntaxHelpers(tree, scopes, {
+        loggers: settings.loggers,
+        discarded: handlers,
+      }),
       hints: createTypeHints(createSyntacticTypeProvider(parsed, tree, scopes)),
       isEnabled(id: string): boolean {
         return activeIds.has(id)
       },
-      syntax: createSyntaxHelpers(tree, scopes, handlers),
       sourceCode: createSourceCode(parsed, tree, scopes),
       settings,
     },
@@ -416,20 +419,21 @@ function collectProgramCandidates(
 
 /**
  * Builds what the mutators of one program need besides the ignore rules of the
- * other programs: its tree, scopes and own ignore rules.
+ * other programs: its tree, with the logger names of the settings, scopes and
+ * own ignore rules.
  *
  * @param parsed - Program that parsed.
- * @param knownMutatorIds - Every registered mutator id.
+ * @param input - File input with every registered mutator id and the settings.
  * @param template - Code of a template, the nodes of it that are never replaced
  *   and its event handlers, or omitted for a script.
  * @returns The program with its tree, scopes, rules and directive warnings.
  */
 function prepareProgram(
   parsed: ParsedFile,
-  knownMutatorIds: ReadonlySet<string>,
+  input: Pick<GenerateFileInput, 'knownMutatorIds' | 'settings'>,
   template?: Pick<PreparedProgram, 'expressions' | 'handlers' | 'hosts'>,
 ): PreparedProgram {
-  let directiveParse = parseIgnoreDirectives(parsed, knownMutatorIds)
+  let directiveParse = parseIgnoreDirectives(parsed, input.knownMutatorIds)
   let ruleCreation = createIgnoreRules(
     parsed,
     directiveParse.directives,
@@ -437,10 +441,10 @@ function prepareProgram(
   )
   return {
     diagnostics: [...directiveParse.diagnostics, ...ruleCreation.diagnostics],
+    tree: indexTree(parsed.program, input.settings.loggers),
     expressions: template?.expressions ?? null,
     handlers: template?.handlers ?? new Set(),
     scopes: analyzeScopes(parsed.program),
-    tree: indexTree(parsed.program),
     hosts: template?.hosts ?? null,
     rules: ruleCreation.rules,
     parsed,

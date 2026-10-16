@@ -27,9 +27,10 @@ let runKeys = [
  * Checks the shape of a configuration read from a file: an object with only
  * known keys, `plugins` whose values are plugin objects, `extends` as a list of
  * preset ids, mutator settings that are `'on'`, `'off'` or `['on', options]`,
- * boolean preset settings, and `run` settings of the right types and ranges.
- * Plugins, ids and adapters are checked when they are loaded and registered. A
- * script without a default export is invalid.
+ * preset settings (booleans, and `loggers` as an array of non-empty strings),
+ * and `run` settings of the right types and ranges. Plugins, ids and adapters
+ * are checked when they are loaded and registered. A script without a default
+ * export is invalid.
  *
  * @param value - Exported value of the configuration file, undefined for a
  *   script without a default export.

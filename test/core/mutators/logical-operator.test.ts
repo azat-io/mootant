@@ -817,4 +817,37 @@ describe('logicalOperator', () => {
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('logical-operator', source)).toStrictEqual(expected)
   })
+
+  it.each<{ expected: string[]; skipped: string[]; source: string }>([
+    {
+      skipped: ['options && options.delay -> options (noise timer-delay)'],
+      expected: ['options && options.delay -> options.delay'],
+      source: 'setTimeout(run, options && options.delay)',
+    },
+    {
+      expected: [
+        "typeof DELAY !== 'undefined' && DELAY -> DELAY",
+        "typeof DELAY !== 'undefined' && DELAY -> typeof DELAY !== 'undefined'",
+      ],
+      source: "setTimeout(run, typeof DELAY !== 'undefined' && DELAY)",
+      skipped: [],
+    },
+    {
+      skipped: [
+        'options?.delay ?? 1000 -> options?.delay (noise timer-delay)',
+        'options?.delay ?? 1000 -> options?.delay || 1000 (noise timer-delay)',
+        'options?.delay ?? 1000 -> 1000 (noise timer-delay)',
+      ],
+      source: 'setTimeout(run, options?.delay ?? 1000)',
+      expected: [],
+    },
+  ])(
+    'keeps only the drops that unguard a read in the timer delay of $source',
+    ({ expected, skipped, source }) => {
+      expect(
+        runMutator('logical-operator', source).map(formatMutant),
+      ).toStrictEqual(expected)
+      expect(listSkipped('logical-operator', source)).toStrictEqual(skipped)
+    },
+  )
 })

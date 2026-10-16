@@ -12,7 +12,8 @@ import { compareCodeUnits } from '../compare-code-units'
 export interface ResolvedPreset {
   /**
    * Settings merged through `extends`, with `coarseMutants: false`, `templates:
-   * true` and `timeouts: false` unless a preset sets them, frozen.
+   * true`, `timeouts: false` and no `loggers` unless a preset sets them,
+   * frozen.
    */
   settings: Readonly<PresetSettings>
 
@@ -87,12 +88,17 @@ export function resolvePreset(
     })
   }
 
+  let settings: PresetSettings = {
+    coarseMutants: false,
+    templates: true,
+    timeouts: false,
+    loggers: [],
+    ...collection.settings,
+  }
   return {
     settings: Object.freeze({
-      coarseMutants: false,
-      templates: true,
-      timeouts: false,
-      ...collection.settings,
+      ...settings,
+      loggers: Object.freeze([...settings.loggers]),
     }),
     mutators,
   }

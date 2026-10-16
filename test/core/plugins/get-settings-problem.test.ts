@@ -17,6 +17,12 @@ describe('getSettingsProblem', () => {
     ],
     [{ unrelatedThing: true }, '"unrelatedThing" is not a setting'],
     [{ timeouts: 'yes' }, '"timeouts" is not true or false'],
+    [{ loggers: [] }, null],
+    [{ loggers: ['consola', 'signale'], timeouts: true }, null],
+    [{ loggers: 'consola' }, '"loggers" is not an array of receiver names'],
+    [{ loggers: ['consola', 1] }, '"loggers" item 1 is not a non-empty string'],
+    [{ loggers: [''] }, '"loggers" item 0 is not a non-empty string'],
+    [{ logger: [] }, '"logger" is not a setting (did you mean "loggers"?)'],
   ])('describes %o', (value, expected) => {
     expect(getSettingsProblem(value)).toBe(expected)
   })

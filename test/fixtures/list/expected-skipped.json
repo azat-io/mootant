@@ -1394,11 +1394,11 @@
       "mutator": "string-literal",
       "reason": "an empty lookup key only makes a tested lookup constant, which the owner of the test emits",
       "column": 15,
-      "start": 7194,
+      "start": 7207,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O8",
       "line": 169,
-      "end": 7199
+      "end": 7212
     },
     {
       "by": {
@@ -1414,26 +1414,26 @@
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, a constant the test's owner emits",
       "column": 23,
-      "start": 7202,
+      "start": 7215,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O19",
       "line": 169,
-      "end": 7207
+      "end": 7220
     },
     {
       "by": null,
       "original": "`bad ${id}`",
-      "replacement": "`${id}`",
+      "replacement": "''",
       "heuristic": true,
       "category": "noise",
       "mutator": "string-literal",
       "reason": "the text of an error message is not worth a test",
       "column": 19,
-      "start": 7320,
+      "start": 7333,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "error-message",
       "line": 171,
-      "end": 7331
+      "end": 7344
     },
     {
       "by": null,
@@ -1444,11 +1444,11 @@
       "mutator": "unary-operator",
       "reason": "the type hints make the operand a number that is never nullish",
       "column": 17,
-      "start": 7504,
+      "start": 7517,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "numeric-plus",
       "line": 177,
-      "end": 7506
+      "end": 7519
     },
     {
       "by": {
@@ -1464,11 +1464,11 @@
       "mutator": "condition",
       "reason": "a comparison-operator mutant makes the comparison true on part of the inputs where the constant does",
       "column": 19,
-      "start": 7694,
+      "start": 7707,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "comparison-region",
       "line": 184,
-      "end": 7701
+      "end": 7714
     },
     {
       "by": {
@@ -1484,11 +1484,11 @@
       "mutator": "condition",
       "reason": "a comparison-operator mutant makes the comparison false on part of the inputs where the constant does",
       "column": 19,
-      "start": 7694,
+      "start": 7707,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "comparison-region",
       "line": 184,
-      "end": 7701
+      "end": 7714
     },
     {
       "by": {
@@ -1504,11 +1504,11 @@
       "mutator": "number-literal",
       "reason": "a comparison-operator mutant changes the comparison on part of the inputs where this change does",
       "column": 24,
-      "start": 7699,
+      "start": 7712,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O4",
       "line": 184,
-      "end": 7701
+      "end": 7714
     },
     {
       "by": null,
@@ -1519,11 +1519,11 @@
       "mutator": "update-operator",
       "reason": "it changes the update that advances a loop, so only a timeout could kill it",
       "column": 28,
-      "start": 7703,
+      "start": 7716,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "loop-advance",
       "line": 184,
-      "end": 7706
+      "end": 7719
     },
     {
       "by": null,
@@ -1534,11 +1534,11 @@
       "mutator": "update-operator",
       "reason": "the value of the update is unused, so prefix and postfix do the same",
       "column": 28,
-      "start": 7703,
+      "start": 7716,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "unused-result",
       "line": 184,
-      "end": 7706
+      "end": 7719
     },
     {
       "by": {
@@ -1554,11 +1554,11 @@
       "mutator": "statement-removal",
       "reason": "a finer update-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
       "column": 5,
-      "start": 7782,
+      "start": 7795,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "solitary",
       "line": 185,
-      "end": 7789
+      "end": 7802
     },
     {
       "by": null,
@@ -1569,11 +1569,11 @@
       "mutator": "update-operator",
       "reason": "the value of the update is unused, so prefix and postfix do the same",
       "column": 5,
-      "start": 7782,
+      "start": 7795,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "unused-result",
       "line": 185,
-      "end": 7789
+      "end": 7802
     },
     {
       "by": null,
@@ -1584,11 +1584,11 @@
       "mutator": "comparison-operator",
       "reason": "a counter that steps over the bound would keep the loop running, so only a timeout could kill it",
       "column": 10,
-      "start": 7917,
+      "start": 7930,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "loop-running",
       "line": 188,
-      "end": 7926
+      "end": 7939
     },
     {
       "by": {
@@ -1604,11 +1604,11 @@
       "mutator": "condition",
       "reason": "a comparison-operator mutant makes the comparison true on part of the inputs where the constant does",
       "column": 10,
-      "start": 7917,
+      "start": 7930,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "comparison-region",
       "line": 188,
-      "end": 7926
+      "end": 7939
     },
     {
       "by": {
@@ -1624,11 +1624,11 @@
       "mutator": "condition",
       "reason": "comparison-operator emits the same constant",
       "column": 10,
-      "start": 7917,
+      "start": 7930,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O1",
       "line": 188,
-      "end": 7926
+      "end": 7939
     },
     {
       "by": null,
@@ -1639,11 +1639,11 @@
       "mutator": "assignment-operator",
       "reason": "it changes the assignment that advances a loop, so only a timeout could kill it",
       "column": 21,
-      "start": 7928,
+      "start": 7941,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "loop-advance",
       "line": 188,
-      "end": 7938
+      "end": 7951
     },
     {
       "by": null,
@@ -1654,11 +1654,11 @@
       "mutator": "statement-removal",
       "reason": "it removes the statement that advances a loop, so only a timeout could kill it",
       "column": 21,
-      "start": 7928,
+      "start": 7941,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "loop-advance",
       "line": 188,
-      "end": 7938
+      "end": 7951
     },
     {
       "by": null,
@@ -1669,11 +1669,11 @@
       "mutator": "optional-chaining",
       "reason": "the type hints say the object cannot be nullish",
       "column": 11,
-      "start": 8208,
+      "start": 8221,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "non-nullable",
       "line": 194,
-      "end": 8218
+      "end": 8231
     },
     {
       "by": {
@@ -1689,11 +1689,11 @@
       "mutator": "condition",
       "reason": "logical-operator owns the constants of a && or || group",
       "column": 7,
-      "start": 8518,
+      "start": 8531,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O1",
       "line": 201,
-      "end": 8528
+      "end": 8541
     },
     {
       "by": {
@@ -1709,11 +1709,11 @@
       "mutator": "condition",
       "reason": "logical-operator owns the constants of a && or || group",
       "column": 7,
-      "start": 8518,
+      "start": 8531,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O1",
       "line": 201,
-      "end": 8528
+      "end": 8541
     },
     {
       "by": {
@@ -1729,11 +1729,11 @@
       "mutator": "number-literal",
       "reason": "a comparison-operator mutant changes the comparison on part of the inputs where this change does",
       "column": 11,
-      "start": 8522,
+      "start": 8535,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O4",
       "line": 201,
-      "end": 8523
+      "end": 8536
     },
     {
       "by": {
@@ -1749,11 +1749,11 @@
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, and a running mutant moves the test toward false",
       "column": 19,
-      "start": 8530,
+      "start": 8543,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "R4",
       "line": 201,
-      "end": 8535
+      "end": 8548
     },
     {
       "by": {
@@ -1769,11 +1769,11 @@
       "mutator": "condition",
       "reason": "logical-operator owns the constants of a && or || group",
       "column": 7,
-      "start": 8681,
+      "start": 8694,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O1",
       "line": 205,
-      "end": 8691
+      "end": 8704
     },
     {
       "by": {
@@ -1789,11 +1789,11 @@
       "mutator": "condition",
       "reason": "logical-operator owns the constants of a && or || group",
       "column": 7,
-      "start": 8681,
+      "start": 8694,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O1",
       "line": 205,
-      "end": 8691
+      "end": 8704
     },
     {
       "by": null,
@@ -1804,11 +1804,11 @@
       "mutator": "logical-operator",
       "reason": "the right operand is always truthy, so dropping it changes nothing",
       "column": 7,
-      "start": 8681,
+      "start": 8694,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "fixed-operand",
       "line": 205,
-      "end": 8691
+      "end": 8704
     },
     {
       "by": {
@@ -1824,11 +1824,11 @@
       "mutator": "boolean-literal",
       "reason": "logical-operator owns the truth value of an operand of && or ||",
       "column": 13,
-      "start": 8687,
+      "start": 8700,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O3",
       "line": 205,
-      "end": 8691
+      "end": 8704
     },
     {
       "by": {
@@ -1844,11 +1844,11 @@
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, a constant the test's owner emits",
       "column": 19,
-      "start": 8693,
+      "start": 8706,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O19",
       "line": 205,
-      "end": 8698
+      "end": 8711
     },
     {
       "by": {
@@ -1864,11 +1864,11 @@
       "mutator": "condition",
       "reason": "logical-operator owns the constants of a && or || group",
       "column": 7,
-      "start": 8768,
+      "start": 8781,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O1",
       "line": 206,
-      "end": 8779
+      "end": 8792
     },
     {
       "by": {
@@ -1884,11 +1884,11 @@
       "mutator": "condition",
       "reason": "logical-operator owns the constants of a && or || group",
       "column": 7,
-      "start": 8768,
+      "start": 8781,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O1",
       "line": 206,
-      "end": 8779
+      "end": 8792
     },
     {
       "by": null,
@@ -1899,11 +1899,11 @@
       "mutator": "logical-operator",
       "reason": "a running mutant inside the group moves it only toward its absorbing value",
       "column": 7,
-      "start": 8768,
+      "start": 8781,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "R2",
       "line": 206,
-      "end": 8779
+      "end": 8792
     },
     {
       "by": {
@@ -1919,11 +1919,11 @@
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, and a running mutant moves the test toward false",
       "column": 20,
-      "start": 8781,
+      "start": 8794,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "R4",
       "line": 206,
-      "end": 8786
+      "end": 8799
     },
     {
       "by": null,
@@ -1934,11 +1934,11 @@
       "mutator": "comparison-operator",
       "reason": "a lower bound of an operand makes the inputs where it differs impossible",
       "column": 7,
-      "start": 8908,
+      "start": 8921,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "lower-bound",
       "line": 208,
-      "end": 8917
+      "end": 8930
     },
     {
       "by": {
@@ -1954,11 +1954,11 @@
       "mutator": "condition",
       "reason": "a comparison-operator mutant makes the comparison true on part of the inputs where the constant does",
       "column": 7,
-      "start": 8908,
+      "start": 8921,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "comparison-region",
       "line": 208,
-      "end": 8917
+      "end": 8930
     },
     {
       "by": {
@@ -1974,11 +1974,11 @@
       "mutator": "condition",
       "reason": "comparison-operator emits the same constant",
       "column": 7,
-      "start": 8908,
+      "start": 8921,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O1",
       "line": 208,
-      "end": 8917
+      "end": 8930
     },
     {
       "by": {
@@ -1994,11 +1994,11 @@
       "mutator": "number-literal",
       "reason": "a comparison-operator mutant changes the comparison on part of the inputs where this change does",
       "column": 14,
-      "start": 8915,
+      "start": 8928,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O4",
       "line": 208,
-      "end": 8917
+      "end": 8930
     },
     {
       "by": {
@@ -2014,11 +2014,11 @@
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, a constant the test's owner emits",
       "column": 18,
-      "start": 8919,
+      "start": 8932,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O19",
       "line": 208,
-      "end": 8924
+      "end": 8937
     },
     {
       "by": null,
@@ -2029,11 +2029,11 @@
       "mutator": "logical-operator",
       "reason": "?? and || differ here only on falsy values that the nullishSwap option does not count, such as the default itself",
       "column": 15,
-      "start": 8992,
+      "start": 9005,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "nullish-swap",
       "line": 209,
-      "end": 9002
+      "end": 9015
     },
     {
       "by": {
@@ -2049,11 +2049,11 @@
       "mutator": "logical-operator",
       "reason": "the swap to || subsumes dropping the left side: every test that kills the swap also kills the drop",
       "column": 18,
-      "start": 9053,
+      "start": 9066,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "swap-subsumes-drop",
       "line": 210,
-      "end": 9066
+      "end": 9079
     },
     {
       "by": null,
@@ -2064,11 +2064,11 @@
       "mutator": "logical-operator",
       "reason": "dropping a null or undefined default only turns one nullish value into the other (nullishNormalization is off)",
       "column": 18,
-      "start": 9053,
+      "start": 9066,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "nullish-normalization",
       "line": 210,
-      "end": 9066
+      "end": 9079
     },
     {
       "by": {
@@ -2084,11 +2084,11 @@
       "mutator": "return-value",
       "reason": "a finer missing-await mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
       "column": 12,
-      "start": 9168,
+      "start": 9181,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "solitary",
       "line": 215,
-      "end": 9181
+      "end": 9194
     },
     {
       "by": null,
@@ -2099,11 +2099,11 @@
       "mutator": "statement-removal",
       "reason": "removing a tail return of no value, undefined or null changes nothing that matters",
       "column": 5,
-      "start": 9245,
+      "start": 9258,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "tail-return",
       "line": 217,
-      "end": 9256
+      "end": 9269
     },
     {
       "by": {
@@ -2119,11 +2119,11 @@
       "mutator": "condition",
       "reason": "a running mutant of the ?? test moves it toward true",
       "column": 7,
-      "start": 9631,
+      "start": 9644,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "R3",
       "line": 227,
-      "end": 9647
+      "end": 9660
     },
     {
       "by": null,
@@ -2134,11 +2134,11 @@
       "mutator": "logical-operator",
       "reason": "in a truth position with a literal default it forces the position to a constant, which the position's owner emits",
       "column": 7,
-      "start": 9631,
+      "start": 9644,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O15",
       "line": 227,
-      "end": 9647
+      "end": 9660
     },
     {
       "by": null,
@@ -2149,11 +2149,11 @@
       "mutator": "logical-operator",
       "reason": "the default is falsy, so in a truth position || and ?? agree",
       "column": 7,
-      "start": 9631,
+      "start": 9644,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "falsy-default",
       "line": 227,
-      "end": 9647
+      "end": 9660
     },
     {
       "by": null,
@@ -2164,11 +2164,11 @@
       "mutator": "logical-operator",
       "reason": "the default is falsy, so in a truth position dropping it changes nothing",
       "column": 7,
-      "start": 9631,
+      "start": 9644,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "falsy-default",
       "line": 227,
-      "end": 9647
+      "end": 9660
     },
     {
       "by": {
@@ -2184,11 +2184,11 @@
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, a constant the test's owner emits",
       "column": 25,
-      "start": 9649,
+      "start": 9662,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O19",
       "line": 227,
-      "end": 9654
+      "end": 9667
     },
     {
       "by": {
@@ -2204,11 +2204,11 @@
       "mutator": "return-value",
       "reason": "the owner of the result emits the constant true",
       "column": 37,
-      "start": 9862,
+      "start": 9875,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O19",
       "line": 231,
-      "end": 9876
+      "end": 9889
     },
     {
       "by": {
@@ -2224,11 +2224,11 @@
       "mutator": "return-value",
       "reason": "the owner of the result emits the constant false",
       "column": 37,
-      "start": 9862,
+      "start": 9875,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O19",
       "line": 231,
-      "end": 9876
+      "end": 9889
     },
     {
       "by": null,
@@ -2239,11 +2239,11 @@
       "mutator": "logical-operator",
       "reason": "in a truth position with a literal default it forces the position to a constant, which the position's owner emits",
       "column": 34,
-      "start": 9970,
+      "start": 9983,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O15",
       "line": 232,
-      "end": 9988
+      "end": 10001
     },
     {
       "by": null,
@@ -2254,11 +2254,11 @@
       "mutator": "logical-operator",
       "reason": "the default is falsy, so in a truth position || and ?? agree",
       "column": 34,
-      "start": 9970,
+      "start": 9983,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "falsy-default",
       "line": 232,
-      "end": 9988
+      "end": 10001
     },
     {
       "by": null,
@@ -2269,11 +2269,11 @@
       "mutator": "logical-operator",
       "reason": "the default is falsy, so in a truth position dropping it changes nothing",
       "column": 34,
-      "start": 9970,
+      "start": 9983,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "falsy-default",
       "line": 232,
-      "end": 9988
+      "end": 10001
     },
     {
       "by": {
@@ -2289,11 +2289,11 @@
       "mutator": "return-value",
       "reason": "a running mutant moves the result toward true",
       "column": 34,
-      "start": 9970,
+      "start": 9983,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "R6",
       "line": 232,
-      "end": 9988
+      "end": 10001
     },
     {
       "by": null,
@@ -2304,11 +2304,11 @@
       "mutator": "string-literal",
       "reason": "an empty lookup key only makes a tested lookup constant, which the owner of the test emits",
       "column": 23,
-      "start": 10113,
+      "start": 10126,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O8",
       "line": 236,
-      "end": 10116
+      "end": 10129
     },
     {
       "by": {
@@ -2324,11 +2324,11 @@
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, a constant the test's owner emits",
       "column": 21,
-      "start": 10267,
+      "start": 10280,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O19",
       "line": 240,
-      "end": 10278
+      "end": 10291
     },
     {
       "by": {
@@ -2344,11 +2344,11 @@
       "mutator": "boolean-literal",
       "reason": "it copies the other branch, which is the test forced to false, a constant the test's owner emits",
       "column": 28,
-      "start": 10274,
+      "start": 10287,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O19",
       "line": 240,
-      "end": 10278
+      "end": 10291
     },
     {
       "by": null,
@@ -2359,11 +2359,11 @@
       "mutator": "statement-removal",
       "reason": "removing a tail return false only turns false into undefined, which is not worth a test",
       "column": 3,
-      "start": 10351,
+      "start": 10364,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "tail-return-false",
       "line": 241,
-      "end": 10363
+      "end": 10376
     },
     {
       "by": {
@@ -2379,11 +2379,11 @@
       "mutator": "boolean-literal",
       "reason": "it copies the other branch, which is the test forced to true, a constant the test's owner emits",
       "column": 10,
-      "start": 10358,
+      "start": 10371,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O19",
       "line": 241,
-      "end": 10363
+      "end": 10376
     },
     {
       "by": null,
@@ -2394,11 +2394,11 @@
       "mutator": "method-call",
       "reason": "the swapped call never matches the literal, so the decision becomes a constant",
       "column": 13,
-      "start": 10422,
+      "start": 10435,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O17",
       "line": 245,
-      "end": 10442
+      "end": 10455
     },
     {
       "by": {
@@ -2414,11 +2414,11 @@
       "mutator": "string-literal",
       "reason": "a comparison-operator mutant changes the comparison on part of the inputs where this change does",
       "column": 38,
-      "start": 10447,
+      "start": 10460,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O4",
       "line": 245,
-      "end": 10452
+      "end": 10465
     },
     {
       "by": {
@@ -2434,11 +2434,11 @@
       "mutator": "condition",
       "reason": "a comparison-operator mutant makes the comparison true on part of the inputs where the constant does",
       "column": 7,
-      "start": 10724,
+      "start": 10737,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "comparison-region",
       "line": 250,
-      "end": 10745
+      "end": 10758
     },
     {
       "by": {
@@ -2454,11 +2454,11 @@
       "mutator": "condition",
       "reason": "comparison-operator emits the same constant",
       "column": 7,
-      "start": 10724,
+      "start": 10737,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O1",
       "line": 250,
-      "end": 10745
+      "end": 10758
     },
     {
       "by": {
@@ -2474,11 +2474,11 @@
       "mutator": "missing-await",
       "reason": "it makes the comparison constant, which comparison-operator's mutants cover",
       "column": 8,
-      "start": 10725,
+      "start": 10738,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "R8",
       "line": 250,
-      "end": 10738
+      "end": 10751
     },
     {
       "by": {
@@ -2494,11 +2494,11 @@
       "mutator": "number-literal",
       "reason": "a comparison-operator mutant changes the comparison on part of the inputs where this change does",
       "column": 27,
-      "start": 10744,
+      "start": 10757,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O4",
       "line": 250,
-      "end": 10745
+      "end": 10758
     },
     {
       "by": {
@@ -2514,11 +2514,11 @@
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, a constant the test's owner emits",
       "column": 30,
-      "start": 10747,
+      "start": 10760,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O19",
       "line": 250,
-      "end": 10753
+      "end": 10766
     },
     {
       "by": null,
@@ -2529,11 +2529,11 @@
       "mutator": "missing-await",
       "reason": "the caller awaits the same promise without the await",
       "column": 16,
-      "start": 10902,
+      "start": 10915,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "awaited-by-caller",
       "line": 254,
-      "end": 10919
+      "end": 10932
     },
     {
       "by": {
@@ -2549,11 +2549,11 @@
       "mutator": "condition",
       "reason": "a comparison-operator mutant makes the comparison true on part of the inputs where the constant does",
       "column": 7,
-      "start": 11124,
+      "start": 11137,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "comparison-region",
       "line": 260,
-      "end": 11129
+      "end": 11142
     },
     {
       "by": {
@@ -2569,11 +2569,11 @@
       "mutator": "condition",
       "reason": "a comparison-operator mutant makes the comparison false on part of the inputs where the constant does",
       "column": 7,
-      "start": 11124,
+      "start": 11137,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "comparison-region",
       "line": 260,
-      "end": 11129
+      "end": 11142
     },
     {
       "by": {
@@ -2589,11 +2589,216 @@
       "mutator": "number-literal",
       "reason": "a comparison-operator mutant changes the comparison on part of the inputs where this change does",
       "column": 11,
-      "start": 11128,
+      "start": 11141,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "O4",
       "line": 260,
-      "end": 11129
+      "end": 11142
+    },
+    {
+      "by": null,
+      "original": "seconds * 1000",
+      "replacement": "seconds / 1000",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "arithmetic-operator",
+      "reason": "a timer delay is not worth a test",
+      "column": 21,
+      "start": 11610,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 274,
+      "end": 11624
+    },
+    {
+      "by": null,
+      "original": "1000",
+      "replacement": "1001",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "number-literal",
+      "reason": "a timer delay is not worth a test",
+      "column": 31,
+      "start": 11620,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 274,
+      "end": 11624
+    },
+    {
+      "by": null,
+      "original": "options?.delay ?? 300",
+      "replacement": "options?.delay",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "logical-operator",
+      "reason": "a timer delay is not worth a test",
+      "column": 20,
+      "start": 11688,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 275,
+      "end": 11709
+    },
+    {
+      "by": null,
+      "original": "options?.delay ?? 300",
+      "replacement": "options?.delay || 300",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "logical-operator",
+      "reason": "a timer delay is not worth a test",
+      "column": 20,
+      "start": 11688,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 275,
+      "end": 11709
+    },
+    {
+      "by": null,
+      "original": "options?.delay ?? 300",
+      "replacement": "300",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "logical-operator",
+      "reason": "a timer delay is not worth a test",
+      "column": 20,
+      "start": 11688,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 275,
+      "end": 11709
+    },
+    {
+      "by": null,
+      "original": "300",
+      "replacement": "301",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "number-literal",
+      "reason": "a timer delay is not worth a test",
+      "column": 38,
+      "start": 11706,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 275,
+      "end": 11709
+    },
+    {
+      "by": null,
+      "original": "await sleep(500)",
+      "replacement": "sleep(500)",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "missing-await",
+      "reason": "awaiting a timer only waits for its delay",
+      "column": 3,
+      "start": 11776,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 276,
+      "end": 11792
+    },
+    {
+      "by": null,
+      "original": "await sleep(500)",
+      "replacement": ";",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "statement-removal",
+      "reason": "the statement only waits for a timer delay",
+      "column": 3,
+      "start": 11776,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 276,
+      "end": 11792
+    },
+    {
+      "by": null,
+      "original": "500",
+      "replacement": "501",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "number-literal",
+      "reason": "a timer delay is not worth a test",
+      "column": 15,
+      "start": 11788,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 276,
+      "end": 11791
+    },
+    {
+      "by": {
+        "column": 20,
+        "line": 285,
+        "mutator": "logical-operator",
+        "id": "j0qvj8jddq6q"
+      },
+      "original": "setTimeout(tick, options && options.delay)",
+      "replacement": ";",
+      "heuristic": true,
+      "category": "subsumed",
+      "mutator": "statement-removal",
+      "reason": "a finer logical-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
+      "column": 3,
+      "start": 12122,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "solitary",
+      "line": 285,
+      "end": 12164
+    },
+    {
+      "by": null,
+      "original": "options && options.delay",
+      "replacement": "options",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "logical-operator",
+      "reason": "a timer delay is not worth a test",
+      "column": 20,
+      "start": 12139,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 285,
+      "end": 12163
+    },
+    {
+      "by": {
+        "column": 3,
+        "line": 286,
+        "mutator": "missing-await",
+        "id": "0pc7grs37yk8"
+      },
+      "original": "await sleep(100, pending)",
+      "replacement": ";",
+      "heuristic": true,
+      "category": "subsumed",
+      "mutator": "statement-removal",
+      "reason": "a finer missing-await mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
+      "column": 3,
+      "start": 12245,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "solitary",
+      "line": 286,
+      "end": 12270
+    },
+    {
+      "by": null,
+      "original": "100",
+      "replacement": "101",
+      "heuristic": true,
+      "category": "noise",
+      "mutator": "number-literal",
+      "reason": "a timer delay is not worth a test",
+      "column": 15,
+      "start": 12257,
+      "file": "test/fixtures/list/source/catalog.ts",
+      "rule": "timer-delay",
+      "line": 286,
+      "end": 12260
     },
     {
       "by": {
@@ -2773,9 +2978,9 @@
     {
       "by": {
         "column": 32,
-        "id": null,
         "line": 2,
-        "mutator": "string-literal"
+        "mutator": "string-literal",
+        "id": null
       },
       "original": "label + '!'",
       "replacement": "label",
@@ -3787,13 +3992,13 @@
     }
   ],
   "summary": {
-    "totalSkipped": 208,
+    "totalSkipped": 221,
     "skippedByCategory": {
       "equivalent": 32,
-      "noise": 16,
+      "noise": 27,
       "timeout": 11,
       "owned": 47,
-      "subsumed": 101,
+      "subsumed": 103,
       "duplicate": 1,
       "invalid": 0
     }

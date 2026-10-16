@@ -22,6 +22,7 @@ import { findCompilerPins } from '../syntax/find-compiler-pins'
 import { validateReplacement } from './validate-replacement'
 import { findIgnoreRule } from '../ignore/find-ignore-rule'
 import { getReplacementKind } from './get-replacement-kind'
+import { canUnguardRead } from '../syntax/can-unguard-read'
 import { getScopePath } from '../identity/get-scope-path'
 import { fitTemplateText } from './fit-template-text'
 import { getSlot } from '../tree/get-slot'
@@ -31,6 +32,14 @@ import { pickFocus } from './pick-focus'
  * Scope path of every candidate of a template.
  */
 const TEMPLATE_SCOPE = '<template>'
+
+/**
+ * Skip of a replacement in a timer delay.
+ */
+const TIMER_DELAY_SKIP: SkipNote = {
+  reason: 'a timer delay is not worth a test',
+  rule: 'timer-delay',
+}
 
 /**
  * What the candidates of one file are collected from.
@@ -126,8 +135,9 @@ interface CandidateCollection {
 
   /**
    * Replacements that were not accepted, in the order they were found: those a
-   * visitor marked as skipped, invalid ones and, without the `timeouts`
-   * setting, those of a value that advances a loop. Empty unless requested.
+   * visitor marked as skipped, invalid ones, those in a timer delay and,
+   * without the `timeouts` setting, those of a value that advances a loop.
+   * Empty unless requested.
    */
   skipped: SkippedCandidate[]
 
@@ -161,16 +171,19 @@ interface VisitorEntry {
  * invalid replacement become mutator errors and cost only that mutator, visit
  * or replacement. A replacement that would move code its framework compiler
  * reads where it stands, such as a Svelte rune call or a Vue compiler macro, is
- * dropped. Without the `timeouts` setting, a replacement of the value that
- * advances a loop is dropped. A replacement that a visitor marks as skipped is
- * never validated and never becomes a candidate; on request it is collected
- * with its rule, like dropped and invalid replacements, so that skipped
- * replacements never change the candidates. In a template only expressions are
- * replaced: a replacement of a statement, a declaration or a node of the
- * synthetic module around the template code is dropped without a trace, and
- * every candidate has the scope `<template>`. A replacement in a Vue template
- * is fitted into the attribute value or the interpolation around it, or skipped
- * when it cannot be.
+ * dropped. A replacement inside the effect-free delay of a known timer call is
+ * skipped as noise, unless it can take away the guard of a read there, such as
+ * `options && options.delay` turned into `options.delay`, even when its visitor
+ * skipped it for another rule. Without the `timeouts` setting, a replacement of
+ * the value that advances a loop is dropped. A replacement that a visitor marks
+ * as skipped is never validated and never becomes a candidate; on request it is
+ * collected with its rule, like dropped and invalid replacements, so that
+ * skipped replacements never change the candidates. In a template only
+ * expressions are replaced: a replacement of a statement, a declaration or a
+ * node of the synthetic module around the template code is dropped without a
+ * trace, and every candidate has the scope `<template>`. A replacement in a Vue
+ * template is fitted into the attribute value or the interpolation around it,
+ * or skipped when it cannot be.
  *
  * @param input - Mutators, parsed file, runtime tree, ignore rules and shared
  *   context services.
@@ -212,6 +225,22 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
         ...pickFocus(replacement),
       })
     }
+  }
+  /**
+   * Tells whether a replacement lies in the effect-free delay of a known timer
+   * call and cannot take away the guard of a read there, so that its mutant can
+   * only change how long the timer waits.
+   *
+   * @param replacement - Replacement to check.
+   * @returns Whether the replacement is skipped as a timer delay.
+   */
+  function isTimerDelay(replacement: Replacement): boolean {
+    let { sourceCode, syntax } = services
+    return (
+      syntax.isRuntimeNode(replacement.node) &&
+      syntax.isTimerDelay(replacement.node) &&
+      !canUnguardRead(tree, replacement, sourceCode.text)
+    )
   }
   let table = new Map<string, VisitorEntry[]>()
   let pins = findCompilerPins(tree, parsed.file)
@@ -275,7 +304,11 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
           continue
         }
         if (replacement.skip) {
-          skip(registered, replacement, replacement.skip)
+          skip(
+            registered,
+            replacement,
+            isTimerDelay(replacement) ? TIMER_DELAY_SKIP : replacement.skip,
+          )
           continue
         }
         let violation = validateReplacement(
@@ -328,6 +361,10 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
             rule: 'template-text',
             reason: fit.reason,
           })
+          continue
+        }
+        if (isTimerDelay(replacement)) {
+          skip(registered, replacement, TIMER_DELAY_SKIP)
           continue
         }
         if (

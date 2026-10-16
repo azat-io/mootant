@@ -10,6 +10,7 @@ import { createRunContext } from './shared/create-run-context'
 import { getNegationTop } from './shared/get-negation-top'
 import { isNumberType } from './shared/is-number-type'
 import { isComparison } from './shared/is-comparison'
+import { isTimerWait } from './shared/is-timer-wait'
 import { getTypeView } from './shared/get-type-view'
 import { isFunction } from '../syntax/is-function'
 
@@ -51,7 +52,9 @@ let relationalOperators = new Set(['<=', '>=', '<', '>'])
  * whose truthiness alone is used, as in a condition test, keeps its mutant: a
  * promise is always truthy, but the constants of the decision's owner skip the
  * awaited call, while the mutant still makes it, with its effects and its
- * rejection. Skipped mutants follow as skipped replacements.
+ * rejection. An `await` that only waits for a promise timer, such as `await
+ * setTimeout(1000)` of `node:timers/promises`, is skipped as a timer delay.
+ * Skipped mutants follow as skipped replacements.
  */
 export let missingAwait: Mutator = {
   create(context) {
@@ -66,6 +69,63 @@ export let missingAwait: Mutator = {
   meta: {
     description: 'Removes an await, as if the promise was not awaited.',
   },
+}
+
+/**
+ * Decides whether the removal of an `await` is skipped (catalog 4.10): the
+ * caller awaits the same promise (EQ), the `await` only waits for a promise
+ * timer (NOISE), the removal makes a comparison with a primitive constant (O3,
+ * R8), or the awaited value is not a promise by its type (EQ).
+ *
+ * @param node - Await expression.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null when the mutant is emitted.
+ */
+function getAwaitSkip(
+  node: AwaitExpression,
+  context: MutatorContext,
+): SkipNote | null {
+  if (isAwaitedByCaller(node, context)) {
+    return {
+      reason: 'the caller awaits the same promise without the await',
+      rule: 'awaited-by-caller',
+    }
+  }
+  if (isTimerWait(node, context)) {
+    return {
+      reason: 'awaiting a timer only waits for its delay',
+      rule: 'timer-delay',
+    }
+  }
+  let comparison = getConstantComparison(node, context)
+  if (comparison) {
+    return isBooleanModeOperand(comparison, context) ?
+        {
+          by: {
+            node: context.syntax.getContextSlot(
+              getNegationTop(comparison, context).node,
+            ).parent!,
+            mutator: 'logical-operator',
+          },
+          reason:
+            'it makes the comparison constant, and logical-operator owns the truth value of an operand of && or ||',
+          rule: 'O3',
+        }
+      : {
+          reason:
+            "it makes the comparison constant, which comparison-operator's mutants cover",
+          by: { mutator: 'comparison-operator', node: comparison },
+          rule: 'R8',
+        }
+  }
+  if (isSettled(node, context)) {
+    return {
+      reason:
+        'the type hints say the value is not a promise, so the await only changes timing',
+      rule: 'settled-value',
+    }
+  }
+  return null
 }
 
 /**
@@ -124,57 +184,6 @@ function isAwaitedByCaller(
     syntax.getContextSlot(reference!).parent === next &&
     !isAwaitObserved(next, context)
   )
-}
-
-/**
- * Decides whether the removal of an `await` is skipped (catalog 4.10): the
- * caller awaits the same promise (EQ), the removal makes a comparison with a
- * primitive constant (O3, R8), or the awaited value is not a promise by its
- * type (EQ).
- *
- * @param node - Await expression.
- * @param context - Mutator context of the file.
- * @returns Rule and reason of the skip, or null when the mutant is emitted.
- */
-function getAwaitSkip(
-  node: AwaitExpression,
-  context: MutatorContext,
-): SkipNote | null {
-  if (isAwaitedByCaller(node, context)) {
-    return {
-      reason: 'the caller awaits the same promise without the await',
-      rule: 'awaited-by-caller',
-    }
-  }
-  let comparison = getConstantComparison(node, context)
-  if (comparison) {
-    return isBooleanModeOperand(comparison, context) ?
-        {
-          by: {
-            node: context.syntax.getContextSlot(
-              getNegationTop(comparison, context).node,
-            ).parent!,
-            mutator: 'logical-operator',
-          },
-          reason:
-            'it makes the comparison constant, and logical-operator owns the truth value of an operand of && or ||',
-          rule: 'O3',
-        }
-      : {
-          reason:
-            "it makes the comparison constant, which comparison-operator's mutants cover",
-          by: { mutator: 'comparison-operator', node: comparison },
-          rule: 'R8',
-        }
-  }
-  if (isSettled(node, context)) {
-    return {
-      reason:
-        'the type hints say the value is not a promise, so the await only changes timing',
-      rule: 'settled-value',
-    }
-  }
-  return null
 }
 
 /**

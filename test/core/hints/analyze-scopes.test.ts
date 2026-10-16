@@ -690,6 +690,16 @@ describe('analyzeScopes', () => {
     expect(resolve(source, name, index)).toBe(expected)
   })
 
+  it('resolves the imports of a JavaScript file, which have no import kind', () => {
+    let { scopes, find } = createTestFile(
+      "import x, { y as z } from 'm'\nx + z",
+      'example.js',
+    )
+
+    expect(scopes.bindings.get(find('Identifier', 'x', 1))?.kind).toBe('import')
+    expect(scopes.bindings.get(find('Identifier', 'z', 1))?.kind).toBe('import')
+  })
+
   it.each([
     { scope: 'Program', source: 'var x', kind: 'var', name: 'x' },
     {

@@ -220,6 +220,17 @@ describe('indexTree', () => {
     ],
     ['the arguments of a logging call', "console.log('a', b)", 'Identifier b'],
     ['a logger argument', 'this.logger.warn(message)', 'Identifier message'],
+    ['a child-logger label', "logger.withContext('Build')", "Literal 'Build'"],
+    [
+      'child-logger bindings',
+      'this.logger.child({ module: name })',
+      'Identifier name',
+    ],
+    [
+      'the label of a chained child logger',
+      "logger.withContext('A').withContext('B')",
+      "Literal 'B'",
+    ],
   ])('leaves out %s', (_description, source, node) => {
     expect(indexSnippet(source).indexed).not.toContain(node)
   })
@@ -244,6 +255,34 @@ describe('indexTree', () => {
     ],
     ['an argument of another call', "load('./a')", "Literal './a'"],
     ['an argument of log.push', 'log.push(x)', 'Identifier x'],
+    ['a consola argument', "consola.info('a')", "Literal 'a'"],
+    ['a consola tag', "consola.withTag('Build')", "Literal 'Build'"],
+    [
+      'a child-logger factory call',
+      "logger.withContext('Build')",
+      "CallExpression logger.withContext('Build')",
+    ],
+    [
+      'the callee of a child-logger factory',
+      "logger?.withContext('Build')",
+      'MemberExpression logger?.withContext',
+    ],
+    ['an argument of a child method', "node.child('a')", "Literal 'a'"],
+    [
+      'child-logger options',
+      "logger.child({}, { redact: ['password'] })",
+      "Literal 'password'",
+    ],
+    [
+      'a call in child-logger bindings',
+      'logger.child({ n: f(x) })',
+      'CallExpression f(x)',
+    ],
+    [
+      'a second child-logger argument',
+      "logger.withContext('Build', level)",
+      'Identifier level',
+    ],
     ['a parenthesized string', "('use strict')", "Literal 'use strict'"],
     [
       'a string after a statement',
@@ -280,6 +319,26 @@ describe('indexTree', () => {
   ])('dispatches %s', (_description, source, node) => {
     expect(indexSnippet(source).dispatched).toContain(node)
   })
+
+  it.each([
+    ['a logging call', "consola.info('a', b)", 'Identifier b'],
+    ['a child-logger label', "consola.withTag('Build')", "Literal 'Build'"],
+    [
+      'a chained child-logger label',
+      "signale.withTag('A').child('B')",
+      "Literal 'B'",
+    ],
+  ])(
+    'leaves out %s of a receiver the loggers setting names',
+    (_description, source, node) => {
+      let { program, text } = createTestFile(source).parsed
+      let tree = indexTree(program, ['consola', 'signale'])
+
+      expect(
+        Array.from(tree.slots.keys(), key => describeNode(key, text)),
+      ).not.toContain(node)
+    },
+  )
 
   it('dispatches JSX', () => {
     expect(indexSnippet('<div>{a}</div>', 'example.tsx').dispatched).toEqual(

@@ -10,6 +10,8 @@ export default defineConfig({
     'mootantrc',
     'quasis',
     'rolldown',
+    'signale',
+    'unguard',
   ],
   ignorePaths: [
     '.github',

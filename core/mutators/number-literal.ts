@@ -10,7 +10,6 @@ import { createRunContext } from './shared/create-run-context'
 import { getLiteralValue } from './shared/get-literal-value'
 import { getLiteralSkip } from './shared/get-literal-skip'
 import { getNumberText } from './shared/get-number-text'
-import { getCalleeName } from '../tree/get-callee-name'
 import { getTypeView } from './shared/get-type-view'
 
 /**
@@ -24,11 +23,6 @@ interface NumberLiteralOptions {
 }
 
 /**
- * Callee names whose second argument is a timer delay.
- */
-let timerNames = new Set(['setInterval', 'setTimeout'])
-
-/**
  * Methods whose call with the first argument `0` returns the receiver
  * unchanged.
  */
@@ -37,12 +31,13 @@ let identityMethods = new Set(['substr', 'slice'])
 /**
  * Adds one to a numeric constant (catalog 4.11). A number or BigInt literal, or
  * `-` applied directly to one, gets its value plus one (T7). Comparison
- * operands, boolean-mode operands, `void` operands, keys, timer delays and
- * (unless the `caseTests` option is set) case labels are skipped, and so are
- * changes that keep the truth value in a boolean context, that only a timeout
- * can kill, that keep the sign of a sort comparator's result, or that another
- * mutant owns or subsumes (branch pairs, no-op callbacks, emptied `||`
- * defaults, `slice(-1)`). A skipped change follows as a skipped replacement.
+ * operands, boolean-mode operands, `void` operands, keys and (unless the
+ * `caseTests` option is set) case labels are skipped, and so are changes that
+ * keep the truth value in a boolean context, that only a timeout can kill, that
+ * keep the sign of a sort comparator's result, or that another mutant owns or
+ * subsumes (branch pairs, no-op callbacks, emptied `||` defaults, `slice(-1)`).
+ * A skipped change follows as a skipped replacement. Timer delays are skipped
+ * for every mutator when the candidates are collected.
  */
 export let numberLiteral: Mutator<NumberLiteralOptions> = {
   create(context) {
@@ -75,10 +70,10 @@ export let numberLiteral: Mutator<NumberLiteralOptions> = {
 
 /**
  * Decides whether number-literal skips the change of a numeric constant
- * (catalog 4.11): keys, case labels unless the `caseTests` option is set, timer
- * delays, the rules all literal mutators share, and a change that keeps the
- * truth value in a boolean context, that keeps the sign of a sort comparator's
- * result or that makes `slice(-1)` the removed call (O18).
+ * (catalog 4.11): keys, case labels unless the `caseTests` option is set, the
+ * rules all literal mutators share, and a change that keeps the truth value in
+ * a boolean context, that keeps the sign of a sort comparator's result or that
+ * makes `slice(-1)` the removed call (O18).
  *
  * @param node - Number or BigInt literal, or `-` applied directly to one.
  * @param context - Mutator context of the file.
@@ -96,7 +91,7 @@ function getNumberSkip(
   } else {
     next = value + 1
   }
-  let { parent, index, key } = syntax.getContextSlot(node)
+  let { parent, key } = syntax.getContextSlot(node)
   if (key === 'key') {
     return { reason: 'property keys are not mutated', rule: 'property-key' }
   }
@@ -104,16 +99,6 @@ function getNumberSkip(
     return {
       reason: 'case labels are mutated only with the caseTests option',
       rule: 'case-label',
-    }
-  }
-  if (
-    index === 1 &&
-    parent?.type === 'CallExpression' &&
-    timerNames.has(getCalleeName(parent.callee) ?? '')
-  ) {
-    return {
-      reason: 'a timer delay is not worth a test',
-      rule: 'timer-delay',
     }
   }
   /**

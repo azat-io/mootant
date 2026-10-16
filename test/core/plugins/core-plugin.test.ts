@@ -54,6 +54,7 @@ function createSampleContext(id: string, options: object): MutatorContext {
       coarseMutants: false,
       templates: true,
       timeouts: false,
+      loggers: [],
     }),
     isEnabled: () => true,
     isActive: () => true,
@@ -127,6 +128,7 @@ describe('corePlugin', () => {
       coarseMutants: false,
       templates: true,
       timeouts: false,
+      loggers: [],
     })
   })
 
@@ -141,6 +143,7 @@ describe('corePlugin', () => {
       coarseMutants: true,
       templates: true,
       timeouts: true,
+      loggers: [],
     })
   })
 

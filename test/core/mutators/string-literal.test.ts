@@ -11,8 +11,12 @@ describe('stringLiteral', () => {
     { expected: ["'Hello' -> ''"], source: "x = 'Hello'" },
     { expected: ["'' -> 'mootant'"], source: "x = ''" },
     {
-      expected: [`\`/api/\${id}/items\` -> \`\${id}\``],
+      expected: [`\`/api/\${id}/items\` -> ''`],
       source: `x = \`/api/\${id}/items\``,
+    },
+    {
+      expected: [`\`/api/\${load(id)}\` -> \`\${load(id)}\``],
+      source: `x = \`/api/\${load(id)}\``,
     },
     { expected: ["'key' -> ''"], source: "x = obj['key']" },
     { source: "x = parts.join(', ')", expected: ["', ' -> ''"] },
@@ -64,11 +68,46 @@ describe('stringLiteral', () => {
     { expected: ['"a" -> ""'], source: 'x = "a"' },
     { expected: ['`` -> `mootant`'], source: 'x = ``' },
     { expected: ['`abc` -> ``'], source: 'x = `abc`' },
+    { expected: [`\`a\${x}b\${y}\` -> ''`], source: `x = \`a\${x}b\${y}\`` },
+    { expected: [`\`a\${(x)}\` -> ''`], source: `x = \`a\${(x)}\`` },
     {
-      expected: [`\`a\${x}b\${y}\` -> \`\${x}\${y}\``],
-      source: `x = \`a\${x}b\${y}\``,
+      expected: [
+        `\`<svg \${this.size}>\${icon?.path}\${list[0]}\${map[key].d}\${(a as T)!.b}</svg>\` -> ''`,
+      ],
+      source: `x = \`<svg \${this.size}>\${icon?.path}\${list[0]}\${map[key].d}\${(a as T)!.b}</svg>\``,
     },
-    { expected: [`\`a\${(x)}\` -> \`\${(x)}\``], source: `x = \`a\${(x)}\`` },
+    {
+      expected: [`\`a\${x}b\${f(y)}\` -> \`\${x}\${f(y)}\``],
+      source: `x = \`a\${x}b\${f(y)}\``,
+    },
+    {
+      expected: [`\`a\${x.y()}\` -> \`\${x.y()}\``],
+      source: `x = \`a\${x.y()}\``,
+    },
+    {
+      expected: [`\`a\${tag\`b\`}\` -> \`\${tag\`b\`}\``],
+      source: `x = \`a\${tag\`b\`}\``,
+    },
+    {
+      expected: [`\`a\${x[i + 1]}\` -> \`\${x[i + 1]}\``],
+      source: `x = \`a\${x[i + 1]}\``,
+    },
+    {
+      expected: [`\`a\${x[f()]}\` -> \`\${x[f()]}\``],
+      source: `x = \`a\${x[f()]}\``,
+    },
+    {
+      expected: [`\`a\${x[1n]}\` -> \`\${x[1n]}\``],
+      source: `x = \`a\${x[1n]}\``,
+    },
+    {
+      source: `class A extends B { c() { return \`a\${super.b}\` } }`,
+      expected: [`\`a\${super.b}\` -> \`\${super.b}\``],
+    },
+    {
+      expected: [`\`a\${x['k'].y}\` -> ''`, "'k' -> ''"],
+      source: `x = \`a\${x['k'].y}\``,
+    },
     { source: `x = \`\${a}\${b}\``, expected: [] },
     { source: ['x = `\\', `\${a}\``].join('\n'), expected: [] },
     { source: `x = String.raw\`a\${b}\``, expected: [] },
@@ -164,12 +203,20 @@ describe('stringLiteral', () => {
       expected: ["'' -> 'mootant'"],
     },
     {
-      source: `x = ok ? \`\${a}\` : \`x\${a}\``,
+      source: `x = ok ? \`\${f(a)}\` : \`x\${f(a)}\``,
       expected: [],
     },
     {
-      source: `x = ok ? \`\${b}\` : \`x\${a}\``,
-      expected: [`\`x\${a}\` -> \`\${a}\``],
+      source: `x = ok ? \`\${f(b)}\` : \`x\${f(a)}\``,
+      expected: [`\`x\${f(a)}\` -> \`\${f(a)}\``],
+    },
+    {
+      source: `x = ok ? '' : \`x\${a}\``,
+      expected: ["'' -> 'mootant'"],
+    },
+    {
+      expected: ['"" -> "mootant"', `\`x\${a}\` -> ''`],
+      source: `x = ok ? "" : \`x\${a}\``,
     },
     {
       source: "x = rows.filter(row => { if (row.ok) return 'a'; return '' })",
@@ -311,12 +358,12 @@ describe('stringLiteral', () => {
       ],
     ],
     [
-      `declare let t: string | undefined; declare let u: string; x = u || 'a'; y = t || 'a'; z = ok ? \`a\${s}\` : \`\${s}\`; function f() { throw new TypeError(\`bad \${u}\`) } run(); 'bare'`,
+      `declare let t: string | undefined; declare let u: string; x = u || 'a'; y = t || 'a'; z = ok ? \`a\${s}\` : ''; function f() { throw new TypeError(\`bad \${u}\`) } run(); 'bare'`,
       [
         "'a' -> '' (owned O16)",
         "'a' -> '' (subsumed R7)",
-        `\`a\${s}\` -> \`\${s}\` (owned O19)`,
-        `\`bad \${u}\` -> \`\${u}\` (noise error-message)`,
+        `\`a\${s}\` -> '' (owned O19)`,
+        `\`bad \${u}\` -> '' (noise error-message)`,
         "'bare' -> '' (noise bare-string)",
       ],
     ],
@@ -336,12 +383,13 @@ describe('stringLiteral', () => {
       "x = new RegExp('^a', 'g')",
       ["'^a' -> '' (noise regex-argument)", "'g' -> '' (noise regex-argument)"],
     ],
-    [`x = RegExp(\`^\${a}$\`)`, []],
-    [`x = RegExp(\`\${a}a$\`)`, []],
+    [`x = RegExp(\`^\${a}$\`)`, [`\`^\${a}$\` -> '' (noise regex-argument)`]],
+    [`x = RegExp(\`\${a}a$\`)`, [`\`\${a}a$\` -> '' (noise regex-argument)`]],
+    [`x = RegExp(\`^\${a()}$\`)`, []],
     ["x = RegExp(('a' as string))", ["'a' -> '' (noise regex-argument)"]],
     [
-      `x = RegExp(\`^\${a}\`, 'g')`,
-      [`\`^\${a}\` -> \`\${a}\` (duplicate duplicate)`],
+      `x = RegExp(\`^\${a()}\`, 'g')`,
+      [`\`^\${a()}\` -> \`\${a()}\` (duplicate duplicate)`],
     ],
     ["x = RegExp('(', 'g')", ["'(' -> '' (noise regex-argument)"]],
     ["x = RegExp('a', flags)", []],
@@ -352,7 +400,7 @@ describe('stringLiteral', () => {
 
   it.each<[string, string[]]>([
     [`x = RegExp(\`^\${a}\`, 'g')`, ["'g' -> ''"]],
-    [`x = RegExp(\`\${a}a$\`)`, [`\`\${a}a$\` -> \`\${a}\``]],
+    [`x = RegExp(\`\${a()}a$\`)`, [`\`\${a()}a$\` -> \`\${a()}\``]],
     ["x = RegExp('(', 'g')", ["'g' -> ''"]],
     ["x = RegExp('a', flags)", ["'a' -> ''"]],
     ["x = f('a', 'g')", ["'a' -> ''", "'g' -> ''"]],

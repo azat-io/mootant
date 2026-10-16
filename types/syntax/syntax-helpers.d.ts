@@ -11,6 +11,7 @@ import type {
   Node,
 } from 'oxc-parser'
 
+import type { TimerCall } from './timer-call'
 import type { NodeSlot } from './node-slot'
 
 /**
@@ -37,6 +38,14 @@ export interface SyntaxHelpers {
   ): ArrowFunctionExpression | FunctionNode | null
 
   /**
+   * Known timer call with the index of its delay argument and whether awaiting
+   * it only waits, or null: `setTimeout` and `setInterval` (global, imported
+   * from `node:timers` or a method), or the promise timers of
+   * `node:timers/promises` and `scheduler.wait`.
+   */
+  readTimerCall(node: CallExpression): TimerCall | null
+
+  /**
    * Operands of the same-operator chain below the node, left to right. Operands
    * that are, through parentheses, logical expressions with the same operator
    * are expanded: `a && (b && c)` gives `a`, `b`, `c`.
@@ -51,9 +60,9 @@ export interface SyntaxHelpers {
 
   /**
    * Whether the node is a logging call: a `console` method, a log method of a
-   * receiver named `log`, `logger` or `...Logger`, or `log` and `debug` called
-   * with a string or template literal first. Its callee and arguments are never
-   * mutated.
+   * receiver named `log`, `logger`, `...Logger` or a name of the `loggers`
+   * setting, or `log` and `debug` called with a string or template literal
+   * first. Its callee and arguments are never mutated.
    */
   isLoggingCall(node: CallExpression): boolean
 
@@ -149,6 +158,12 @@ export interface SyntaxHelpers {
    * of logging calls, which the tree-bound helpers do not accept.
    */
   isRuntimeNode(node: Node): boolean
+
+  /**
+   * Whether the node lies in the effect-free delay argument of a known timer
+   * call.
+   */
+  isTimerDelay(node: Node): boolean
 
   /**
    * Whether the update, assignment or statement changes a name that a loop

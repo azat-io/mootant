@@ -60,8 +60,12 @@ const RECORDERS = [
 ]
 
 /**
- * Text that defines the recorders, `settle` and `fail` around a program and
- * returns an instance of it.
+ * Text that defines the recorders, `settle`, `fail` and the stand-in timers
+ * around a program and returns an instance of it. The global `setTimeout` and
+ * the `setTimeout` of `node:timers/promises` ignore the delay: they convert it
+ * to a number, as Node does, and fire one turn of the event loop later, and the
+ * run waits for them like for `settle`. The promise timer resolves with its
+ * value, so it takes on the state of a thenable.
  */
 const PRELUDE = [
   'let events = []',
@@ -88,7 +92,34 @@ const PRELUDE = [
   '  promise.catch(() => {})',
   '  return promise',
   '}',
+  'function setTimeout(callback, delay, ...values) {',
+  "  if (typeof callback !== 'function') throw new TypeError('callback')",
+  '  void (delay * 1)',
+  '  state.pending++',
+  '  setImmediate(() => {',
+  '    state.pending--',
+  '    callback(...values)',
+  '  })',
+  '  return 1',
+  '}',
+  'let timersPromises = {',
+  '  setTimeout: (delay, value) => new Promise(resolve => {',
+  '    void (delay * 1)',
+  '    state.pending++',
+  '    setImmediate(() => {',
+  '      state.pending--',
+  '      resolve(value)',
+  '    })',
+  '  }),',
+  '}',
 ].join('\n')
+
+/**
+ * Import of `node:timers/promises` in a program, with the text between its
+ * braces or the name of its namespace or default import.
+ */
+const TIMERS_IMPORT =
+  /import\s+(?:\{(?<names>[^}]*)\}|(?:\*\s+as\s+)?(?<name>[\w$]+))\s+from\s+["'](?:node:)?timers\/promises["'];?/gu
 
 /**
  * Key of the marker that `createReader` puts in an input.
@@ -131,7 +162,7 @@ async function runJob(job: ProgramJob): Promise<string> {
   if (cached?.code !== job.code) {
     cached = {
       create: runInThisContext(
-        `() => {\n${PRELUDE}\n${job.code}\nreturn { events, state, call: values => f(...values) }\n}`,
+        `() => {\n${PRELUDE}\nlet call = (() => {\n${replaceTimersImports(job.code)}\nreturn values => f(...values)\n})()\nreturn { events, state, call }\n}`,
       ) as () => ProgramInstance,
       code: job.code,
     }
@@ -213,6 +244,22 @@ function materialize(value: unknown, events: unknown[][]): unknown {
     record[key] = materialize(item, events)
   }
   return record
+}
+
+/**
+ * Replaces the imports of `node:timers/promises` in a program with reads of the
+ * stand-in timers of the prelude.
+ *
+ * @param code - Program text without types.
+ * @returns Program text without those imports.
+ */
+function replaceTimersImports(code: string): string {
+  return code.replaceAll(TIMERS_IMPORT, (...match: unknown[]) => {
+    let { names, name } = match.at(-1) as { names?: string; name?: string }
+    return names === undefined ?
+        `const ${name} = timersPromises;`
+      : `const {${names.replaceAll(/\s+as\s+/gu, ': ')}} = timersPromises;`
+  })
 }
 
 /**

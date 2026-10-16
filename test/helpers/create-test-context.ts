@@ -82,6 +82,7 @@ export function createTestContext(
         timeouts: setup.timeouts ?? false,
         coarseMutants: false,
         templates: true,
+        loggers: [],
       },
       isEnabled(id: string): boolean {
         return enabled.has(id)

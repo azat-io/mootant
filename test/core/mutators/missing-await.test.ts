@@ -124,6 +124,34 @@ describe('missingAwait', () => {
   })
 
   it.each([
+    "import { setTimeout } from 'node:timers/promises'\nawait setTimeout(1000)",
+    "import { setTimeout as sleep } from 'timers/promises'\nawait sleep(delay)",
+    "import * as timers from 'node:timers/promises'\nawait timers.setTimeout(1)",
+    "import { scheduler } from 'node:timers/promises'\nawait scheduler.wait(500)",
+    'await scheduler.wait(500)',
+    "import { setTimeout } from 'node:timers/promises'\nvoid (await setTimeout(1))",
+    "import { setTimeout as sleep } from 'node:timers/promises'\nawait sleep(100, 'done')",
+    "import { setTimeout as sleep } from 'node:timers/promises'\nawait sleep(100, undefined)",
+  ])('skips an await that only waits for a timer in %s', code => {
+    expect(listMutantTexts('missing-await', [code])).toStrictEqual([])
+  })
+
+  it.each([
+    "import { setTimeout } from 'node:timers/promises'\nlet v = await setTimeout(1, 'v')",
+    "import { setInterval } from 'node:timers/promises'\nawait setInterval(1)",
+    'await setTimeout(run, 1000)',
+    'let setTimeout = load\nawait setTimeout(1000)',
+    "import { setTimeout } from 'node:timers/promises'\nawait setTimeout(1000, undefined, { signal })",
+    "import { setTimeout } from 'node:timers/promises'\nawait setTimeout(...args)",
+    'await scheduler.wait(1000, { signal })',
+    "let timers = require('node:timers/promises')\nawait timers.setTimeout(100)",
+    "import { setTimeout as sleep } from 'node:timers/promises'\nawait sleep(100, pendingOperation)",
+    "import { setTimeout as sleep } from 'node:timers/promises'\nawait sleep(100, load())",
+  ])('keeps an await that does more than wait in %s', code => {
+    expect(listMutantTexts('missing-await', [code])).toHaveLength(1)
+  })
+
+  it.each([
     'let a = (await count()) > limit',
     'let a = (await load()) === other',
     'let a = (await load()) instanceof Error',
@@ -262,6 +290,10 @@ describe('missingAwait', () => {
       ['await name -> name (equivalent settled-value)'],
     ],
     ['async function f() { use(await load()) }', []],
+    [
+      "import { setTimeout } from 'node:timers/promises'\nasync function f() { await setTimeout(1000) }",
+      ['await setTimeout(1000) -> setTimeout(1000) (noise timer-delay)'],
+    ],
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('missing-await', source)).toStrictEqual(expected)
   })

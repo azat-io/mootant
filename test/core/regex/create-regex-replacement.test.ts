@@ -11,7 +11,12 @@ import { createTestFile } from '../../helpers/create-test-file'
 /**
  * Settings of `recommended`.
  */
-const SETTINGS = { coarseMutants: false, templates: true, timeouts: false }
+const SETTINGS = {
+  coarseMutants: false,
+  templates: true,
+  timeouts: false,
+  loggers: [],
+}
 
 /**
  * Reads the pattern argument of the `RegExp` call of `x = <call>`.
@@ -152,7 +157,7 @@ describe('createRegexReplacement', () => {
       createRegexReplacement(
         read('/a+/g'),
         { change: { text: '*', start: 1, end: 2 }, skip: null, flags: 'g' },
-        { coarseMutants: false, templates: true, timeouts: true },
+        { coarseMutants: false, templates: true, timeouts: true, loggers: [] },
       ).skip,
     ).toBeUndefined()
   })

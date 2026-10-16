@@ -866,4 +866,39 @@ describe('comparisonOperator', () => {
   ])('lists the skipped entries of %s', (source, expected) => {
     expect(listSkipped('comparison-operator', source)).toStrictEqual(expected)
   })
+
+  it.each<{ expected: string[]; skipped: string[]; source: string }>([
+    {
+      expected: [
+        "typeof DELAY === 'number' -> true",
+        "typeof DELAY === 'number' -> false",
+      ],
+      source: "setTimeout(run, typeof DELAY === 'number' ? DELAY : 1000)",
+      skipped: [],
+    },
+    {
+      expected: [
+        "typeof ms === 'number' -> true",
+        "typeof ms === 'number' -> false",
+      ],
+      source: "setTimeout(run, typeof ms === 'number' ? ms * 1000 : 0)",
+      skipped: [],
+    },
+    {
+      skipped: [
+        "typeof ms === 'number' -> true (noise timer-delay)",
+        "typeof ms === 'number' -> false (noise timer-delay)",
+      ],
+      source: "setTimeout(run, typeof ms === 'number' ? 1000 : 0)",
+      expected: [],
+    },
+  ])(
+    'keeps only the type checks that guard an operand in the timer delay of $source',
+    ({ expected, skipped, source }) => {
+      expect(
+        runMutator('comparison-operator', source).map(formatMutant),
+      ).toStrictEqual(expected)
+      expect(listSkipped('comparison-operator', source)).toStrictEqual(skipped)
+    },
+  )
 })

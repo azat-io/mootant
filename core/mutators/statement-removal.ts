@@ -2,6 +2,7 @@ import type {
   ExpressionStatement,
   ContinueStatement,
   SwitchStatement,
+  CallExpression,
   BreakStatement,
   SwitchCase,
   Node,
@@ -17,6 +18,8 @@ import { getOwnerConstant } from './shared/get-owner-constant'
 import { createRunContext } from './shared/create-run-context'
 import { getTowardMutant } from './shared/get-toward-mutant'
 import { isTailPosition } from './shared/is-tail-position'
+import { isEffectFree } from '../syntax/is-effect-free'
+import { isTimerWait } from './shared/is-timer-wait'
 
 /**
  * Mutator context of a removal and the skip its visitor decided.
@@ -71,9 +74,9 @@ let loopTypes = new Set<Node['type'] | undefined>([
  * labeled `break` and `yield` statements are removed too. The removal is
  * solitary (2.6), except for a plain assignment; it is skipped for the body of
  * a label, for the whole then-branch of an `if` whose test its owner forces to
- * `false` (O19) or a mutant moves toward `false` (R4), and for a statement that
- * advances a loop while timeouts are off. Skipped mutants follow as skipped
- * replacements.
+ * `false` (O19) or a mutant moves toward `false` (R4), for a statement that
+ * advances a loop while timeouts are off, and for a statement that only waits
+ * for a promise timer. Skipped mutants follow as skipped replacements.
  */
 export let statementRemoval: Mutator<StatementRemovalOptions> = {
   create(context) {
@@ -118,7 +121,10 @@ export let statementRemoval: Mutator<StatementRemovalOptions> = {
       },
       ExpressionStatement(node, parent) {
         return hasEffect(node, context) ?
-            getRemoval(node, parent, { skip: null, context })
+            getRemoval(node, parent, {
+              skip: getTimerWaitSkip(node, context),
+              context,
+            })
           : []
       },
       ThrowStatement(node, parent) {
@@ -284,6 +290,37 @@ function getEndedCase(
   }
   return parent?.type === 'SwitchCase' && parent.consequent.at(-1) === last ?
       parent
+    : null
+}
+
+/**
+ * Skips the removal of a statement that only waits for a promise timer, such as
+ * `await setTimeout(1000)` of `node:timers/promises` (NOISE): without it the
+ * code only runs earlier. Arguments with an effect keep the removal, which also
+ * removes their effect.
+ *
+ * @param node - Expression statement.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null.
+ */
+function getTimerWaitSkip(
+  node: ExpressionStatement,
+  context: MutatorContext,
+): SkipNote | null {
+  let { syntax } = context
+  let expression = syntax.unwrapExpression(node.expression)
+  if (
+    expression.type !== 'AwaitExpression' ||
+    !isTimerWait(expression, context)
+  ) {
+    return null
+  }
+  let call = syntax.unwrapExpression(expression.argument) as CallExpression
+  return call.arguments.every(isEffectFree) ?
+      {
+        reason: 'the statement only waits for a timer delay',
+        rule: 'timer-delay',
+      }
     : null
 }
 

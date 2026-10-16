@@ -63,7 +63,7 @@ describe('prepareRun', () => {
 
     expect(loadConfig).toHaveBeenCalledExactlyOnceWith(undefined, '/work')
     expect(setup).toMatchObject({
-      settings: { coarseMutants: false, timeouts: false },
+      settings: { coarseMutants: false, timeouts: false, loggers: [] },
       preset: 'recommended',
       root: '/work',
       run: {},
@@ -103,6 +103,49 @@ describe('prepareRun', () => {
     expect(listIds(setup)).not.toContain('string-literal')
     expect(listIds(setup).at(-1)).toBe('acme/zero')
     expect(setup.knownMutatorIds.has('acme/zero')).toBe(true)
+  })
+
+  it('replaces the loggers of the presets with those of the configuration', async () => {
+    useConfig({
+      plugins: {
+        acme: {
+          ...ACME,
+          presets: {
+            logs: {
+              settings: { loggers: ['consola'] },
+              description: 'Logs.',
+              mutators: {},
+            },
+          },
+        },
+      },
+      extends: ['recommended', 'acme/logs'],
+      settings: { loggers: ['signale'] },
+    })
+    let setup = await prepareRun({ cwd: ROOT })
+
+    expect(setup.settings.loggers).toStrictEqual(['signale'])
+  })
+
+  it('keeps the loggers of the presets when the configuration sets none', async () => {
+    useConfig({
+      plugins: {
+        acme: {
+          ...ACME,
+          presets: {
+            logs: {
+              settings: { loggers: ['consola'] },
+              description: 'Logs.',
+              mutators: {},
+            },
+          },
+        },
+      },
+      extends: ['recommended', 'acme/logs'],
+    })
+    let setup = await prepareRun({ cwd: ROOT })
+
+    expect(setup.settings.loggers).toStrictEqual(['consola'])
   })
 
   it('returns the run settings of the configuration', async () => {

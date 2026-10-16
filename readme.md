@@ -145,6 +145,9 @@ export default defineConfig({
   presets
 - `settings`: `coarseMutants`, `timeouts` and `templates` (`false` leaves Svelte
   and Vue templates alone), over the presets
+  - `loggers`: receiver names, such as `['consola', 'signale']`, whose log calls
+    and child-logger labels are not mutated, like those of `console` and
+    `logger`; replaces the value of the presets
 - `plugins`: plugin objects by namespace, imported by the configuration file.
   Their mutators and presets get ids like `acme/name`:
 

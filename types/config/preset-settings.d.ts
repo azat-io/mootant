@@ -3,6 +3,16 @@
  */
 export interface PresetSettings {
   /**
+   * Exact names of receivers that are loggers besides the built-in ones
+   * (`console`, `log` and `logger` in any letter case, names ending with
+   * `Logger`), such as `['consola', 'signale']`: the arguments of their log
+   * methods and the labels of their child-logger factories are not mutated.
+   * Empty unless a preset or the configuration sets it; a later value replaces
+   * an earlier one.
+   */
+  loggers: readonly string[]
+
+  /**
    * Whether coarse mutants, such as a removed statement, are kept when a finer
    * mutant lies inside them. A finer mutant does not prove that a test sees
    * what the coarse one erases: with `state` already false, a test kills the

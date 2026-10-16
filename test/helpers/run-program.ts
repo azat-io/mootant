@@ -36,7 +36,9 @@ let queue: Promise<unknown> = Promise.resolve()
  *   label (it never counts as unhandled), and `returned` when the result of `f`
  *   is settled. The run waits for every `settle` and `fail` promise and the
  *   work they start, so a missing `await` changes the order and a late effect
- *   is seen.
+ *   is seen. The global `setTimeout` and the one imported from
+ *   `node:timers/promises` ignore the delay and fire one turn of the event loop
+ *   later, so a change of the delay alone is not seen.
  * - The awaited result of `f`, the message it threw, or `pending` when its
  *   promise never settles.
  *

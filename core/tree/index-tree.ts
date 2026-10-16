@@ -3,7 +3,9 @@ import type { Program, Node } from 'oxc-parser'
 import type { TreeIndex } from '../../types/syntax/tree-index'
 import type { NodeSlot } from '../../types/syntax/node-slot'
 
+import { isLoggerFactoryCall } from '../syntax/is-logger-factory-call'
 import { isLoggingCall } from '../syntax/is-logging-call'
+import { isLoggerLabel } from '../syntax/is-logger-label'
 import { isModuleCall } from '../syntax/is-module-call'
 import { isNamePosition } from './is-name-position'
 import { walkTree } from './walk-tree'
@@ -47,18 +49,24 @@ let skippedTypes = new Set<string>([
  * Builds the runtime tree of a program in one walk: the raw slot of every node
  * that holds runtime code, and the nodes that visitors receive in pre-order.
  * Type positions, type-only and ambient declarations, module specifiers,
- * directives, the callee and arguments of logging calls and the arguments of
- * `import.meta.glob` are left out. Names that are never values, such as
+ * directives, the callee and arguments of logging calls, the label of a
+ * child-logger factory such as `logger.withContext('Build')` and the arguments
+ * of `import.meta.glob` are left out. Names that are never values, such as
  * non-computed keys, are indexed but not dispatched.
  *
  * @param program - Root of the file.
+ * @param loggers - Exact receiver names the `loggers` setting adds to the
+ *   loggers of logging calls and child-logger factories; none when omitted.
  * @returns Slots and dispatch order of the runtime tree.
  */
-export function indexTree(program: Program): TreeIndex {
+export function indexTree(
+  program: Program,
+  loggers: readonly string[] = [],
+): TreeIndex {
   let slots = new Map<Node, NodeSlot>()
   let order: Node[] = []
   walkTree(program, (node, slot) => {
-    if (isSkippedNode(node) || isSkippedSlot(slot)) {
+    if (isSkippedNode(node) || isSkippedSlot(slot, loggers)) {
       return false
     }
     slots.set(node, slot)
@@ -75,9 +83,10 @@ export function indexTree(program: Program): TreeIndex {
  * part of a call that only a log or a module specifier depends on.
  *
  * @param slot - Raw slot of a node.
+ * @param loggers - Exact receiver names the `loggers` setting adds.
  * @returns Whether the node in the slot is left out of the runtime tree.
  */
-function isSkippedSlot(slot: NodeSlot): boolean {
+function isSkippedSlot(slot: NodeSlot, loggers: readonly string[]): boolean {
   let { parent, index, key } = slot
   if (skippedKeys.has(key)) {
     return true
@@ -95,7 +104,11 @@ function isSkippedSlot(slot: NodeSlot): boolean {
       return true
     case 'CallExpression':
       return (
-        isLoggingCall(parent) || (index !== null && isModuleCall(parent, index))
+        isLoggingCall(parent, loggers) ||
+        (index === 0 &&
+          isLoggerFactoryCall(parent, loggers) &&
+          isLoggerLabel(parent.arguments[0]!)) ||
+        (index !== null && isModuleCall(parent, index))
       )
     default:
       return false

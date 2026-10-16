@@ -13,8 +13,8 @@ describe('validateConfig', () => {
     {},
     {
       mutators: { 'string-literal': 'off', 'acme/swap': ['on', {}] },
+      settings: { loggers: ['consola'], coarseMutants: true },
       plugins: { local: { mutators: {} } },
-      settings: { coarseMutants: true },
       extends: ['strict'],
     },
     {
@@ -55,6 +55,10 @@ describe('validateConfig', () => {
     [
       { settings: { timeouts: 'yes' } },
       '"settings" are invalid: "timeouts" is not true or false',
+    ],
+    [
+      { settings: { loggers: ['consola', ''] } },
+      '"settings" are invalid: "loggers" item 1 is not a non-empty string',
     ],
     [{ run: [] }, '"run" is invalid: it must be an object'],
     [

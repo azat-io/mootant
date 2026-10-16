@@ -163,7 +163,7 @@ export class Builder {
 export function strings(id: string, mode: string, s: string, map: Map<string, string>) {
   let greeting = 'Hello' // ''
   let empty = '' // 'mootant'
-  let path = `/api/${id}/items` // `${id}`
+  let path = `/api/${id}/items` // only plain reads: ''
   let joined = `${id}${mode}` // no static text: no mutant
   let found = s.includes('foo') // value context: the needle is kept
   if (map.has('key')) run() // lookup key in a test: no string mutant
@@ -262,4 +262,26 @@ export function partialIgnore(x: number) {
 
 interface Query {
   filter(test: (n: number) => boolean): Query
+}
+
+export function childLogger(logger: { withContext(label: string): object }) {
+  let buildLogger = logger.withContext('Build') // child-logger label: nothing
+}
+
+import { setTimeout as sleep } from 'node:timers/promises'
+
+export async function timers(seconds: number, options?: { delay?: number }) {
+  setInterval(tick, seconds * 1000) // timer delay: only the statement removal
+  setTimeout(tick, options?.delay ?? 300) // ?. becomes . (it can throw); the rest of the delay is noise
+  await sleep(500) // promise timer: no mutant
+}
+
+export function templates(size: number, icon: { path: string }) {
+  let svg = `<svg width="${size}">${icon.path}</svg>` // only plain reads: ''
+  let label = `${format(size)} px` // a call is kept: `${format(size)}`
+}
+
+export async function guardedTimers(options: Options | null, pending: Job) {
+  setTimeout(tick, options && options.delay) // a drop that unguards options.delay is kept; the rest of the delay is noise
+  await sleep(100, pending) // the timer takes on the state of pending: the await is kept
 }

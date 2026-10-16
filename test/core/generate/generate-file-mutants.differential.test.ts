@@ -910,6 +910,87 @@ const IDIOMS: Idiom[] = [
     inputs: [[true], [false]],
     file: 'example.ts',
   },
+  {
+    lines: [
+      'function f(options) {',
+      '  setTimeout(run, options && options.delay)',
+      '}',
+    ],
+    inputs: [[null], [undefined], [{}], [{ delay: 5 }]],
+    name: 'a timer delay behind a guard',
+    file: 'example.js',
+  },
+  {
+    lines: [
+      'function f(options) {',
+      '  setTimeout(run, options != null ? options.delay * 1000 : 0)',
+      '}',
+    ],
+    gaps: { equivalent: ['comparison-operator options != null -> false'] },
+    name: 'a timer delay behind a conditional guard',
+    inputs: [[null], [{}], [{ delay: 5 }]],
+    file: 'example.js',
+  },
+  {
+    gaps: {
+      equivalent: [
+        "logical-operator typeof DELAY !== 'undefined' && DELAY -> typeof DELAY !== 'undefined'",
+        "comparison-operator typeof DELAY !== 'undefined' -> false",
+      ],
+    },
+    lines: [
+      'function f() {',
+      "  setTimeout(run, typeof DELAY !== 'undefined' && DELAY)",
+      '}',
+    ],
+    unsoundSkips: { subsumed: ["string-literal 'undefined' -> '' (O4)"] },
+    name: 'a timer delay behind a check of an undeclared global',
+    file: 'example.js',
+    inputs: [[]],
+  },
+  {
+    lines: [
+      'function f(ms) {',
+      "  setTimeout(run, typeof ms === 'number' ? ms * 1000 : 0)",
+      '}',
+    ],
+    gaps: {
+      equivalent: ["comparison-operator typeof ms === 'number' -> false"],
+    },
+    unsoundSkips: { subsumed: ["string-literal 'number' -> '' (O4)"] },
+    name: 'a timer delay behind a type check',
+    inputs: [[1], [1n], [null]],
+    file: 'example.js',
+  },
+  {
+    lines: [
+      "import { setTimeout as sleep } from 'node:timers/promises'",
+      'async function f(ok) {',
+      "  let operation = ok ? settle('a') : fail('b')",
+      '  try {',
+      '    await sleep(100, operation)',
+      '  } catch (error) {',
+      '    return error.message',
+      '  }',
+      "  return 'done'",
+      '}',
+    ],
+    name: 'a promise timer that resolves with a pending operation',
+    inputs: [[true], [false]],
+    file: 'example.js',
+  },
+  {
+    lines: [
+      "import { setTimeout as sleep } from 'node:timers/promises'",
+      'async function f(value) {',
+      '  await sleep(100, null)',
+      '  save(value)',
+      '}',
+    ],
+    name: 'a promise timer that only waits',
+    inputs: [[1], [2]],
+    file: 'example.js',
+  },
 ]
 
 /**
@@ -1137,6 +1218,12 @@ interface IdiomProbes {
   skipProbes: ({ mutator: string; rule: string } & SkipProbe)[]
 
   /**
+   * Skipped candidates of `f` in a timer delay or a timer wait, with their
+   * outputs under timers that ignore the delay.
+   */
+  delayProbes: SkipProbe[]
+
+  /**
    * Mutants of `f` with their outputs.
    */
   probes: MutantProbe[]
@@ -1203,8 +1290,27 @@ async function probeIdiom(
         by: candidate.by,
       })),
   )
+  let delayProbes = await Promise.all(
+    skipped
+      .filter(
+        candidate =>
+          candidate.start >= start &&
+          candidate.kind !== null &&
+          candidate.rule === 'timer-delay',
+      )
+      .map(async candidate => ({
+        outputs: await runProgram(
+          applyMutant(source, { ...candidate, kind: candidate.kind! }),
+          file,
+          inputs,
+        ),
+        label: `${candidate.mutator} ${source.slice(candidate.start, candidate.end)} -> ${candidate.replacement} (${candidate.rule})`,
+        category: candidate.category,
+        by: candidate.by,
+      })),
+  )
   let original = await runProgram(source, file, inputs)
-  return { skipProbes, original, probes }
+  return { delayProbes, skipProbes, original, probes }
 }
 
 /**
@@ -1221,6 +1327,23 @@ function combine(...lists: unknown[][]): unknown[][] {
     )
   }
   return combinations
+}
+
+/**
+ * Finds the skipped candidates of a timer delay or a timer wait that change
+ * more than how long a timer waits: the run uses timers that ignore the delay,
+ * so such a candidate must have the outputs of the original.
+ *
+ * @param original - Outputs of the original program, in input order.
+ * @param probes - Skipped candidates with the `timer-delay` rule.
+ * @returns Labels of the candidates whose outputs differ from the original.
+ */
+function findDelayChanges(original: string[], probes: SkipProbe[]): string[] {
+  return probes
+    .filter(probe =>
+      probe.outputs.some((output, index) => output !== original[index]),
+    )
+    .map(probe => probe.label)
 }
 
 describe('runProgram', () => {
@@ -1324,7 +1447,7 @@ describe('generateFileMutants', () => {
   )(
     'keeps no weak mutant and no unsound skip in $name under $preset',
     async ({ unsoundSkips, expected, inputs, preset, lines, file }) => {
-      let { skipProbes, original, probes } = await probeIdiom(
+      let { delayProbes, skipProbes, original, probes } = await probeIdiom(
         lines.join('\n'),
         inputs,
         { preset, file },
@@ -1336,6 +1459,7 @@ describe('generateFileMutants', () => {
         ...SOUND,
         ...unsoundSkips,
       })
+      expect(findDelayChanges(original, delayProbes)).toStrictEqual([])
     },
   )
 

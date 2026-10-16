@@ -2,13 +2,19 @@ import { findClosestName } from '../text/find-closest-name'
 import { isRecord } from './is-record'
 
 /**
- * Names of the preset settings.
+ * Names of the preset settings whose values are true or false.
  */
-let settingNames = ['coarseMutants', 'templates', 'timeouts']
+let booleanSettingNames = ['coarseMutants', 'templates', 'timeouts']
+
+/**
+ * Names of every preset setting.
+ */
+let settingNames = [...booleanSettingNames, 'loggers']
 
 /**
  * Finds what is wrong with preset settings read at runtime: they must be an
- * object whose keys are known settings with boolean values.
+ * object whose keys are known settings, with boolean values except `loggers`,
+ * an array of non-empty strings.
  *
  * @param value - Settings read from a configuration file or a plugin.
  * @returns Description of the first problem, or null when there is none.
@@ -23,9 +29,33 @@ export function getSettingsProblem(value: unknown): string | null {
       let suggestion = closest === null ? '' : ` (did you mean "${closest}"?)`
       return `"${name}" is not a setting${suggestion}`
     }
-    if (typeof setting !== 'boolean') {
+    if (name === 'loggers') {
+      let problem = getLoggersProblem(setting)
+      if (problem !== null) {
+        return problem
+      }
+    } else if (typeof setting !== 'boolean') {
       return `"${name}" is not true or false`
     }
   }
   return null
+}
+
+/**
+ * Finds what is wrong with the `loggers` setting: it must be an array of
+ * non-empty strings.
+ *
+ * @param value - Value of the setting.
+ * @returns Description of the first problem, or null when there is none.
+ */
+function getLoggersProblem(value: unknown): string | null {
+  if (!Array.isArray(value)) {
+    return '"loggers" is not an array of receiver names'
+  }
+  let index = value.findIndex(
+    (name: unknown) => typeof name !== 'string' || name === '',
+  )
+  return index === -1 ? null : (
+      `"loggers" item ${index} is not a non-empty string`
+    )
 }

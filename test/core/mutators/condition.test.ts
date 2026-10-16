@@ -587,4 +587,28 @@ describe('condition', () => {
   ])('lists the skipped constants of %s', (source, expected) => {
     expect(listSkipped('condition', source)).toStrictEqual(expected)
   })
+
+  it.each<{ expected: string[]; skipped: string[]; source: string }>([
+    {
+      source: 'setTimeout(run, options ? options.delay : 0)',
+      expected: ['options -> true', 'options -> false'],
+      skipped: [],
+    },
+    {
+      skipped: [
+        'quick -> true (noise timer-delay)',
+        'quick -> false (noise timer-delay)',
+      ],
+      source: 'setTimeout(run, quick ? 1 : 4000)',
+      expected: [],
+    },
+  ])(
+    'keeps only the tests that guard a read in the timer delay of $source',
+    ({ expected, skipped, source }) => {
+      expect(runMutator('condition', source).map(formatMutant)).toStrictEqual(
+        expected,
+      )
+      expect(listSkipped('condition', source)).toStrictEqual(skipped)
+    },
+  )
 })

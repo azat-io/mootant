@@ -9,6 +9,7 @@ import type { Mutator } from '../../../types/mutator/mutator'
 import { generateFileMutants } from '../../../core/generate/generate-file-mutants'
 import { createMutantId } from '../../../core/identity/create-mutant-id'
 import { updateOperator } from '../../../core/mutators/update-operator'
+import { stringLiteral } from '../../../core/mutators/string-literal'
 
 /**
  * Ids that ignore directives of the snippets may list.
@@ -94,15 +95,16 @@ function generateSvelte(
   templates = true,
 ): Omit<FileMutants, 'absolute'> {
   return generateFileMutants({
+    settings: Object.freeze({
+      coarseMutants: true,
+      timeouts: false,
+      loggers: [],
+      templates,
+    }),
     mutators: [
       activate('arithmetic', 0, ARITHMETIC),
       activate('removal', 1, REMOVAL),
     ],
-    settings: Object.freeze({
-      coarseMutants: true,
-      timeouts: false,
-      templates,
-    }),
     compilers: { vue: null, svelte },
     source: lines.join('\n'),
     file: 'src/Card.svelte',
@@ -130,6 +132,7 @@ function generate(
       coarseMutants: setup.coarseMutants ?? false,
       templates: true,
       timeouts: false,
+      loggers: [],
     }),
     skipped: setup.skipped ?? false,
     source: lines.join('\n'),
@@ -155,6 +158,7 @@ function generateComponent(
       coarseMutants: false,
       templates: true,
       timeouts: false,
+      loggers: [],
     }),
     mutators: [activate('arithmetic', 0, ARITHMETIC)],
     source: lines.join('\n'),
@@ -329,11 +333,13 @@ describe('generateFileMutants', () => {
       name: 'drops a coarse mutant that holds a finer pending one',
       expected: ['arithmetic'],
       coarseMutants: false,
+      loggers: [],
     },
     {
       name: 'keeps a coarse mutant that holds a finer one with coarse mutants on',
       expected: ['arithmetic', 'removal'],
       coarseMutants: true,
+      loggers: [],
     },
   ])('$name', ({ coarseMutants, expected }) => {
     let result = generate(
@@ -544,6 +550,7 @@ describe('generateFileMutants', () => {
         coarseMutants: false,
         templates: true,
         timeouts: false,
+        loggers: [],
       }),
       mutators: [activate('update-operator', 0, updateOperator)],
       compilers: { vue: null, svelte },
@@ -581,15 +588,16 @@ describe('generateFileMutants', () => {
         '  <button @click="count++" @input="save" @blur="() => count++">x</button>',
         '</template>',
       ].join('\n'),
-      mutators: [
-        activate('arithmetic', 0, ARITHMETIC),
-        activate('update-operator', 1, updateOperator),
-      ],
       settings: Object.freeze({
         coarseMutants: false,
         templates: true,
         timeouts: false,
+        loggers: [],
       }),
+      mutators: [
+        activate('arithmetic', 0, ARITHMETIC),
+        activate('update-operator', 1, updateOperator),
+      ],
       compilers: { svelte: null, vue },
       file: 'src/Card.vue',
       knownMutatorIds,
@@ -621,6 +629,7 @@ describe('generateFileMutants', () => {
           coarseMutants: false,
           templates: true,
           timeouts: false,
+          loggers: [],
         }),
         mutators: [activate('arithmetic', 0, ARITHMETIC)],
         source: '<template>{{ a + b }}</template>',
@@ -630,6 +639,46 @@ describe('generateFileMutants', () => {
       }).mutants,
     ).toStrictEqual([])
   })
+
+  it.each([
+    {
+      source: [
+        '<script setup>let a = 1</script>',
+        `<template><p :title='\`\${a} px\`' :alt="\`\${a}\`">{{ \`n \${a}\` }}</p></template>`,
+      ].join('\n'),
+      expected: ['""', "''"],
+      file: 'src/Card.vue',
+    },
+    {
+      source: `<script>let a = 1</script>\n<p title={\`\${a} px\`}>{\`n \${a.b}\`}</p>`,
+      file: 'src/Card.svelte',
+      expected: ["''", "''"],
+    },
+  ])(
+    'empties a template of plain reads in a $file template',
+    ({ expected, source, file }) => {
+      let result = generateFileMutants({
+        settings: Object.freeze({
+          coarseMutants: false,
+          templates: true,
+          timeouts: false,
+          loggers: [],
+        }),
+        mutators: [activate('string-literal', 0, stringLiteral)],
+        compilers: { svelte, vue },
+        knownMutatorIds,
+        source,
+        file,
+      })
+
+      expect(result.mutants.map(mutant => mutant.replacement)).toStrictEqual(
+        expected,
+      )
+      expect(
+        result.mutants.every(mutant => mutant.scope === '<template>'),
+      ).toBe(true)
+    },
+  )
 
   it('reads a Svelte template that follows a byte order mark', () => {
     let source = `${String.fromCodePoint(0xfe_ff)}<p>{a + 12}</p>`
@@ -698,6 +747,7 @@ describe('generateFileMutants', () => {
           coarseMutants: false,
           templates: true,
           timeouts: false,
+          loggers: [],
         }),
         mutators: [activate('arithmetic', 0, ARITHMETIC)],
         compilers: { svelte, vue },
@@ -755,6 +805,7 @@ describe('generateFileMutants', () => {
         coarseMutants: false,
         templates: true,
         timeouts: false,
+        loggers: [],
       }),
       mutators: [activate('arithmetic', 0, ARITHMETIC)],
       compilers: { svelte, vue },
