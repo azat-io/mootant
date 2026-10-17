@@ -16,7 +16,9 @@ import { runMutants } from '../core/run-mutants'
  * `--json`. What the tests write is shown with `--verbose`, else only when the
  * run fails. Never rejects: the exit code is 1 when the run does not pass (an
  * error diagnostic, a mutant without a verdict, a score below the threshold) or
- * fails, so piped output is never cut.
+ * fails, so piped output is never cut. Re-check commands leave `--since` out:
+ * `--mutant` already pins the mutant, which the changed lines may no longer
+ * hold after a commit or a rebase.
  *
  * @param options - Options of the run command.
  */
@@ -30,8 +32,10 @@ export async function runMutation(options: RunOptions): Promise<void> {
       }),
       ...(options.threshold !== undefined && { threshold: options.threshold }),
       ...(options.fast !== undefined && { fast: options.fast }),
+      ...(options.cache !== undefined && { cache: options.cache }),
       ...(options.config !== undefined && { config: options.config }),
       ...(options.preset !== undefined && { preset: options.preset }),
+      ...(options.since !== undefined && { since: options.since }),
       onProgress: event => {
         progress.handle(event)
       },

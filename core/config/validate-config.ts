@@ -14,6 +14,7 @@ let configKeys = ['extends', 'mutators', 'plugins', 'run', 'settings']
  * Keys of the `run` settings.
  */
 let runKeys = [
+  'cache',
   'concurrency',
   'fast',
   'hitLimit',
@@ -111,9 +112,9 @@ function getConfigProblem(value: unknown): string | null {
 
 /**
  * Finds what is wrong with the `run` settings: unknown keys, a threshold out of
- * 0 to 100, a concurrency that is not a positive integer, a non-boolean `fast`,
- * a runner that is neither a name nor an object, paths that are not non-empty
- * strings, and limit settings that are not positive numbers.
+ * 0 to 100, a concurrency that is not a positive integer, a non-boolean `fast`
+ * or `cache`, a runner that is neither a name nor an object, paths that are not
+ * non-empty strings, and limit settings that are not positive numbers.
  *
  * @param value - Run settings read from the configuration file.
  * @returns Description of the first problem, or null when there is none.
@@ -129,7 +130,7 @@ function getRunProblem(value: unknown): string | null {
       return `"${key}" is not a run setting${suggestion}`
     }
   }
-  let { concurrency, threshold, runner, paths, fast } = value
+  let { concurrency, threshold, runner, paths, cache, fast } = value
   if (
     threshold !== undefined &&
     (typeof threshold !== 'number' || !(threshold >= 0) || !(threshold <= 100))
@@ -144,6 +145,9 @@ function getRunProblem(value: unknown): string | null {
   }
   if (fast !== undefined && typeof fast !== 'boolean') {
     return '"fast" must be true or false'
+  }
+  if (cache !== undefined && typeof cache !== 'boolean') {
+    return '"cache" must be true or false'
   }
   if (
     runner !== undefined &&

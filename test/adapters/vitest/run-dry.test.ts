@@ -33,6 +33,14 @@ vi.mock(import('../../../adapters/vitest/stop-hung-worker'), () => ({
 const TIMEOUTS = { file: 100, test: 50 }
 
 /**
+ * Vitest project as the session reads it.
+ */
+interface FakeProject {
+  vite: { environments: Record<string, unknown> }
+  name: string
+}
+
+/**
  * Specification as the session reads it: file, project and pool.
  */
 interface FakeSpecification {
@@ -41,16 +49,9 @@ interface FakeSpecification {
   pool: string
 }
 
-/**
- * Vitest project as the session reads it.
- */
-interface FakeProject {
-  name: string
-}
+let project: FakeProject = { vite: { environments: {} }, name: '' }
 
-let project: FakeProject = { name: '' }
-
-let other: FakeProject = { name: 'b' }
+let other: FakeProject = { vite: { environments: {} }, name: 'b' }
 
 /**
  * Builds the end record of a test file.
@@ -65,8 +66,10 @@ function createEnd(fields: Partial<VitestOutRecord> = {}): VitestOutRecord {
     loadDuration: 3,
     hookError: null,
     loadError: null,
+    environment: [],
     covers: ['s1'],
     reached: false,
+    modified: [],
     duration: 5,
     kind: 'end',
     strays: [],
@@ -142,6 +145,7 @@ describe('runDry', () => {
       instrumented: true,
       outside: new Set(),
       served: new Set(),
+      environment: {},
       keys: new Map(),
       diagnostics: [],
       files: null,
@@ -165,6 +169,11 @@ describe('runDry', () => {
             ),
           ),
         )
+        await writeFile(
+          path.join(directory, 'env', 'a.json'),
+          JSON.stringify({ variables: { MODE: 'h' }, project: '' }),
+        )
+        await writeFile(path.join(directory, 'env', 'b.json'), '{"proj')
         return { unhandledErrors: [] }
       },
       getRelevantTestSpecifications: () => {
@@ -182,7 +191,7 @@ describe('runDry', () => {
       provide: vi.fn(),
     }
     handle = {
-      context: { workDirectory: directory, files },
+      context: { workDirectory: directory, root: '/', files },
       vitest,
       state,
     } as never
@@ -197,6 +206,16 @@ describe('runDry', () => {
     let ab = getFileHash('/test/a.test.ts', 'b')
     let b = getFileHash('/test/b.test.ts', '')
     outputs = {
+      [`${a}-2`]: [
+        createTestRecord('a1', 2),
+        { message: 'ignored', kind: 'late', mutant: null, test: 'a1' },
+        createEnd({
+          dependencies: ['/src/a.ts?v=1'],
+          modified: ['/test/a.json'],
+          environment: ['MODE'],
+          duration: 4,
+        }),
+      ],
       [`${b}-1`]: [
         createTestRecord('b1'),
         createEnd({
@@ -204,11 +223,6 @@ describe('runDry', () => {
           loadError: 'load boom',
           strays: ['stray'],
         }),
-      ],
-      [`${a}-2`]: [
-        createTestRecord('a1', 2),
-        { message: 'ignored', kind: 'late', mutant: null, test: 'a1' },
-        createEnd({ duration: 4 }),
       ],
       [`${ab}-3`]: [
         createTestRecord('ab1'),
@@ -229,8 +243,10 @@ describe('runDry', () => {
       timeouts: TIMEOUTS,
       repeat: true,
       mode: 'dry',
+      root: '/',
       directory,
     })
+    expect(handle.state.environment).toStrictEqual({ '': { MODE: 'h' } })
     expect(
       ran[0]!.map(
         specification =>
@@ -252,23 +268,43 @@ describe('runDry', () => {
     }
     expect(result).toStrictEqual({
       files: [
-        { file: '/test/a.test.ts', hookDuration: 0, project: '', ...clean },
+        {
+          dependencies: [
+            '/src/a.ts',
+            '/src/tsconfig.json',
+            '/test/a.test.ts',
+            '/test/tsconfig.json',
+            '/tsconfig.json',
+          ],
+          modified: ['/test/a.json'],
+          file: '/test/a.test.ts',
+          environment: ['MODE'],
+          hookDuration: 0,
+          project: '',
+          ...clean,
+        },
         {
           ...clean,
           errors: ['afterAll boom'],
           file: '/test/a.test.ts',
+          dependencies: null,
           loadFailed: true,
           hookDuration: 16,
+          environment: [],
+          modified: [],
           project: 'b',
         },
         {
           errors: ['load boom', 'afterAll boom', 'stray'],
           file: '/test/b.test.ts',
+          dependencies: null,
           concurrent: false,
           loadFailed: true,
+          environment: [],
           hookDuration: 1,
           loadDuration: 3,
           covers: ['s1'],
+          modified: [],
           project: '',
           hits: 2,
         },
@@ -348,6 +384,7 @@ describe('runDry', () => {
       timeouts: TIMEOUTS,
       repeat: false,
       mode: 'dry',
+      root: '/',
       directory,
     })
     expect(instrumented).toStrictEqual([false, true])

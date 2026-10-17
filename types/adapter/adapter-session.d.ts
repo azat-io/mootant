@@ -4,6 +4,7 @@ import type { Diagnostic } from '../mutant/diagnostic'
 import type { DryRunResult } from './dry-run-result'
 import type { IsolatedPlan } from './isolated-plan'
 import type { BatchResult } from './batch-result'
+import type { CacheInputs } from './cache-inputs'
 import type { BatchPlan } from './batch-plan'
 
 /**
@@ -32,10 +33,11 @@ export interface AdapterSession {
   runBatch(plan: BatchPlan): Promise<BatchResult>
 
   /**
-   * Absolute paths of the modules a test file loaded in the last dry run, the
-   * test file included. Optional; used by the incremental cache.
+   * What every verdict of the session depends on beyond the dependencies of
+   * each test file, for the cache. Called once after the last dry run.
+   * Optional; without it no verdict is cached.
    */
-  getModuleClosure?(testFile: string): string[]
+  cacheInputs?(): Promise<CacheInputs>
 
   /**
    * Warnings found when the session started, such as test runner settings the

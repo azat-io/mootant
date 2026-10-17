@@ -2,11 +2,21 @@ import type {
   IsolatedResult,
   IsolatedFacts,
 } from '../../types/adapter/isolated-result'
-import type { IsolatedPlan } from '../../types/adapter/isolated-plan'
+import type {
+  IsolatedPlan,
+  IsolatedUnit,
+} from '../../types/adapter/isolated-plan'
 import type { VitestHandle } from './types/vitest-session-state'
+import type { VitestOutRecord } from './types/vitest-worker'
 
 import { isTimeoutMessage } from './worker/is-timeout-message'
+import { readUnitInputs } from './read-unit-inputs'
 import { runPlan } from './run-plan'
+
+/**
+ * End record of a unit.
+ */
+type VitestEndRecord = Extract<VitestOutRecord, { kind: 'end' }>
 
 /**
  * Executes isolated units in one Vitest run, each on its whole test file and
@@ -14,7 +24,8 @@ import { runPlan } from './run-plan'
  * without an end record is `hang` when the watchdog stopped its worker, else
  * `crash`. A failed cleanup of worker-scoped fixtures or a failed teardown of
  * the test environment is the unit's hook error; a suite hook that hit Vitest's
- * hook timeout marks the unit as timed out.
+ * hook timeout marks the unit as timed out. A unit that ended reports what it
+ * read (`readUnitInputs`).
  *
  * @param handle - Live Vitest instance of the session.
  * @param plan - Units to run.
@@ -26,6 +37,7 @@ export async function runIsolated(
 ): Promise<IsolatedResult> {
   let outcome = await runPlan(handle, { units: plan.units, mode: 'isolated' })
   let units: IsolatedFacts[] = []
+  let ended: [IsolatedFacts, IsolatedUnit, VitestEndRecord][] = []
   for (let [unit, { records, claimed, hung }] of outcome.units.entries()) {
     if (!claimed) {
       continue
@@ -48,7 +60,7 @@ export async function runIsolated(
         unit,
       })
     } else {
-      units.push({
+      let facts: IsolatedFacts = {
         timedOut: end.hookError !== null && isTimeoutMessage(end.hookError),
         hookError: end.hookError,
         loadError: end.loadError,
@@ -59,8 +71,16 @@ export async function runIsolated(
         hits: end.hits,
         tests,
         unit,
-      })
+      }
+      units.push(facts)
+      ended.push([facts, plan.units[unit]!, end])
     }
   }
+  let tsconfigs = new Map<string, string[]>()
+  await Promise.all(
+    ended.map(async ([facts, unit, end]) => {
+      facts.inputs = await readUnitInputs(handle, { ...unit, tsconfigs }, end)
+    }),
+  )
   return { units }
 }

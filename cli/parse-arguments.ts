@@ -23,6 +23,9 @@ Options:
   --preset <name>      Mutator preset: recommended, strict or a plugin preset;
                        replaces the presets of the configuration
                        (default: recommended)
+  --since <ref>        Only mutants on lines changed since the merge base of
+                       <ref> and HEAD, uncommitted changes and untracked files
+                       included
   --json               Print the report as JSON; for run, only the mutants to
                        act on (survived, no coverage, error)
   --all                run: with --json, list every mutant
@@ -36,6 +39,8 @@ Options:
   --concurrency <n>    run: most test files at once (default: CPU cores - 1)
   --fast               run: try many mutants in one test run; faster, but a
                        kill may be false (state left by earlier tries)
+  --no-cache           run: run every mutant again instead of reusing the
+                       verdicts of earlier runs
   --mutant <id>        run: run only this mutant, by its id or a unique prefix
                        of 4 characters or more, as reports print it; repeat
                        for more
@@ -58,6 +63,8 @@ let parserOptions = {
   color: { type: 'boolean' },
   config: { type: 'string' },
   preset: { type: 'string' },
+  cache: { type: 'boolean' },
+  since: { type: 'string' },
   fast: { type: 'boolean' },
   json: { type: 'boolean' },
   all: { type: 'boolean' },
@@ -69,6 +76,7 @@ let parserOptions = {
 let runOnlyOptions = [
   'threshold',
   'concurrency',
+  'cache',
   'fast',
   'mutant',
   'verbose',
@@ -116,6 +124,16 @@ export interface RunOptions {
   preset?: string
 
   /**
+   * False when `--no-cache` is given, true with `--cache`.
+   */
+  cache?: boolean
+
+  /**
+   * Git revision, when `--since` is given.
+   */
+  since?: string
+
+  /**
    * True when `--fast` is given.
    */
   fast?: boolean
@@ -154,6 +172,11 @@ export interface ListOptions {
    * Preset id, when `--preset` is given.
    */
   preset?: string
+
+  /**
+   * Git revision, when `--since` is given.
+   */
+  since?: string
 
   /**
    * Whether to print the report as JSON.
@@ -219,6 +242,16 @@ export function parseArguments(
       return { text: helpText, kind: 'help' }
     }
 
+    if (
+      values.since !== undefined &&
+      (values.since === '' || values.since.startsWith('-'))
+    ) {
+      return {
+        message: '--since expects a git revision, such as --since main.',
+        kind: 'error',
+      }
+    }
+
     if (command === 'run') {
       return parseRunOptions(values, paths)
     }
@@ -250,6 +283,7 @@ export function parseArguments(
       options: {
         ...(values.config !== undefined && { config: values.config }),
         ...(values.preset !== undefined && { preset: values.preset }),
+        ...(values.since !== undefined && { since: values.since }),
         skipped: values.skipped ?? false,
         json: values.json ?? false,
         paths,
@@ -314,8 +348,10 @@ function parseRunOptions(
       }),
       ...(threshold !== undefined && { threshold }),
       ...(values.fast !== undefined && { fast: values.fast }),
+      ...(values.cache !== undefined && { cache: values.cache }),
       ...(values.config !== undefined && { config: values.config }),
       ...(values.preset !== undefined && { preset: values.preset }),
+      ...(values.since !== undefined && { since: values.since }),
       verbose: values.verbose ?? false,
       mutantIds: values.mutant ?? [],
       json: values.json ?? false,

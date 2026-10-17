@@ -1,3 +1,4 @@
+import type { RunInputs } from './run-inputs'
 import type { TryFacts } from './try-facts'
 
 /**
@@ -13,6 +14,12 @@ export interface BatchResult {
    * path.
    */
   hookErrors: { message: string; unit: number }[]
+
+  /**
+   * What each unit that reported it read, with the index of the unit; the cache
+   * never stores kills of other units. Omitted when the adapter cannot tell.
+   */
+  inputs?: ({ unit: number } & RunInputs)[]
 
   /**
    * Tries in the order they ran per unit, control tries included, with the

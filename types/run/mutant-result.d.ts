@@ -57,6 +57,12 @@ export interface MutantResult {
   duration: number
 
   /**
+   * Whether the verdict came from an earlier run whose code, tests and settings
+   * are unchanged; nothing ran it in this run.
+   */
+  cached: boolean
+
+  /**
    * The mutant as listed.
    */
   mutant: Mutant

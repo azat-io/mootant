@@ -161,7 +161,9 @@ export function createRunResult(): RunResult {
     preset: 'recommended',
     runner: 'vitest',
     threshold: null,
+    cache: false,
     mode: 'fast',
+    since: null,
     root: ROOT,
   }
 }
@@ -185,6 +187,7 @@ function createVerdict(
     coveredBy: [],
     message: null,
     path: 'batch',
+    cached: false,
     duration: 1.6,
     cause: null,
     tries: 1,

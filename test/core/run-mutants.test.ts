@@ -1,5 +1,6 @@
 import {
   beforeEach,
+  afterEach,
   beforeAll,
   afterAll,
   describe,
@@ -17,6 +18,7 @@ import type { RunConfig } from '../../types/config/run-config'
 import type { RunEvent } from '../../types/run/run-event'
 
 import { createSwitchedFiles } from '../../core/instrument/create-switched-files'
+import { readChangedLines } from '../../core/git/read-changed-lines'
 import { createFakeAdapter } from '../helpers/create-fake-adapter'
 import { loadConfig } from '../../core/config/load-config'
 import { listMutants } from '../../core/list-mutants'
@@ -24,6 +26,10 @@ import { runMutants } from '../../core/run-mutants'
 
 vi.mock(import('../../core/config/load-config'), () => ({
   loadConfig: vi.fn(),
+}))
+
+vi.mock(import('../../core/git/read-changed-lines'), () => ({
+  readChangedLines: vi.fn(),
 }))
 
 vi.mock(
@@ -383,6 +389,94 @@ describe('runMutants', () => {
     ).rejects.toThrow('Unknown mutant id "zzzzzzzzzzzz".')
   })
 
+  it('runs only the mutants on lines changed since a revision', async () => {
+    let [add] = ids['src/math.ts']!
+    let [ratio] = ids['src/flag.ts']!
+    vi.mocked(readChangedLines).mockResolvedValue({
+      files: new Map([[path.join(root, 'src/math.ts'), new Set([2])]]),
+      base: 'abc123',
+    })
+    let file = path.join(root, 'test/math.test.ts')
+    let world: FakeWorld = {
+      tests: [
+        {
+          kills: { [add!]: 'expected 3 to be -1' },
+          covers: [add!, ratio!],
+          id: 'math',
+          file,
+        },
+      ],
+      files: [{ file }],
+    }
+
+    let { result } = await run(world, { since: 'main' })
+
+    expect(readChangedLines).toHaveBeenCalledExactlyOnceWith(root, 'main')
+    expect(result.since).toStrictEqual({ base: 'abc123', ref: 'main' })
+    expect(
+      result.results.map(verdict => [verdict.mutant.id, verdict.status]),
+    ).toStrictEqual([[add, 'Killed']])
+    expect(result.files.map(listed => listed.file)).toStrictEqual([
+      'src/math.ts',
+    ])
+    expect(result.listedIds).toContain(ratio)
+    await expect(
+      run(world, { mutantIds: [ratio!], since: 'main' }),
+    ).rejects.toThrow(
+      `Mutant "${ratio}" is not on a line changed since main; drop --since to run it.`,
+    )
+    let { result: pinned } = await run(world, {
+      mutantIds: [add!],
+      since: 'main',
+    })
+    expect(pinned.results.map(verdict => verdict.mutant.id)).toStrictEqual([
+      add,
+    ])
+    await expect(
+      run(world, { mutantIds: ['zzzzzzzzzzzz'], since: 'main' }),
+    ).rejects.toThrow('Unknown mutant id "zzzzzzzzzzzz".')
+  })
+
+  it.each([
+    { mode: 'isolated', fast: false },
+    { mode: 'fast', fast: true },
+  ] as const)(
+    'does not start the test runner when no changed line has a mutant ($mode)',
+    async ({ mode, fast }) => {
+      vi.mocked(readChangedLines).mockResolvedValue({
+        files: new Map([[path.join(root, 'src/flag.ts'), new Set([2])]]),
+        base: 'abc123',
+      })
+      useRunConfig({ threshold: 50 })
+
+      let { result, fake } = await run(
+        { tests: [], files: [] },
+        { since: 'main', fast },
+      )
+
+      expect(fake.context).toBeNull()
+      expect(result).toMatchObject({
+        timing: { batch: fast ? 0 : null, isolated: 0, dryRun: 0 },
+        since: { base: 'abc123', ref: 'main' },
+        unrepeatable: fast ? [] : null,
+        runnerVersion: null,
+        runner: 'fake',
+        threshold: 50,
+        cache: false,
+        results: [],
+        tests: [],
+        runs: {},
+        mode,
+      })
+      expect(
+        result.files.map(listed => [listed.file, listed.mutants]),
+      ).toStrictEqual([['src/flag.ts', []]])
+      expect(result.listedIds).toStrictEqual(
+        expect.arrayContaining(Object.values(ids).flat()),
+      )
+    },
+  )
+
   it('reports unrepeatable tests before the batch phases', async () => {
     let [ratio, two] = ids['src/flag.ts']!
     let events: RunEvent[] = []
@@ -603,5 +697,185 @@ describe('runMutants', () => {
       runMutants({ paths: ['src'], builtIns: {}, cwd: root }),
     ).rejects.toThrow('Vitest is missing.')
     await expect(stat(workDirectory)).rejects.toThrow('ENOENT')
+  })
+
+  describe('with the cache', () => {
+    /**
+     * Builds a project whose test kills the mutant of `src/math.ts` and covers
+     * two mutants of `src/flag.ts`, with an adapter that supports the cache.
+     *
+     * @param fields - Changes to the simulated project.
+     * @returns Simulated project.
+     */
+    function createWorld(fields: Partial<FakeWorld> = {}): FakeWorld {
+      let [add] = ids['src/math.ts']!
+      let [ratio, two] = ids['src/flag.ts']!
+      return {
+        tests: [
+          {
+            file: path.join(root, 'test/math.test.ts'),
+            kills: { [add!]: 'expected 3 to be -1' },
+            covers: [add!, ratio!, two!],
+            id: 'math',
+          },
+        ],
+        cacheInputs: { settings: null, files: [] },
+        ...fields,
+      }
+    }
+
+    /**
+     * Finds the cache file of the project.
+     *
+     * @returns Absolute path of the cache file.
+     */
+    function cacheFile(): string {
+      return path.join(root, 'node_modules/.cache/mootant/run-v1.json')
+    }
+
+    afterEach(async () => {
+      await rm(path.join(root, 'node_modules'), {
+        recursive: true,
+        force: true,
+      })
+    })
+
+    it('reuses the verdicts of an unchanged project', async () => {
+      let events: RunEvent[] = []
+      let first = await run(createWorld())
+      let second = await run(createWorld(), {
+        onProgress: event => {
+          events.push(event)
+        },
+      })
+
+      expect(first.result.cache).toBe(true)
+      expect(first.result.results.some(entry => entry.cached)).toBe(false)
+      expect(second.fake.calls.isolated).toStrictEqual([])
+      expect(second.result.runs).toStrictEqual({ dry: 1 })
+      expect(
+        second.result.results.map(entry => [entry.status, entry.cached]),
+      ).toStrictEqual(
+        first.result.results.map(entry => [
+          entry.status,
+          entry.status !== 'Ignored' && entry.status !== 'NoCoverage',
+        ]),
+      )
+      expect(events).toContainEqual({
+        message: 'Reused cached verdicts for 3 of 4 mutants.',
+        kind: 'note',
+      })
+    })
+
+    it('names a single reused verdict', async () => {
+      let events: RunEvent[] = []
+      let world = createWorld({
+        tests: [
+          {
+            file: path.join(root, 'test/math.test.ts'),
+            covers: [ids['src/math.ts']![0]!],
+            id: 'math',
+          },
+        ],
+      })
+      await run(world, { paths: ['src/math.ts'] })
+      await run(world, {
+        onProgress: event => {
+          events.push(event)
+        },
+        paths: ['src/math.ts'],
+      })
+
+      expect(events).toContainEqual({
+        message: 'Reused a cached verdict for 1 of 1 mutants.',
+        kind: 'note',
+      })
+    })
+
+    it('neither reads nor saves verdicts when it is off', async () => {
+      await run(createWorld(), { cache: false })
+
+      await expect(stat(cacheFile())).rejects.toThrow('ENOENT')
+
+      useRunConfig({ cache: false })
+      await run(createWorld())
+
+      await expect(stat(cacheFile())).rejects.toThrow('ENOENT')
+
+      useRunConfig({ cache: false })
+      let { result } = await run(createWorld(), { cache: true })
+
+      expect(result.cache).toBe(true)
+      await expect(stat(cacheFile())).resolves.toBeDefined()
+    })
+
+    it('is off for an adapter without cache support', async () => {
+      let { result } = await run(createWorld({ cacheInputs: undefined }))
+
+      expect(result.cache).toBe(false)
+      await expect(stat(cacheFile())).rejects.toThrow('ENOENT')
+    })
+
+    it('saves nothing from a run with error diagnostics', async () => {
+      let skipped = expect.objectContaining({
+        message:
+          'Verdicts were not cached because the run had errors; the next run will run these mutants again.',
+        code: 'cache-skipped',
+        severity: 'warning',
+      }) as unknown
+      let bad = path.join(root, 'src/bad.ts')
+      await writeFile(bad, 'let = ;\n')
+      try {
+        let { result } = await run(createWorld())
+
+        expect(result.diagnostics).toContainEqual(skipped)
+        await expect(stat(cacheFile())).rejects.toThrow('ENOENT')
+      } finally {
+        await rm(bad)
+      }
+      let { result } = await run(
+        createWorld({
+          diagnostics: [
+            {
+              code: 'instrumentation-break',
+              message: 'Broken.',
+              severity: 'error',
+              column: null,
+              file: null,
+              line: null,
+            },
+          ],
+        }),
+      )
+
+      expect(result.diagnostics).toContainEqual(skipped)
+      await expect(stat(cacheFile())).rejects.toThrow('ENOENT')
+    })
+
+    it('warns when the cache cannot be saved', async () => {
+      await mkdir(path.join(cacheFile(), 'inside'), { recursive: true })
+      let { result } = await run(createWorld())
+
+      expect(result.diagnostics).toContainEqual(
+        expect.objectContaining({
+          message: expect.stringMatching(
+            /^The cache could not be saved to node_modules\/\.cache\/mootant\/run-v1\.json \(.+\); the next run will not reuse the verdicts of this one\.$/u,
+          ) as unknown,
+          code: 'cache-write-failed',
+          severity: 'warning',
+        }),
+      )
+    })
+
+    it('reuses batch kills in fast mode', async () => {
+      await run(createWorld(), { fast: true })
+      let { result, fake } = await run(createWorld(), { fast: true })
+
+      expect(fake.calls.batch).toStrictEqual([])
+      expect(fake.calls.isolated).toStrictEqual([])
+      expect(
+        result.results.find(entry => entry.status === 'Killed'),
+      ).toMatchObject({ path: 'batch', cached: true })
+    })
   })
 })

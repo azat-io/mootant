@@ -62,6 +62,11 @@ export interface MutantState {
   queue: string[]
 
   /**
+   * Whether its verdict came from the cache, so nothing ran it.
+   */
+  cached: boolean
+
+  /**
    * Whether a test file reached it while loading.
    */
   static: boolean

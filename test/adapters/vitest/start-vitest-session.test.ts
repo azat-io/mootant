@@ -20,6 +20,7 @@ import type { AdapterContext } from '../../../types/adapter/adapter-context'
 import { installMutantRuntime } from '../../../core/runtime/install-mutant-runtime'
 import { startVitestSession } from '../../../adapters/vitest/start-vitest-session'
 import { checkVitestCopy } from '../../../adapters/vitest/check-vitest-copy'
+import { getCacheInputs } from '../../../adapters/vitest/get-cache-inputs'
 import { detectVitest } from '../../../adapters/vitest/detect-vitest'
 import { runIsolated } from '../../../adapters/vitest/run-isolated'
 import { runBatch } from '../../../adapters/vitest/run-batch'
@@ -43,6 +44,10 @@ vi.mock(import('../../../adapters/vitest/run-batch'), () => ({
 
 vi.mock(import('../../../adapters/vitest/run-isolated'), () => ({
   runIsolated: vi.fn(),
+}))
+
+vi.mock(import('../../../adapters/vitest/get-cache-inputs'), () => ({
+  getCacheInputs: vi.fn(() => ({ settings: null, files: [] })),
 }))
 
 /**
@@ -151,12 +156,20 @@ describe('startVitestSession', () => {
     await session.dryRun(request)
     await session.runBatch({ units: [] })
     await session.runIsolated({ units: [] })
+    await expect(session.cacheInputs!()).resolves.toStrictEqual({
+      settings: null,
+      files: [],
+    })
     let [handle] = vi.mocked(runDry).mock.calls[0]!
     let worker = handle.state.pool.createPoolWorker({} as never)
 
     expect(runDry).toHaveBeenCalledWith(handle, request)
     expect(runBatch).toHaveBeenCalledWith(handle, { units: [] })
     expect(runIsolated).toHaveBeenCalledWith(handle, { units: [] })
+    expect(getCacheInputs).toHaveBeenCalledWith(
+      vitest,
+      handle.state.environment,
+    )
     expect(handle.vitest).toBe(vitest)
     expect(vitest.config.sequence.sequencer).not.toBe(BaseSequencer)
     expect(installMutantRuntime().coverage).toBe(handle.state.outside)

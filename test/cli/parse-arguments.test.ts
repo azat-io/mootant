@@ -21,6 +21,9 @@ const HELP_TEXT = [
   '  --preset <name>      Mutator preset: recommended, strict or a plugin preset;',
   '                       replaces the presets of the configuration',
   '                       (default: recommended)',
+  '  --since <ref>        Only mutants on lines changed since the merge base of',
+  '                       <ref> and HEAD, uncommitted changes and untracked files',
+  '                       included',
   '  --json               Print the report as JSON; for run, only the mutants to',
   '                       act on (survived, no coverage, error)',
   '  --all                run: with --json, list every mutant',
@@ -34,6 +37,8 @@ const HELP_TEXT = [
   '  --concurrency <n>    run: most test files at once (default: CPU cores - 1)',
   '  --fast               run: try many mutants in one test run; faster, but a',
   '                       kill may be false (state left by earlier tries)',
+  '  --no-cache           run: run every mutant again instead of reusing the',
+  '                       verdicts of earlier runs',
   '  --mutant <id>        run: run only this mutant, by its id or a unique prefix',
   '                       of 4 characters or more, as reports print it; repeat',
   '                       for more',
@@ -197,6 +202,9 @@ describe('parseArguments', () => {
         '--concurrency',
         '3',
         '--fast',
+        '--no-cache',
+        '--since',
+        'main',
         '--mutant',
         'k3m9x2p7q4w8',
         '--mutant',
@@ -222,10 +230,33 @@ describe('parseArguments', () => {
         concurrency: 3,
         paths: ['src'],
         verbose: true,
+        since: 'main',
+        cache: false,
         fast: true,
         json: true,
         all: true,
       },
+      kind: 'run',
+    })
+  })
+
+  it('reads --since for list', () => {
+    expect(
+      parseArguments(['list', 'src', '--since', 'origin/main'], '1.0.0'),
+    ).toStrictEqual({
+      options: {
+        since: 'origin/main',
+        paths: ['src'],
+        skipped: false,
+        json: false,
+      },
+      kind: 'list',
+    })
+  })
+
+  it('reads --cache, which forces the cache on', () => {
+    expect(parseArguments(['run', '--cache'], '1.0.0')).toMatchObject({
+      options: { cache: true },
       kind: 'run',
     })
   })
@@ -277,6 +308,10 @@ describe('parseArguments', () => {
       argv: ['list', 'src', '--fast'],
     },
     {
+      message: '--cache applies to the run command only.',
+      argv: ['list', 'src', '--no-cache'],
+    },
+    {
       message: '--verbose applies to the run command only.',
       argv: ['list', 'src', '--verbose'],
     },
@@ -291,6 +326,14 @@ describe('parseArguments', () => {
     {
       message: '--all applies to the JSON report only; add --json.',
       argv: ['run', 'src', '--all'],
+    },
+    {
+      message: '--since expects a git revision, such as --since main.',
+      argv: ['run', 'src', '--since='],
+    },
+    {
+      message: '--since expects a git revision, such as --since main.',
+      argv: ['list', 'src', '--since=-p'],
     },
   ])('returns "$message" for $argv', ({ message, argv }) => {
     let result = parseArguments(argv, '1.0.0')

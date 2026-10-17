@@ -65,9 +65,10 @@ describe('validateConfig', () => {
       { run: { thresholds: 1 } },
       '"run" is invalid: "thresholds" is not a run setting (did you mean "threshold"?)',
     ],
+    [{ run: { bail: 1 } }, '"run" is invalid: "bail" is not a run setting'],
     [
-      { run: { cache: false } },
-      '"run" is invalid: "cache" is not a run setting',
+      { run: { caches: false } },
+      '"run" is invalid: "caches" is not a run setting (did you mean "cache"?)',
     ],
     [
       { run: { threshold: 101 } },
@@ -90,6 +91,10 @@ describe('validateConfig', () => {
       '"run" is invalid: "concurrency" must be a positive integer',
     ],
     [{ run: { fast: 1 } }, '"run" is invalid: "fast" must be true or false'],
+    [
+      { run: { cache: 'no' } },
+      '"run" is invalid: "cache" must be true or false',
+    ],
     [
       { run: { runner: '' } },
       '"run" is invalid: "runner" must be a built-in adapter name or an adapter object',

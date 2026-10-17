@@ -2,6 +2,7 @@
   "schemaVersion": 2,
   "command": "list",
   "preset": "recommended",
+  "since": null,
   "summary": {
     "totalFiles": 8,
     "totalMutants": 342,

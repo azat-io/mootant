@@ -18,7 +18,7 @@ vi.mock(import('../../../adapters/vitest/wait-for-workers'), () => ({
 function createHandle(run: () => Promise<unknown>): VitestHandle {
   return {
     vitest: { runTestSpecifications: vi.fn(run), provide: vi.fn() },
-    context: { workDirectory: '/work' },
+    context: { workDirectory: '/work', root: '/p' },
   } as never
 }
 
@@ -40,6 +40,7 @@ describe('runSpecifications', () => {
       directory: '/work',
       repeat: true,
       mode: 'dry',
+      root: '/p',
       timeouts,
     })
     expect(waitForWorkers).toHaveBeenCalledWith('/work')

@@ -58,6 +58,7 @@ export function buildRunReport(
     diagnostics: result.diagnostics,
     mutators: result.mutators,
     preset: result.preset,
+    since: result.since,
     files: result.files,
     skipped: false,
   })
@@ -92,6 +93,7 @@ export function buildRunReport(
         isolatedBecause: verdict.isolatedBecause,
         duration: Math.round(verdict.duration),
         message: verdict.message,
+        cached: verdict.cached,
         status: verdict.status,
         cause: verdict.cause,
         path: verdict.path,
@@ -145,6 +147,10 @@ export function buildRunReport(
         ...cost,
         duration: Math.round(cost.duration),
       })),
+      totalCached:
+        result.cache ?
+          result.results.filter(verdict => verdict.cached).length
+        : null,
       totalUnrepeatableTests: unrepeatable === null ? null : unrepeatable.size,
       totalBatch: fast ? totalBatch : null,
       totalNoCoverage: counts.NoCoverage,
@@ -171,6 +177,7 @@ export function buildRunReport(
     mutators: list.mutators,
     runner: result.runner,
     preset: result.preset,
+    since: result.since,
     mode: result.mode,
     files: list.files,
     schemaVersion: 2,

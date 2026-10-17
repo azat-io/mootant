@@ -64,7 +64,9 @@ describe('runMutation', () => {
       paths: ['src'],
       concurrency: 2,
       verbose: true,
+      since: 'main',
       threshold: 40,
+      cache: false,
       json: false,
       all: false,
       fast: true,
@@ -81,7 +83,9 @@ describe('runMutation', () => {
       preset: 'strict',
       paths: ['src'],
       concurrency: 2,
+      since: 'main',
       threshold: 40,
+      cache: false,
       fast: true,
     })
     expect(createRunProgress).toHaveBeenCalledExactlyOnceWith(
@@ -91,7 +95,7 @@ describe('runMutation', () => {
     expect(Object.keys(getBuiltInAdapters())).toStrictEqual(['vitest'])
   })
 
-  it('shows the flags in the header and keeps the paths, the configuration and the mode in the hint', async () => {
+  it('shows the flags in the header and keeps the paths, the configuration and the mode, but not --since, in the hint', async () => {
     let result = createRunResult()
     result.listedIds = [...result.listedIds, 'survivor-twin']
     vi.mocked(runMutants).mockResolvedValue(result)
@@ -100,6 +104,7 @@ describe('runMutation', () => {
       config: 'my config.ts',
       mutantIds: ['surv'],
       preset: 'strict',
+      since: 'HEAD~1',
       paths: ['src'],
       verbose: false,
       threshold: 40,
@@ -111,7 +116,7 @@ describe('runMutation', () => {
     let text = consoleInfoSpy.mock.calls[0]![0] as string
 
     expect(text.split('\n', 1)[0]).toBe(
-      "● mootant run src --config 'my config.ts' --preset strict --fast --threshold 40 --mutant surv  vitest 5.0.4",
+      "● mootant run src --config 'my config.ts' --preset strict --since 'HEAD~1' --fast --threshold 40 --mutant surv  vitest 5.0.4",
     )
     expect(text).toContain('  4:10  comparison-operator  survive\n')
     expect(text.split('\n').at(-1)).toBe(

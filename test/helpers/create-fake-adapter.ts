@@ -7,8 +7,10 @@ import type { AdapterContext } from '../../types/adapter/adapter-context'
 import type { DryRunRequest } from '../../types/adapter/dry-run-request'
 import type { DryRunResult } from '../../types/adapter/dry-run-result'
 import type { IsolatedPlan } from '../../types/adapter/isolated-plan'
+import type { CacheInputs } from '../../types/adapter/cache-inputs'
 import type { BatchResult } from '../../types/adapter/batch-result'
 import type { TestAdapter } from '../../types/adapter/test-adapter'
+import type { RunInputs } from '../../types/adapter/run-inputs'
 import type { Diagnostic } from '../../types/mutant/diagnostic'
 import type { BatchPlan } from '../../types/adapter/batch-plan'
 import type { TryFacts } from '../../types/adapter/try-facts'
@@ -47,6 +49,12 @@ export interface FakeWorld {
    * Warnings the session reports at start.
    */
   diagnostics?: Diagnostic[]
+
+  /**
+   * What every verdict depends on; when given, the session supports the cache
+   * and every dry test file reports its dependencies.
+   */
+  cacheInputs?: CacheInputs
 
   /**
    * Test files with load-time behavior.
@@ -192,6 +200,18 @@ interface FakeTest {
  */
 interface FakeTestFile {
   /**
+   * Files it depends on, when the session supports the cache; the test file
+   * itself when omitted, null when the runner cannot tell.
+   */
+  dependencies?: string[] | null
+
+  /**
+   * Environment variables it reads, when the session supports the cache; none
+   * when omitted.
+   */
+  environment?: string[]
+
+  /**
    * Mutants it reaches while loading.
    */
   loadCovers?: string[]
@@ -215,6 +235,12 @@ interface FakeTestFile {
    * Whether it has tests marked concurrent.
    */
   concurrent?: boolean
+
+  /**
+   * Dependencies it changes itself, when the session supports the cache; none
+   * when omitted.
+   */
+  modified?: string[]
 
   /**
    * Whether it fails to load while a switched file it reaches is served.
@@ -257,6 +283,9 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
     closed: 0,
   }
   let session: AdapterSession = {
+    ...(world.cacheInputs && {
+      cacheInputs: () => Promise.resolve(world.cacheInputs!),
+    }),
     ...(world.diagnostics && { diagnostics: world.diagnostics }),
     ...(world.workers && { workers: world.workers }),
     ...(world.version && { version: world.version }),
@@ -282,6 +311,12 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
               (spec?.loadCovers ?? []).filter(id => active.has(id))
             : []
           return {
+            ...(world.cacheInputs && {
+              dependencies:
+                spec?.dependencies === undefined ? [file] : spec.dependencies,
+              environment: spec?.environment ?? [],
+              ...(spec?.modified && { modified: spec.modified }),
+            }),
             errors:
               spec?.broken === true && covers.length > 0 ? ['broken'] : [],
             loadFailed: spec?.broken === true && covers.length > 0,
@@ -341,6 +376,7 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
     runBatch: plan => {
       fake.calls.batch.push(plan)
       let result: BatchResult = {
+        ...(world.cacheInputs && { inputs: [] }),
         hookErrors: [],
         incomplete: [],
         tries: [],
@@ -348,6 +384,10 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
       }
       for (let [index, unit] of plan.units.entries()) {
         let spec = world.files?.find(entry => entry.file === unit.file)
+        let inputs = readInputs(unit.file)
+        if (inputs) {
+          result.inputs?.push({ ...inputs, unit: index })
+        }
         if (
           unit.tests.some(test =>
             test.mutants.some(mutant => has(spec?.hookKills, mutant)),
@@ -431,6 +471,22 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
   }
 
   /**
+   * Reports what a unit of a test file read: its dependencies and environment
+   * variables, as in the dry run.
+   *
+   * @param file - Absolute path of the test file.
+   * @returns Inputs of the unit, or null when the runner cannot tell.
+   */
+  function readInputs(file: string): RunInputs | null {
+    let spec = world.files?.find(entry => entry.file === file)
+    let dependencies =
+      spec?.dependencies === undefined ? [file] : spec.dependencies
+    return dependencies === null ? null : (
+        { environment: spec?.environment ?? [], dependencies }
+      )
+  }
+
+  /**
    * Runs one isolated unit.
    *
    * @param unit - Unit of the plan.
@@ -449,6 +505,7 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
         getFileTests(unit.file).map(test => simulate(test, unit.mutant, true))
       : []
     return {
+      ...(world.cacheInputs && { inputs: readInputs(unit.file) }),
       hookError:
         loadError === null && has(spec?.hookKills, unit.mutant) ?
           'hook boom'

@@ -17,6 +17,12 @@ export interface TestAdapter {
   start(context: AdapterContext): Promise<AdapterSession>
 
   /**
+   * Version of the adapter itself, part of the cache key; the version of the
+   * test runner is `AdapterSession.version`. Optional.
+   */
+  version?: string
+
+  /**
    * Whether `runBatch` is available. Without it every covered mutant runs on
    * the isolated path.
    */

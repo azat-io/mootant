@@ -51,6 +51,8 @@ Options:
   (see [Configuration](#configuration))
 - `--preset <name>`: `recommended` (default), `strict`, which adds noisier
   mutants, or a plugin preset; it replaces the presets of the configuration
+- `--since <ref>`: only mutants on lines changed since `<ref>`, uncommitted
+  changes included
 - `--json`: print the list as JSON for tools and AI agents, every mutant with
   its source lines before and after the change, long lines cut around it
 - `--no-color`: print without colors (also `NO_COLOR=1`)
@@ -93,11 +95,12 @@ without mutants first.
 
 Options:
 
-- `--config <path>` and `--preset <name>`: as for `list`
+- `--config <path>`, `--preset <name>` and `--since <ref>`: as for `list`
 - `--threshold <score>`: lowest mutation score, from 0 to 100, that passes
 - `--concurrency <n>`: most test files at once (default: Vitest's `maxWorkers`)
 - `--fast`: try many mutants in one test run; faster, but a kill may be false
   and concurrent tests run one at a time
+- `--no-cache`: run every mutant again instead of reusing earlier verdicts
 - `--mutant <id>`: run only this mutant, by its id or a unique prefix of 4
   characters or more; repeat for more
 - `--verbose`: show what the tests print, the covering test of each survivor and
@@ -107,6 +110,10 @@ Options:
 The score is killed and timed-out mutants over all scored mutants; `Ignored` and
 `Error` are excluded. The exit code is 1 on errors or a score below the
 threshold. Snapshots are never updated.
+
+Verdicts are cached in `node_modules/.cache/mootant` and reused while the
+mutated file and the files and environment variables its tests read stay the
+same. Use `--no-cache` after changes only child processes or the network see.
 
 Vue and Svelte components run through the project's Vite plugin of the
 framework; code their compilers read as written, such as `defineProps()` or a
@@ -164,6 +171,7 @@ export default defineConfig({
 - `run`: settings of `mootant run`; command line options win:
   - `paths`: default source paths, relative to the configuration directory
   - `threshold`, `concurrency`, `fast`: as the options of the same names
+  - `cache`: `false` as `--no-cache`
   - `runner`: auto-detected, `'vitest'`, or an imported adapter object. For a
     custom Vitest config, import `vitestAdapter` from `mootant/vitest` and use
     `vitestAdapter({ config: 'vitest.unit.config.ts' })`

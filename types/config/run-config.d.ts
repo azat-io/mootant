@@ -41,6 +41,12 @@ export interface RunConfig {
   paths?: string[]
 
   /**
+   * Reuse verdicts of earlier runs whose code, tests and settings are
+   * unchanged; true when omitted.
+   */
+  cache?: boolean
+
+  /**
    * Fast mode: try runtime mutants in batch runs first and accept their kills,
    * which may be false; false when omitted, so every covered mutant is decided
    * on a fresh module graph.

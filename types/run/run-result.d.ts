@@ -1,4 +1,5 @@
 import type { ActiveMutator } from '../mutator/active-mutator'
+import type { SinceRevision } from '../git/since-revision'
 import type { FileMutants } from '../mutant/file-mutants'
 import type { Diagnostic } from '../mutant/diagnostic'
 import type { RunDurations } from './run-durations'
@@ -28,6 +29,11 @@ export interface RunResult {
    * Version of the test runner, or null when the adapter does not tell.
    */
   runnerVersion: string | null
+
+  /**
+   * Revision of `--since` with its merge base, or null without it.
+   */
+  since: SinceRevision | null
 
   /**
    * Problems of the run beyond those of listing a file: skipped paths, files
@@ -67,8 +73,8 @@ export interface RunResult {
   files: FileMutants[]
 
   /**
-   * Ids of every listed mutant of the paths, the ones `--mutant` left out
-   * included, so short ids stay unique among them.
+   * Ids of every listed mutant of the paths, the ones `--since` and `--mutant`
+   * left out included, so short ids stay unique among them.
    */
   listedIds: string[]
 
@@ -76,6 +82,12 @@ export interface RunResult {
    * Tests the dry run saw.
    */
   tests: DryTest[]
+
+  /**
+   * Whether verdicts were reused from and saved to the cache: false with
+   * `--no-cache`, `run.cache: false`, or an adapter without cache support.
+   */
+  cache: boolean
 
   /**
    * Name of the adapter.

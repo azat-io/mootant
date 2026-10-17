@@ -62,6 +62,11 @@ type FakeHooks = { aroundEach: AroundHook[] } & Record<string, unknown[]>
 type Body = (runtime: MutantRuntime) => Promise<void> | void
 
 /**
+ * Root of the fake project.
+ */
+const ROOT = '/project'
+
+/**
  * Test file of the fake runs.
  */
 const FILE = '/project/test/a.test.ts'
@@ -506,7 +511,7 @@ describe('mootantRunner', () => {
     workerState.ctx.traces = traces
     directory = await mkdtemp(path.join(tmpdir(), 'mootant-runner-'))
     await Promise.all(
-      ['beat', 'claim', 'done', 'out', 'plan', 'worker'].map(folder =>
+      ['beat', 'claim', 'done', 'env', 'out', 'plan', 'worker'].map(folder =>
         mkdir(path.join(directory, folder)),
       ),
     )
@@ -553,6 +558,7 @@ describe('mootantRunner', () => {
       timeouts: { file: 100, test: 50 },
       repeat: true,
       mode: 'dry',
+      root: ROOT,
       directory,
     }
     let { runner } = createRunner()
@@ -643,8 +649,101 @@ describe('mootantRunner', () => {
     expect(getRuntime().coverage).toBeNull()
   })
 
+  it('records what the unit depended on in a dry run, its teardown included', async () => {
+    options = {
+      timeouts: { file: 100, test: 50 },
+      repeat: false,
+      mode: 'dry',
+      root: ROOT,
+      directory,
+    }
+    let project = path.join(directory, 'project')
+    await mkdir(path.join(project, 'node_modules'), { recursive: true })
+    options.root = project
+    let { runner } = createRunner()
+    let snapshot = '/project/test/__snapshots__/a.test.ts.snap'
+    Reflect.set(runner, 'snapshotClient', {
+      snapshotStateMap: new Map([
+        [
+          FILE,
+          {
+            getSnapshotFiles: () => ['/project/test/output.txt'],
+            snapshotPath: snapshot,
+          },
+        ],
+      ]),
+    })
+    let data = path.join(project, 'data.json')
+    let written = path.join(project, 'written.json')
+    let fixture = path.join(project, 'fixture.json')
+    let setting = path.join(project, 'environment.json')
+    let file = createFile([
+      createTest('a', () => {
+        expect(process.env['MOOTANT_PROBE']).toBeUndefined()
+        expect(existsSync(data)).toBe(false)
+        expect(existsSync(path.join(project, 'node_modules/a.json'))).toBe(
+          false,
+        )
+        expect(existsSync(path.join(tmpdir(), 'outside.json'))).toBe(false)
+        writeFileSync(written, '{}')
+        expect(readFileSync(written, 'utf8')).toBe('{}')
+      }),
+    ])
+    file.file = file
+    runner.onCleanupWorkerContext!(() => {
+      expect(existsSync(fixture)).toBe(false)
+      expect(process.env['MOOTANT_FIXTURE']).toBeUndefined()
+    })
+    await runner.onBeforeCollect([FILE])
+    runner.onCollected([file])
+    await runTasks(runner, file, file.tasks)
+    await runner.onAfterRunSuite(file)
+    expect(process.env['MOOTANT_LATE']).toBeUndefined()
+    runner.onAfterRunFiles([file])
+    await tearDownWorker(() => {
+      expect(existsSync(setting)).toBe(false)
+      expect(process.env['MOOTANT_ENVIRONMENT']).toBeUndefined()
+    })
+    expect(existsSync(path.join(project, 'after.json'))).toBe(false)
+    expect(process.env['MOOTANT_AFTER']).toBeUndefined()
+
+    let [records] = Object.values(await readRecords())
+    let end = records!.at(-1) as {
+      dependencies: string[]
+      environment: string[]
+    }
+    let [saved] = await readdir(path.join(directory, 'env'))
+    let environment = JSON.parse(
+      await readFile(path.join(directory, 'env', saved!), 'utf8'),
+    ) as { variables: Record<string, string>; project: string }
+
+    expect(end.dependencies).toContain(snapshot)
+    expect(end.dependencies).toContain('/project/test/output.txt')
+    expect(end.dependencies).toContain(import.meta.filename)
+    expect(end.dependencies).toContain(data)
+    expect(end.dependencies).not.toContain(written)
+    expect(
+      end.dependencies.filter(dependency => dependency.startsWith(project)),
+    ).toStrictEqual([data, setting, fixture])
+    expect(end.environment).toStrictEqual([
+      'MOOTANT_ENVIRONMENT',
+      'MOOTANT_FIXTURE',
+      'MOOTANT_LATE',
+      'MOOTANT_PROBE',
+    ])
+    expect(saved).toBe(`${getFileHash('', '')}.json`)
+    expect(environment.project).toBe('')
+    expect(environment.variables['PATH']).toMatch(/^[\da-f]{64}$/u)
+  })
+
   it('surrounds every planned mutant with control tries in a batch run', async () => {
-    options = { timeouts: null, repeat: false, mode: 'batch', directory }
+    options = {
+      timeouts: null,
+      repeat: false,
+      mode: 'batch',
+      root: ROOT,
+      directory,
+    }
     let limits = { load: { hitLimit: 50, timeout: 300 }, total: 5000 }
     writePlan([
       {
@@ -700,6 +799,8 @@ describe('mootantRunner', () => {
       'end',
     ])
     expect(records.at(-1)).toMatchObject({ kind: 'end', unit: 5, hits: 1 })
+    expect(records.at(-1)).toMatchObject({ environment: [] })
+    expect(records.at(-1)).toHaveProperty('dependencies')
     expect(tests[4]!.mode).toBe('skip')
     expect(
       existsSync(path.join(directory, 'beat', `${process.pid}.json`)),
@@ -707,7 +808,13 @@ describe('mootantRunner', () => {
   })
 
   it('reads a try after its aroundEach teardown, with its mutant active', async () => {
-    options = { timeouts: null, repeat: false, mode: 'batch', directory }
+    options = {
+      timeouts: null,
+      repeat: false,
+      mode: 'batch',
+      root: ROOT,
+      directory,
+    }
     writePlan([
       {
         tests: [
@@ -753,7 +860,13 @@ describe('mootantRunner', () => {
   })
 
   it('writes late errors and abandons a unit after a timeout', async () => {
-    options = { timeouts: null, repeat: false, mode: 'batch', directory }
+    options = {
+      timeouts: null,
+      repeat: false,
+      mode: 'batch',
+      root: ROOT,
+      directory,
+    }
     writePlan([
       {
         tests: [
@@ -801,7 +914,13 @@ describe('mootantRunner', () => {
   })
 
   it('claims the unit planned for the project of the file', async () => {
-    options = { timeouts: null, repeat: false, mode: 'batch', directory }
+    options = {
+      timeouts: null,
+      repeat: false,
+      mode: 'batch',
+      root: ROOT,
+      directory,
+    }
     writePlan(
       [
         {
@@ -822,7 +941,13 @@ describe('mootantRunner', () => {
   })
 
   it('skips every test of a file without a free unit', async () => {
-    options = { timeouts: null, repeat: false, mode: 'batch', directory }
+    options = {
+      timeouts: null,
+      repeat: false,
+      mode: 'batch',
+      root: ROOT,
+      directory,
+    }
     let { runner } = createRunner()
     let tests = [createTest('a')]
     await runFile(runner, createFile(tests))
@@ -839,7 +964,13 @@ describe('mootantRunner', () => {
   })
 
   it('runs the whole file with the mutant active from loading in an isolated run', async () => {
-    options = { mode: 'isolated', timeouts: null, repeat: false, directory }
+    options = {
+      mode: 'isolated',
+      timeouts: null,
+      repeat: false,
+      root: ROOT,
+      directory,
+    }
     let unit = {
       limits: { hitLimit: 100, timeout: 4000 },
       project: '',
@@ -886,7 +1017,13 @@ describe('mootantRunner', () => {
   })
 
   it('ends a unit after the cleanup of the worker-scoped fixtures', async () => {
-    options = { mode: 'isolated', timeouts: null, repeat: false, directory }
+    options = {
+      mode: 'isolated',
+      timeouts: null,
+      repeat: false,
+      root: ROOT,
+      directory,
+    }
     writePlan([
       {
         limits: { hitLimit: 100, timeout: 4000 },
@@ -938,7 +1075,13 @@ describe('mootantRunner', () => {
   })
 
   it('ends a unit after the environment teardown, whose error fails it', async () => {
-    options = { mode: 'isolated', timeouts: null, repeat: false, directory }
+    options = {
+      mode: 'isolated',
+      timeouts: null,
+      repeat: false,
+      root: ROOT,
+      directory,
+    }
     writePlan([
       {
         limits: { hitLimit: 100, timeout: 4000 },
@@ -981,7 +1124,13 @@ describe('mootantRunner', () => {
   })
 
   it('keeps the error of a failed cleanup over the environment teardown', async () => {
-    options = { timeouts: null, mode: 'batch', repeat: false, directory }
+    options = {
+      timeouts: null,
+      mode: 'batch',
+      repeat: false,
+      root: ROOT,
+      directory,
+    }
     writePlan([
       {
         tests: [{ mutants: ['m'], timeout: 1000, hitLimit: 10, id: 'a' }],
@@ -1012,7 +1161,13 @@ describe('mootantRunner', () => {
   })
 
   it('ends a unit after the cleanup when the teardown cannot be watched', async () => {
-    options = { mode: 'isolated', timeouts: null, repeat: false, directory }
+    options = {
+      mode: 'isolated',
+      timeouts: null,
+      repeat: false,
+      root: ROOT,
+      directory,
+    }
     writePlan([
       {
         limits: { hitLimit: 100, timeout: 4000 },
@@ -1037,7 +1192,13 @@ describe('mootantRunner', () => {
   })
 
   it('writes no end record when the files never finished', async () => {
-    options = { mode: 'isolated', timeouts: null, repeat: false, directory }
+    options = {
+      mode: 'isolated',
+      timeouts: null,
+      repeat: false,
+      root: ROOT,
+      directory,
+    }
     writePlan([
       {
         limits: { hitLimit: 100, timeout: 4000 },
@@ -1058,7 +1219,13 @@ describe('mootantRunner', () => {
   })
 
   it('ends a unit with its files without a teardown hook', async () => {
-    options = { mode: 'isolated', timeouts: null, repeat: false, directory }
+    options = {
+      mode: 'isolated',
+      timeouts: null,
+      repeat: false,
+      root: ROOT,
+      directory,
+    }
     writePlan([
       {
         limits: { hitLimit: 100, timeout: 4000 },
@@ -1090,11 +1257,56 @@ describe('mootantRunner', () => {
     ).toStrictEqual(['test', 'end'])
   })
 
+  it('reports no dependencies with a test environment of its own', async () => {
+    options = {
+      mode: 'isolated',
+      timeouts: null,
+      repeat: false,
+      root: ROOT,
+      directory,
+    }
+    writePlan([
+      {
+        limits: { hitLimit: 100, timeout: 4000 },
+        project: '',
+        mutant: 'm',
+        file: FILE,
+      },
+    ])
+    let state = Reflect.get(createRunner().runner, 'workerState') as {
+      ctx: { environment: { name: string }; pool: string }
+    }
+    let { environment, pool } = state.ctx
+    state.ctx.pool = 'vmForks'
+    let runner: MootantRunner
+    try {
+      ;({ runner } = createRunner())
+    } finally {
+      state.ctx.pool = pool
+    }
+    let file = createFile([createTest('a')])
+    await runner.onBeforeCollect([FILE])
+    runner.onCollected([file])
+    await runTasks(runner, file, file.tasks)
+    state.ctx.environment = { ...environment, name: './test/environment.ts' }
+    try {
+      runner.onAfterRunFiles([file])
+    } finally {
+      state.ctx.environment = environment
+    }
+
+    expect((await readRecords())[`${hash}-0`]!.at(-1)).toMatchObject({
+      dependencies: null,
+      kind: 'end',
+    })
+  })
+
   it('keeps the own repeats and retries of a test within each try', async () => {
     options = {
       timeouts: { file: 100, test: 50 },
       repeat: true,
       mode: 'dry',
+      root: ROOT,
       directory,
     }
     let { runner } = createRunner()
@@ -1156,7 +1368,13 @@ describe('mootantRunner', () => {
   })
 
   it('keeps the mutant of a batch try active through its repetitions', async () => {
-    options = { timeouts: null, repeat: false, mode: 'batch', directory }
+    options = {
+      timeouts: null,
+      repeat: false,
+      mode: 'batch',
+      root: ROOT,
+      directory,
+    }
     writePlan([
       {
         tests: [
@@ -1209,7 +1427,13 @@ describe('mootantRunner', () => {
   })
 
   it('abandons a unit when a repetition of a try runs out of time', async () => {
-    options = { timeouts: null, repeat: false, mode: 'batch', directory }
+    options = {
+      timeouts: null,
+      repeat: false,
+      mode: 'batch',
+      root: ROOT,
+      directory,
+    }
     writePlan([
       {
         tests: [{ mutants: ['m1'], hitLimit: 10, timeout: 20, id: 'a' }],
@@ -1246,6 +1470,7 @@ describe('mootantRunner', () => {
       timeouts: { file: 100, test: 50 },
       repeat: false,
       mode: 'dry',
+      root: ROOT,
       directory,
     }
     let { runner } = createRunner(300)
@@ -1289,6 +1514,7 @@ describe('mootantRunner', () => {
       timeouts: { file: 100, test: 50 },
       repeat: true,
       mode: 'dry',
+      root: ROOT,
       directory,
     }
     let { runner } = createRunner()
@@ -1325,6 +1551,7 @@ describe('mootantRunner', () => {
       timeouts: { file: 100, test: 50 },
       repeat: false,
       mode: 'dry',
+      root: ROOT,
       directory,
     }
     let { runner } = createRunner()
@@ -1346,6 +1573,7 @@ describe('mootantRunner', () => {
       timeouts: { file: 100, test: 50 },
       repeat: false,
       mode: 'dry',
+      root: ROOT,
       directory,
     }
     let { runner } = createRunner()
@@ -1441,6 +1669,7 @@ describe('mootantRunner', () => {
       timeouts: { file: 100, test: 50 },
       repeat: true,
       mode: 'dry',
+      root: ROOT,
       directory,
     }
     let { runner } = createRunner()
@@ -1458,6 +1687,7 @@ describe('mootantRunner', () => {
       timeouts: { file: 100, test: 50 },
       repeat: true,
       mode: 'dry',
+      root: ROOT,
       directory,
     }
     let first = createRunner().runner

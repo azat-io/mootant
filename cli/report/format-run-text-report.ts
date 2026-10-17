@@ -93,17 +93,18 @@ const STATIC_COST_TIME = 30_000
 
 /**
  * Formats a run report as text: a header with the command and the test runner;
- * the dry run, mutants and time; the counts by status and the score; a section
- * for each status to act on (`survived`, `no coverage`, `errors`) with its
- * count and its mutants grouped by file, each as a diff of its source lines
- * under a heading with the location, mutator and short id, the reason of an
- * error under the diff; and a hint to re-check the first survivor, else the
- * first listed mutant. Killed, timed-out and ignored mutants are only counted.
- * In fast mode a note tells how many verdicts came from batch tries and may be
- * false; when a run of half a minute or more spent more than a quarter of its
- * time in isolated units, the source files whose mutants took the largest share
- * of the isolated test time are named. Verbose output adds the covering tests
- * of survivors and the runs of the test runner.
+ * the dry run, the mutants with how many were ignored or reused from the cache,
+ * and time; the counts by status and the score; a section for each status to
+ * act on (`survived`, `no coverage`, `errors`) with its count and its mutants
+ * grouped by file, each as a diff of its source lines under a heading with the
+ * location, mutator and short id, the reason of an error under the diff; and a
+ * hint to re-check the first survivor, else the first listed mutant. Killed,
+ * timed-out and ignored mutants are only counted. In fast mode a note tells how
+ * many verdicts came from batch tries and may be false; when a run of half a
+ * minute or more spent more than a quarter of its time in isolated units, the
+ * source files whose mutants took the largest share of the isolated test time
+ * are named. Verbose output adds the covering tests of survivors and the runs
+ * of the test runner.
  *
  * @param report - Report of a run.
  * @param options - Command, hint, id length, style and verbosity.
@@ -171,6 +172,10 @@ function getRunFields(
   let { duration } = summary
   let ignored =
     summary.totalIgnored > 0 ? `, ${summary.totalIgnored} ignored` : ''
+  let cached =
+    summary.totalCached !== null && summary.totalCached > 0 ?
+      `, ${summary.totalCached} cached`
+    : ''
   let phases = [
     `start ${formatDuration(duration.startup)}`,
     `dry run ${formatDuration(duration.dryRun)}`,
@@ -186,7 +191,7 @@ function getRunFields(
     ],
     [
       'mutants',
-      `${summary.totalMutants} in ${pluralize(summary.totalFiles, 'file')}${ignored}`,
+      `${summary.totalMutants} in ${pluralize(summary.totalFiles, 'file')}${ignored}${cached}`,
     ],
     [
       'time',

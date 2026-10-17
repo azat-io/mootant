@@ -6,7 +6,10 @@ import type {
   RunnerTask,
 } from 'vitest'
 
-import { closeSync, openSync, rmSync } from 'node:fs'
+import { writeFileSync, closeSync, openSync, rmSync } from 'node:fs'
+import { builtinEnvironments } from 'vitest/runtime'
+import { createRequire } from 'node:module'
+import { createHash } from 'node:crypto'
 import { TestRunner } from 'vitest'
 import path from 'node:path'
 
@@ -18,7 +21,10 @@ import type { TryFacts } from '../../types/adapter/try-facts'
 
 import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
 import { watchWorkerClose } from './worker/watch-worker-close'
+import { trackEnvironment } from './worker/track-environment'
+import { listDependencies } from './worker/list-dependencies'
 import { getErrorMessage } from './worker/get-error-message'
+import { trackFileReads } from './worker/track-file-reads'
 import { readWorkerPlan } from './worker/read-worker-plan'
 import { raceTryTimeout } from './worker/race-try-timeout'
 import { writeOutRecord } from './worker/write-out-record'
@@ -195,9 +201,15 @@ let clock = captureClock()
  * loading through the whole file, its teardown included. A unit ends only after
  * the worker's teardown: Vitest cleans up the worker-scoped fixtures, then
  * tears the test environment down; errors of both count as a failed suite hook,
- * and the heartbeat covers both, so a hang there stops the worker. A unit waits
- * until the worker of the unit before it of the same test file is gone, so a
- * test file never runs twice at once.
+ * and the heartbeat covers both, so a hang there stops the worker. What the
+ * code reads is recorded until the unit ends, so files and environment
+ * variables read in that teardown are inputs of the unit like those its tests
+ * read; a teardown step that runs after the unit ended, as the test
+ * environment's when the worker's teardown cannot be watched, counts for
+ * neither. A test environment other than Vitest's own loads and sets up before
+ * the runner exists, out of sight, so its units report no dependencies and are
+ * never cached. A unit waits until the worker of the unit before it of the same
+ * test file is gone, so a test file never runs twice at once.
  *
  * Tests the user marked concurrent stay concurrent in isolated units and in a
  * dry run that tries each test once, as in a plain run; a batch run and a dry
@@ -233,6 +245,19 @@ export default class MootantRunner extends TestRunner {
       }
     },
   }
+
+  /**
+   * Project files the test code read through `node:fs` while the unit ran, its
+   * teardown included, those it wrote, which are no inputs when it reads them
+   * later, the paths it changed with the directories they are in, and the
+   * environment variables it read; null while nothing records.
+   */
+  private inputs: {
+    environment: Set<string>
+    written: Set<string>
+    touched: Set<string>
+    files: Set<string>
+  } | null = null
 
   /**
    * Mutant runtime the switched code calls.
@@ -271,6 +296,13 @@ export default class MootantRunner extends TestRunner {
    * Options the main process provided for this run.
    */
   private readonly options: VitestWorkerOptions
+
+  /**
+   * What the test file depended on (`listDependencies`) when its file suite
+   * ended, its snapshot files included, read before Vitest drops its snapshot
+   * state, or null before; the end of the unit adds what its teardown read.
+   */
+  private dependencies: string[] | null = null
 
   /**
    * Descriptor of the heartbeat file, or null until the first beat.
@@ -336,6 +368,12 @@ export default class MootantRunner extends TestRunner {
   private readonly sequential: boolean
 
   /**
+   * Names of the environment variables the unit read, `*` for all of them,
+   * sorted; read when the unit ends.
+   */
+  private environment: string[] = []
+
+  /**
    * Descriptor of the out file of this unit, open for appending, or null when
    * the worker claimed no unit.
    */
@@ -345,6 +383,12 @@ export default class MootantRunner extends TestRunner {
    * Heartbeat file of this worker.
    */
   private readonly beatFile: string
+
+  /**
+   * Files and directories the test code read and changed itself while the unit
+   * ran, sorted; read when the unit ends.
+   */
+  private modified: string[] = []
 
   /**
    * Whether the unit ends in the worker's teardown, after Vitest cleaned up the
@@ -490,6 +534,7 @@ export default class MootantRunner extends TestRunner {
       this.outName = `${hash}-${process.pid}`
       this.out = openSync(path.join(out, `${this.outName}.jsonl`), 'a')
       this.beat(options.timeouts!.file, null)
+      this.startTracking(true)
       return
     }
     let plan = readWorkerPlan(options.directory, hash)
@@ -532,6 +577,7 @@ export default class MootantRunner extends TestRunner {
       )
     }
     this.beat(this.budget, null)
+    this.startTracking(false)
   }
 
   /**
@@ -647,6 +693,28 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
+   * Records a test that ended with a skip before a suite ends. Once the file
+   * suite ends, reads what the test file depended on so far, its snapshot files
+   * included, before Vitest saves and drops its snapshot state; recording what
+   * the code reads goes on until the unit ends, so the worker-scoped fixtures'
+   * cleanup and the test environment's teardown count too.
+   *
+   * @param suite - Suite that ran.
+   */
+  public override async onAfterRunSuite(suite: RunnerTestSuite): Promise<void> {
+    this.finishEnded()
+    if (suite.file === suite && this.inputs !== null) {
+      let client = Reflect.get(this, 'snapshotClient') as {
+        snapshotStateMap: Map<string, Parameters<typeof listDependencies>[2]>
+      }
+      this.dependencies = this.listDependencies(
+        client.snapshotStateMap.get(suite.file.filepath),
+      )
+    }
+    await super.onAfterRunSuite(suite)
+  }
+
+  /**
    * Runs the planned test function, against mootant's timer when the try has a
    * deadline. After a timed-out try the rest of the test is skipped.
    *
@@ -730,13 +798,68 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
-   * Records a test that ended with a skip before a suite ends.
+   * Starts recording the project files the test code reads through `node:fs`
+   * and the environment variables it reads, before the test file and its setup
+   * files load. The first worker of a project in a dry run also writes the
+   * hashes of the worker's environment variables, as Vitest set them up, to
+   * `env/<hash>.json` of the work directory, for the main process to tell what
+   * the variables read were.
    *
-   * @param suite - Suite that ran.
+   * @param snapshot - Whether to write the environment of the project.
    */
-  public override async onAfterRunSuite(suite: RunnerTestSuite): Promise<void> {
-    this.finishEnded()
-    await super.onAfterRunSuite(suite)
+  private startTracking(snapshot: boolean): void {
+    let { directory, root } = this.options
+    let inputs = {
+      environment: new Set<string>(),
+      written: new Set<string>(),
+      touched: new Set<string>(),
+      files: new Set<string>(),
+    }
+    this.inputs = inputs
+    /**
+     * Tells whether a path is a file of the project.
+     *
+     * @param file - Absolute path.
+     * @returns Whether it is in the root, outside `node_modules`.
+     */
+    function isProjectFile(file: string): boolean {
+      return (
+        (file === root || file.startsWith(root + path.sep)) &&
+        !file.includes(`${path.sep}node_modules${path.sep}`)
+      )
+    }
+    trackFileReads({
+      write: file => {
+        inputs.written.add(file)
+        inputs.touched.add(file)
+        inputs.touched.add(path.dirname(file))
+      },
+      read: file => {
+        if (isProjectFile(file) && !inputs.written.has(file)) {
+          inputs.files.add(file)
+        }
+      },
+    })
+    let real = trackEnvironment(Reflect.get(this, 'workerState'), name => {
+      inputs.environment.add(name)
+    })
+    if (snapshot) {
+      let variables: Record<string, string> = {}
+      for (let [name, value = ''] of Object.entries(real)) {
+        variables[name] = createHash('sha256').update(value).digest('hex')
+      }
+      try {
+        writeFileSync(
+          path.join(
+            directory,
+            'env',
+            `${getFileHash('', this.config.name ?? '')}.json`,
+          ),
+          JSON.stringify({ project: this.config.name ?? '', variables }),
+          { flag: 'wx' },
+        )
+      } catch {}
+    }
   }
 
   /**
@@ -799,6 +922,53 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
+   * Writes the end record of the unit once its test files ran and marks the
+   * unit as finished for the progress of the main process, removes the
+   * heartbeat file, and returns the runtime to its idle state.
+   */
+  private finishUnit(): void {
+    let { runtime } = this
+    let { mode } = this.options
+    if (this.out !== null && this.filesEnded) {
+      let { hits } = runtime
+      if (mode === 'batch') {
+        hits += this.outsideHits
+      } else if (mode === 'dry') {
+        hits -= this.inside.hits
+      }
+      let dependencies = this.stopTracking()
+      writeOutRecord(this.out, {
+        covers: [...this.loadCovers].toSorted(),
+        duration: clock.now() - this.started,
+        loadDuration: this.loadDuration,
+        environment: this.environment,
+        concurrent: this.concurrent,
+        loadError: this.loadError,
+        hookError: this.hookError,
+        abandoned: this.abandoned,
+        reached: runtime.reached,
+        modified: this.modified,
+        strays: this.loadStrays,
+        unit: this.unitIndex,
+        dependencies,
+        kind: 'end',
+        hits,
+      })
+      closeSync(
+        openSync(path.join(this.options.directory, 'done', this.outName), 'w'),
+      )
+    }
+    if (this.beatDescriptor !== null) {
+      closeSync(this.beatDescriptor)
+      this.beatDescriptor = null
+    }
+    rmSync(this.beatFile, { force: true })
+    runtime.hitLimit = Infinity
+    runtime.coverage = null
+    runtime.active = null
+  }
+
+  /**
    * Reads the facts of a test's try that ended, once Vitest finished it, so
    * errors of its teardown count; then the runtime goes back to the state
    * between tries.
@@ -844,49 +1014,6 @@ export default class MootantRunner extends TestRunner {
         this.inside.hits += runtime.hits - this.inside.from
       }
     }
-  }
-
-  /**
-   * Writes the end record of the unit once its test files ran and marks the
-   * unit as finished for the progress of the main process, removes the
-   * heartbeat file, and returns the runtime to its idle state.
-   */
-  private finishUnit(): void {
-    let { runtime } = this
-    let { mode } = this.options
-    if (this.out !== null && this.filesEnded) {
-      let { hits } = runtime
-      if (mode === 'batch') {
-        hits += this.outsideHits
-      } else if (mode === 'dry') {
-        hits -= this.inside.hits
-      }
-      writeOutRecord(this.out, {
-        covers: [...this.loadCovers].toSorted(),
-        duration: clock.now() - this.started,
-        loadDuration: this.loadDuration,
-        concurrent: this.concurrent,
-        loadError: this.loadError,
-        hookError: this.hookError,
-        abandoned: this.abandoned,
-        reached: runtime.reached,
-        strays: this.loadStrays,
-        unit: this.unitIndex,
-        kind: 'end',
-        hits,
-      })
-      closeSync(
-        openSync(path.join(this.options.directory, 'done', this.outName), 'w'),
-      )
-    }
-    if (this.beatDescriptor !== null) {
-      closeSync(this.beatDescriptor)
-      this.beatDescriptor = null
-    }
-    rmSync(this.beatFile, { force: true })
-    runtime.hitLimit = Infinity
-    runtime.coverage = null
-    runtime.active = null
   }
 
   /**
@@ -936,6 +1063,39 @@ export default class MootantRunner extends TestRunner {
     await new Promise<void>(resolve => {
       clock.setImmediate(resolve)
     })
+  }
+
+  /**
+   * Stops recording what the code reads once the unit ended and lists what it
+   * depended on: what the test file depended on when its file suite ended, with
+   * what the worker evaluated, required and read through `node:fs` until now,
+   * the environment variables it read, and the files it read and changed
+   * itself. A test environment other than Vitest's own loads and sets up before
+   * the runner exists, so what its module and `setup` read, and the references
+   * to `process.env` and `node:fs` they keep, are out of sight: such a unit
+   * reports no dependencies, so it is never cached.
+   *
+   * @returns What the unit depended on, sorted, or null when it cannot tell.
+   */
+  private stopTracking(): string[] | null {
+    let { environment, touched, files } = this.inputs!
+    let dependencies = new Set([
+      ...(this.dependencies ?? []),
+      ...this.listDependencies(undefined),
+    ])
+    this.environment = [...environment].toSorted()
+    this.modified = [...files].filter(file => touched.has(file)).toSorted()
+    this.inputs = null
+    let state = Reflect.get(this, 'workerState') as {
+      ctx: { environment: { name: string } }
+      metaEnv: object
+    }
+    trackFileReads(null)
+    trackEnvironment(state, null)
+    this.dependencies = [...dependencies].toSorted()
+    return Object.hasOwn(builtinEnvironments, state.ctx.environment.name) ?
+        this.dependencies
+      : null
   }
 
   /**
@@ -1026,6 +1186,26 @@ export default class MootantRunner extends TestRunner {
     } else {
       this.beat(latest.watch - now, latest.test)
     }
+  }
+
+  /**
+   * Lists what the test file depended on so far (`listDependencies`), the files
+   * it read through `node:fs` included.
+   *
+   * @param snapshot - Snapshot state of the test file, or undefined.
+   * @returns Module ids and absolute paths, sorted.
+   */
+  private listDependencies(
+    snapshot: Parameters<typeof listDependencies>[2],
+  ): string[] {
+    return listDependencies(
+      Reflect.get(this, 'workerState'),
+      [
+        ...Object.keys(createRequire(import.meta.url).cache),
+        ...this.inputs!.files,
+      ],
+      snapshot,
+    )
   }
 
   /**

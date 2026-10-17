@@ -1,7 +1,9 @@
 import type { BatchResult } from '../../types/adapter/batch-result'
 import type { VitestHandle } from './types/vitest-session-state'
 import type { BatchPlan } from '../../types/adapter/batch-plan'
+import type { VitestOutRecord } from './types/vitest-worker'
 
+import { readUnitInputs } from './read-unit-inputs'
 import { runPlan } from './run-plan'
 
 /**
@@ -9,7 +11,8 @@ import { runPlan } from './run-plan'
  * stopped is `hang`, and its last mutant try is reported as timed out; a unit
  * without an end record is `crash`; a unit the worker stopped after a timed-out
  * try is `abandoned`. Tries it did not run are missing. A unit whose suite hook
- * or worker teardown failed reports that error.
+ * or worker teardown failed reports that error. A unit that ended reports what
+ * it read (`readUnitInputs`), unless its worker could not tell.
  *
  * @param handle - Live Vitest instance of the session.
  * @param plan - Units to run.
@@ -30,6 +33,7 @@ export async function runBatch(
     tries: [],
     late: [],
   }
+  let ends: [number, Extract<VitestOutRecord, { kind: 'end' }>][] = []
   for (let [unit, { records, hung }] of outcome.units.entries()) {
     let ended = false
     let abandoned = false
@@ -42,6 +46,7 @@ export async function runBatch(
       } else {
         ended = true
         ;({ abandoned } = record)
+        ends.push([unit, record])
         if (record.hookError !== null) {
           result.hookErrors.push({ message: record.hookError, unit })
         }
@@ -84,5 +89,17 @@ export async function runBatch(
       })
     }
   }
+  let tsconfigs = new Map<string, string[]>()
+  let inputs = await Promise.all(
+    ends.map(async ([unit, record]) => {
+      let read = await readUnitInputs(
+        handle,
+        { ...plan.units[unit]!, tsconfigs },
+        record,
+      )
+      return read === null ? [] : [{ ...read, unit }]
+    }),
+  )
+  result.inputs = inputs.flat()
   return result
 }

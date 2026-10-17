@@ -56,6 +56,7 @@ describe('buildRunReport', () => {
       coveredBy: null,
       ignoredBy: null,
       path: 'batch',
+      cached: false,
       endColumn: 23,
       reason: null,
       duration: 2,
@@ -137,6 +138,7 @@ describe('buildRunReport', () => {
       totalErrorMutants: 1,
       coveredScore: 66.67,
       totalNoCoverage: 1,
+      totalCached: null,
       totalSurvived: 1,
       totalIsolated: 3,
       totalWarnings: 1,
@@ -153,6 +155,35 @@ describe('buildRunReport', () => {
       passed: false,
       score: 50,
     })
+  })
+
+  it('counts the verdicts that came from the cache when it was on', () => {
+    let result = createRunResult()
+    result.cache = true
+    result.results[0]!.cached = true
+    result.results[2]!.cached = true
+
+    let report = build(result)
+
+    expect(report.summary.totalCached).toBe(2)
+    expect(report.mutants.map(mutant => mutant.cached)).toStrictEqual([
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+    ])
+  })
+
+  it('keeps the revision of --since with its merge base', () => {
+    let result = createRunResult()
+
+    expect(build(result).since).toBeNull()
+
+    result.since = { base: 'abc123', ref: 'main' }
+
+    expect(build(result).since).toStrictEqual({ base: 'abc123', ref: 'main' })
   })
 
   it('reports the checks of fast mode as null in the default mode', () => {

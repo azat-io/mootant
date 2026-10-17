@@ -1,5 +1,7 @@
 import type { ListResult } from '../types/report/list-result'
 
+import { selectChangedMutants } from './files/select-changed-mutants'
+import { readChangedLines } from './git/read-changed-lines'
 import { listFileMutants } from './files/list-file-mutants'
 import { prepareRun } from './config/prepare-run'
 
@@ -31,6 +33,12 @@ interface ListMutantsOptions {
   preset?: string
 
   /**
+   * Git revision given with `--since`: only mutants on lines changed since its
+   * merge base with `HEAD` are listed.
+   */
+  since?: string
+
+  /**
    * Working directory that display paths are relative to.
    */
   cwd: string
@@ -42,14 +50,17 @@ interface ListMutantsOptions {
  * relative to the project root, reads every file and generates its mutants one
  * file at a time. A file that cannot be read or parsed is reported and the
  * others are still listed. Skipped candidates are collected only on request and
- * never change the mutants.
+ * never change the mutants. With `--since`, only the mutants and skipped
+ * candidates on lines changed since the merge base of the revision and `HEAD`
+ * are listed, and only the changed files.
  *
  * @param options - Paths, configuration, preset and working directory of the
  *   run.
  * @returns Result of the run, before it is formatted.
  * @throws Error - When the configuration or a plugin cannot be loaded or is
  *   invalid, when a preset or mutator is unknown, when paths are missing or
- *   hold no source file, or when two mutants share an id.
+ *   hold no source file, when two mutants share an id, or when the changed
+ *   lines cannot be read from git.
  */
 export async function listMutants(
   options: ListMutantsOptions,
@@ -57,6 +68,10 @@ export async function listMutants(
   let { knownMutatorIds, mutators, settings, preset, root } =
     await prepareRun(options)
   let skipped = options.skipped ?? false
+  let changes =
+    options.since === undefined ?
+      null
+    : await readChangedLines(root, options.since)
   let { diagnostics, files } = await listFileMutants({
     paths: options.paths,
     cwd: options.cwd,
@@ -67,10 +82,13 @@ export async function listMutants(
     root,
   })
   return {
+    since:
+      changes === null ? null : { ref: options.since!, base: changes.base },
+    files:
+      changes === null ? files : selectChangedMutants(files, changes.files),
     diagnostics,
     mutators,
     skipped,
     preset,
-    files,
   }
 }

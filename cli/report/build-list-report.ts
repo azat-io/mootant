@@ -117,6 +117,7 @@ export function buildListReport(result: ListResult): ListReport {
     })),
     diagnostics: sortedDiagnostics,
     preset: result.preset,
+    since: result.since,
     schemaVersion: 2,
     command: 'list',
     mutants,

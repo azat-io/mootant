@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../mutant/diagnostic'
+import type { RunCache } from '../cache/run-cache'
 import type { DryAnalysis } from './dry-analysis'
 import type { MutantState } from './mutant-state'
 import type { RunEvent } from './run-event'
@@ -28,6 +29,12 @@ export interface RunState {
    * Problems found while running, such as hung or crashed workers.
    */
   diagnostics: Diagnostic[]
+
+  /**
+   * Verdicts of earlier runs to reuse and the evidence of this run to store, or
+   * null when the cache is off.
+   */
+  cache: RunCache | null
 
   /**
    * Coverage and stability read from the dry run.

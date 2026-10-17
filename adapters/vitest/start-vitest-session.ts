@@ -22,6 +22,7 @@ import { createMootantPlugin } from './create-mootant-plugin'
 import { createOutputStream } from './create-output-stream'
 import { createForksPool } from './create-forks-pool'
 import { checkVitestCopy } from './check-vitest-copy'
+import { getCacheInputs } from './get-cache-inputs'
 import { getRunnerPath } from './get-runner-path'
 import { detectVitest } from './detect-vitest'
 import { runIsolated } from './run-isolated'
@@ -74,6 +75,7 @@ export async function startVitestSession(
     instrumented: true,
     outside: new Set(),
     served: new Set(),
+    environment: {},
     keys: new Map(),
     diagnostics: [],
     error: null,
@@ -155,6 +157,8 @@ export async function startVitestSession(
       }
       return [...files]
     },
+    cacheInputs: () =>
+      Promise.resolve(getCacheInputs(vitest, state.environment)),
     close: () => {
       closed ??= closeVitest()
       return closed

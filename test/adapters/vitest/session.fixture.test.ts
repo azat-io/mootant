@@ -42,6 +42,7 @@ describe('vitest adapter', () => {
       },
       paths: ['src'],
       concurrency: 2,
+      cache: false,
       cwd: root,
     })
 
@@ -95,6 +96,7 @@ describe('vitest adapter', () => {
       },
       paths: ['src'],
       concurrency: 2,
+      cache: false,
       fast: true,
       cwd: root,
     })

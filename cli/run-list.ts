@@ -19,6 +19,7 @@ export async function runList(options: ListOptions): Promise<void> {
       skipped: options.skipped,
       config: options.config,
       preset: options.preset,
+      since: options.since,
       paths: options.paths,
       cwd: process.cwd(),
     })

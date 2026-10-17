@@ -1,6 +1,7 @@
 import type { ListReportMutator } from './list-report-mutator'
 import type { ListReportMutant } from './list-report-mutant'
 import type { IsolatedReason } from '../run/isolated-reason'
+import type { SinceRevision } from '../git/since-revision'
 import type { ListReportFile } from './list-report-file'
 import type { RunDurations } from '../run/run-durations'
 import type { Diagnostic } from '../mutant/diagnostic'
@@ -29,6 +30,11 @@ export interface RunReportSummary {
    * Score over covered mutants, or null.
    */
   coveredScore: number | null
+
+  /**
+   * Mutants whose verdict came from the cache, or null when the cache was off.
+   */
+  totalCached: number | null
 
   /**
    * Mutants with status `Error`; not diagnostics.
@@ -190,6 +196,12 @@ export interface RunReportMutant extends Omit<ListReportMutant, 'status'> {
    * Milliseconds spent on it, rounded.
    */
   duration: number
+
+  /**
+   * Whether the verdict came from an earlier run whose code, tests and settings
+   * are unchanged; nothing ran it in this run.
+   */
+  cached: boolean
 }
 
 /**
@@ -211,6 +223,12 @@ export interface RunReport {
    * `--all`. The summary counts every mutant either way.
    */
   listed: 'actionable' | 'all'
+
+  /**
+   * Revision given with `--since` and the merge-base commit the working tree
+   * was compared with, or null without `--since`.
+   */
+  since: SinceRevision | null
 
   /**
    * Mutants of the mutated files, in file and canonical order: the ones to act

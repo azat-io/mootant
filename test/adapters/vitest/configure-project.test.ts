@@ -46,6 +46,7 @@ function createState(): VitestSessionState {
     instrumented: true,
     outside: new Set(),
     served: new Set(),
+    environment: {},
     keys: new Map(),
     diagnostics: [],
     files: null,

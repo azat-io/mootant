@@ -28,7 +28,8 @@ const UNREPORTED = 'The test runner did not report this mutant.'
  * reached the mutant and passed is survived evidence. The dry run had no failed
  * suite hook, since one fails the dry run. Stray errors of tests and test files
  * that had them in the dry run prove nothing. A unit without facts is planned
- * once more, then the mutant gets an `Error` verdict.
+ * once more, then the mutant gets an `Error` verdict. Kills and reached passes
+ * go to the cache of the run, which keeps only what it may reuse.
  *
  * @param state - State of the run, updated in place.
  * @param planned - The plan the run executed and the requests it was built
@@ -78,6 +79,12 @@ export function applyIsolatedResult(
       continue
     }
     let verdict = readUnit(state, mutant, { facts: found, request, unit })
+    if (verdict !== null) {
+      state.cache?.recordUnit(mutant, request.file, {
+        inputs: found.inputs,
+        verdict,
+      })
+    }
     if (verdict === 'survived') {
       mutant.survived = true
     } else if (

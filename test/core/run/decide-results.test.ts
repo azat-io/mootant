@@ -19,6 +19,7 @@ describe('decideResults', () => {
       test: 'a1',
     }
     killed.duration = 3
+    killed.cached = true
     killed.tries = 2
     state.mutants.get('m2')!.survived = true
     let ignored = createMutant({
@@ -43,6 +44,7 @@ describe('decideResults', () => {
         killedBy: null,
         killedIn: null,
         coveredBy: [],
+        cached: false,
         message: null,
         duration: 0,
         cause: null,
@@ -59,10 +61,15 @@ describe('decideResults', () => {
         message: 'boom',
         killedBy: 'a1',
         path: 'batch',
+        cached: true,
         duration: 3,
         tries: 2,
       },
-      expect.objectContaining({ status: 'Survived', killedBy: null }),
+      expect.objectContaining({
+        status: 'Survived',
+        killedBy: null,
+        cached: false,
+      }),
       expect.objectContaining({ status: 'NoCoverage', path: null }),
     ])
   })

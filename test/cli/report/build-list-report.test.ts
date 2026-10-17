@@ -48,6 +48,7 @@ function createResult(
     ],
     preset: 'recommended',
     skipped: false,
+    since: null,
     diagnostics,
     files,
   }
@@ -308,6 +309,7 @@ describe('buildListReport', () => {
       diagnostics: [skippedPath],
       preset: 'strict',
       skipped: false,
+      since: null,
     }
 
     let report = buildListReport(result)
@@ -393,6 +395,7 @@ describe('buildListReport', () => {
       schemaVersion: 2,
       preset: 'strict',
       command: 'list',
+      since: null,
     })
   })
 

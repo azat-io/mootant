@@ -43,6 +43,11 @@ interface CommandOptions {
   preset?: string
 
   /**
+   * Git revision, from `--since`.
+   */
+  since?: string
+
+  /**
    * Whether batch tries are on, from `--fast` or `--no-fast`.
    */
   fast?: boolean
@@ -69,6 +74,9 @@ export function formatCommand(
   }
   if (options.preset !== undefined) {
     parts.push('--preset', quote(options.preset))
+  }
+  if (options.since !== undefined) {
+    parts.push('--since', quote(options.since))
   }
   if (options.skipped === true) {
     parts.push('--skipped')

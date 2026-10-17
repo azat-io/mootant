@@ -9,6 +9,15 @@ import type { TryFacts } from '../../../types/adapter/try-facts'
 export type VitestOutRecord =
   | {
       /**
+       * Ids of the modules the worker evaluated, the files Node's `require`
+       * loaded, the project files the test code read through `node:fs` and the
+       * snapshot files of the test file (`listDependencies`), or null when the
+       * worker cannot tell, as with a test environment other than Vitest's
+       * own.
+       */
+      dependencies: string[] | null
+
+      /**
        * Message of the first failed suite hook (`beforeAll`, `afterAll`,
        * `aroundAll`) or, after them, of the failed cleanup of the worker-scoped
        * fixtures or of the failed teardown of the test environment, or null.
@@ -21,6 +30,12 @@ export type VitestOutRecord =
       loadError: string | null
 
       /**
+       * Names of the environment variables the test code read, or `*` when it
+       * listed them all, sorted.
+       */
+      environment: string[]
+
+      /**
        * Milliseconds from the start of loading to the end of collection.
        */
       loadDuration: number
@@ -29,6 +44,13 @@ export type VitestOutRecord =
        * Whether a suite or test of the file was marked concurrent.
        */
       concurrent: boolean
+
+      /**
+       * Project files and directories the test code read through `node:fs` and
+       * changed itself, by writing, creating, removing or moving them or the
+       * entries of a directory, sorted.
+       */
+      modified: string[]
 
       /**
        * Whether the worker stopped the unit after a timed-out try.
@@ -184,6 +206,11 @@ export interface VitestWorkerOptions {
    * false in batch and isolated runs.
    */
   repeat: boolean
+
+  /**
+   * Project root; files the test code reads count as inputs only inside it.
+   */
+  root: string
 }
 
 /**

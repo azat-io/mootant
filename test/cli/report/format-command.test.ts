@@ -11,11 +11,12 @@ describe('formatCommand', () => {
         paths: ['src', 'lib'],
         preset: 'strict',
         concurrency: 2,
+        since: 'main',
         threshold: 80,
         fast: true,
       }),
     ).toBe(
-      'mootant run src lib --config mootant.config.ts --preset strict --fast --threshold 80 --concurrency 2 --mutant 3f2a --mutant b9c0',
+      'mootant run src lib --config mootant.config.ts --preset strict --since main --fast --threshold 80 --concurrency 2 --mutant 3f2a --mutant b9c0',
     )
     expect(formatCommand('run', { fast: false, paths: [] })).toBe(
       'mootant run --no-fast',

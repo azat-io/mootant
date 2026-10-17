@@ -4,7 +4,12 @@ import { validateAdapter } from '../../../core/run/validate-adapter'
 
 describe('validateAdapter', () => {
   it('accepts an adapter object', () => {
-    let adapter = { start: () => null, name: 'jest-like', batch: false }
+    let adapter = {
+      start: () => null,
+      name: 'jest-like',
+      version: '1.0.0',
+      batch: false,
+    }
 
     expect(validateAdapter(adapter, 'jest-like')).toBe(adapter)
   })
@@ -21,6 +26,10 @@ describe('validateAdapter', () => {
       '"batch" must be true or false',
     ],
     [{ name: 'jest', batch: true }, '"start" must be a function'],
+    [
+      { start: () => null, name: 'jest', batch: true, version: 1 },
+      '"version" must be a string',
+    ],
   ])('rejects %o', (value, problem) => {
     expect(() => validateAdapter(value, 'acme')).toThrow(
       `The test runner adapter "acme" is invalid: ${problem}.`,

@@ -3,6 +3,7 @@ import { availableParallelism } from 'node:os'
 import type { BuiltInAdapters } from '../types/adapter/built-in-adapters'
 import type { AdapterSession } from '../types/adapter/adapter-session'
 import type { SwitchedFile } from '../types/adapter/switched-file'
+import type { SinceRevision } from '../types/git/since-revision'
 import type { TestAdapter } from '../types/adapter/test-adapter'
 import type { FileMutants } from '../types/mutant/file-mutants'
 import type { Diagnostic } from '../types/mutant/diagnostic'
@@ -15,15 +16,20 @@ import type { RunEvent } from '../types/run/run-event'
 
 import { createSwitchedFiles } from './instrument/create-switched-files'
 import { getComponentFramework } from './parser/get-component-framework'
+import { selectChangedMutants } from './files/select-changed-mutants'
 import { loadSvelteCompiler } from './parser/load-svelte-compiler'
 import { getPackageDirectory } from './run/get-package-directory'
 import { createWorkDirectory } from './run/create-work-directory'
 import { resolveMutantIds } from './identity/resolve-mutant-ids'
 import { markOutsideMutants } from './run/mark-outside-mutants'
+import { applyCachedBatch } from './cache/apply-cached-batch'
+import { applyCachedUnits } from './cache/apply-cached-units'
 import { runIsolatedRounds } from './run/run-isolated-rounds'
 import { computeStaticCost } from './run/compute-static-cost'
 import { loadVueCompiler } from './parser/load-vue-compiler'
+import { prepareRunCache } from './cache/prepare-run-cache'
 import { listFileMutants } from './files/list-file-mutants'
+import { readChangedLines } from './git/read-changed-lines'
 import { getTestFileKey } from './run/get-test-file-key'
 import { compareCodeUnits } from './compare-code-units'
 import { runBatchPhases } from './run/run-batch-phases'
@@ -31,6 +37,9 @@ import { createRunState } from './run/create-run-state'
 import { getDisplayPath } from './run/get-display-path'
 import { selectRunFiles } from './run/select-run-files'
 import { resolveAdapter } from './run/resolve-adapter'
+import { saveRunCache } from './cache/save-run-cache'
+import { readRunCache } from './cache/read-run-cache'
+import { getCachePath } from './cache/get-cache-path'
 import { decideResults } from './run/decide-results'
 import { runDryPhase } from './run/run-dry-phase'
 import { prepareRun } from './config/prepare-run'
@@ -86,6 +95,18 @@ interface RunMutantsOptions {
   preset?: string
 
   /**
+   * Whether to reuse verdicts of earlier runs and save the new ones (false with
+   * `--no-cache`); over `run.cache`.
+   */
+  cache?: boolean
+
+  /**
+   * Git revision given with `--since`: only mutants on lines changed since its
+   * merge base with `HEAD` run.
+   */
+  since?: string
+
+  /**
    * Fast mode (`--fast`): batch runs first, with heuristic kills; over
    * `run.fast`.
    */
@@ -107,25 +128,39 @@ interface RunMutantsOptions {
  * where one test run tries many mutants and kills are accepted as heuristic
  * verdicts; its survivors and doubtful tries still run isolated. Mutants the
  * test runner ran outside its workers end with `Error` unless a test killed
- * them. The adapter is closed and the work directory removed whatever happens.
+ * them. Unless the cache is off, valid verdicts of earlier runs are reused
+ * before anything runs, and the evidence of the run is saved after it, unless
+ * it has error diagnostics. With `--since`, only the mutants on lines changed
+ * since the merge base of the revision and `HEAD` run, and when there are none
+ * the test runner does not start. The adapter is closed and the work directory
+ * removed whatever happens.
  *
  * @param options - Paths, configuration, adapters and run settings.
  * @returns Verdicts, diagnostics and timings, before they are formatted.
  * @throws Error - When the configuration, the paths, a `--mutant` id or the
- *   adapter is invalid, when the test runner cannot start, or when tests fail
- *   without mutants.
+ *   adapter is invalid, when the changed lines cannot be read from git, when
+ *   the test runner cannot start, or when tests fail without mutants.
  */
 export async function runMutants(
   options: RunMutantsOptions,
 ): Promise<RunResult> {
   let started = performance.now()
+  let startedAt = Date.now()
   let setup = await prepareRun(options)
   let { root, run } = setup
+  let fast = options.fast ?? run.fast ?? false
+  let threshold = options.threshold ?? run.threshold ?? null
   let fromConfig = options.paths.length === 0
   let paths = fromConfig ? (run.paths ?? []) : options.paths
   if (paths.length === 0) {
     throw new Error('mootant run needs paths, such as "mootant run src".')
   }
+  let changes =
+    options.since === undefined ?
+      null
+    : await readChangedLines(root, options.since)
+  let since: SinceRevision | null =
+    changes === null ? null : { ref: options.since!, base: changes.base }
   let listing = await listFileMutants({
     knownMutatorIds: setup.knownMutatorIds,
     cwd: fromConfig ? root : options.cwd,
@@ -135,8 +170,19 @@ export async function runMutants(
     paths,
     root,
   })
-  let files = selectMutants(listing.files, options.mutantIds)
+  let files = selectMutants({
+    changed:
+      changes === null ?
+        listing.files
+      : selectChangedMutants(listing.files, changes.files),
+    ids: options.mutantIds,
+    listed: listing.files,
+    since,
+  })
   let mutants = files.flatMap(file => file.mutants)
+  let listedIds = listing.files.flatMap(file =>
+    file.mutants.map(mutant => mutant.id),
+  )
   /**
    * Passes an event of the run on, when someone listens.
    *
@@ -152,6 +198,35 @@ export async function runMutants(
     kind: 'mutants',
   })
   let adapter = await resolveAdapter(run.runner, root, options.builtIns)
+  if (since !== null && mutants.length === 0) {
+    let total = performance.now() - started
+    return {
+      timing: {
+        batch: fast ? 0 : null,
+        startup: total,
+        isolated: 0,
+        dryRun: 0,
+        total,
+      },
+      diagnostics: listing.diagnostics,
+      mode: fast ? 'fast' : 'isolated',
+      unrepeatable: fast ? [] : null,
+      mutators: setup.mutators,
+      runner: adapter.name,
+      preset: setup.preset,
+      runnerVersion: null,
+      staticCost: [],
+      cache: false,
+      results: [],
+      listedIds,
+      tests: [],
+      threshold,
+      runs: {},
+      files,
+      since,
+      root,
+    }
+  }
   let work = await createWorkDirectory()
   try {
     let switched: SwitchedFile[] = []
@@ -173,17 +248,19 @@ export async function runMutants(
     })
     try {
       return await execute({
-        listedIds: listing.files.flatMap(file =>
-          file.mutants.map(mutant => mutant.id),
-        ),
         diagnostics: listing.diagnostics,
+        startedAt,
+        listedIds,
+        threshold,
         switched,
         session,
         adapter,
         options,
         started,
         files,
+        since,
         setup,
+        fast,
         run,
       })
     } finally {
@@ -204,27 +281,37 @@ export async function runMutants(
  * @param context.adapter - Adapter of the session.
  * @param context.options - Options of the run.
  * @param context.started - Start time of the run.
+ * @param context.startedAt - Start of the run in milliseconds since the epoch.
  * @param context.files - Listed files with the selected mutants.
  * @param context.listedIds - Ids of every listed mutant of the paths.
+ * @param context.threshold - Lowest total score that passes, or null.
+ * @param context.since - Revision of `--since` with its merge base, or null.
+ * @param context.fast - Whether the run is in fast mode.
  * @param context.setup - Prepared configuration.
  * @param context.run - Run settings of the configuration.
  * @returns Result of the run.
  */
 async function execute(context: {
   setup: Awaited<ReturnType<typeof prepareRun>>
+  since: SinceRevision | null
   options: RunMutantsOptions
   diagnostics: Diagnostic[]
+  threshold: number | null
   switched: SwitchedFile[]
   session: AdapterSession
   adapter: TestAdapter
   files: FileMutants[]
   listedIds: string[]
+  startedAt: number
   started: number
   run: RunConfig
+  fast: boolean
 }): Promise<RunResult> {
-  let { session, options, setup, run } = context
+  let { session, options, setup, fast, run } = context
   let { root } = setup
-  let fast = options.fast ?? run.fast ?? false
+  let cachePath = getCachePath(root)
+  let stored =
+    (options.cache ?? run.cache ?? true) ? readRunCache(cachePath) : null
   let selected = selectRunFiles(
     context.files,
     await session.listTestFiles(),
@@ -286,17 +373,34 @@ async function execute(context: {
       }),
     )
   }
-  let state = createRunState({
-    limits: {
-      hitLimit: {
-        floor: run.hitLimit?.floor ?? 100_000,
-        factor: run.hitLimit?.factor ?? 100,
-      },
-      timeout: {
-        constant: run.timeout?.constant ?? 250,
-        factor: run.timeout?.factor ?? 3,
-      },
+  let limits = {
+    hitLimit: {
+      floor: run.hitLimit?.floor ?? 100_000,
+      factor: run.hitLimit?.factor ?? 100,
     },
+    timeout: {
+      constant: run.timeout?.constant ?? 250,
+      factor: run.timeout?.factor ?? 3,
+    },
+  }
+  let now = Date.now()
+  let cache =
+    stored === null ? null : (
+      await prepareRunCache({
+        started: context.startedAt,
+        adapter: context.adapter,
+        files: selected.files,
+        dry: dryPhase.dry,
+        analysis,
+        session,
+        stored,
+        limits,
+        setup,
+        root,
+        now,
+      })
+    )
+  let state = createRunState({
     workers:
       session.workers ??
       options.concurrency ??
@@ -306,6 +410,7 @@ async function execute(context: {
     batch: context.adapter.batch,
     mutants: pending,
     analysis,
+    limits,
     errors,
     fast,
     root,
@@ -313,19 +418,53 @@ async function execute(context: {
   if (dryPhase.runs > 0) {
     state.runs.dry = dryPhase.runs
   }
+  state.cache = cache
   if (fast && analysis.unrepeatable.size > 0) {
     options.onProgress?.({ message: describeUnrepeatable(state), kind: 'note' })
+  }
+  if (fast && context.adapter.batch) {
+    applyCachedBatch(state)
+  }
+  applyCachedUnits(state)
+  let cached = [...state.mutants.values()].filter(
+    mutant => mutant.cached,
+  ).length
+  if (cached > 0) {
+    options.onProgress?.({
+      message:
+        cached === 1 ?
+          `Reused a cached verdict for 1 of ${state.mutants.size} mutants.`
+        : `Reused cached verdicts for ${cached} of ${state.mutants.size} mutants.`,
+      kind: 'note',
+    })
   }
 
   let batchStarted = performance.now()
   if (fast && context.adapter.batch) {
     await runBatchPhases(session, state)
+    applyCachedUnits(state)
   }
   let isolatedStarted = performance.now()
   await runIsolatedRounds(session, state)
   markOutsideMutants(state, dryPhase.dry.outside)
-  let finished = performance.now()
   diagnostics.push(...state.diagnostics)
+  if (cache !== null) {
+    let skipped = await saveRunCache({
+      failed: [
+        ...diagnostics,
+        ...context.files.flatMap(file => file.diagnostics),
+      ].some(diagnostic => diagnostic.severity === 'error'),
+      started: context.startedAt,
+      file: cachePath,
+      cache,
+      root,
+      now,
+    })
+    if (skipped !== null) {
+      diagnostics.push(skipped)
+    }
+  }
+  let finished = performance.now()
 
   return {
     timing: {
@@ -337,16 +476,18 @@ async function execute(context: {
     },
     unrepeatable:
       fast ? [...analysis.unrepeatable].toSorted(compareCodeUnits) : null,
-    threshold: options.threshold ?? run.threshold ?? null,
     results: decideResults(state, mutants),
     runnerVersion: session.version ?? null,
     staticCost: computeStaticCost(state),
     mode: fast ? 'fast' : 'isolated',
+    threshold: context.threshold,
     listedIds: context.listedIds,
     runner: context.adapter.name,
     tests: dryPhase.dry.tests,
     mutators: setup.mutators,
+    cache: cache !== null,
     files: selected.files,
+    since: context.since,
     preset: setup.preset,
     runs: state.runs,
     diagnostics,
@@ -409,6 +550,55 @@ function reportFastLimits(input: {
 }
 
 /**
+ * Keeps only the mutants given with `--mutant`, and only the files that still
+ * have mutants. Ids are resolved against every listed mutant, so an id means
+ * the same with and without `--since`.
+ *
+ * @param selection - What to select from.
+ * @param selection.changed - Listed files with only the mutants on changed
+ *   lines with `--since`, or every listed file.
+ * @param selection.ids - Ids or unique id prefixes to keep, or undefined or
+ *   empty to keep every mutant.
+ * @param selection.listed - Every listed file.
+ * @param selection.since - Revision of `--since`, or null.
+ * @returns Files with the selected mutants.
+ * @throws Error - When an id or id prefix does not name exactly one listed
+ *   mutant, or names one that is not on a changed line.
+ */
+function selectMutants(selection: {
+  since: SinceRevision | null
+  ids: undefined | string[]
+  changed: FileMutants[]
+  listed: FileMutants[]
+}): FileMutants[] {
+  let { changed, listed, since, ids } = selection
+  if (ids === undefined || ids.length === 0) {
+    return changed
+  }
+  let resolved = resolveMutantIds(
+    ids,
+    listed.flatMap(file => file.mutants),
+  )
+  let selectable = new Set(
+    changed.flatMap(file => file.mutants.map(mutant => mutant.id)),
+  )
+  for (let [index, id] of resolved.entries()) {
+    if (!selectable.has(id)) {
+      throw new Error(
+        `Mutant "${ids[index]}" is not on a line changed since ${since!.ref}; drop --since to run it.`,
+      )
+    }
+  }
+  let wanted = new Set(resolved)
+  return changed
+    .map(file => ({
+      ...file,
+      mutants: file.mutants.filter(mutant => wanted.has(mutant.id)),
+    }))
+    .filter(file => file.mutants.length > 0)
+}
+
+/**
  * Describes how many tests are not repeatable and how many mutants they send to
  * the isolated path.
  *
@@ -425,36 +615,4 @@ function describeUnrepeatable(state: RunState): string {
   return mutants === 1 ?
       `${counted} not repeatable; the 1 mutant ${reach} runs isolated.`
     : `${counted} not repeatable; the ${mutants} mutants ${reach} run isolated.`
-}
-
-/**
- * Keeps only the mutants given with `--mutant`, and only the files that still
- * have mutants.
- *
- * @param files - Listed files.
- * @param ids - Ids or unique id prefixes to keep, or undefined or empty to keep
- *   every mutant.
- * @returns Files with the selected mutants.
- * @throws Error - When an id or id prefix does not name exactly one listed
- *   mutant.
- */
-function selectMutants(
-  files: FileMutants[],
-  ids: undefined | string[],
-): FileMutants[] {
-  if (ids === undefined || ids.length === 0) {
-    return files
-  }
-  let wanted = new Set(
-    resolveMutantIds(
-      ids,
-      files.flatMap(file => file.mutants),
-    ),
-  )
-  return files
-    .map(file => ({
-      ...file,
-      mutants: file.mutants.filter(mutant => wanted.has(mutant.id)),
-    }))
-    .filter(file => file.mutants.length > 0)
 }

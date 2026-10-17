@@ -65,6 +65,7 @@ let report: ListReport = {
   preset: 'recommended',
   schemaVersion: 2,
   command: 'list',
+  since: null,
 }
 
 /**

@@ -45,33 +45,6 @@ function createMutant(overrides: Partial<ListReportMutant>): ListReportMutant {
 }
 
 /**
- * Creates a skipped candidate at the start of `example.ts`.
- *
- * @param overrides - Fields that differ from the default candidate.
- * @returns Skipped candidate as the report holds it.
- */
-function createSkipped(
-  overrides: Partial<ListReportSkipped>,
-): ListReportSkipped {
-  return {
-    reason: 'the type hints prove the comparison is always false',
-    mutator: 'comparison-operator',
-    rule: 'proven-comparison',
-    category: 'equivalent',
-    original: 'a === null',
-    replacement: 'false',
-    file: 'example.ts',
-    heuristic: true,
-    column: 5,
-    start: 4,
-    by: null,
-    line: 1,
-    end: 14,
-    ...overrides,
-  }
-}
-
-/**
  * Creates a report of the given mutants. Only the fields the text format reads
  * are filled.
  *
@@ -98,8 +71,36 @@ function createReport(
     command: 'list',
     diagnostics: [],
     mutators: [],
+    since: null,
     files: [],
     mutants,
+  }
+}
+
+/**
+ * Creates a skipped candidate at the start of `example.ts`.
+ *
+ * @param overrides - Fields that differ from the default candidate.
+ * @returns Skipped candidate as the report holds it.
+ */
+function createSkipped(
+  overrides: Partial<ListReportSkipped>,
+): ListReportSkipped {
+  return {
+    reason: 'the type hints prove the comparison is always false',
+    mutator: 'comparison-operator',
+    rule: 'proven-comparison',
+    category: 'equivalent',
+    original: 'a === null',
+    replacement: 'false',
+    file: 'example.ts',
+    heuristic: true,
+    column: 5,
+    start: 4,
+    by: null,
+    line: 1,
+    end: 14,
+    ...overrides,
   }
 }
 

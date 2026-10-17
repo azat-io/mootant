@@ -3,12 +3,31 @@ import { describe, expect, it, vi } from 'vitest'
 import type { VitestHandle } from '../../../adapters/vitest/types/vitest-session-state'
 import type { VitestHeartbeat } from '../../../adapters/vitest/types/vitest-worker'
 
+import { readUnitInputs } from '../../../adapters/vitest/read-unit-inputs'
 import { runIsolated } from '../../../adapters/vitest/run-isolated'
 import { createTryFacts } from '../../helpers/create-try-facts'
 import { runPlan } from '../../../adapters/vitest/run-plan'
 
 vi.mock(import('../../../adapters/vitest/run-plan'), () => ({
   runPlan: vi.fn(),
+}))
+
+vi.mock(import('../../../adapters/vitest/read-unit-inputs'), () => ({
+  readUnitInputs: vi.fn(
+    (
+      _handle: unknown,
+      _unit: unknown,
+      reported?: { dependencies: string[] | null; environment: string[] },
+    ) =>
+      Promise.resolve(
+        reported!.dependencies === null ?
+          null
+        : {
+            dependencies: reported!.dependencies,
+            environment: reported!.environment,
+          },
+      ),
+  ),
 }))
 
 describe('runIsolated', () => {
@@ -27,13 +46,16 @@ describe('runIsolated', () => {
           records: [
             ...records,
             {
+              dependencies: ['/p/a.test.ts'],
               hookError: 'afterAll boom',
+              environment: ['MODE'],
               loadError: 'boom',
               strays: ['stray'],
               concurrent: false,
               abandoned: false,
               loadDuration: 1,
               reached: true,
+              modified: [],
               duration: 9,
               kind: 'end',
               covers: [],
@@ -53,10 +75,13 @@ describe('runIsolated', () => {
               hookError: 'Hook timed out in 519ms.',
               concurrent: false,
               abandoned: false,
+              dependencies: [],
               loadError: null,
               loadDuration: 1,
+              environment: [],
               reached: true,
               duration: 600,
+              modified: [],
               kind: 'end',
               strays: [],
               covers: [],
@@ -71,11 +96,12 @@ describe('runIsolated', () => {
       error: null,
     })
 
-    await expect(
-      runIsolated({} as VitestHandle, { units: [] }),
-    ).resolves.toStrictEqual({
+    let plan = { units: [] }
+
+    await expect(runIsolated({} as VitestHandle, plan)).resolves.toStrictEqual({
       units: [
         {
+          inputs: { dependencies: ['/p/a.test.ts'], environment: ['MODE'] },
           hookError: 'afterAll boom',
           loadError: 'boom',
           strays: ['stray'],
@@ -112,6 +138,7 @@ describe('runIsolated', () => {
           unit: 3,
         },
         {
+          inputs: { dependencies: [], environment: [] },
           hookError: 'Hook timed out in 519ms.',
           incomplete: null,
           loadError: null,
@@ -125,5 +152,6 @@ describe('runIsolated', () => {
         },
       ],
     })
+    expect(readUnitInputs).toHaveBeenCalledTimes(2)
   })
 })

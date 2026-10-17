@@ -75,6 +75,7 @@ export function createRunState(input: RunStateInput): RunState {
     mutants: new Map(),
     root: input.root,
     diagnostics: [],
+    cache: null,
     analysis,
     runs: {},
   }
@@ -98,6 +99,7 @@ export function createRunState(input: RunStateInput): RunState {
       isolatedBecause: null,
       unitDuration: 0,
       survived: false,
+      cached: false,
       duration: 0,
       confirm: [],
       files: [],

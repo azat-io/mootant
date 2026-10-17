@@ -94,12 +94,14 @@ async function runAllPaths(
     cwd: directory,
     paths: ['src'],
     concurrency: 2,
+    cache: false,
     builtIns,
   })
   let fast = await runMutants({
     cwd: directory,
     paths: ['src'],
     concurrency: 2,
+    cache: false,
     fast: true,
     builtIns,
   })
@@ -409,6 +411,7 @@ describe('verdict equivalence', () => {
       cwd: path.join(root, 'stuck'),
       paths: ['src'],
       concurrency: 1,
+      cache: false,
     })
 
     // Vitest stops waiting for a killed worker's answer only after a minute,
@@ -438,6 +441,7 @@ describe('verdict equivalence', () => {
         cwd: path.join(root, 'leaky'),
         paths: ['src'],
         concurrency: 1,
+        cache: false,
       }),
     ).rejects.toThrow('Tests fail without mutants; fix them first')
   }, 30_000)
@@ -494,6 +498,7 @@ describe('verdict equivalence', () => {
         builtIns: createBuiltIns(shortened),
         paths: ['src'],
         concurrency: 1,
+        cache: false,
         fast: true,
         cwd: hang,
       }),
@@ -505,6 +510,7 @@ describe('verdict equivalence', () => {
       builtIns: createBuiltIns(shortened),
       paths: ['src'],
       concurrency: 1,
+      cache: false,
       cwd: hang,
     })
 
@@ -544,6 +550,7 @@ describe('verdict equivalence', () => {
       cwd: path.join(root, 'slow'),
       paths: ['src'],
       concurrency: 1,
+      cache: false,
     })
 
     expect(result.results.map(classify)).toStrictEqual(['killed'])
@@ -746,6 +753,7 @@ describe('verdict equivalence', () => {
       cwd: path.join(root, 'global'),
       paths: ['src'],
       concurrency: 2,
+      cache: false,
     })
 
     // A plain Vitest run fails with the first three: the global setup

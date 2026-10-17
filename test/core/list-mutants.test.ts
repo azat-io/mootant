@@ -6,6 +6,7 @@ import type { Plugin } from '../../types/config/plugin'
 
 import { createFakeFileSystem } from '../helpers/create-fake-file-system'
 import { createMutantId } from '../../core/identity/create-mutant-id'
+import { readChangedLines } from '../../core/git/read-changed-lines'
 import { loadConfig } from '../../core/config/load-config'
 import { listMutants } from '../../core/list-mutants'
 
@@ -23,6 +24,10 @@ vi.mock(
     return { createMutantId: vi.fn(actual.createMutantId) }
   },
 )
+
+vi.mock(import('../../core/git/read-changed-lines'), () => ({
+  readChangedLines: vi.fn(),
+}))
 
 vi.mock(import('../../core/config/load-config'), () => ({
   loadConfig: vi.fn().mockResolvedValue(null),
@@ -93,6 +98,8 @@ describe('listMutants', () => {
     })
 
     expect(result.preset).toBe('recommended')
+    expect(result.since).toBeNull()
+    expect(readChangedLines).not.toHaveBeenCalled()
     expect(result.diagnostics).toStrictEqual([])
     expect(result.mutators.map(active => active.id)).toStrictEqual([
       'number-swap',
@@ -121,6 +128,34 @@ describe('listMutants', () => {
         parsed: true,
       },
     ])
+  })
+
+  it('lists only the mutants and skipped candidates on lines changed since a revision', async () => {
+    installFileSystem({
+      '/repo/src/a.ts': 'x = 1\ny = 5\nz = 3',
+      '/repo/src/b.js': 'y = 3',
+    })
+    vi.mocked(readChangedLines).mockResolvedValue({
+      files: new Map([['/repo/src/a.ts', new Set([2])]]),
+      base: 'abc123',
+    })
+
+    let result = await listMutants({
+      paths: ['src'],
+      since: 'main',
+      skipped: true,
+      cwd: '/repo',
+    })
+
+    expect(readChangedLines).toHaveBeenCalledExactlyOnceWith('/repo', 'main')
+    expect(result.since).toStrictEqual({ base: 'abc123', ref: 'main' })
+    expect(
+      result.files.map(({ mutants, skipped, file }) => ({
+        skipped: skipped.map(candidate => candidate.start),
+        mutants: mutants.map(mutant => mutant.start),
+        file,
+      })),
+    ).toStrictEqual([{ file: 'src/a.ts', mutants: [10], skipped: [10] }])
   })
 
   it('writes paths and ids relative to the directory of the configuration', async () => {

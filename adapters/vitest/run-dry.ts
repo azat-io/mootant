@@ -7,7 +7,9 @@ import type { VitestHeartbeat } from './types/vitest-worker'
 import type { DryFile } from '../../types/adapter/dry-file'
 import type { DryTest } from '../../types/adapter/dry-test'
 
+import { readEnvironmentHashes } from './read-environment-hashes'
 import { compareCodeUnits } from '../../core/compare-code-units'
+import { collectDependencies } from './collect-dependencies'
 import { indexSwitchedFiles } from './index-switched-files'
 import { resetRunDirectory } from './reset-run-directory'
 import { runSpecifications } from './run-specifications'
@@ -29,7 +31,9 @@ import { readOutFiles } from './read-out-files'
  * past the file budget plus the timeouts of the file's suite hooks, and reports
  * it in `hung`. Each test file that ends is reported to the context's
  * `onUnitEnd`. Mutant sites the main process evaluated since the session
- * started, such as in a `globalSetup` file, are reported in `outside`.
+ * started, such as in a `globalSetup` file, are reported in `outside`. The
+ * hashes of the environment variables of each project's workers are kept in the
+ * session state for `getCacheInputs`.
  *
  * @param handle - Live Vitest instance of the session.
  * @param request - Related files, test files, repeats and whether to serve
@@ -78,8 +82,12 @@ export async function runDry(
       ends.stop()
       await watch.stop()
     }
+    Object.assign(
+      state.environment,
+      readEnvironmentHashes(context.workDirectory),
+    )
     return {
-      ...readDryResult(handle, specifications, error),
+      ...(await readDryResult(handle, specifications, error)),
       hung: hung.map(beat => ({
         name: beat.name,
         test: beat.test,
@@ -98,31 +106,37 @@ export async function runDry(
  * Builds the result of a dry run from the out files. A test file without an end
  * record failed to load, with the run's error as its message. The time a file
  * spent outside tries after loading, such as in suite hooks, is its whole time
- * minus loading and its tries.
+ * minus loading and its tries. What a test file depended on comes from its end
+ * record (`collectDependencies`).
  *
  * @param handle - Live Vitest instance of the session.
  * @param specifications - Test files that ran.
  * @param error - First unhandled error of the run, or null.
  * @returns Result of the dry run.
  */
-function readDryResult(
+async function readDryResult(
   handle: VitestHandle,
   specifications: readonly TestSpecification[],
   error: string | null,
-): Omit<DryRunResult, 'hung'> {
+): Promise<Omit<DryRunResult, 'hung'>> {
   let { context, state } = handle
+  let mismatched = [...state.mismatched].toSorted(compareCodeUnits)
+  let outside = [...state.outside].toSorted(compareCodeUnits)
+  let served = [...state.served].toSorted(compareCodeUnits)
+  let tsconfigs = new Map<string, string[]>()
   let entries = new Map(
     specifications.map(({ moduleId, project }) => [
       getFileHash(moduleId, project.name),
-      { project: project.name, file: moduleId },
+      { project: project.name, source: project, file: moduleId },
     ]),
   )
   let reported = new Set<string>()
+  let collecting: [DryFile, Parameters<typeof collectDependencies>[0]][] = []
   let files: DryFile[] = []
   let tests: DryTest[] = []
   for (let [name, records] of readOutFiles(context.workDirectory)) {
     let hash = name.split('-', 1)[0]!
-    let { project, file } = entries.get(hash)!
+    let { project, source, file } = entries.get(hash)!
     let ended = false
     let tried = 0
     reported.add(hash)
@@ -141,7 +155,7 @@ function readDryResult(
         })
       } else if (record.kind === 'end') {
         ended = true
-        files.push({
+        let entry: DryFile = {
           errors: [
             ...(record.loadError === null ? [] : [record.loadError]),
             ...(record.hookError === null ? [] : [record.hookError]),
@@ -153,29 +167,41 @@ function readDryResult(
           ),
           loadFailed: record.loadError !== null || record.hookError !== null,
           loadDuration: record.loadDuration,
+          environment: record.environment,
           concurrent: record.concurrent,
+          modified: record.modified,
           covers: record.covers,
           hits: record.hits,
           project,
           file,
-        })
+        }
+        files.push(entry)
+        collecting.push([
+          entry,
+          { reported: record.dependencies, project: source, tsconfigs, file },
+        ])
       }
     }
     if (!ended) {
       files.push(createFailedFile({ project, file }, error))
     }
   }
+  await Promise.all(
+    collecting.map(async ([entry, input]) => {
+      entry.dependencies = await collectDependencies(input)
+    }),
+  )
   for (let [hash, entry] of entries) {
     if (!reported.has(hash)) {
       files.push(createFailedFile(entry, error))
     }
   }
   return {
-    mismatched: [...state.mismatched].toSorted(compareCodeUnits),
-    outside: [...state.outside].toSorted(compareCodeUnits),
-    served: [...state.served].toSorted(compareCodeUnits),
     tests: tests.toSorted(compareEntries),
     files: files.toSorted(compareEntries),
+    mismatched,
+    outside,
+    served,
   }
 }
 

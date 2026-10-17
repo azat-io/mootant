@@ -11,7 +11,27 @@ vi.mock(import('../../../adapters/vitest/run-plan'), () => ({
   runPlan: vi.fn(),
 }))
 
+vi.mock(import('../../../adapters/vitest/read-unit-inputs'), () => ({
+  readUnitInputs: vi.fn(
+    (
+      _handle: unknown,
+      _unit: unknown,
+      reported?: { dependencies: string[] | null; environment: string[] },
+    ) =>
+      Promise.resolve(
+        reported!.dependencies === null ?
+          null
+        : {
+            dependencies: reported!.dependencies,
+            environment: reported!.environment,
+          },
+      ),
+  ),
+}))
+
 let end = {
+  dependencies: ['/p/a.test.ts'],
+  environment: ['MODE'],
   kind: 'end' as const,
   concurrent: false,
   abandoned: false,
@@ -19,6 +39,7 @@ let end = {
   hookError: null,
   loadError: null,
   reached: false,
+  modified: [],
   duration: 2,
   covers: [],
   strays: [],
@@ -77,6 +98,11 @@ describe('runBatch', () => {
           claimed: true,
           hung: null,
         },
+        {
+          records: [{ ...end, dependencies: null }],
+          claimed: true,
+          hung: null,
+        },
       ],
       error: null,
     })
@@ -105,6 +131,13 @@ describe('runBatch', () => {
         unit: 1,
       },
     ])
+    expect(result.inputs).toStrictEqual(
+      [0, 5, 6, 7].map(unit => ({
+        dependencies: ['/p/a.test.ts'],
+        environment: ['MODE'],
+        unit,
+      })),
+    )
     expect(result.late).toStrictEqual([
       { message: 'late', mutant: 'm', test: 't' },
     ])

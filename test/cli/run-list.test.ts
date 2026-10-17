@@ -93,6 +93,7 @@ function createResult(diagnostics: Diagnostic[]): ListResult {
     ],
     preset: 'recommended',
     skipped: false,
+    since: null,
     diagnostics,
   }
 }
@@ -123,6 +124,7 @@ describe('runList', () => {
       paths: ['src', 'lib'],
       preset: 'strict',
       skipped: true,
+      since: 'main',
       json: false,
     })
 
@@ -130,6 +132,7 @@ describe('runList', () => {
       paths: ['src', 'lib'],
       cwd: process.cwd(),
       preset: 'strict',
+      since: 'main',
       skipped: true,
     })
   })

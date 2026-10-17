@@ -1,0 +1,4 @@
+{
+  // Options Vite reads come from the extended file.
+  "extends": "./configs/base.json"
+}

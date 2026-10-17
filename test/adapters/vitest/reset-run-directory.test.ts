@@ -17,6 +17,7 @@ describe('resetRunDirectory', () => {
       'beat',
       'claim',
       'done',
+      'env',
       'keep.txt',
       'out',
       'plan',

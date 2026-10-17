@@ -456,6 +456,19 @@ describe('formatRunTextReport', () => {
     expect(getField(text, 'mutants')).toBe('6 in 1 file')
   })
 
+  it('counts the verdicts that came from the cache after the ignored ones', () => {
+    let report = createReport()
+    report.summary.totalCached = 4
+
+    expect(getField(format(report), 'mutants')).toBe(
+      '6 in 1 file, 1 ignored, 4 cached',
+    )
+
+    report.summary.totalCached = 0
+
+    expect(getField(format(report), 'mutants')).toBe('6 in 1 file, 1 ignored')
+  })
+
   it('prints no runs when nothing ran', () => {
     let report = createReport()
     report.summary.runs = {}

@@ -27,12 +27,16 @@ import { waitForWorkers } from './wait-for-workers'
  */
 export async function runSpecifications(
   handle: VitestHandle,
-  worker: Omit<VitestWorkerOptions, 'directory'>,
+  worker: Omit<VitestWorkerOptions, 'directory' | 'root'>,
   specifications: TestSpecification[],
 ): Promise<string | null> {
   let { context, vitest } = handle
   let { exitCode } = process
-  vitest.provide('mootant', { ...worker, directory: context.workDirectory })
+  vitest.provide('mootant', {
+    ...worker,
+    directory: context.workDirectory,
+    root: context.root,
+  })
   try {
     let result = await vitest.runTestSpecifications(specifications)
     await waitForWorkers(context.workDirectory)

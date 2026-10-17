@@ -10,6 +10,12 @@ import type { Diagnostic } from '../../../types/mutant/diagnostic'
  */
 export interface VitestSessionState {
   /**
+   * Hashes of the environment variables the workers of each project saw in the
+   * last dry run, by name, by project name.
+   */
+  environment: Record<string, Record<string, string>>
+
+  /**
    * Switched files by real path, or null until the plugin or a dry run reads
    * `AdapterContext.files`.
    */

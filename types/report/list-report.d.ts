@@ -2,6 +2,7 @@ import type { ListReportMutator } from './list-report-mutator'
 import type { ListReportSummary } from './list-report-summary'
 import type { ListReportSkipped } from './list-report-skipped'
 import type { ListReportMutant } from './list-report-mutant'
+import type { SinceRevision } from '../git/since-revision'
 import type { ListReportFile } from './list-report-file'
 import type { Diagnostic } from '../mutant/diagnostic'
 
@@ -24,6 +25,12 @@ export interface ListReport {
    * Mutants of every file, in canonical order.
    */
   mutants: ListReportMutant[]
+
+  /**
+   * Revision given with `--since` and the merge-base commit the working tree
+   * was compared with, or null without `--since`.
+   */
+  since: SinceRevision | null
 
   /**
    * Counts of the whole run.

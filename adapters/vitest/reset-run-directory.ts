@@ -4,12 +4,13 @@ import path from 'node:path'
 /**
  * Folders of the work directory that hold the files of one Vitest run.
  */
-const RUN_FOLDERS = ['beat', 'claim', 'done', 'out', 'plan', 'worker']
+const RUN_FOLDERS = ['beat', 'claim', 'done', 'env', 'out', 'plan', 'worker']
 
 /**
  * Empties the folders of the previous Vitest run: plans, claims, worker ids,
- * out files, finished units and heartbeats. A heartbeat, claim or worker id
- * left from an earlier run must never be read as one of this run.
+ * out files, finished units, heartbeats and environment hashes. A heartbeat,
+ * claim or worker id left from an earlier run must never be read as one of this
+ * run.
  *
  * @param directory - Work directory of the session.
  */

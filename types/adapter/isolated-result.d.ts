@@ -1,3 +1,4 @@
+import type { RunInputs } from './run-inputs'
 import type { TryFacts } from './try-facts'
 
 /**
@@ -8,6 +9,12 @@ export interface IsolatedFacts {
    * `crash` or `hang` when the unit did not finish, else null.
    */
   incomplete: 'crash' | 'hang' | null
+
+  /**
+   * What the unit read, or null or omitted when the adapter cannot tell, as
+   * after a crash; the cache then never stores the unit's evidence.
+   */
+  inputs?: RunInputs | null
 
   /**
    * Message of the first failed suite hook (`beforeAll`, `afterAll`,

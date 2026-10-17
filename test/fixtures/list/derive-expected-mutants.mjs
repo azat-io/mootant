@@ -637,6 +637,7 @@ function buildReport(expectations, sources, preset) {
     schemaVersion: 2,
     command: 'list',
     preset,
+    since: null,
     summary: {
       totalFiles: expectations.files.length,
       totalMutants: mutants.length,
