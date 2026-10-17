@@ -595,15 +595,12 @@ describe('condition', () => {
       skipped: [],
     },
     {
-      skipped: [
-        'quick -> true (noise timer-delay)',
-        'quick -> false (noise timer-delay)',
-      ],
+      expected: ['quick -> true', 'quick -> false'],
       source: 'setTimeout(run, quick ? 1 : 4000)',
-      expected: [],
+      skipped: [],
     },
   ])(
-    'keeps only the tests that guard a read in the timer delay of $source',
+    'keeps the tests in the timer delay of $source',
     ({ expected, skipped, source }) => {
       expect(runMutator('condition', source).map(formatMutant)).toStrictEqual(
         expected,

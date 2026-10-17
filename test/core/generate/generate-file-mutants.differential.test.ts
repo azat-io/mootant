@@ -916,17 +916,25 @@ const IDIOMS: Idiom[] = [
       '  setTimeout(run, options && options.delay)',
       '}',
     ],
+    gaps: {
+      equivalent: ['logical-operator options && options.delay -> options'],
+    },
     inputs: [[null], [undefined], [{}], [{ delay: 5 }]],
     name: 'a timer delay behind a guard',
     file: 'example.js',
   },
   {
+    gaps: {
+      equivalent: [
+        'comparison-operator options != null -> false',
+        'arithmetic-operator options.delay * 1000 -> options.delay / 1000',
+      ],
+    },
     lines: [
       'function f(options) {',
       '  setTimeout(run, options != null ? options.delay * 1000 : 0)',
       '}',
     ],
-    gaps: { equivalent: ['comparison-operator options != null -> false'] },
     name: 'a timer delay behind a conditional guard',
     inputs: [[null], [{}], [{ delay: 5 }]],
     file: 'example.js',
@@ -949,17 +957,43 @@ const IDIOMS: Idiom[] = [
     inputs: [[]],
   },
   {
+    gaps: {
+      equivalent: [
+        "comparison-operator typeof ms === 'number' -> false",
+        'arithmetic-operator ms * 1000 -> ms / 1000',
+      ],
+    },
     lines: [
       'function f(ms) {',
       "  setTimeout(run, typeof ms === 'number' ? ms * 1000 : 0)",
       '}',
     ],
-    gaps: {
-      equivalent: ["comparison-operator typeof ms === 'number' -> false"],
-    },
     unsoundSkips: { subsumed: ["string-literal 'number' -> '' (O4)"] },
     name: 'a timer delay behind a type check',
     inputs: [[1], [1n], [null]],
+    file: 'example.js',
+  },
+  {
+    gaps: {
+      equivalent: [
+        "arithmetic-operator -ms * (60 * 1000) - emit('delay', ms) -> -ms * (60 * 1000) + emit('delay', ms)",
+        'arithmetic-operator -ms * (60 * 1000) -> -ms / (60 * 1000)',
+        'unary-operator -ms -> ms',
+      ],
+    },
+    lines: [
+      'function f(ms) {',
+      "  setTimeout(run, -ms * (60 * 1000) - emit('delay', ms))",
+      '}',
+    ],
+    name: 'literals in a timer delay next to an effect',
+    inputs: [[1], [1n], [null]],
+    file: 'example.js',
+  },
+  {
+    lines: ['function f(x) {', "  setTimeout(run, x + '0')", '}'],
+    name: 'a string operand in a timer delay',
+    inputs: [[1], [1n]],
     file: 'example.js',
   },
   {

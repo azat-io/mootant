@@ -885,15 +885,15 @@ describe('comparisonOperator', () => {
       skipped: [],
     },
     {
-      skipped: [
-        "typeof ms === 'number' -> true (noise timer-delay)",
-        "typeof ms === 'number' -> false (noise timer-delay)",
+      expected: [
+        "typeof ms === 'number' -> true",
+        "typeof ms === 'number' -> false",
       ],
       source: "setTimeout(run, typeof ms === 'number' ? 1000 : 0)",
-      expected: [],
+      skipped: [],
     },
   ])(
-    'keeps only the type checks that guard an operand in the timer delay of $source',
+    'keeps the type checks in the timer delay of $source',
     ({ expected, skipped, source }) => {
       expect(
         runMutator('comparison-operator', source).map(formatMutant),

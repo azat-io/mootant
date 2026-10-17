@@ -820,9 +820,12 @@ describe('logicalOperator', () => {
 
   it.each<{ expected: string[]; skipped: string[]; source: string }>([
     {
-      skipped: ['options && options.delay -> options (noise timer-delay)'],
-      expected: ['options && options.delay -> options.delay'],
+      expected: [
+        'options && options.delay -> options.delay',
+        'options && options.delay -> options',
+      ],
       source: 'setTimeout(run, options && options.delay)',
+      skipped: [],
     },
     {
       expected: [
@@ -833,16 +836,15 @@ describe('logicalOperator', () => {
       skipped: [],
     },
     {
-      skipped: [
-        'options?.delay ?? 1000 -> options?.delay (noise timer-delay)',
-        'options?.delay ?? 1000 -> options?.delay || 1000 (noise timer-delay)',
-        'options?.delay ?? 1000 -> 1000 (noise timer-delay)',
+      expected: [
+        'options?.delay ?? 1000 -> options?.delay',
+        'options?.delay ?? 1000 -> options?.delay || 1000',
       ],
+      skipped: ['options?.delay ?? 1000 -> 1000 (subsumed swap-subsumes-drop)'],
       source: 'setTimeout(run, options?.delay ?? 1000)',
-      expected: [],
     },
   ])(
-    'keeps only the drops that unguard a read in the timer delay of $source',
+    'keeps the drops in the timer delay of $source',
     ({ expected, skipped, source }) => {
       expect(
         runMutator('logical-operator', source).map(formatMutant),

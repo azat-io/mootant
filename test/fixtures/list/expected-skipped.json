@@ -2596,19 +2596,24 @@
       "end": 11142
     },
     {
-      "by": null,
-      "original": "seconds * 1000",
-      "replacement": "seconds / 1000",
+      "by": {
+        "column": 21,
+        "line": 274,
+        "mutator": "arithmetic-operator",
+        "id": "kmgpx9psqs2q"
+      },
+      "original": "setInterval(tick, seconds * 1000)",
+      "replacement": ";",
       "heuristic": true,
-      "category": "noise",
-      "mutator": "arithmetic-operator",
-      "reason": "a timer delay is not worth a test",
-      "column": 21,
-      "start": 11610,
+      "category": "subsumed",
+      "mutator": "statement-removal",
+      "reason": "a finer arithmetic-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
+      "column": 3,
+      "start": 11592,
       "file": "test/fixtures/list/source/catalog.ts",
-      "rule": "timer-delay",
+      "rule": "solitary",
       "line": 274,
-      "end": 11624
+      "end": 11625
     },
     {
       "by": null,
@@ -2626,49 +2631,44 @@
       "end": 11624
     },
     {
-      "by": null,
-      "original": "options?.delay ?? 300",
-      "replacement": "options?.delay",
+      "by": {
+        "column": 20,
+        "line": 275,
+        "mutator": "logical-operator",
+        "id": "dcny8wc8k7q6"
+      },
+      "original": "setTimeout(tick, options?.delay ?? 300)",
+      "replacement": ";",
       "heuristic": true,
-      "category": "noise",
-      "mutator": "logical-operator",
-      "reason": "a timer delay is not worth a test",
-      "column": 20,
-      "start": 11688,
+      "category": "subsumed",
+      "mutator": "statement-removal",
+      "reason": "a finer logical-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
+      "column": 3,
+      "start": 11699,
       "file": "test/fixtures/list/source/catalog.ts",
-      "rule": "timer-delay",
+      "rule": "solitary",
       "line": 275,
-      "end": 11709
+      "end": 11738
     },
     {
-      "by": null,
-      "original": "options?.delay ?? 300",
-      "replacement": "options?.delay || 300",
-      "heuristic": true,
-      "category": "noise",
-      "mutator": "logical-operator",
-      "reason": "a timer delay is not worth a test",
-      "column": 20,
-      "start": 11688,
-      "file": "test/fixtures/list/source/catalog.ts",
-      "rule": "timer-delay",
-      "line": 275,
-      "end": 11709
-    },
-    {
-      "by": null,
+      "by": {
+        "column": 20,
+        "line": 275,
+        "mutator": "logical-operator",
+        "id": null
+      },
       "original": "options?.delay ?? 300",
       "replacement": "300",
-      "heuristic": true,
-      "category": "noise",
+      "heuristic": false,
+      "category": "subsumed",
       "mutator": "logical-operator",
-      "reason": "a timer delay is not worth a test",
+      "reason": "the swap to || subsumes dropping the left side: every test that kills the swap also kills the drop",
       "column": 20,
-      "start": 11688,
+      "start": 11716,
       "file": "test/fixtures/list/source/catalog.ts",
-      "rule": "timer-delay",
+      "rule": "swap-subsumes-drop",
       "line": 275,
-      "end": 11709
+      "end": 11737
     },
     {
       "by": null,
@@ -2679,11 +2679,11 @@
       "mutator": "number-literal",
       "reason": "a timer delay is not worth a test",
       "column": 38,
-      "start": 11706,
+      "start": 11734,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "timer-delay",
       "line": 275,
-      "end": 11709
+      "end": 11737
     },
     {
       "by": null,
@@ -2694,11 +2694,11 @@
       "mutator": "missing-await",
       "reason": "awaiting a timer only waits for its delay",
       "column": 3,
-      "start": 11776,
+      "start": 11802,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "timer-delay",
       "line": 276,
-      "end": 11792
+      "end": 11818
     },
     {
       "by": null,
@@ -2709,11 +2709,11 @@
       "mutator": "statement-removal",
       "reason": "the statement only waits for a timer delay",
       "column": 3,
-      "start": 11776,
+      "start": 11802,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "timer-delay",
       "line": 276,
-      "end": 11792
+      "end": 11818
     },
     {
       "by": null,
@@ -2724,11 +2724,11 @@
       "mutator": "number-literal",
       "reason": "a timer delay is not worth a test",
       "column": 15,
-      "start": 11788,
+      "start": 11814,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "timer-delay",
       "line": 276,
-      "end": 11791
+      "end": 11817
     },
     {
       "by": {
@@ -2744,26 +2744,11 @@
       "mutator": "statement-removal",
       "reason": "a finer logical-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
       "column": 3,
-      "start": 12122,
+      "start": 12148,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "solitary",
       "line": 285,
-      "end": 12164
-    },
-    {
-      "by": null,
-      "original": "options && options.delay",
-      "replacement": "options",
-      "heuristic": true,
-      "category": "noise",
-      "mutator": "logical-operator",
-      "reason": "a timer delay is not worth a test",
-      "column": 20,
-      "start": 12139,
-      "file": "test/fixtures/list/source/catalog.ts",
-      "rule": "timer-delay",
-      "line": 285,
-      "end": 12163
+      "end": 12190
     },
     {
       "by": {
@@ -2779,11 +2764,11 @@
       "mutator": "statement-removal",
       "reason": "a finer missing-await mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
       "column": 3,
-      "start": 12245,
+      "start": 12259,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "solitary",
       "line": 286,
-      "end": 12270
+      "end": 12284
     },
     {
       "by": null,
@@ -2794,11 +2779,11 @@
       "mutator": "number-literal",
       "reason": "a timer delay is not worth a test",
       "column": 15,
-      "start": 12257,
+      "start": 12271,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "timer-delay",
       "line": 286,
-      "end": 12260
+      "end": 12274
     },
     {
       "by": {
@@ -3992,13 +3977,13 @@
     }
   ],
   "summary": {
-    "totalSkipped": 221,
+    "totalSkipped": 219,
     "skippedByCategory": {
       "equivalent": 32,
-      "noise": 27,
+      "noise": 22,
       "timeout": 11,
       "owned": 47,
-      "subsumed": 103,
+      "subsumed": 106,
       "duplicate": 1,
       "invalid": 0
     }

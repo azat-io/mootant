@@ -19,10 +19,11 @@ import type { SkipNote } from '../../types/mutant/skip-note'
 
 import { getSourcePosition } from '../text/get-source-position'
 import { findCompilerPins } from '../syntax/find-compiler-pins'
+import { readLiteralType } from '../syntax/read-literal-type'
 import { validateReplacement } from './validate-replacement'
 import { findIgnoreRule } from '../ignore/find-ignore-rule'
 import { getReplacementKind } from './get-replacement-kind'
-import { canUnguardRead } from '../syntax/can-unguard-read'
+import { parseExpression } from '../text/parse-expression'
 import { getScopePath } from '../identity/get-scope-path'
 import { fitTemplateText } from './fit-template-text'
 import { getSlot } from '../tree/get-slot'
@@ -171,19 +172,19 @@ interface VisitorEntry {
  * invalid replacement become mutator errors and cost only that mutator, visit
  * or replacement. A replacement that would move code its framework compiler
  * reads where it stands, such as a Svelte rune call or a Vue compiler macro, is
- * dropped. A replacement inside the effect-free delay of a known timer call is
- * skipped as noise, unless it can take away the guard of a read there, such as
- * `options && options.delay` turned into `options.delay`, even when its visitor
- * skipped it for another rule. Without the `timeouts` setting, a replacement of
- * the value that advances a loop is dropped. A replacement that a visitor marks
- * as skipped is never validated and never becomes a candidate; on request it is
- * collected with its rule, like dropped and invalid replacements, so that
- * skipped replacements never change the candidates. In a template only
- * expressions are replaced: a replacement of a statement, a declaration or a
- * node of the synthetic module around the template code is dropped without a
- * trace, and every candidate has the scope `<template>`. A replacement in a Vue
- * template is fitted into the attribute value or the interpolation around it,
- * or skipped when it cannot be.
+ * dropped. A replacement that only changes a literal in the delay of a known
+ * timer call, such as `1000` turned into `1001`, is skipped as noise, even when
+ * its visitor skipped it for another rule; a replacement there that touches a
+ * name, a member read, a call or a guard stays a candidate. Without the
+ * `timeouts` setting, a replacement of the value that advances a loop is
+ * dropped. A replacement that a visitor marks as skipped is never validated and
+ * never becomes a candidate; on request it is collected with its rule, like
+ * dropped and invalid replacements, so that skipped replacements never change
+ * the candidates. In a template only expressions are replaced: a replacement of
+ * a statement, a declaration or a node of the synthetic module around the
+ * template code is dropped without a trace, and every candidate has the scope
+ * `<template>`. A replacement in a Vue template is fitted into the attribute
+ * value or the interpolation around it, or skipped when it cannot be.
  *
  * @param input - Mutators, parsed file, runtime tree, ignore rules and shared
  *   context services.
@@ -227,20 +228,30 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
     }
   }
   /**
-   * Tells whether a replacement lies in the effect-free delay of a known timer
-   * call and cannot take away the guard of a read there, so that its mutant can
-   * only change how long the timer waits.
+   * Tells whether a replacement only changes a literal in a timer delay: the
+   * value of the replaced node only reaches the delay of a known timer call,
+   * and the node and the replacement are both literal-only expressions with a
+   * value of the same type, such as `1000` turned into `1001` or `60 * 1000`
+   * into `60 / 1000`. Its mutant can only change how long the timer waits.
    *
    * @param replacement - Replacement to check.
    * @returns Whether the replacement is skipped as a timer delay.
    */
   function isTimerDelay(replacement: Replacement): boolean {
-    let { sourceCode, syntax } = services
-    return (
-      syntax.isRuntimeNode(replacement.node) &&
-      syntax.isTimerDelay(replacement.node) &&
-      !canUnguardRead(tree, replacement, sourceCode.text)
+    let { syntax } = services
+    let { node, text } = replacement
+    if (!syntax.isRuntimeNode(node) || !syntax.isTimerDelay(node)) {
+      return false
+    }
+    let type = readLiteralType(node)
+    if (type === null) {
+      return false
+    }
+    let written = parseExpression(
+      text,
+      parsed.language === 'typescript' ? 'ts' : 'js',
     )
+    return written !== null && readLiteralType(written) === type
   }
   let table = new Map<string, VisitorEntry[]>()
   let pins = findCompilerPins(tree, parsed.file)

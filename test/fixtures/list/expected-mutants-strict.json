@@ -4,8 +4,8 @@
   "preset": "strict",
   "summary": {
     "totalFiles": 8,
-    "totalMutants": 404,
-    "totalPending": 378,
+    "totalMutants": 408,
+    "totalPending": 382,
     "totalIgnored": 26,
     "totalErrors": 0,
     "totalWarnings": 3
@@ -14,7 +14,7 @@
     {
       "id": "arithmetic-operator",
       "description": "Swaps an arithmetic operator, or drops the right operand of a + that is not known to be numeric.",
-      "mutants": 35
+      "mutants": 36
     },
     {
       "id": "array-element",
@@ -49,7 +49,7 @@
     {
       "id": "logical-operator",
       "description": "Drops one operand of &&, || or ??, swaps ?? and || where falsy values differ, or makes a whole condition constant.",
-      "mutants": 38
+      "mutants": 41
     },
     {
       "id": "method-call",
@@ -116,7 +116,7 @@
     {
       "file": "test/fixtures/list/source/catalog.ts",
       "parsed": true,
-      "mutants": 253
+      "mutants": 257
     },
     {
       "file": "test/fixtures/list/source/component.tsx",
@@ -6680,9 +6680,39 @@
       "original": "setInterval(tick, seconds * 1000)",
       "replacement": ";",
       "diff": {
-        "after": ["  ; // timer delay: only the statement removal"],
+        "after": [
+          "  ; // timer delay: 1000 -> 1001 is noise; * becomes / (a name is touched)"
+        ],
         "before": [
-          "  setInterval(tick, seconds * 1000) // timer delay: only the statement removal"
+          "  setInterval(tick, seconds * 1000) // timer delay: 1000 -> 1001 is noise; * becomes / (a name is touched)"
+        ],
+        "cutStart": 0,
+        "cutEnd": 0
+      },
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "kmgpx9psqs2q",
+      "mutator": "arithmetic-operator",
+      "file": "test/fixtures/list/source/catalog.ts",
+      "line": 274,
+      "column": 21,
+      "endLine": 274,
+      "endColumn": 35,
+      "start": 11610,
+      "end": 11624,
+      "scope": "timers",
+      "kind": "expression",
+      "original": "seconds * 1000",
+      "replacement": "seconds / 1000",
+      "diff": {
+        "after": [
+          "  setInterval(tick, seconds / 1000) // timer delay: 1000 -> 1001 is noise; * becomes / (a name is touched)"
+        ],
+        "before": [
+          "  setInterval(tick, seconds * 1000) // timer delay: 1000 -> 1001 is noise; * becomes / (a name is touched)"
         ],
         "cutStart": 0,
         "cutEnd": 0
@@ -6699,18 +6729,74 @@
       "column": 3,
       "endLine": 275,
       "endColumn": 42,
-      "start": 11671,
-      "end": 11710,
+      "start": 11699,
+      "end": 11738,
       "scope": "timers",
       "kind": "block",
       "original": "setTimeout(tick, options?.delay ?? 300)",
       "replacement": ";",
       "diff": {
         "after": [
-          "  ; // ?. becomes . (it can throw); the rest of the delay is noise"
+          "  ; // ?. becomes . and ?? loses an operand; 300 -> 301 is noise"
         ],
         "before": [
-          "  setTimeout(tick, options?.delay ?? 300) // ?. becomes . (it can throw); the rest of the delay is noise"
+          "  setTimeout(tick, options?.delay ?? 300) // ?. becomes . and ?? loses an operand; 300 -> 301 is noise"
+        ],
+        "cutStart": 0,
+        "cutEnd": 0
+      },
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "dcny8wc8k7q6",
+      "mutator": "logical-operator",
+      "file": "test/fixtures/list/source/catalog.ts",
+      "line": 275,
+      "column": 20,
+      "endLine": 275,
+      "endColumn": 41,
+      "start": 11716,
+      "end": 11737,
+      "scope": "timers",
+      "kind": "expression",
+      "original": "options?.delay ?? 300",
+      "replacement": "options?.delay",
+      "diff": {
+        "after": [
+          "  setTimeout(tick, options?.delay) // ?. becomes . and ?? loses an operand; 300 -> 301 is noise"
+        ],
+        "before": [
+          "  setTimeout(tick, options?.delay ?? 300) // ?. becomes . and ?? loses an operand; 300 -> 301 is noise"
+        ],
+        "cutStart": 0,
+        "cutEnd": 0
+      },
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "9f9zs2j8mxt2",
+      "mutator": "logical-operator",
+      "file": "test/fixtures/list/source/catalog.ts",
+      "line": 275,
+      "column": 20,
+      "endLine": 275,
+      "endColumn": 41,
+      "start": 11716,
+      "end": 11737,
+      "scope": "timers",
+      "kind": "expression",
+      "original": "options?.delay ?? 300",
+      "replacement": "options?.delay || 300",
+      "diff": {
+        "after": [
+          "  setTimeout(tick, options?.delay || 300) // ?. becomes . and ?? loses an operand; 300 -> 301 is noise"
+        ],
+        "before": [
+          "  setTimeout(tick, options?.delay ?? 300) // ?. becomes . and ?? loses an operand; 300 -> 301 is noise"
         ],
         "cutStart": 0,
         "cutEnd": 0
@@ -6727,18 +6813,18 @@
       "column": 20,
       "endLine": 275,
       "endColumn": 34,
-      "start": 11688,
-      "end": 11702,
+      "start": 11716,
+      "end": 11730,
       "scope": "timers",
       "kind": "expression",
       "original": "options?.delay",
       "replacement": "options.delay",
       "diff": {
         "after": [
-          "  setTimeout(tick, options.delay ?? 300) // ?. becomes . (it can throw); the rest of the delay is noise"
+          "  setTimeout(tick, options.delay ?? 300) // ?. becomes . and ?? loses an operand; 300 -> 301 is noise"
         ],
         "before": [
-          "  setTimeout(tick, options?.delay ?? 300) // ?. becomes . (it can throw); the rest of the delay is noise"
+          "  setTimeout(tick, options?.delay ?? 300) // ?. becomes . and ?? loses an operand; 300 -> 301 is noise"
         ],
         "cutStart": 0,
         "cutEnd": 0
@@ -6755,8 +6841,8 @@
       "column": 13,
       "endLine": 280,
       "endColumn": 54,
-      "start": 11902,
-      "end": 11943,
+      "start": 11928,
+      "end": 11969,
       "scope": "templates",
       "kind": "expression",
       "original": "`<svg width=\"${size}\">${icon.path}</svg>`",
@@ -6781,8 +6867,8 @@
       "column": 15,
       "endLine": 281,
       "endColumn": 35,
-      "start": 11982,
-      "end": 12002,
+      "start": 12008,
+      "end": 12028,
       "scope": "templates",
       "kind": "expression",
       "original": "`${format(size)} px`",
@@ -6809,18 +6895,18 @@
       "column": 3,
       "endLine": 285,
       "endColumn": 45,
-      "start": 12122,
-      "end": 12164,
+      "start": 12148,
+      "end": 12190,
       "scope": "guardedTimers",
       "kind": "block",
       "original": "setTimeout(tick, options && options.delay)",
       "replacement": ";",
       "diff": {
         "after": [
-          "  ; // a drop that unguards options.delay is kept; the rest of the delay is noise"
+          "  ; // both drops of && are kept: they touch a name and a member read"
         ],
         "before": [
-          "  setTimeout(tick, options && options.delay) // a drop that unguards options.delay is kept; the rest of the delay is noise"
+          "  setTimeout(tick, options && options.delay) // both drops of && are kept: they touch a name and a member read"
         ],
         "cutStart": 0,
         "cutEnd": 0
@@ -6837,18 +6923,46 @@
       "column": 20,
       "endLine": 285,
       "endColumn": 44,
-      "start": 12139,
-      "end": 12163,
+      "start": 12165,
+      "end": 12189,
       "scope": "guardedTimers",
       "kind": "expression",
       "original": "options && options.delay",
       "replacement": "options.delay",
       "diff": {
         "after": [
-          "  setTimeout(tick, options.delay) // a drop that unguards options.delay is kept; the rest of the delay is noise"
+          "  setTimeout(tick, options.delay) // both drops of && are kept: they touch a name and a member read"
         ],
         "before": [
-          "  setTimeout(tick, options && options.delay) // a drop that unguards options.delay is kept; the rest of the delay is noise"
+          "  setTimeout(tick, options && options.delay) // both drops of && are kept: they touch a name and a member read"
+        ],
+        "cutStart": 0,
+        "cutEnd": 0
+      },
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "gefmsy377q6p",
+      "mutator": "logical-operator",
+      "file": "test/fixtures/list/source/catalog.ts",
+      "line": 285,
+      "column": 20,
+      "endLine": 285,
+      "endColumn": 44,
+      "start": 12165,
+      "end": 12189,
+      "scope": "guardedTimers",
+      "kind": "expression",
+      "original": "options && options.delay",
+      "replacement": "options",
+      "diff": {
+        "after": [
+          "  setTimeout(tick, options) // both drops of && are kept: they touch a name and a member read"
+        ],
+        "before": [
+          "  setTimeout(tick, options && options.delay) // both drops of && are kept: they touch a name and a member read"
         ],
         "cutStart": 0,
         "cutEnd": 0
@@ -6865,8 +6979,8 @@
       "column": 3,
       "endLine": 286,
       "endColumn": 28,
-      "start": 12245,
-      "end": 12270,
+      "start": 12259,
+      "end": 12284,
       "scope": "guardedTimers",
       "kind": "expression",
       "original": "await sleep(100, pending)",
@@ -6893,8 +7007,8 @@
       "column": 3,
       "endLine": 286,
       "endColumn": 28,
-      "start": 12245,
-      "end": 12270,
+      "start": 12259,
+      "end": 12284,
       "scope": "guardedTimers",
       "kind": "block",
       "original": "await sleep(100, pending)",

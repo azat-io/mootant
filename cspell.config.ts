@@ -11,7 +11,6 @@ export default defineConfig({
     'quasis',
     'rolldown',
     'signale',
-    'unguard',
   ],
   ignorePaths: [
     '.github',

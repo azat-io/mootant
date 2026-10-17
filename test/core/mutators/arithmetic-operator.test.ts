@@ -28,6 +28,15 @@ describe('arithmeticOperator', () => {
       ],
     },
     {
+      source: [
+        'function f(x: number, run: () => void) {',
+        "  setTimeout(run, x + '0')",
+        "  y = x + '0'",
+        '}',
+      ].join('\n'),
+      expected: [{ original: "x + '0'", replacement: 'x' }],
+    },
+    {
       expected: [{ original: 'a + b', replacement: 'a' }],
       source: 'function add(a, b) { return a + b }',
       setup: { file: 'example.js' },

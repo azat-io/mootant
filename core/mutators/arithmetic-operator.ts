@@ -36,12 +36,13 @@ let identities = new Map<string, Set<LiteralValue>>([
  * Swaps an arithmetic operator, or drops the right operand of a + that is not
  * known to be numeric (catalog 4.1). A numeric `+` becomes `-`; any other `+`
  * keeps only its left operand, unless the right operand is a string literal or
- * a template without expressions (string-literal owns it, O11) or the
- * expression builds an error message (NOISE). The other operators swap: `-` to
- * `+`, `*` to `/`, `/`, `%` and `**` to `*`. Swaps are skipped for identities
- * (`+ 0`, `- 0` after a number, `* 1`, `/ -1`, `** 1`, EQ) and for a `+` or `-`
- * before a unary `-` that is not a negative number literal (unary-operator owns
- * it, O14). Skipped mutants follow as skipped replacements.
+ * a template without expressions (string-literal owns it, O11, except in a
+ * timer delay, where the emptying is skipped) or the expression builds an error
+ * message (NOISE). The other operators swap: `-` to `+`, `*` to `/`, `/`, `%`
+ * and `**` to `*`. Swaps are skipped for identities (`+ 0`, `- 0` after a
+ * number, `* 1`, `/ -1`, `** 1`, EQ) and for a `+` or `-` before a unary `-`
+ * that is not a negative number literal (unary-operator owns it, O14). Skipped
+ * mutants follow as skipped replacements.
  */
 export let arithmeticOperator: Mutator = {
   create(context) {
@@ -118,7 +119,10 @@ function getSwapSkip(
  * Decides whether the drop of the right operand of a `+` that is not known to
  * be numeric is skipped (catalog 4.1): the expression builds an error message
  * (NOISE), whose operands string-literal skips too, or the right operand is a
- * string literal or a template without expressions (O11).
+ * string literal or a template without expressions (O11). In a timer delay the
+ * drop is not owned: the emptying of the string is skipped there as a timer
+ * delay, while the drop may change the type of the delay, such as `x + '0'`
+ * turned into `x`, so it stays a mutant.
  *
  * @param node - `+` expression.
  * @param context - Mutator context of the file.
@@ -136,7 +140,10 @@ function getDropSkip(
       rule: 'error-message',
     }
   }
-  if (typeof getLiteralValue(right) === 'string') {
+  if (
+    typeof getLiteralValue(right) === 'string' &&
+    !syntax.isTimerDelay(node)
+  ) {
     return {
       reason: "dropping a string operand is string-literal's emptying of it",
       by: { mutator: 'string-literal', node: right },

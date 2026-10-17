@@ -5,24 +5,30 @@ import type { TreeIndex } from '../../types/syntax/tree-index'
 
 import { getContextSlot } from '../tree/get-context-slot'
 import { readTimerCall } from './read-timer-call'
-import { isEffectFree } from './is-effect-free'
-import { isStatement } from './is-statement'
-import { isFunction } from './is-function'
 
 /**
- * Tells whether a node is the delay argument of a known timer call, or part of
- * it, and the delay is free of effects (`setTimeout(run, 100)`, `seconds` and
- * `1000` in `setInterval(tick, seconds * 1000)`, `await setTimeout(500)` of
- * `node:timers/promises`). A change there only changes when the timer fires. A
- * delay with a call, an assignment or another effect is not one, since a change
- * inside it can change what runs; nor is an argument after a spread, whose
- * position is unknown. The walk up stops at the first call argument, statement
- * or function.
+ * Operators of a binary expression that only compute a number or join a string
+ * from their operands.
+ */
+let arithmeticOperators = new Set(['**', '%', '*', '+', '-', '/'])
+
+/**
+ * Tells whether the value of a node only reaches the delay argument of a known
+ * timer call (`setTimeout(run, 100)`, `seconds` and `1000` in
+ * `setInterval(tick, seconds * 1000)`, `await setTimeout(500)` of
+ * `node:timers/promises`). On the way up to the delay the value may only pass
+ * through parentheses and TypeScript wrappers, unary `+` and `-`, an operand of
+ * an arithmetic operator, a branch of a conditional expression and the right
+ * operand of a logical expression: positions where the value decides nothing
+ * but the result. The test of a conditional, the left operand of a logical
+ * expression, the object or key of a member read, a call argument and every
+ * other position stop the walk, since there the value can decide what runs. An
+ * argument after a spread, whose position is unknown, is not a delay.
  *
  * @param tree - Runtime tree of the file.
  * @param scopes - Scope analysis of the file.
  * @param node - Node of the runtime tree.
- * @returns Whether the node lies in an effect-free timer delay.
+ * @returns Whether the value of the node only reaches a timer delay.
  * @throws Error - When the node is not part of the runtime tree.
  */
 export function isTimerDelay(
@@ -31,26 +37,47 @@ export function isTimerDelay(
   node: Node,
 ): boolean {
   let current = node
-  while (!isStatement(current) && !isFunction(current)) {
+  for (;;) {
     let { parent, index, key } = getContextSlot(tree, current)
     if (parent === null) {
       return false
     }
-    if (key === 'arguments') {
-      if (parent.type !== 'CallExpression') {
-        return false
+    switch (parent.type) {
+      case 'ConditionalExpression':
+        if (key === 'test') {
+          return false
+        }
+        break
+      case 'LogicalExpression':
+        if (key !== 'right') {
+          return false
+        }
+        break
+      case 'BinaryExpression':
+        if (!arithmeticOperators.has(parent.operator)) {
+          return false
+        }
+        break
+      case 'UnaryExpression':
+        if (parent.operator !== '+' && parent.operator !== '-') {
+          return false
+        }
+        break
+      case 'CallExpression': {
+        if (key !== 'arguments') {
+          return false
+        }
+        let position = index!
+        return (
+          readTimerCall(scopes, parent)?.delay === position &&
+          parent.arguments
+            .slice(0, position)
+            .every(argument => argument.type !== 'SpreadElement')
+        )
       }
-      let position = index!
-      let { arguments: list } = parent
-      return (
-        readTimerCall(scopes, parent)?.delay === position &&
-        list
-          .slice(0, position)
-          .every(argument => argument.type !== 'SpreadElement') &&
-        isEffectFree(list[position]!)
-      )
+      default:
+        return false
     }
     current = parent
   }
-  return false
 }

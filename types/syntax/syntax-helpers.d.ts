@@ -160,8 +160,9 @@ export interface SyntaxHelpers {
   isRuntimeNode(node: Node): boolean
 
   /**
-   * Whether the node lies in the effect-free delay argument of a known timer
-   * call.
+   * Whether the value of the node only reaches the delay argument of a known
+   * timer call, through arithmetic, conditional branches and right operands of
+   * logical expressions.
    */
   isTimerDelay(node: Node): boolean
 

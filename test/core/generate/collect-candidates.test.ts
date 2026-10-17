@@ -306,27 +306,45 @@ describe('collectCandidates', () => {
     },
   )
 
-  it('skips a replacement in a timer delay unless it can unguard a read', () => {
+  it('skips only a literal change in a timer delay', () => {
     let { candidates, skipped } = collect(
       [
         'setTimeout(run, seconds * 1000)',
-        'setTimeout(run, options?.delay)',
-        'setTimeout(seconds * 1000)',
-        'setTimeout(run, options && options.delay)',
-        'setTimeout(run, options.delay * 2)',
+        'setTimeout(run, 60 * 1000)',
+        "setTimeout(run, quick ? 1 : '4000')",
       ],
       [
         activate('first', 0, context => ({
           BinaryExpression(node) {
-            return [{ text: context.sourceCode.getText(node.left), node }]
+            let { right, left } = node
+            let text = `${context.sourceCode.getText(left)} / ${context.sourceCode.getText(right)}`
+            return [{ node, text }]
           },
         })),
-        activate('second', 1, context => ({
-          LogicalExpression(node) {
-            return [{ text: context.sourceCode.getText(node.right), node }]
+        activate('second', 1, () => ({
+          Literal(node) {
+            return typeof node.value === 'string' ?
+                [
+                  { text: '1', node },
+                  { text: "''", node },
+                ]
+              : []
           },
-          ChainExpression(node) {
-            return [{ text: 'options.delay', node }]
+        })),
+        activate('third', 2, () => ({
+          ConditionalExpression(node) {
+            return [{ text: '1', node }]
+          },
+        })),
+        activate('fourth', 3, () => ({
+          Literal(node) {
+            return node.value === 1 ?
+                [
+                  { text: '1n', node },
+                  { text: '(1)', node },
+                  { text: '1); f(', node },
+                ]
+              : []
           },
         })),
       ],
@@ -336,9 +354,11 @@ describe('collectCandidates', () => {
     expect(
       candidates.map(candidate => [candidate.registered.id, candidate.text]),
     ).toStrictEqual([
-      ['second', 'options.delay'],
-      ['first', 'seconds'],
-      ['second', 'options.delay'],
+      ['first', 'seconds / 1000'],
+      ['third', '1'],
+      ['fourth', '1n'],
+      ['fourth', '1); f('],
+      ['second', '1'],
     ])
     expect(
       skipped.map(candidate => [
@@ -347,13 +367,14 @@ describe('collectCandidates', () => {
         candidate.text,
       ]),
     ).toStrictEqual([
-      ['first', 'timer-delay', 'seconds'],
-      ['first', 'timer-delay', 'options.delay'],
+      ['first', 'timer-delay', '60 / 1000'],
+      ['fourth', 'timer-delay', '(1)'],
+      ['second', 'timer-delay', "''"],
     ])
     expect(skipped[0]!.reason).toBe('a timer delay is not worth a test')
   })
 
-  it('lists a replacement its visitor skipped in a timer delay as a timer delay', () => {
+  it('lists a literal change its visitor skipped in a timer delay as a timer delay', () => {
     let { skipped } = collect(
       ['let n: number = 1', 'setTimeout(run, 100)'],
       [
@@ -367,6 +388,7 @@ describe('collectCandidates', () => {
             let note = { reason: 'Own.', rule: 'O11' } as const
             return [
               { skip: note, text: '2', node },
+              { text: 'base', skip: note, node },
               { node: typeAnnotation, text: 'string', skip: note },
             ]
           },
@@ -378,7 +400,9 @@ describe('collectCandidates', () => {
     expect(skipped.map(candidate => candidate.rule)).toStrictEqual([
       'O11',
       'O11',
+      'O11',
       'timer-delay',
+      'O11',
       'O11',
     ])
   })

@@ -271,8 +271,8 @@ export function childLogger(logger: { withContext(label: string): object }) {
 import { setTimeout as sleep } from 'node:timers/promises'
 
 export async function timers(seconds: number, options?: { delay?: number }) {
-  setInterval(tick, seconds * 1000) // timer delay: only the statement removal
-  setTimeout(tick, options?.delay ?? 300) // ?. becomes . (it can throw); the rest of the delay is noise
+  setInterval(tick, seconds * 1000) // timer delay: 1000 -> 1001 is noise; * becomes / (a name is touched)
+  setTimeout(tick, options?.delay ?? 300) // ?. becomes . and ?? loses an operand; 300 -> 301 is noise
   await sleep(500) // promise timer: no mutant
 }
 
@@ -282,6 +282,6 @@ export function templates(size: number, icon: { path: string }) {
 }
 
 export async function guardedTimers(options: Options | null, pending: Job) {
-  setTimeout(tick, options && options.delay) // a drop that unguards options.delay is kept; the rest of the delay is noise
+  setTimeout(tick, options && options.delay) // both drops of && are kept: they touch a name and a member read
   await sleep(100, pending) // the timer takes on the state of pending: the await is kept
 }
