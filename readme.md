@@ -2,15 +2,15 @@
 
 <picture>
   <source
-    srcset="https://raw.githubusercontent.com/azat-io/mootant/main/assets/logo-light.webp"
+    srcset="https://raw.githubusercontent.com/azat-io/mootant/main/assets/logo-light.svg"
     media="(prefers-color-scheme: light)"
   />
   <source
-    srcset="https://raw.githubusercontent.com/azat-io/mootant/main/assets/logo-dark.webp"
+    srcset="https://raw.githubusercontent.com/azat-io/mootant/main/assets/logo-dark.svg"
     media="(prefers-color-scheme: dark)"
   />
   <img
-    src="https://raw.githubusercontent.com/azat-io/mootant/main/assets/logo-light.webp"
+    src="https://raw.githubusercontent.com/azat-io/mootant/main/assets/logo-light.svg"
     alt="Mootant Logo"
     align="right"
     height="160"
