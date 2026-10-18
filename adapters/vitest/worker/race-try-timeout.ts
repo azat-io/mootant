@@ -1,4 +1,4 @@
-import type { SafeClock } from '../types/safe-clock'
+import type { SafeClock } from '../../shared/types/safe-clock'
 
 /**
  * How a test function settled: null when it resolved, else what it threw.

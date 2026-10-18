@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { raceTryTimeout } from '../../../../adapters/vitest/worker/race-try-timeout'
-import { captureClock } from '../../../../adapters/vitest/worker/capture-clock'
+import { captureClock } from '../../../../adapters/shared/capture-clock'
 
 describe('raceTryTimeout', () => {
   it('tells whether the timer fired first', async () => {

@@ -7,11 +7,11 @@ import type { TryFacts } from './try-facts'
  */
 export interface BatchResult {
   /**
-   * Units whose suite hooks (`beforeAll`, `afterAll`, `aroundAll`) or worker
-   * teardown (such as the cleanup of worker-scoped fixtures or the teardown of
-   * the test environment) failed, with the first message; the core sends every
-   * mutant tried in such a unit that is not a trusted kill to the isolated
-   * path.
+   * Units whose suite hooks (such as `beforeAll`/`before`, `afterAll`/`after`,
+   * `aroundAll`) or file teardown (such as the cleanup of worker-scoped
+   * fixtures or the teardown of the test environment) failed, with the first
+   * message; the core sends every mutant tried in such a unit that is not a
+   * trusted kill to the isolated path.
    */
   hookErrors: { message: string; unit: number }[]
 

@@ -12,7 +12,8 @@
     "cli",
     "agent-skills",
     "ai-agents",
-    "vitest"
+    "vitest",
+    "node-test"
   ],
   "homepage": "https://github.com/azat-io/mootant",
   "repository": "azat-io/mootant",
@@ -23,6 +24,10 @@
     ".": {
       "types": "./dist/core/index.d.ts",
       "default": "./dist/core/index.js"
+    },
+    "./node-test": {
+      "types": "./dist/adapters/node-test/index.d.ts",
+      "default": "./dist/adapters/node-test/index.js"
     },
     "./package.json": "./package.json",
     "./runtime": {
@@ -94,6 +99,7 @@
     "prettier": "^3.9.10",
     "simple-git-hooks": "^2.14.0",
     "svelte": "^5.57.2",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vite": "^8.3.4",
     "vite-plugin-dts": "^5.1.2",

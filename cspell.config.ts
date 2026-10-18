@@ -17,6 +17,8 @@ export default defineConfig({
     'rolldown',
     'shlvl',
     'signale',
+    'subtest',
+    'subtests',
     'windowid',
   ],
   ignorePaths: [

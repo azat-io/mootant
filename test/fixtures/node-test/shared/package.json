@@ -1,0 +1,8 @@
+{
+  "name": "node-test-shared",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

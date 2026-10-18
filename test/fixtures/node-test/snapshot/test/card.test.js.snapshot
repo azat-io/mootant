@@ -1,0 +1,6 @@
+exports[`renders a card 1`] = `
+{
+  "title": "ANN",
+  "role": "admin"
+}
+`;

@@ -92,7 +92,10 @@ describe('runMutation', () => {
       expect.objectContaining({ width: Infinity }),
       true,
     )
-    expect(Object.keys(getBuiltInAdapters())).toStrictEqual(['vitest'])
+    expect(Object.keys(getBuiltInAdapters())).toStrictEqual([
+      'vitest',
+      'node-test',
+    ])
   })
 
   it('shows the flags in the header and keeps the paths, the configuration and the mode, but not --since, in the hint', async () => {

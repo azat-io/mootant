@@ -187,6 +187,47 @@ describe('runMutants', () => {
     expect(result.unrepeatable).toBeNull()
   })
 
+  it('notes a tie between detected test runners', async () => {
+    let [add] = ids['src/math.ts']!
+    let fake = createFakeAdapter({
+      tests: [
+        {
+          file: path.join(root, 'test/math.test.ts'),
+          covers: [add!],
+          id: 'math',
+        },
+      ],
+    })
+    vi.mocked(loadConfig).mockResolvedValue(null)
+    let events: RunEvent[] = []
+    let detected = {
+      load: () => Promise.resolve(fake.adapter),
+      detect: () => Promise.resolve(true),
+    }
+
+    let result = await runMutants({
+      builtIns: Object.fromEntries([
+        ['fake', detected],
+        ['other', detected],
+      ]),
+      onProgress: event => {
+        events.push(event)
+      },
+      mutantIds: [add!],
+      paths: ['src'],
+      cwd: root,
+    })
+
+    expect(result.runner).toBe('fake')
+    expect(events.filter(event => event.kind === 'note')).toStrictEqual([
+      {
+        message:
+          'Found several test runners (fake, other) and used fake; set run.runner to choose another.',
+        kind: 'note',
+      },
+    ])
+  })
+
   it('runs the mutants of the paths in fast mode and decides them', async () => {
     let [add] = ids['src/math.ts']!
     let [ratio, two, three] = ids['src/flag.ts']!
@@ -323,12 +364,24 @@ describe('runMutants', () => {
       fast: true,
     })
 
+    let events: RunEvent[] = []
     let result = await runMutants({
+      onProgress: event => {
+        events.push(event)
+      },
       cwd: path.join(root, 'src'),
       builtIns: {},
       paths: [],
     })
 
+    expect(events.filter(event => event.kind === 'note')).toStrictEqual([
+      {
+        message:
+          'fake has no batch mode, so fast mode runs every mutant isolated, as a run without --fast does.',
+        kind: 'note',
+      },
+    ])
+    expect(fake.calls.dry.map(request => request.repeat)).toStrictEqual([false])
     expect(fake.context!.concurrency).toBe(3)
     expect(fake.calls.isolated[0]!.units).toStrictEqual([
       {
@@ -339,9 +392,11 @@ describe('runMutants', () => {
       },
     ])
     expect(result.threshold).toBe(50)
-    expect(result.mode).toBe('fast')
+    expect(result.mode).toBe('isolated')
+    expect(result.timing.batch).toBeNull()
+    expect(result.unrepeatable).toBeNull()
     expect(result.results.map(entry => entry.isolatedBecause)).toStrictEqual([
-      'no-batch',
+      null,
     ])
     expect(result.diagnostics.map(diagnostic => diagnostic.code)).toStrictEqual(
       ['test-file-excluded'],

@@ -2,8 +2,8 @@ import type { TestProject } from 'vitest/node'
 
 import path from 'node:path'
 
+import { listTsconfigFiles } from '../shared/list-tsconfig-files'
 import { compareCodeUnits } from '../../core/compare-code-units'
-import { listTsconfigFiles } from './list-tsconfig-files'
 
 /**
  * Query or hash at the end of a module id.

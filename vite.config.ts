@@ -70,6 +70,20 @@ function external(id: string): boolean {
  */
 export default defineConfig({
   build: {
+    lib: {
+      entry: [
+        'adapters/node-test/preload/reporter.ts',
+        'adapters/node-test/preload/preload.ts',
+        'adapters/node-test/preload/hooks.ts',
+        'adapters/node-test/index.ts',
+        'adapters/vitest/index.ts',
+        'adapters/vitest/runner.ts',
+        'core/runtime/index.ts',
+        'cli/index.ts',
+        'core/index.ts',
+      ],
+      formats: ['es'],
+    },
     rolldownOptions: {
       output: {
         chunkFileNames: '[name]-[hash].js',
@@ -82,16 +96,6 @@ export default defineConfig({
         attachDebugInfo: 'none',
       },
       external,
-    },
-    lib: {
-      entry: [
-        'adapters/vitest/index.ts',
-        'adapters/vitest/runner.ts',
-        'core/runtime/index.ts',
-        'cli/index.ts',
-        'core/index.ts',
-      ],
-      formats: ['es'],
     },
     minify: true,
   },

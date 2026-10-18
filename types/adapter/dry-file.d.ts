@@ -25,9 +25,9 @@ export interface DryFile {
   loadDuration: number
 
   /**
-   * Milliseconds the file spent outside tries after it loaded, such as in
-   * `beforeAll` and `afterAll` hooks of its suites and in the worker's
-   * teardown.
+   * Milliseconds the file spent outside tries after it loaded, such as in the
+   * suite hooks (`beforeAll`/`before`, `afterAll`/`after`) and in the teardown
+   * after the file.
    */
   hookDuration: number
 
@@ -41,8 +41,8 @@ export interface DryFile {
   modified?: string[]
 
   /**
-   * Whether the file failed to load, a suite hook of it failed, or the worker's
-   * teardown failed after it.
+   * Whether the file failed to load, a suite hook of it failed, the teardown
+   * after it failed, or its plain run failed outside its tests.
    */
   loadFailed: boolean
 
@@ -54,12 +54,13 @@ export interface DryFile {
 
   /**
    * Ids of mutants whose sites ran outside any try: while the file and its
-   * imports loaded, in setup files, `beforeAll`, `afterAll`. Sorted.
+   * imports loaded, in setup files, in suite hooks (`beforeAll`/`before`,
+   * `afterAll`/`after`). Sorted.
    */
   covers: string[]
 
   /**
-   * The collection error, the first failed suite hook or worker teardown and
+   * The collection error, the first failed suite hook or file teardown and
    * unhandled errors outside tries, as messages.
    */
   errors: string[]

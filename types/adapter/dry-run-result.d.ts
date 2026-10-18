@@ -13,6 +13,15 @@ export interface DryRunResult {
   hung: { test: string | null; name: string | null; file: string }[]
 
   /**
+   * Switched files the tests loaded past the adapter, so it could not serve
+   * them, each with the end of a sentence that names how, such as `a test loads
+   * it through require() of an ES module, which Node before 22.15 runs past
+   * module hooks`; the core reports it for a file never served. Optional: an
+   * adapter that cannot tell leaves it out.
+   */
+  unserved?: { reason: string; file: string }[]
+
+  /**
    * Switched files whose loaded text differed from `original`.
    */
   mismatched: string[]
@@ -20,7 +29,7 @@ export interface DryRunResult {
   /**
    * Ids of the mutants whose sites the test runner evaluated outside the test
    * workers since the session started, where the adapter cannot switch mutants,
-   * such as in Vitest's `globalSetup`; sorted. The core gives such a mutant
+   * such as in a global setup file; sorted. The core gives such a mutant
    * `Error` unless a test kills it or times out.
    */
   outside: string[]

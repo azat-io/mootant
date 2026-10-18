@@ -3,7 +3,7 @@ import type { TestSpecification } from 'vitest/node'
 import type { VitestWorkerOptions } from './types/vitest-worker'
 import type { VitestHandle } from './types/vitest-session-state'
 
-import { getErrorMessage } from './worker/get-error-message'
+import { getErrorMessage } from '../shared/get-error-message'
 import { waitForWorkers } from './wait-for-workers'
 
 /**

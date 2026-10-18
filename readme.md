@@ -30,7 +30,8 @@ weak. Mootant aims for mutants that are worth fixing: it skips mutants that
 cannot change behavior, that duplicate another mutant or that only a timeout can
 catch.
 
-> **Early development.** The runner currently supports Vitest 5.
+> **Early development.** The runner currently supports Vitest 5 and the Node.js
+> test runner (`node:test`).
 
 ## Usage
 
@@ -83,21 +84,22 @@ mootant run src --json --threshold 80
 ```
 
 Uses the project's [Vitest](https://vitest.dev) 5 installation and
-configuration, selecting tests related to the mutated files. Progress is shown
-as the run goes; the report lists surviving and uncovered mutants and mutants
-with errors in a section each, by file, every one as its source lines before and
-after the change, with a short id. `--json` lists the same mutants with full
-ids, source lines, covering tests and the command to re-check each;
-`--json --all` lists every mutant, a killed one with the test that killed it
-instead of the covering tests. What the tests print is hidden, unless tests fail
-without mutants: then the output of their test files is shown. Tests must pass
-without mutants first.
+configuration, or [`node:test`](#nodetest), selecting tests related to the
+mutated files. Progress is shown as the run goes; the report lists surviving and
+uncovered mutants and mutants with errors in a section each, by file, every one
+as its source lines before and after the change, with a short id. `--json` lists
+the same mutants with full ids, source lines, covering tests and the command to
+re-check each; `--json --all` lists every mutant, a killed one with the test
+that killed it instead of the covering tests. What the tests print is hidden,
+unless tests fail without mutants: then the output of their test files is shown.
+Tests must pass without mutants first.
 
 Options:
 
 - `--config <path>`, `--preset <name>` and `--since <ref>`: as for `list`
 - `--threshold <score>`: lowest mutation score, from 0 to 100, that passes
-- `--concurrency <n>`: most test files at once (default: Vitest's `maxWorkers`)
+- `--concurrency <n>`: most test files at once (default: Vitest's `maxWorkers`,
+  CPU cores - 1 for `node:test`)
 - `--fast`: try many mutants in one test run; faster, but a kill may be false
   and concurrent tests run one at a time
 - `--no-cache`: run every mutant again instead of reusing earlier verdicts
@@ -122,6 +124,14 @@ compile with its mutants gives them `Error` with the compiler's message. Vue
 templates reach mutants through `Math[Symbol.for('mootant')]`, so tests that
 freeze `Math` break them. Astro components can be listed but not run yet. Tests
 that load a mutated file only through a computed `import()` may not be selected.
+
+### node:test
+
+Used when the test scripts run `node --test`, `tsx --test`, `bnt` or `borp`, or
+test files import `node:test`. Each mutant runs a test file in its own process,
+on Node.js 20.19 or 22.12 and later; `--fast` changes nothing. Child processes
+and workers run the original code, and tests slower than 60 seconds need
+`--test-timeout`.
 
 ## Configuration
 
@@ -172,9 +182,13 @@ export default defineConfig({
   - `paths`: default source paths, relative to the configuration directory
   - `threshold`, `concurrency`, `fast`: as the options of the same names
   - `cache`: `false` as `--no-cache`
-  - `runner`: auto-detected, `'vitest'`, or an imported adapter object. For a
-    custom Vitest config, import `vitestAdapter` from `mootant/vitest` and use
-    `vitestAdapter({ config: 'vitest.unit.config.ts' })`
+  - `runner`: auto-detected, `'vitest'`, `'node-test'`, or an imported adapter
+    object. For a custom Vitest config, import `vitestAdapter` from
+    `mootant/vitest` and use
+    `vitestAdapter({ config: 'vitest.unit.config.ts' })`; for another test
+    command, import `nodeTestAdapter` from `mootant/node-test` and use
+    `nodeTestAdapter({ command: 'bnt' })` (also `files`, `execArgv`, `env`,
+    `node`)
   - `timeout`: `factor × baseline duration + constant` milliseconds; defaults to
     `{ factor: 3, constant: 250 }`
   - `hitLimit`: `max(floor, factor × baseline site evaluations)`; defaults to

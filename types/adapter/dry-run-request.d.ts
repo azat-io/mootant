@@ -4,7 +4,7 @@
 export interface DryRunRequest {
   /**
    * Test files to run, each whole, by path and project (an empty string without
-   * one); null runs every test file related to `related`.
+   * one); null runs the test files related to `related`, or more.
    */
   files: { project: string; file: string }[] | null
 
@@ -24,7 +24,10 @@ export interface DryRunRequest {
   instrumented: boolean
 
   /**
-   * Absolute paths of mutated files: only test files that import them run.
+   * Absolute paths of mutated files, a hint of which test files to run when
+   * `files` is null: those that may import them run. An adapter may run more,
+   * such as every test file when it does not know yet what each one imports;
+   * each test file it runs is reported as usual.
    */
   related: string[]
 

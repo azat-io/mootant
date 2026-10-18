@@ -42,7 +42,7 @@ export interface TryFacts {
   skipped: boolean
 
   /**
-   * Milliseconds of the try, `beforeEach`/`afterEach` included.
+   * Milliseconds of the try, its `beforeEach`/`afterEach` hooks included.
    */
   duration: number
 

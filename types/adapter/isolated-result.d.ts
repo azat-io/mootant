@@ -17,10 +17,11 @@ export interface IsolatedFacts {
   inputs?: RunInputs | null
 
   /**
-   * Message of the first failed suite hook (`beforeAll`, `afterAll`,
-   * `aroundAll`) or, after them, of the failed worker teardown, such as the
-   * cleanup of worker-scoped fixtures or the teardown of the test environment,
-   * or null.
+   * Message of the first failed suite hook (such as `beforeAll`/`before`,
+   * `afterAll`/`after`, `aroundAll`) or, after them, of the failed file
+   * teardown, such as the cleanup of worker-scoped fixtures or the teardown of
+   * the test environment, or of a file whose run failed outside its tests, or
+   * null.
    */
   hookError: string | null
 

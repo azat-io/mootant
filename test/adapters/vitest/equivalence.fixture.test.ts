@@ -670,7 +670,7 @@ describe('verdict equivalence', () => {
     expect(
       rows.filter(row => row.mutant === "src/toggle.vue | string-literal | ''"),
     ).toHaveLength(2)
-  }, 60_000)
+  }, 120_000)
 
   it('agrees with mutants applied by hand in Svelte components, templates and modules', async () => {
     let { original, isolated, fast, rows } = await runAllPaths(

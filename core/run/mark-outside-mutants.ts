@@ -4,7 +4,7 @@ import { compareCodeUnits } from '../compare-code-units'
 
 /**
  * Gives `Error` to every mutant the test runner evaluated outside its test
- * workers (`DryRunResult.outside`), such as in Vitest's `globalSetup`, unless a
+ * workers (`DryRunResult.outside`), such as in a global setup file, unless a
  * test killed it or timed out with it. The adapter cannot switch a mutant
  * there, so the code outside the workers always ran the original: a pass, or no
  * test reaching it, proves nothing. Each source file with such mutants gets one

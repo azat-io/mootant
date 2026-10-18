@@ -4,8 +4,8 @@ import { spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
-import { captureClock } from '../../../../adapters/vitest/worker/capture-clock'
 import { waitForTurn } from '../../../../adapters/vitest/worker/wait-for-turn'
+import { captureClock } from '../../../../adapters/shared/capture-clock'
 
 /**
  * Waits 60 ms on the real clock, a few polls of the waiting unit.

@@ -73,6 +73,27 @@ async function run(
   return { progress, switched, phase, fake }
 }
 
+/**
+ * Lists the messages of the diagnostics of a dry phase.
+ *
+ * @param phase - Outcome of the phase.
+ * @param phase.diagnostics - Its diagnostics.
+ * @returns Messages in order.
+ */
+function listMessages(phase: { diagnostics: { message: string }[] }): string[] {
+  return phase.diagnostics.map(diagnostic => diagnostic.message)
+}
+
+/**
+ * Builds the `unserved` list of a dry run for `/src/b.ts`.
+ *
+ * @param text - Reason of the file.
+ * @returns List with the file.
+ */
+function reason(text: string): { reason: string; file: string }[] {
+  return [{ file: '/src/b.ts', reason: text }]
+}
+
 describe('runDryPhase', () => {
   it('does not run without switched files', async () => {
     let fake = createFakeAdapter({ tests: [] })
@@ -511,6 +532,54 @@ describe('runDryPhase', () => {
       'instrumentation-break',
       'instrument-error',
     ])
+  })
+
+  it('names how a never served file was loaded past the adapter', async () => {
+    let repeated = [
+      {
+        dry: 'repeated' as const,
+        file: '/t/a.test.ts',
+        covers: ['a1'],
+        id: 't1',
+      },
+    ]
+
+    let first = await run({
+      onDry: (result, request) => ({
+        ...result,
+        ...(request.repeat && { unserved: reason('first') }),
+        served: ['/src/a.ts'],
+      }),
+      tests: repeated,
+    })
+    let once = await run({
+      onDry: (result, request) => ({
+        ...result,
+        ...(!request.repeat && { unserved: reason('once') }),
+        served: ['/src/a.ts'],
+      }),
+      tests: repeated,
+    })
+    let again = await run({
+      onDry: (result, request) =>
+        request.related.length === 1 ?
+          { ...result, unserved: reason('again'), served: [] }
+        : { ...result, served: [] },
+      tests: [
+        { file: '/t/a.test.ts', covers: ['a1'], dry: 'broken', id: 't1' },
+        { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
+      ],
+    })
+
+    expect(listMessages(first.phase)).toStrictEqual([
+      "No test loaded src/b.ts through the test runner's transform: first.",
+    ])
+    expect(listMessages(once.phase)).toStrictEqual([
+      "No test loaded src/b.ts through the test runner's transform: once.",
+    ])
+    expect(listMessages(again.phase).at(-1)).toBe(
+      "No test loaded src/b.ts through the test runner's transform: again.",
+    )
   })
 
   it('merges the mutants both runs saw outside the workers', async () => {

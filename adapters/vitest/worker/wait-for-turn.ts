@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
-import type { SafeClock } from '../types/safe-clock'
+import type { SafeClock } from '../../shared/types/safe-clock'
 
 import { isProcessAlive } from './is-process-alive'
 

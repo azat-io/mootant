@@ -3,8 +3,8 @@ import type { RunnerTestCase } from 'vitest'
 import type { MutantRuntime } from '../../../types/adapter/mutant-runtime'
 import type { TryFacts } from '../../../types/adapter/try-facts'
 
+import { getErrorMessage } from '../../shared/get-error-message'
 import { isTimeoutMessage } from './is-timeout-message'
-import { getErrorMessage } from './get-error-message'
 
 /**
  * What the worker runner observed of a try besides the runtime's counters.

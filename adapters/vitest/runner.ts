@@ -21,10 +21,10 @@ import type { TryFacts } from '../../types/adapter/try-facts'
 
 import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
 import { watchWorkerClose } from './worker/watch-worker-close'
-import { trackEnvironment } from './worker/track-environment'
+import { trackEnvironment } from '../shared/track-environment'
 import { listDependencies } from './worker/list-dependencies'
-import { getErrorMessage } from './worker/get-error-message'
-import { trackFileReads } from './worker/track-file-reads'
+import { getErrorMessage } from '../shared/get-error-message'
+import { trackFileReads } from '../shared/track-file-reads'
 import { readWorkerPlan } from './worker/read-worker-plan'
 import { raceTryTimeout } from './worker/race-try-timeout'
 import { writeOutRecord } from './worker/write-out-record'
@@ -33,7 +33,7 @@ import { writeHeartbeat } from './worker/write-heartbeat'
 import { findHookError } from './worker/find-hook-error'
 import { getHookBudget } from './worker/get-hook-budget'
 import { readTryFacts } from './worker/read-try-facts'
-import { captureClock } from './worker/capture-clock'
+import { captureClock } from '../shared/capture-clock'
 import { getFileHash } from './worker/get-file-hash'
 import { waitForTurn } from './worker/wait-for-turn'
 import { orderTests } from './worker/order-tests'
@@ -184,6 +184,12 @@ const MAX_BUDGET = 2 ** 31 - 1
  * Global slot that keeps one pair of process listeners per worker process.
  */
 const STRAY_SLOT = Symbol.for('mootant.vitest.strays')
+
+/**
+ * Variables Vitest numbers its workers with: they differ from worker to worker
+ * and are not inputs of a test, so the environment tracking ignores them.
+ */
+const VITEST_VARIABLES = ['VITEST_WORKER_ID', 'VITEST_POOL_ID']
 
 /**
  * Timers of the worker, captured when the runner loads: before setup files and
@@ -863,9 +869,12 @@ export default class MootantRunner extends TestRunner {
         }
       },
     })
-    let real = trackEnvironment(Reflect.get(this, 'workerState'), name => {
-      inputs.environment.add(name)
-    })
+    let real = trackEnvironment(
+      { holder: Reflect.get(this, 'workerState'), ignored: VITEST_VARIABLES },
+      name => {
+        inputs.environment.add(name)
+      },
+    )
     if (snapshot) {
       let variables: Record<string, string> = {}
       for (let [name, value = ''] of Object.entries(real)) {
@@ -1118,7 +1127,7 @@ export default class MootantRunner extends TestRunner {
       metaEnv: object
     }
     trackFileReads(null)
-    trackEnvironment(state, null)
+    trackEnvironment({ ignored: VITEST_VARIABLES, holder: state }, null)
     this.dependencies = [...dependencies].toSorted()
     return Object.hasOwn(builtinEnvironments, state.ctx.environment.name) ?
         this.dependencies

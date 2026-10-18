@@ -146,6 +146,9 @@ export async function runDryPhase(
   let { unrepeatableFiles, runs } = checked
   let mismatched = new Set(dry.mismatched)
   let served = new Set(dry.served)
+  let unserved = new Map(
+    (dry.unserved ?? []).map(entry => [entry.file, entry.reason]),
+  )
   let { unloaded, failing } = findFailures(dry)
   if (failing.length > 0 || unloaded.length > 0) {
     let failingIds = new Set(failing.map(test => test.id))
@@ -226,6 +229,11 @@ export async function runDryPhase(
       for (let file of dry.served) {
         served.add(file)
       }
+      if (dry.unserved !== undefined) {
+        for (let entry of dry.unserved) {
+          unserved.set(entry.file, entry.reason)
+        }
+      }
       let left = findFailures(dry)
       if (left.failing.length > 0 || left.unloaded.length > 0) {
         reportFailedFiles(input, [...left.failing, ...left.unloaded])
@@ -250,7 +258,7 @@ export async function runDryPhase(
         createDiagnostic(
           'never-served',
           display,
-          `No test loaded ${display} through the test runner's transform: no test imports it, or tests import a built copy, an external or a pre-bundled dependency.`,
+          `No test loaded ${display} through the test runner's transform: ${unserved.get(file) ?? 'no test imports it, or tests import a built copy, an external or a pre-bundled dependency'}.`,
         ),
       )
     }
@@ -328,6 +336,9 @@ async function runCheckedDry(
       mismatched: mergeSorted(dry.mismatched, once.mismatched),
       outside: mergeSorted(dry.outside, once.outside),
       served: mergeSorted(dry.served, once.served),
+      ...((dry.unserved ?? once.unserved) !== undefined && {
+        unserved: [...(dry.unserved ?? []), ...(once.unserved ?? [])],
+      }),
       hung: [],
     },
     unrepeatableFiles: new Set(

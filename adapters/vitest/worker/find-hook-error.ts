@@ -1,6 +1,6 @@
 import type { RunnerTestSuite, RunnerTestFile } from 'vitest'
 
-import { getErrorMessage } from './get-error-message'
+import { getErrorMessage } from '../../shared/get-error-message'
 
 /**
  * Pattern of the error Vitest adds to a file with snapshots no test checked

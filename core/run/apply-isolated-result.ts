@@ -23,19 +23,19 @@ const UNREPORTED = 'The test runner did not report this mutant.'
  * it exceeded its hit limit; a hang, or a test or suite hook that ran out of
  * time after the mutant was reached, waits for a confirmation with doubled
  * bounds, or is final when the unit was one; a crash, a load error, a failed
- * suite hook or worker teardown in a unit that reached the mutant, or a test
- * that failed or threw a stray error after the mutant was reached kills; a unit
- * that reached the mutant and passed is survived evidence. The dry run had no
- * failed suite hook, since one fails the dry run. Stray errors of tests and
- * test files that had them in the dry run prove nothing. A unit without facts
- * is planned once more, then gives an `Error` verdict unless another file has
- * evidence. The verdict of a mutant follows `decideEvidence`: the kill or
- * timeout of its first test file in the order of `routeIsolated` that has one,
- * once every file before it is done; a timeout waiting for its confirmation or
- * a unit waiting for its retry holds back the evidence of later files, so the
- * verdict does not depend on which files ran together. Kills and reached passes
- * go to the cache of the run, which keeps only what it may reuse. The cost of a
- * unit counts the start of its process too.
+ * suite hook or file teardown in a unit that reached the mutant, or a test that
+ * failed or threw a stray error after the mutant was reached kills; a unit that
+ * reached the mutant and passed is survived evidence. The dry run had no failed
+ * suite hook, since one fails the dry run. Stray errors of tests and test files
+ * that had them in the dry run prove nothing. A unit without facts is planned
+ * once more, then gives an `Error` verdict unless another file has evidence.
+ * The verdict of a mutant follows `decideEvidence`: the kill or timeout of its
+ * first test file in the order of `routeIsolated` that has one, once every file
+ * before it is done; a timeout waiting for its confirmation or a unit waiting
+ * for its retry holds back the evidence of later files, so the verdict does not
+ * depend on which files ran together. Kills and reached passes go to the cache
+ * of the run, which keeps only what it may reuse. The cost of a unit counts the
+ * start of its process too.
  *
  * @param state - State of the run, updated in place.
  * @param planned - The plan the run executed and the requests it was built

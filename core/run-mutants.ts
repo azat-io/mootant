@@ -109,7 +109,8 @@ interface RunMutantsOptions {
 
   /**
    * Fast mode (`--fast`): batch runs first, with heuristic kills; over
-   * `run.fast`.
+   * `run.fast`. With an adapter without batch mode, the run notes it and
+   * decides every mutant isolated.
    */
   fast?: boolean
 
@@ -127,8 +128,9 @@ interface RunMutantsOptions {
  * isolated path, where each mutant gets a fresh module graph and its whole
  * covering test files. In fast mode, runtime mutants first take the batch path,
  * where one test run tries many mutants and kills are accepted as heuristic
- * verdicts; its survivors and doubtful tries still run isolated. Mutants the
- * test runner ran outside its workers end with `Error` unless a test killed
+ * verdicts; its survivors and doubtful tries still run isolated. An adapter
+ * without batch mode runs fast mode as the default mode, with a note. Mutants
+ * the test runner ran outside its workers end with `Error` unless a test killed
  * them. Unless the cache is off, valid verdicts of earlier runs are reused
  * before anything runs, and the evidence of the run is saved after it, unless
  * it has error diagnostics. With `--since`, only the mutants on lines changed
@@ -149,7 +151,7 @@ export async function runMutants(
   let startedAt = Date.now()
   let setup = await prepareRun(options)
   let { root, run } = setup
-  let fast = options.fast ?? run.fast ?? false
+  let requestedFast = options.fast ?? run.fast ?? false
   let threshold = options.threshold ?? run.threshold ?? null
   let fromConfig = options.paths.length === 0
   let paths = fromConfig ? (run.paths ?? []) : options.paths
@@ -198,7 +200,18 @@ export async function runMutants(
     total: mutants.length,
     kind: 'mutants',
   })
-  let adapter = await resolveAdapter(run.runner, root, options.builtIns)
+  let resolved = await resolveAdapter(run.runner, root, options.builtIns)
+  let { adapter } = resolved
+  if (resolved.note !== null) {
+    report({ message: resolved.note, kind: 'note' })
+  }
+  let fast = requestedFast && adapter.batch
+  if (requestedFast && !adapter.batch) {
+    report({
+      message: `${adapter.name} has no batch mode, so fast mode runs every mutant isolated, as a run without --fast does.`,
+      kind: 'note',
+    })
+  }
   if (since !== null && mutants.length === 0) {
     let total = performance.now() - started
     return {
@@ -287,7 +300,8 @@ export async function runMutants(
  * @param context.listedIds - Ids of every listed mutant of the paths.
  * @param context.threshold - Lowest total score that passes, or null.
  * @param context.since - Revision of `--since` with its merge base, or null.
- * @param context.fast - Whether the run is in fast mode.
+ * @param context.fast - Whether the run is in fast mode, which needs an adapter
+ *   with batch mode.
  * @param context.setup - Prepared configuration.
  * @param context.run - Run settings of the configuration.
  * @returns Result of the run.
@@ -426,7 +440,7 @@ async function execute(context: {
   if (fast && analysis.unrepeatable.size > 0) {
     options.onProgress?.({ message: describeUnrepeatable(state), kind: 'note' })
   }
-  if (fast && context.adapter.batch) {
+  if (fast) {
     applyCachedBatch(state)
   }
   applyCachedUnits(state)
@@ -444,7 +458,7 @@ async function execute(context: {
   }
 
   let batchStarted = performance.now()
-  if (fast && context.adapter.batch) {
+  if (fast) {
     await runBatchPhases(session, state)
     applyCachedUnits(state)
   }
