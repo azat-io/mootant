@@ -6,8 +6,8 @@ import type { TryCause } from '../run/try-cause'
  */
 export interface CacheEntry {
   /**
-   * `Killed` with the test of the kill, or `Survived` for an isolated unit that
-   * reached the mutant and passed.
+   * `Killed` with the test of the kill, or `Survived` for an isolated unit or a
+   * batch try that reached the mutant and passed.
    */
   status: 'Survived' | 'Killed'
 

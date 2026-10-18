@@ -31,6 +31,7 @@ function setup(): {
     mismatched: new Set(),
     instrumented: true,
     outside: new Set(),
+    spawns: new Map(),
     served: new Set(),
     environment: {},
     keys: new Map(),

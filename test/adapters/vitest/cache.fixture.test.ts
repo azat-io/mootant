@@ -79,6 +79,20 @@ let teardownFixture = path.resolve(
 )
 
 /**
+ * Fixture project whose test file kills the mutants of `src/half.ts` in its
+ * first test, so a unit stops there, while its second test reads
+ * `test/late.json`.
+ */
+let bailFixture = path.resolve(import.meta.dirname, '../../fixtures/cache-bail')
+
+/**
+ * Fixture project whose mutants of `src/scale.ts` are reached without a kill by
+ * `test/scale.test.ts`, the test file named after the module, and killed by
+ * `test/other.test.ts`, which runs after it and costs more.
+ */
+let rankFixture = path.resolve(import.meta.dirname, '../../fixtures/cache-rank')
+
+/**
  * Environment variables the tests change, with their values before.
  */
 let variables = Object.fromEntries(
@@ -156,6 +170,32 @@ async function copyFixture(source = fixture): Promise<string> {
   // Files modified in the millisecond a run starts count as changed during it.
   await setTimeout(5)
   return root
+}
+
+/**
+ * Makes `test/scale.test.ts` of a copy of the rank fixture loop until a value
+ * grows, so mutants that stop `scale` from growing it hit the limit there.
+ *
+ * @param root - Root of the copy.
+ */
+async function writeLoopingScaleTest(root: string): Promise<void> {
+  await writeFile(
+    path.join(root, 'test/scale.test.ts'),
+    [
+      "import { expect, it } from 'vitest'",
+      '',
+      "import { scale } from '../src/scale'",
+      '',
+      "it('scales up', () => {",
+      '  let value = 1',
+      '  while (value < 100) {',
+      '    value = scale(value)',
+      '  }',
+      '  expect(value).toBe(128)',
+      '})',
+      '',
+    ].join('\n'),
+  )
 }
 
 /**
@@ -394,6 +434,92 @@ describe('vitest adapter with the cache', () => {
       })
     }, Promise.resolve())
   }, 120_000)
+
+  it('runs a kill of a unit that stopped at it again after a change of what the tests it skipped read', async () => {
+    let root = await copyFixture(bailFixture)
+    let first = await run(root)
+    let unchanged = await run(root)
+    let kills = first.result.results.filter(entry => entry.status === 'Killed')
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(kills.length).toBeGreaterThan(0)
+    let names = new Map(first.result.tests.map(test => [test.id, test.name]))
+
+    expect(
+      new Set(kills.map(entry => names.get(entry.killedBy!))),
+    ).toStrictEqual(new Set(['halves']))
+    expect(splitCached(unchanged.result)).toStrictEqual({
+      cached: ['src/half.ts'],
+      ran: [],
+    })
+
+    await writeFile(
+      path.join(root, 'test/late.json'),
+      '{ "expected": 5, "value": 10 }\n',
+    )
+    await setTimeout(5)
+    let changed = await run(root)
+
+    expect(splitCached(changed.result)).toStrictEqual({
+      ran: ['src/half.ts'],
+      cached: [],
+    })
+    expect(changed.result.results.map(summarize)).toStrictEqual(
+      first.result.results.map(summarize),
+    )
+  }, 60_000)
+
+  it('decides from a cached kill like a fresh run once an earlier file runs again', async () => {
+    let root = await copyFixture(rankFixture)
+    let first = await run(root)
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(
+      new Set(first.result.results.map(entry => entry.status)),
+    ).toStrictEqual(new Set(['Killed']))
+
+    await writeLoopingScaleTest(root)
+    await setTimeout(5)
+    let cached = await run(root)
+    let fresh = await run(root, { cache: false })
+
+    expect(
+      cached.result.results.filter(entry => entry.status === 'Timeout'),
+    ).not.toStrictEqual([])
+    expect(cached.result.results.map(summarize)).toStrictEqual(
+      fresh.result.results.map(summarize),
+    )
+    expect(cached.units).toBe(2)
+  }, 60_000)
+
+  it('reuses a batch kill in fast mode only after the tests tried before it pass', async () => {
+    let root = await copyFixture(rankFixture)
+    let first = await run(root, { fast: true })
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(
+      new Set(first.result.results.map(entry => entry.status)),
+    ).toStrictEqual(new Set(['Killed']))
+
+    let unchanged = await run(root, { fast: true })
+
+    expect(unchanged.result.results.map(summarize)).toStrictEqual(
+      first.result.results.map(summarize),
+    )
+    expect(unchanged.result.runs).toStrictEqual({ dry: 1 })
+
+    await writeLoopingScaleTest(root)
+    await setTimeout(5)
+    let cached = await run(root, { fast: true })
+    let fresh = await run(root, { cache: false, fast: true })
+
+    expect(
+      cached.result.results.filter(entry => entry.status === 'Timeout'),
+    ).not.toStrictEqual([])
+    expect(cached.result.results.map(summarize)).toStrictEqual(
+      fresh.result.results.map(summarize),
+    )
+  }, 60_000)
 
   it('runs mutants again after a change of what tests read at runtime', async () => {
     let root = await copyFixture(runtimeFixture)

@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { VitestHandle } from '../../../adapters/vitest/types/vitest-session-state'
 import type { VitestHeartbeat } from '../../../adapters/vitest/types/vitest-worker'
 
 import { readUnitInputs } from '../../../adapters/vitest/read-unit-inputs'
@@ -55,6 +54,7 @@ describe('runIsolated', () => {
               abandoned: false,
               loadDuration: 1,
               reached: true,
+              booted: 1150,
               modified: [],
               duration: 9,
               kind: 'end',
@@ -65,10 +65,11 @@ describe('runIsolated', () => {
           ],
           claimed: true,
           hung: null,
+          pid: 100,
         },
-        { claimed: false, records: [], hung: null },
-        { hung: {} as VitestHeartbeat, claimed: true, records },
-        { claimed: true, records: [], hung: null },
+        { claimed: false, records: [], hung: null, pid: null },
+        { hung: {} as VitestHeartbeat, claimed: true, pid: 102, records },
+        { claimed: true, records: [], hung: null, pid: 103 },
         {
           records: [
             {
@@ -81,6 +82,7 @@ describe('runIsolated', () => {
               environment: [],
               reached: true,
               duration: 600,
+              booted: 2500,
               modified: [],
               kind: 'end',
               strays: [],
@@ -91,14 +93,16 @@ describe('runIsolated', () => {
           ],
           claimed: true,
           hung: null,
+          pid: 104,
         },
       ],
       error: null,
     })
 
     let plan = { units: [] }
+    let handle = { state: { spawns: new Map([[100, 1000]]) } } as never
 
-    await expect(runIsolated({} as VitestHandle, plan)).resolves.toStrictEqual({
+    await expect(runIsolated(handle, plan)).resolves.toStrictEqual({
       units: [
         {
           inputs: { dependencies: ['/p/a.test.ts'], environment: ['MODE'] },
@@ -109,6 +113,7 @@ describe('runIsolated', () => {
           timedOut: false,
           reached: true,
           tests: tries,
+          startup: 150,
           duration: 9,
           hits: 7,
           unit: 0,
@@ -145,6 +150,7 @@ describe('runIsolated', () => {
           timedOut: true,
           reached: true,
           duration: 600,
+          startup: 0,
           strays: [],
           tests: [],
           hits: 1,

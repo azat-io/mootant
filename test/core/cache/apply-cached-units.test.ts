@@ -41,7 +41,7 @@ let world = {
 }
 
 describe('applyCachedUnits', () => {
-  it('decides from cached kills and passes and keeps the other files', async () => {
+  it('takes cached kills and passes as evidence and keeps the other files', async () => {
     let { state } = await createTestRun(world, {
       mutants: ['m1', 'm2', 'm3', 'm4'],
       isolate: true,
@@ -66,10 +66,11 @@ describe('applyCachedUnits', () => {
     applyCachedUnits(state)
 
     expect(state.mutants.get('m1')).toMatchObject({
-      verdict: kill,
-      cached: true,
-      files: [],
+      files: ['/t/a.test.ts'],
+      cached: false,
+      verdict: null,
     })
+    expect(state.mutants.get('m1')!.evidence.get('/t/b.test.ts')).toBe(kill)
     expect(state.mutants.get('m2')).toMatchObject({
       survived: true,
       verdict: null,
@@ -84,6 +85,38 @@ describe('applyCachedUnits', () => {
     expect(state.mutants.get('m4')).toMatchObject({
       survived: true,
       cached: false,
+    })
+  })
+
+  it('decides from a cached kill only after every earlier file', async () => {
+    let { state } = await createTestRun(world, {
+      mutants: ['m1', 'm2'],
+      isolate: true,
+    })
+    let kill = {
+      cause: 'assertion' as const,
+      status: 'Killed' as const,
+      file: '/t/a.test.ts',
+      message: 'boom',
+      test: 'a1',
+    }
+    state.cache = createCache({
+      'm2 /t/b.test.ts': { ...kill, file: '/t/b.test.ts', test: 'b1' },
+      'm2 /t/a.test.ts': 'survived',
+      'm1 /t/a.test.ts': kill,
+    })
+
+    applyCachedUnits(state)
+
+    expect(state.mutants.get('m1')).toMatchObject({
+      verdict: kill,
+      cached: true,
+      files: [],
+    })
+    expect(state.mutants.get('m2')).toMatchObject({
+      verdict: { file: '/t/b.test.ts', test: 'b1' },
+      cached: true,
+      files: [],
     })
   })
 

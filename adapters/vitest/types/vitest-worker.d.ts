@@ -78,6 +78,12 @@ export type VitestOutRecord =
       strays: string[]
 
       /**
+       * Epoch milliseconds at which the worker began the unit, before it waited
+       * for the unit before it.
+       */
+      booted: number
+
+      /**
        * Site evaluations outside any try.
        */
       hits: number

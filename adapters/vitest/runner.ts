@@ -198,7 +198,10 @@ let clock = captureClock()
  * planned mutants test by test, switching the active mutant between tries, with
  * a control try without a mutant before and after every mutant try. In an
  * isolated run it claims one unit and keeps its mutant active from the start of
- * loading through the whole file, its teardown included. A unit ends only after
+ * loading through the whole file, its teardown included; once a try fails after
+ * the mutant was reached, which kills the mutant whatever runs next, the tests
+ * and suites that have not started are skipped, while hooks of started suites,
+ * the cleanup of fixtures and the teardown still run. A unit ends only after
  * the worker's teardown: Vitest cleans up the worker-scoped fixtures, then
  * tears the test environment down; errors of both count as a failed suite hook,
  * and the heartbeat covers both, so a hang there stops the worker. What the
@@ -436,6 +439,12 @@ export default class MootantRunner extends TestRunner {
   private outsideHits = 0
 
   /**
+   * Whether a try of an isolated unit failed after the mutant was reached, so
+   * the tests and suites that have not started yet are skipped.
+   */
+  private bailed = false
+
+  /**
    * Length of the text in the heartbeat file.
    */
   private beatLength = 0
@@ -460,6 +469,12 @@ export default class MootantRunner extends TestRunner {
    * Start of loading on the captured clock.
    */
   private started = 0
+
+  /**
+   * Epoch milliseconds at which the worker began the unit, before it waited for
+   * its turn.
+   */
+  private booted = 0
 
   /**
    * Milliseconds the whole unit may take.
@@ -522,6 +537,7 @@ export default class MootantRunner extends TestRunner {
     let file = paths[0]!
     this.file = file
     this.started = clock.now()
+    this.booted = performance.timeOrigin + this.started
     runtime.hitLimit = Infinity
     runtime.coverage = null
     runtime.reached = false
@@ -623,7 +639,8 @@ export default class MootantRunner extends TestRunner {
    * each planned mutant not yet failed between two control tries, and runs an
    * unplanned test before the last planned one once without a mutant; tests
    * after the last planned one are skipped, and so is every test after a
-   * timed-out try. Each try repeats the test as often as its own `repeats`
+   * timed-out try or, in an isolated unit, after a try that failed once the
+   * mutant was reached. Each try repeats the test as often as its own `repeats`
    * asks, so Vitest's repeats are multiplied; its `retry` is kept.
    *
    * @param test - Test or suite about to run.
@@ -638,6 +655,7 @@ export default class MootantRunner extends TestRunner {
     if (
       options.mode !== 'dry' &&
       (this.abandoned ||
+        this.bailed ||
         (this.runnable !== null && !this.runnable.has(test.id)))
     ) {
       test.mode = 'skip'
@@ -763,6 +781,23 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
+   * Records a test that ended with a skip before a suite's hooks run. After an
+   * isolated unit bailed, a suite that has not started is skipped with its
+   * hooks.
+   *
+   * @param suite - Suite about to run.
+   */
+  public override async onBeforeRunSuite(
+    suite: RunnerTestSuite,
+  ): Promise<void> {
+    this.finishEnded()
+    if (this.bailed) {
+      suite.mode = 'skip'
+    }
+    await super.onBeforeRunSuite(suite)
+  }
+
+  /**
    * Notes the state of the test after its `afterEach` hooks; the try's facts
    * are read once its teardown finished.
    *
@@ -773,18 +808,6 @@ export default class MootantRunner extends TestRunner {
     if (current) {
       current.state = test.result!.state
     }
-  }
-
-  /**
-   * Records a test that ended with a skip before a suite's hooks run.
-   *
-   * @param suite - Suite about to run.
-   */
-  public override async onBeforeRunSuite(
-    suite: RunnerTestSuite,
-  ): Promise<void> {
-    this.finishEnded()
-    await super.onBeforeRunSuite(suite)
   }
 
   /**
@@ -922,53 +945,6 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
-   * Writes the end record of the unit once its test files ran and marks the
-   * unit as finished for the progress of the main process, removes the
-   * heartbeat file, and returns the runtime to its idle state.
-   */
-  private finishUnit(): void {
-    let { runtime } = this
-    let { mode } = this.options
-    if (this.out !== null && this.filesEnded) {
-      let { hits } = runtime
-      if (mode === 'batch') {
-        hits += this.outsideHits
-      } else if (mode === 'dry') {
-        hits -= this.inside.hits
-      }
-      let dependencies = this.stopTracking()
-      writeOutRecord(this.out, {
-        covers: [...this.loadCovers].toSorted(),
-        duration: clock.now() - this.started,
-        loadDuration: this.loadDuration,
-        environment: this.environment,
-        concurrent: this.concurrent,
-        loadError: this.loadError,
-        hookError: this.hookError,
-        abandoned: this.abandoned,
-        reached: runtime.reached,
-        modified: this.modified,
-        strays: this.loadStrays,
-        unit: this.unitIndex,
-        dependencies,
-        kind: 'end',
-        hits,
-      })
-      closeSync(
-        openSync(path.join(this.options.directory, 'done', this.outName), 'w'),
-      )
-    }
-    if (this.beatDescriptor !== null) {
-      closeSync(this.beatDescriptor)
-      this.beatDescriptor = null
-    }
-    rmSync(this.beatFile, { force: true })
-    runtime.hitLimit = Infinity
-    runtime.coverage = null
-    runtime.active = null
-  }
-
-  /**
    * Reads the facts of a test's try that ended, once Vitest finished it, so
    * errors of its teardown count; then the runtime goes back to the state
    * between tries.
@@ -1000,6 +976,9 @@ export default class MootantRunner extends TestRunner {
     if (mode !== 'dry' && facts.timedOut) {
       this.abandoned = true
     }
+    if (mode === 'isolated' && facts.failed && facts.reached) {
+      this.bailed = true
+    }
     if (mode === 'batch') {
       if (runtime.active !== null && (facts.failed || facts.timedOut)) {
         this.killed.add(runtime.active)
@@ -1014,6 +993,54 @@ export default class MootantRunner extends TestRunner {
         this.inside.hits += runtime.hits - this.inside.from
       }
     }
+  }
+
+  /**
+   * Writes the end record of the unit once its test files ran and marks the
+   * unit as finished for the progress of the main process, removes the
+   * heartbeat file, and returns the runtime to its idle state.
+   */
+  private finishUnit(): void {
+    let { runtime } = this
+    let { mode } = this.options
+    if (this.out !== null && this.filesEnded) {
+      let { hits } = runtime
+      if (mode === 'batch') {
+        hits += this.outsideHits
+      } else if (mode === 'dry') {
+        hits -= this.inside.hits
+      }
+      let dependencies = this.stopTracking()
+      writeOutRecord(this.out, {
+        covers: [...this.loadCovers].toSorted(),
+        duration: clock.now() - this.started,
+        loadDuration: this.loadDuration,
+        environment: this.environment,
+        concurrent: this.concurrent,
+        loadError: this.loadError,
+        hookError: this.hookError,
+        abandoned: this.abandoned,
+        reached: runtime.reached,
+        modified: this.modified,
+        strays: this.loadStrays,
+        unit: this.unitIndex,
+        booted: this.booted,
+        dependencies,
+        kind: 'end',
+        hits,
+      })
+      closeSync(
+        openSync(path.join(this.options.directory, 'done', this.outName), 'w'),
+      )
+    }
+    if (this.beatDescriptor !== null) {
+      closeSync(this.beatDescriptor)
+      this.beatDescriptor = null
+    }
+    rmSync(this.beatFile, { force: true })
+    runtime.hitLimit = Infinity
+    runtime.coverage = null
+    runtime.active = null
   }
 
   /**

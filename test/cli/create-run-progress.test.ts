@@ -139,7 +139,7 @@ describe('createRunProgress', () => {
       'confirming 1 timeout  0/9 test runs · 0.0s',
       'testing 1 mutant  0/9 test runs · 0.0s',
       'testing 3 survivors with more test files  0/9 test runs · 0.0s',
-      'retrying 2 mutants  0/9 test runs · 0.0s',
+      'testing 2 survivors with more test files  0/9 test runs · 0.0s',
     ])
   })
 

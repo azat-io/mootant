@@ -1,3 +1,4 @@
+import type { IsolatedEvidence } from './isolated-evidence'
 import type { IsolatedReason } from './isolated-reason'
 import type { Mutant } from '../mutant/mutant'
 import type { TryCause } from './try-cause'
@@ -11,6 +12,12 @@ export interface MutantState {
    * doubled bounds.
    */
   confirm: { cause: 'time-limit' | 'hang'; test: string }[]
+
+  /**
+   * Isolated evidence by key of the test file, fresh or cached. Files not run
+   * yet are left out.
+   */
+  evidence: Map<string, IsolatedEvidence>
 
   /**
    * Why it takes the isolated path, or null when it does not, and outside fast
@@ -29,7 +36,7 @@ export interface MutantState {
   verdict: MutantVerdict | null
 
   /**
-   * Milliseconds of its isolated units.
+   * Milliseconds of its isolated units, each with the start of its process.
    */
   unitDuration: number
 
@@ -51,8 +58,15 @@ export interface MutantState {
   duration: number
 
   /**
+   * Keys of all its test files on the isolated path, the likeliest to kill it
+   * first (`rankMutantFiles`); the first with evidence decides its verdict
+   * (`decideEvidence`).
+   */
+  ranked: string[]
+
+  /**
    * Keys of the test files not run yet on the isolated path (`getTestFileKey`),
-   * cheapest first.
+   * in the order of `ranked`.
    */
   files: string[]
 

@@ -6,17 +6,22 @@ import { planIsolated } from './plan-isolated'
 import { countRun } from './count-run'
 
 /**
- * Most isolated runs: two rounds and one more for retries and confirmations.
- */
-const ISOLATED_RUNS = 3
-
-/**
- * Runs the isolated path. The first run tries every isolated mutant in its
- * cheapest test file; the next tries the undecided ones in all their other
- * files, together with units that went missing and timeouts to confirm; a last
- * run takes the retries and confirmations of the second. Only timeouts to
- * confirm can be left after it, since a unit missing twice already gets an
- * `Error` verdict; their mutants get one too.
+ * Runs the isolated path in rounds, one run of the test runner each, until no
+ * undecided mutant has a test file left and no retry or confirmation is
+ * pending. Every undecided isolated mutant takes its next test files in the
+ * order of `routeIsolated`, the likeliest to kill it first: one in the first
+ * and the second round, then twice as many as in the round before (2, 4, 8, and
+ * so on), so a mutant stops at the batch of the file that killed it, and a
+ * survivor, which must run every file, needs only a few rounds. Idle workers
+ * take no extra files: a unit can wait for another of its test file, and the
+ * pool runs units in order, so extra files may make a round longer, and
+ * measurements showed no gain. A mutant whose timeout waits for its
+ * confirmation takes no new files until the confirmation decides it. The
+ * verdict comes from the first file with evidence (`decideEvidence`), so it
+ * does not depend on the batches or the workers. A round also runs the retries
+ * and confirmations of the round before. A request lives at most four rounds,
+ * as a unit missing twice gets an `Error` verdict and a timeout is confirmed
+ * once, so the rounds end.
  *
  * @param session - Live test runner.
  * @param state - State of the run, updated in place.
@@ -25,62 +30,53 @@ export async function runIsolatedRounds(
   session: AdapterSession,
   state: RunState,
 ): Promise<void> {
-  let carried = await Array.from(
-    { length: ISOLATED_RUNS },
-    (_value, run) => run,
-  ).reduce<Promise<IsolatedRequest[]>>(
-    async (previous, run) =>
-      runRound(session, state, { carried: await previous, run }),
-    Promise.resolve([]),
-  )
-  for (let request of carried) {
-    let mutant = state.mutants.get(request.mutant)!
-    mutant.verdict ??= {
-      message: 'A timeout could not be confirmed: no isolated run was left.',
-      status: 'Error',
-      cause: null,
-      file: null,
-      test: null,
-    }
-  }
+  await runRounds(session, state, { carried: [], round: 0 })
 }
 
 /**
- * Runs one isolated run: the requests carried over from the previous run, and
- * the files of every undecided mutant, its cheapest one in the first run and
- * all others later.
+ * Runs one isolated round: the requests carried over from the round before that
+ * are still undecided, and the next test files of every undecided mutant.
  *
  * @param session - Live test runner.
  * @param state - State of the run, updated in place.
- * @param progress - Requests carried over and runs so far.
- * @param progress.carried - Retries and confirmations of the previous run.
- * @param progress.run - Isolated runs so far.
- * @returns Retries and confirmations for the next run.
+ * @param progress - Requests carried over and rounds so far.
+ * @param progress.carried - Retries and confirmations of the round before.
+ * @param progress.round - Rounds so far.
+ * @returns Retries and confirmations for the next round, or null when the round
+ *   had nothing to run.
  */
 async function runRound(
   session: AdapterSession,
   state: RunState,
-  progress: { carried: IsolatedRequest[]; run: number },
-): Promise<IsolatedRequest[]> {
-  let { carried, run } = progress
+  progress: { carried: IsolatedRequest[]; round: number },
+): Promise<IsolatedRequest[] | null> {
+  let { carried, round } = progress
   let requests = carried.filter(
     request => state.mutants.get(request.mutant)!.verdict === null,
   )
-  for (let mutant of state.mutants.values()) {
-    if (mutant.path === 'isolated' && mutant.verdict === null) {
-      let files = mutant.files.splice(0, run === 0 ? 1 : Infinity)
-      for (let file of files) {
-        requests.push({
-          mutant: mutant.mutant.id,
-          confirming: false,
-          retried: false,
-          file,
-        })
-      }
+  let next = [...state.mutants.values()].filter(
+    mutant =>
+      mutant.path === 'isolated' &&
+      mutant.verdict === null &&
+      mutant.files.length > 0 &&
+      ![...mutant.evidence.values()].includes('confirming'),
+  )
+  let size = round === 0 ? 1 : 2 ** (round - 1)
+  let taken = new Map(
+    next.map(mutant => [mutant, mutant.files.splice(0, size)]),
+  )
+  for (let [mutant, files] of taken) {
+    for (let file of files) {
+      requests.push({
+        mutant: mutant.mutant.id,
+        confirming: false,
+        retried: false,
+        file,
+      })
     }
   }
   if (requests.length === 0) {
-    return []
+    return null
   }
   let plan = planIsolated(state, requests)
   let mutants = new Set(requests.map(({ mutant }) => mutant))
@@ -90,4 +86,24 @@ async function runRound(
   })
   let result = await session.runIsolated(plan)
   return applyIsolatedResult(state, { requests, plan }, result)
+}
+
+/**
+ * Runs isolated rounds from the given one until nothing is left to run.
+ *
+ * @param session - Live test runner.
+ * @param state - State of the run, updated in place.
+ * @param progress - Requests carried over and the number of the round.
+ * @param progress.carried - Retries and confirmations of the round before.
+ * @param progress.round - Rounds so far.
+ */
+async function runRounds(
+  session: AdapterSession,
+  state: RunState,
+  progress: { carried: IsolatedRequest[]; round: number },
+): Promise<void> {
+  let carried = await runRound(session, state, progress)
+  if (carried !== null) {
+    await runRounds(session, state, { round: progress.round + 1, carried })
+  }
 }

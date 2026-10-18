@@ -11,6 +11,12 @@ import { routeIsolated } from './route-isolated'
  */
 interface RunStateInput {
   /**
+   * Absolute paths each test file imports through relative specifiers, by test
+   * file path.
+   */
+  imports: ReadonlyMap<string, readonly string[]>
+
+  /**
    * Receives the events of the run, such as the start of each run of the test
    * runner.
    */
@@ -70,6 +76,7 @@ export function createRunState(input: RunStateInput): RunState {
   let { analysis, mutants, errors } = input
   let state: RunState = {
     workers: input.workers,
+    imports: input.imports,
     report: input.report,
     limits: input.limits,
     mutants: new Map(),
@@ -97,11 +104,13 @@ export function createRunState(input: RunStateInput): RunState {
       coveredBy: found?.coveredBy ?? [],
       static: found?.static ?? false,
       isolatedBecause: null,
+      evidence: new Map(),
       unitDuration: 0,
       survived: false,
       cached: false,
       duration: 0,
       confirm: [],
+      ranked: [],
       files: [],
       tries: 0,
       units: 0,

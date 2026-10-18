@@ -22,6 +22,12 @@ export interface VitestSessionState {
   files: Map<string, SwitchedFile> | null
 
   /**
+   * Epoch milliseconds at which the pool started each worker process of the
+   * current run, by process id (`createForksPool`).
+   */
+  spawns: Map<number, number>
+
+  /**
    * Pool the projects run with (`createForksPool`).
    */
   pool: PoolRunnerInitializer

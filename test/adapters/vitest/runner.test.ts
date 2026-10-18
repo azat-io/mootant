@@ -225,6 +225,34 @@ function createRunner(
 }
 
 /**
+ * Runs the tasks of a suite in order, suites with their hooks; a suite the
+ * runner skipped before it started runs nothing, as in Vitest.
+ *
+ * @param runner - Runner under test.
+ * @param file - Test file of the tasks.
+ * @param tasks - Tests and suites to run.
+ */
+async function runTasks(
+  runner: MootantRunner,
+  file: RunnerTestFile,
+  tasks: RunnerTask[],
+): Promise<void> {
+  await tasks.reduce(async (previous, task) => {
+    await previous
+    if (task.type === 'suite') {
+      await runner.onBeforeRunSuite(task)
+      if (task.mode === 'skip') {
+        return
+      }
+      await runTasks(runner, file, task.tasks)
+      await runner.onAfterRunSuite(task)
+    } else {
+      await simulateTest(runner, file, task)
+    }
+  }, Promise.resolve())
+}
+
+/**
  * Reads the out files of the run.
  *
  * @returns Records by out file name.
@@ -294,30 +322,6 @@ function createTest(id: string, body: Body = () => {}): RunnerTestCase {
   } as never
   bodies.set(test, body)
   return test
-}
-
-/**
- * Runs the tasks of a suite in order, suites with their hooks.
- *
- * @param runner - Runner under test.
- * @param file - Test file of the tasks.
- * @param tasks - Tests and suites to run.
- */
-async function runTasks(
-  runner: MootantRunner,
-  file: RunnerTestFile,
-  tasks: RunnerTask[],
-): Promise<void> {
-  await tasks.reduce(async (previous, task) => {
-    await previous
-    if (task.type === 'suite') {
-      await runner.onBeforeRunSuite(task)
-      await runTasks(runner, file, task.tasks)
-      await runner.onAfterRunSuite(task)
-    } else {
-      await simulateTest(runner, file, task)
-    }
-  }, Promise.resolve())
 }
 
 /**
@@ -963,7 +967,7 @@ describe('mootantRunner', () => {
     await expect(readRecords()).resolves.toStrictEqual({})
   })
 
-  it('runs the whole file with the mutant active from loading in an isolated run', async () => {
+  it('runs the file with the mutant active from loading until a test kills it in an isolated run', async () => {
     options = {
       mode: 'isolated',
       timeouts: null,
@@ -984,7 +988,16 @@ describe('mootantRunner', () => {
       }
     }
     let { runner, config } = createRunner()
-    let tests = [createTest('a'), createTest('b', body), createTest('c', body)]
+    let later = createSuite([createTest('d', body)])
+    let tests = [
+      createTest('a', () => {
+        throw new Error('not reached')
+      }),
+      createTest('b'),
+      createTest('c', body),
+      later,
+      createTest('e', body),
+    ]
     await runFile(runner, createFile(tests), () => {
       getRuntime().hit('other')
       runner.onStray(new Error('load stray'))
@@ -996,18 +1009,27 @@ describe('mootantRunner', () => {
     let records = await readRecords()
 
     expect(config.hookTimeout).toBe(4000)
-    expect(tests[2]!.mode).toBe('run')
+    // A failure before the mutant was reached proves nothing, so the unit
+    // goes on; the kill of `c` skips what has not started.
+    expect(tests.map(task => task.mode)).toStrictEqual([
+      'run',
+      'run',
+      'run',
+      'skip',
+      'skip',
+    ])
     expect(records[`${hash}-0`]).toMatchObject([
+      { tries: [{ reached: false, failed: true, mutant: 'm' }], kind: 'test' },
       { tries: [{ reached: false, mutant: 'm', hits: 0 }], kind: 'test' },
       {
         tries: [{ message: 'killed', reached: true, failed: true, hits: 1 }],
         kind: 'test',
       },
-      { tries: [{ reached: true, failed: true, hits: 1 }], kind: 'test' },
-      { strays: ['load stray'], reached: true, kind: 'end', hits: 3, unit: 5 },
+      { strays: ['load stray'], reached: true, kind: 'end', hits: 2, unit: 5 },
     ])
-    expect(records[`${hash}-1`]).toHaveLength(4)
-    expect(records[`${hash}-1`]!.at(-1)).toMatchObject({ unit: 6, hits: 2 })
+    expect(all[2]!.mode).toBe('skip')
+    expect(records[`${hash}-1`]).toHaveLength(3)
+    expect(records[`${hash}-1`]!.at(-1)).toMatchObject({ unit: 6, hits: 1 })
     expect(
       existsSync(path.join(directory, 'worker', String(process.pid))),
     ).toBe(true)

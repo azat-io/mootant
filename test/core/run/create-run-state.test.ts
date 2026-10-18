@@ -26,6 +26,7 @@ describe('createRunState', () => {
       errors: new Map([['b.ts', 'Broken.']]),
       analysis: base.analysis,
       limits: TEST_LIMITS,
+      imports: new Map(),
       report: () => {},
       root: '/root',
       batch: true,

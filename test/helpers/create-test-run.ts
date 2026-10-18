@@ -82,6 +82,7 @@ export async function createTestRun(
     batch: fake.adapter.batch,
     analysis: readDryRun(dry),
     limits: TEST_LIMITS,
+    imports: new Map(),
     errors: new Map(),
     report: () => {},
     root: '/',

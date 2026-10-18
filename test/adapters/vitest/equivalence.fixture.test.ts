@@ -747,6 +747,57 @@ describe('verdict equivalence', () => {
     ).toStrictEqual([])
   }, 60_000)
 
+  it('runs the test file named after the module first, takes its verdict first, and stops a unit at its first kill', async () => {
+    // `test/scale.test.ts` is named after `src/scale.ts` but is the slowest
+    // file; `test/cheap.test.ts` imports it directly and kills nothing;
+    // `test/format.test.ts` reaches it through `src/format.ts`. The second
+    // test of `test/scale.test.ts` loops for every mutant its first test
+    // kills, so a unit that went on after the kill would time out.
+    let rounds = path.join(root, 'rounds')
+    let result = await runMutants({
+      builtIns: createBuiltIns(vitestAdapter()),
+      paths: ['src'],
+      concurrency: 2,
+      cache: false,
+      cwd: rounds,
+    })
+    let scale = result.results.filter(
+      entry => entry.mutant.file === 'src/scale.ts',
+    )
+    let names = new Map(result.tests.map(test => [test.id, test.name]))
+    let survivors = scale.filter(entry => entry.status === 'Survived')
+    let unit = scale.find(entry => entry.mutant.replacement === "''")!
+
+    expect(result.diagnostics).toStrictEqual([])
+    expect(result.results.map(entry => entry.status)).not.toContain('Timeout')
+    expect(
+      scale
+        .filter(entry => entry.status === 'Killed' && entry !== unit)
+        .map(entry => [
+          names.get(entry.killedBy!),
+          path.relative(rounds, entry.killedIn!),
+          entry.cause,
+          entry.tries,
+        ]),
+    ).toStrictEqual(
+      scale
+        .filter(entry => entry.status === 'Killed' && entry !== unit)
+        .map(() => ['doubles', 'test/scale.test.ts', 'assertion', 1]),
+    )
+    // The cheaper files reach the static mutant too, but the first round
+    // takes only the file named after the module, which kills it.
+    expect(unit).toMatchObject({
+      isolatedBecause: 'static',
+      status: 'Killed',
+      tries: 1,
+    })
+    expect(path.relative(rounds, unit.killedIn!)).toBe('test/scale.test.ts')
+    // A survivor runs every file that reaches it, one more in each round.
+    expect(survivors.length).toBeGreaterThan(0)
+    expect(survivors.every(entry => entry.tries === 3)).toBe(true)
+    expect(result.runs.isolated).toBe(3)
+  }, 60_000)
+
   it('gives Error to mutants that only a global setup runs', async () => {
     let result = await runMutants({
       builtIns: createBuiltIns(vitestAdapter()),

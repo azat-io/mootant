@@ -25,7 +25,9 @@ type VitestEndRecord = Extract<VitestOutRecord, { kind: 'end' }>
  * `crash`. A failed cleanup of worker-scoped fixtures or a failed teardown of
  * the test environment is the unit's hook error; a suite hook that hit Vitest's
  * hook timeout marks the unit as timed out. A unit that ended reports what it
- * read (`readUnitInputs`).
+ * read (`readUnitInputs`) and how long its process took to start: from the
+ * moment the pool started the worker to the moment the worker began the unit,
+ * before it waited for its turn.
  *
  * @param handle - Live Vitest instance of the session.
  * @param plan - Units to run.
@@ -38,7 +40,7 @@ export async function runIsolated(
   let outcome = await runPlan(handle, { units: plan.units, mode: 'isolated' })
   let units: IsolatedFacts[] = []
   let ended: [IsolatedFacts, IsolatedUnit, VitestEndRecord][] = []
-  for (let [unit, { records, claimed, hung }] of outcome.units.entries()) {
+  for (let [unit, { records, claimed, hung, pid }] of outcome.units.entries()) {
     if (!claimed) {
       continue
     }
@@ -60,7 +62,9 @@ export async function runIsolated(
         unit,
       })
     } else {
+      let spawned = handle.state.spawns.get(pid!)
       let facts: IsolatedFacts = {
+        startup: spawned === undefined ? 0 : Math.max(0, end.booted - spawned),
         timedOut: end.hookError !== null && isTimeoutMessage(end.hookError),
         hookError: end.hookError,
         loadError: end.loadError,

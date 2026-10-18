@@ -305,14 +305,13 @@ export function createRunCache(input: RunCacheInput): RunCache {
         owners.delete(slot)
       }
     },
-    lookupBatch: (mutant, test) => {
-      let file = getTestFileKey(analysis.tests.get(test)!)
-      let found = read(locate(mutant, file, test))
-      return found === 'survived' ? null : found
-    },
     recordBatch: (mutant, test, evidence) => {
       let file = getTestFileKey(analysis.tests.get(test)!)
       write(locate(mutant, file, test), 'batch', evidence)
+    },
+    lookupBatch: (mutant, test) => {
+      let file = getTestFileKey(analysis.tests.get(test)!)
+      return read(locate(mutant, file, test))
     },
     recordUnit: (mutant, file, evidence) => {
       write(locate(mutant, file, null), 'isolated', evidence)

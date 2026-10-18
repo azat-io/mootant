@@ -69,15 +69,20 @@ describe('runPlan', () => {
     let configs = [{ maxWorkers: 4 }, { maxWorkers: 1 }]
     let seen: number[] = []
     let hash = getFileHash('/a.test.ts', 'a')
+    let other = getFileHash('/b.test.ts', '')
+    let spawns = new Map([[1, 1]])
+    let onUnitEnd = vi.fn()
     let handle = {
       vitest: {
         runTestSpecifications: async () => {
-          seen.push(...configs.map(config => config.maxWorkers))
-          await writeFile(path.join(directory, 'claim', `${hash}-0`), '')
+          seen.push(...configs.map(config => config.maxWorkers), spawns.size)
+          await writeFile(path.join(directory, 'claim', `${hash}-0`), '12')
           await writeFile(
             path.join(directory, 'out', `${hash}-0.jsonl`),
             '{"kind":"late","message":"x","mutant":null,"test":"t"}\n',
           )
+          await writeFile(path.join(directory, 'claim', `${other}-0`), '13')
+          await writeFile(path.join(directory, 'done', `${other}-0`), '')
           return { unhandledErrors: [new Error('worker died')] }
         },
         getProjectByName: (name: string) => ({
@@ -89,8 +94,8 @@ describe('runPlan', () => {
         projects: configs.map(config => ({ config })),
         provide: vi.fn(),
       },
-      context: { workDirectory: directory },
-      state: {} as VitestSessionState,
+      context: { workDirectory: directory, onUnitEnd },
+      state: { spawns } as Partial<VitestSessionState>,
     } as never
     let limits = { hitLimit: 1, timeout: 1 }
     let units: IsolatedUnit[] = [
@@ -107,9 +112,10 @@ describe('runPlan', () => {
           records: [{ message: 'x', kind: 'late', mutant: null, test: 't' }],
           claimed: true,
           hung: null,
+          pid: 12,
         },
-        { hung: createBeat(1), claimed: false, records: [] },
-        { claimed: false, records: [], hung: null },
+        { hung: createBeat(1), claimed: true, records: [], pid: 13 },
+        { claimed: false, records: [], hung: null, pid: null },
       ],
       error: 'worker died',
     })
@@ -118,7 +124,10 @@ describe('runPlan', () => {
       ' /b.test.ts',
       'b /a.test.ts',
     ])
-    expect(seen).toStrictEqual([2, 1])
+    expect(seen).toStrictEqual([2, 1, 0])
+    // The unit marked done counts as it ends; the claimed unit without a
+    // mark counts once the run is over.
+    expect(onUnitEnd).toHaveBeenCalledTimes(2)
     expect(configs).toStrictEqual([{ maxWorkers: 4 }, { maxWorkers: 1 }])
   })
 
@@ -132,6 +141,7 @@ describe('runPlan', () => {
         projects: [],
       },
       context: { workDirectory: directory },
+      state: { spawns: new Map() },
     } as never
 
     await expect(runPlan(handle, { mode: 'batch', units: [] })).rejects.toThrow(

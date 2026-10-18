@@ -247,12 +247,9 @@ function describeRun(event: Extract<RunEvent, { kind: 'run-start' }>): string {
     case 'confirmation':
       return `confirming ${pluralize(event.mutants, 'timeout')}`
     case 'isolated':
-      if (event.round === 1) {
-        return `testing ${mutants}`
-      }
-      return event.round === 2 ?
-          `testing ${pluralize(event.mutants, 'survivor')} with more test files`
-        : `retrying ${mutants}`
+      return event.round === 1 ?
+          `testing ${mutants}`
+        : `testing ${pluralize(event.mutants, 'survivor')} with more test files`
     case 'recovery':
       return `recovering ${mutants} of lost batch tries`
     case 'batch':

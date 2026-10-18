@@ -3,7 +3,8 @@
  */
 export interface ModuleCost {
   /**
-   * Milliseconds of the isolated units that ran its mutants.
+   * Milliseconds of the isolated units that ran its mutants, each with the
+   * start of its process.
    */
   duration: number
 

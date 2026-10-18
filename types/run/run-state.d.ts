@@ -10,6 +10,13 @@ import type { RunKind } from './run-kind'
  */
 export interface RunState {
   /**
+   * Absolute paths each test file imports through relative specifiers, as
+   * written (`readTestImports`), by test file path; a test file left out
+   * imports nothing.
+   */
+  imports: ReadonlyMap<string, readonly string[]>
+
+  /**
    * Test runner runs by kind; kinds that did not run are left out.
    */
   runs: Partial<Record<RunKind, number>>

@@ -69,8 +69,9 @@ export async function startVitestSession(
     ForksPoolWorker: typeof ForksPoolWorker
     createVitest: typeof CreateVitest
   }
+  let spawns = new Map<number, number>()
   let state: VitestSessionState = {
-    pool: createForksPool(vitestNode.ForksPoolWorker),
+    pool: createForksPool(vitestNode.ForksPoolWorker, spawns),
     mismatched: new Set(),
     instrumented: true,
     outside: new Set(),
@@ -81,6 +82,7 @@ export async function startVitestSession(
     error: null,
     files: null,
     runnerPath,
+    spawns,
   }
   let { onOutput } = context
   let instance: Vitest | null = null

@@ -32,13 +32,18 @@ const STOPPED: WorkerResponse = { [RESPONSE_FLAG]: true, type: 'stopped' }
  * process that exited is not stopped again: Vitest's forks worker waits for an
  * `exit` event that a process killed by a signal has already sent. Should
  * Vitest change its stop messages, the stop simply waits for Vitest's timer as
- * before.
+ * before. The pool also notes when it started each worker process, so the cost
+ * of a unit can include the start of its process; should Vitest stop exposing
+ * the process, nothing is noted.
  *
  * @param Worker - Forks worker class of the project's Vitest.
+ * @param spawns - Receives the epoch milliseconds at which the pool started a
+ *   worker process, by process id.
  * @returns Pool to set as the projects' `poolRunner`.
  */
 export function createForksPool(
   Worker: typeof ForksPoolWorker,
+  spawns: Map<number, number>,
 ): PoolRunnerInitializer {
   return {
     createPoolWorker: options => {
@@ -56,7 +61,12 @@ export function createForksPool(
       }
       return {
         start: async () => {
+          let spawned = performance.timeOrigin + performance.now()
           await worker.start()
+          let pid = readProcessId(worker)
+          if (pid !== null) {
+            spawns.set(pid, spawned)
+          }
           worker.on('exit', () => {
             exited = true
             if (stopping) {
@@ -90,5 +100,21 @@ export function createForksPool(
       } satisfies PoolWorker
     },
     name: POOL_NAME,
+  }
+}
+
+/**
+ * Reads the process id of a started forks worker through its `fork` getter,
+ * which Vitest keeps private.
+ *
+ * @param worker - Started forks worker.
+ * @returns Process id, or null when the worker does not expose its process.
+ */
+function readProcessId(worker: ForksPoolWorker): number | null {
+  try {
+    let child = Reflect.get(worker, 'fork') as { pid?: unknown } | undefined
+    return typeof child?.pid === 'number' ? child.pid : null
+  } catch {
+    return null
   }
 }

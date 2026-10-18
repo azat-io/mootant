@@ -294,21 +294,18 @@ describe('createRunCache', () => {
     expect(second.lookupUnit(mutant, '/t/a.test.ts')).toBeNull()
   })
 
-  it('reuses no batch entry that is not a kill', async () => {
+  it('keeps reached batch passes apart from isolated evidence', async () => {
     let state = await createState()
     let first = create(state)
     let mutant = state.mutants.get('m1')!
-    first.recordBatch(mutant, 'a1', { verdict: kill, inputs: read })
-    let stored = new Map(
-      [...first.entries].map(([slot, entry]): [string, CacheEntry] => [
-        slot,
-        { ...entry, status: 'Survived', test: null },
-      ]),
-    )
+    first.recordBatch(mutant, 'a1', { verdict: 'survived', inputs: read })
+    let second = create(state, { stored: storedOf(first.entries) })
 
-    expect(
-      create(state, { stored: storedOf(stored) }).lookupBatch(mutant, 'a1'),
-    ).toBeNull()
+    expect([...first.entries.values()]).toMatchObject([
+      { status: 'Survived', path: 'batch', test: null },
+    ])
+    expect(second.lookupBatch(mutant, 'a1')).toBe('survived')
+    expect(second.lookupUnit(mutant, '/t/a.test.ts')).toBeNull()
   })
 
   it('forgets what was written or reused for one test file', async () => {

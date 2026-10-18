@@ -11,14 +11,13 @@ import type { CacheEntry } from './cache-entry'
  */
 export interface RunCache {
   /**
-   * Records an accepted batch kill of a mutant by a test, in fast mode, with
-   * what its unit read.
+   * Finds valid evidence of a mutant in a test on the batch path, a kill or a
+   * reached pass, or null; only used in fast mode.
    */
-  recordBatch(
+  lookupBatch(
     mutant: MutantState,
     test: string,
-    evidence: CacheEvidence<MutantVerdict>,
-  ): void
+  ): MutantVerdict | 'survived' | null
 
   /**
    * Finds valid evidence of a mutant in a test file (`getTestFileKey`) on the
@@ -30,18 +29,18 @@ export interface RunCache {
   ): MutantVerdict | 'survived' | null
 
   /**
+   * Records the evidence of a batch try of a mutant in a test, in fast mode: an
+   * accepted kill or a reached pass, with what its unit read.
+   */
+  recordBatch(mutant: MutantState, test: string, evidence: CacheEvidence): void
+
+  /**
    * Records the evidence of an isolated unit: a kill or a reached pass, with
    * what the unit read. Kills by a crash, timeouts and errors are not stored,
    * and neither is anything about a test file without a key or a unit whose
    * inputs are unknown.
    */
   recordUnit(mutant: MutantState, file: string, evidence: CacheEvidence): void
-
-  /**
-   * Finds a valid kill of a mutant by a test on the batch path, or null; only
-   * used in fast mode.
-   */
-  lookupBatch(mutant: MutantState, test: string): MutantVerdict | null
 
   /**
    * Files the verdicts of each test file (`getTestFileKey`) depend on, the test
@@ -97,7 +96,7 @@ export interface CacheEvidence<
   inputs: RunInputs | undefined | null
 
   /**
-   * A kill or, for an isolated unit, a reached pass.
+   * A kill or a reached pass.
    */
   verdict: Verdict
 }

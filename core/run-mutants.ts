@@ -30,6 +30,7 @@ import { loadVueCompiler } from './parser/load-vue-compiler'
 import { prepareRunCache } from './cache/prepare-run-cache'
 import { listFileMutants } from './files/list-file-mutants'
 import { readChangedLines } from './git/read-changed-lines'
+import { readTestImports } from './run/read-test-imports'
 import { getTestFileKey } from './run/get-test-file-key'
 import { compareCodeUnits } from './compare-code-units'
 import { runBatchPhases } from './run/run-batch-phases'
@@ -406,6 +407,9 @@ async function execute(context: {
       options.concurrency ??
       run.concurrency ??
       Math.max(1, availableParallelism() - 1),
+    imports: await readTestImports(
+      [...analysis.testFiles.values()].map(entry => entry.file),
+    ),
     report: event => options.onProgress?.(event),
     batch: context.adapter.batch,
     mutants: pending,

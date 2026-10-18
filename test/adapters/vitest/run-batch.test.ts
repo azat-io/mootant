@@ -43,6 +43,7 @@ let end = {
   duration: 2,
   covers: [],
   strays: [],
+  booted: 0,
   hits: 0,
   unit: 0,
 }
@@ -86,22 +87,30 @@ describe('runBatch', () => {
           ],
           claimed: true,
           hung: null,
+          pid: 1,
         },
-        { hung: createBeat('m', 't'), claimed: true, records: [] },
-        { hung: createBeat(null, null), claimed: true, records: [] },
-        { hung: createBeat('m', null), claimed: true, records: [] },
-        { claimed: false, records: [], hung: null },
-        { records: [{ ...end, abandoned: true }], claimed: true, hung: null },
-        { hung: createBeat('m', 't'), records: [end], claimed: true },
+        { hung: createBeat('m', 't'), claimed: true, records: [], pid: 1 },
+        { hung: createBeat(null, null), claimed: true, records: [], pid: 1 },
+        { hung: createBeat('m', null), claimed: true, records: [], pid: 1 },
+        { claimed: false, records: [], hung: null, pid: null },
+        {
+          records: [{ ...end, abandoned: true }],
+          claimed: true,
+          hung: null,
+          pid: 1,
+        },
+        { hung: createBeat('m', 't'), records: [end], claimed: true, pid: 1 },
         {
           records: [{ ...end, hookError: 'afterAll boom' }],
           claimed: true,
           hung: null,
+          pid: 1,
         },
         {
           records: [{ ...end, dependencies: null }],
           claimed: true,
           hung: null,
+          pid: 1,
         },
       ],
       error: null,
@@ -160,7 +169,7 @@ describe('runBatch', () => {
 
   it('names the run error of a crashed unit', async () => {
     vi.mocked(runPlan).mockResolvedValue({
-      units: [{ claimed: true, records: [], hung: null }],
+      units: [{ claimed: true, records: [], hung: null, pid: 1 }],
       error: 'Worker forks emitted error.',
     })
 

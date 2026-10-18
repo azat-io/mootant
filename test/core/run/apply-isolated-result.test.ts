@@ -51,7 +51,7 @@ async function apply(
 }
 
 describe('applyIsolatedResult', () => {
-  it('kills on failures, load errors, crashes and stray errors', async () => {
+  it('kills on failures, load errors, crashes and stray errors, and costs units with their start', async () => {
     let { state, next } = await apply(
       {
         tests: [
@@ -68,11 +68,20 @@ describe('applyIsolatedResult', () => {
             id: 'a2',
           },
         ],
-        files: [{ loadKills: ['loading'], file: '/t/a.test.ts' }],
+        files: [
+          {
+            loadCovers: ['loading'],
+            loadKills: ['loading'],
+            file: '/t/a.test.ts',
+          },
+        ],
       },
       ['failed', 'loading', 'crash', 'stray', 'passed'],
       {
         change: facts => {
+          if (facts.unit === 0) {
+            return { ...facts, startup: 120 }
+          }
           if (facts.unit === 2) {
             return { ...facts, incomplete: 'crash' }
           }
@@ -93,7 +102,7 @@ describe('applyIsolatedResult', () => {
         status: 'Killed',
         test: 'a2',
       },
-      unitDuration: 4,
+      unitDuration: 124,
       duration: 4,
       units: 1,
       tries: 1,
@@ -246,10 +255,23 @@ describe('applyIsolatedResult', () => {
       change: facts => ({ ...facts, unit: -1 }),
       request: { retried: true },
     })
+    let confirmation = await apply(world, ['m1'], {
+      change: facts => ({ ...facts, unit: -1 }),
+      request: { confirming: true },
+    })
 
     expect(first.next).toStrictEqual([
       { file: '/t/a.test.ts', confirming: false, retried: true, mutant: 'm1' },
     ])
+    expect(first.state.mutants.get('m1')!.evidence.get('/t/a.test.ts')).toBe(
+      'retrying',
+    )
+    expect(confirmation.next).toStrictEqual([
+      { file: '/t/a.test.ts', confirming: true, retried: true, mutant: 'm1' },
+    ])
+    expect(
+      confirmation.state.mutants.get('m1')!.evidence.has('/t/a.test.ts'),
+    ).toBe(false)
     expect(second.next).toStrictEqual([])
     expect(second.state.mutants.get('m1')!.verdict).toStrictEqual({
       message: 'The test runner did not report this mutant.',
@@ -260,7 +282,7 @@ describe('applyIsolatedResult', () => {
     })
   })
 
-  it('records later units of a decided mutant without changing it', async () => {
+  it('keeps the kill of the first file when later units of the run pass or go missing', async () => {
     let { session, state } = await createTestRun(
       {
         tests: [
@@ -290,8 +312,60 @@ describe('applyIsolatedResult', () => {
     expect(next).toStrictEqual([])
     expect(state.mutants.get('m1')).toMatchObject({
       verdict: { status: 'Killed', test: 'a1' },
-      survived: false,
       units: 2,
+    })
+  })
+
+  it('holds back a later kill while an earlier file waits for its retry', async () => {
+    let { session, state } = await createTestRun(
+      {
+        tests: [
+          { file: '/t/a.test.ts', covers: ['m1'], id: 'a1' },
+          {
+            kills: { m1: 'boom' },
+            file: '/t/b.test.ts',
+            covers: ['m1'],
+            duration: 1,
+            id: 'b1',
+          },
+        ],
+      },
+      { mutants: ['m1'], isolate: true },
+    )
+    let mutant = state.mutants.get('m1')!
+    let requests = mutant.files
+      .splice(0)
+      .map(file => ({ confirming: false, retried: false, mutant: 'm1', file }))
+    let plan = planIsolated(state, requests)
+    let result = await session.runIsolated(plan)
+
+    let next = applyIsolatedResult(
+      state,
+      { requests, plan },
+      { units: result.units.slice(1) },
+    )
+
+    expect(next).toStrictEqual([{ ...requests[0], retried: true }])
+    expect(mutant.verdict).toBeNull()
+    expect(mutant.evidence.get('/t/a.test.ts')).toBe('retrying')
+
+    let retry = planIsolated(state, next)
+    let retried = await session.runIsolated(retry)
+    applyIsolatedResult(
+      state,
+      { requests: next, plan: retry },
+      {
+        units: retried.units.map(facts => ({
+          ...facts,
+          hits: facts.hits + 1_000_000,
+        })),
+      },
+    )
+
+    expect(mutant.verdict).toMatchObject({
+      file: '/t/a.test.ts',
+      cause: 'hit-limit',
+      status: 'Timeout',
     })
   })
 

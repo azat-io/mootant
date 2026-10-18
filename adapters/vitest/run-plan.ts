@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
 import type { VitestOutRecord, VitestHeartbeat } from './types/vitest-worker'
@@ -29,6 +29,12 @@ interface UnitOutcome {
   records: VitestOutRecord[]
 
   /**
+   * Process id of the worker that claimed the unit, or null when no worker
+   * claimed it.
+   */
+  pid: number | null
+
+  /**
    * Whether a worker claimed the unit.
    */
   claimed: boolean
@@ -41,7 +47,9 @@ interface UnitOutcome {
  * may get the same test file; each claims the next unit of the file and waits
  * until the unit before it finished (`waitForTurn`), so a test file never runs
  * twice at once. A concurrency lowers every project's `maxWorkers` for this
- * run.
+ * run. A unit counts as finished when its worker marks it done or, once the run
+ * is over, when a worker claimed it and died or was stopped before it could, so
+ * the progress reaches the number of units that ran.
  *
  * @param handle - Live Vitest instance of the session.
  * @param plan - Kind of the run, units in plan order and the most units at
@@ -65,6 +73,7 @@ export async function runPlan(
   let { vitest } = handle
   let directory = handle.context.workDirectory
   resetRunDirectory(directory)
+  handle.state.spawns.clear()
   let names = await writePlanFiles(directory, units)
   let specifications = units.map(unit =>
     vitest.getProjectByName(unit.project).createSpecification(unit.file),
@@ -99,12 +108,25 @@ export async function runPlan(
   }
   let records = readOutFiles(directory)
   let claims = new Set(readdirSync(path.join(directory, 'claim')))
+  let done = new Set(readdirSync(path.join(directory, 'done')))
+  for (let name of names) {
+    if (claims.has(name) && !done.has(name)) {
+      handle.context.onUnitEnd?.()
+    }
+  }
   return {
-    units: names.map((name, index) => ({
-      records: records.get(name) ?? [],
-      hung: hung.get(index) ?? null,
-      claimed: claims.has(name),
-    })),
+    units: names.map((name, index) => {
+      let claimed = claims.has(name)
+      return {
+        pid:
+          claimed ?
+            Number(readFileSync(path.join(directory, 'claim', name), 'utf8'))
+          : null,
+        records: records.get(name) ?? [],
+        hung: hung.get(index) ?? null,
+        claimed,
+      }
+    }),
     error,
   }
 }

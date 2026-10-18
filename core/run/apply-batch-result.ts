@@ -25,7 +25,8 @@ import { classifyTry } from './classify-try'
  * isolated path. A test whose leading control skipped itself ends its repeats
  * there, so its mutants count as tried without evidence rather than missing. A
  * hung unit gets a `worker-hang` warning and its timed-out try the cause
- * `hang`. Accepted kills go to the cache of the run.
+ * `hang`. Accepted kills and reached passes go to the cache of the run, so a
+ * later run reuses a kill only after the same passes (`applyCachedBatch`).
  *
  * @param state - State of the run, updated in place.
  * @param run - The run to record.
@@ -104,6 +105,10 @@ export function applyBatchResult(
           }
           case 'survived': {
             mutant.survived = true
+            state.cache?.recordBatch(mutant, test.id, {
+              inputs: result.inputs?.find(inputs => inputs.unit === index),
+              verdict: 'survived',
+            })
 
             break
           }

@@ -55,6 +55,13 @@ export interface IsolatedFacts {
   duration: number
 
   /**
+   * Milliseconds the unit's process took to start before the unit began, such
+   * as forking and booting a worker, without waiting for other units; 0 or
+   * omitted when the adapter cannot tell.
+   */
+  startup?: number
+
+  /**
    * Site evaluations of the whole unit.
    */
   hits: number

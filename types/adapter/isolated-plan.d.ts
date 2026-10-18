@@ -3,7 +3,10 @@ import type { TryLimits } from './try-limits'
 /**
  * One mutant active in one whole test file from the moment the file starts
  * loading, in a fresh module graph: every test of the file runs, since a test
- * that does not reach the mutant may still see the state an earlier test left.
+ * that does not reach the mutant may still see the state an earlier test left,
+ * until a test fails after the mutant was reached. That failure kills the
+ * mutant whatever runs next, so the adapter may skip the tests left; suite
+ * hooks that started, fixture cleanup and teardown still run.
  */
 export interface IsolatedUnit {
   /**

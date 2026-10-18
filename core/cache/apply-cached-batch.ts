@@ -1,20 +1,29 @@
+import type { MutantState } from '../../types/run/mutant-state'
 import type { RunState } from '../../types/run/run-state'
 
+import { rankMutantFiles } from '../run/rank-mutant-files'
 import { getTestFileKey } from '../run/get-test-file-key'
+import { compareCodeUnits } from '../compare-code-units'
+import { decideEvidence } from '../run/decide-evidence'
 
 /**
  * Applies cached evidence to the mutants on the batch path before the batch
  * phases of fast mode. Isolated evidence comes first, since it is what the
- * default mode trusts: a valid cached kill in a covering test file decides the
- * mutant on the isolated path, and so do valid cached reached passes in all of
- * them, as `Survived`. Otherwise a valid cached batch kill by a covering test
- * decides it on the batch path. Decided mutants are `cached` and take no batch
- * try; the others run as usual.
+ * default mode trusts, and it decides by the rule of the isolated path
+ * (`decideEvidence`) over the test files it would run in (`rankMutantFiles`): a
+ * valid cached kill in one of them decides the mutant on the isolated path when
+ * every file before it has a valid cached reached pass, and valid cached
+ * reached passes in all of them decide it as `Survived`. Otherwise a valid
+ * cached batch kill by a covering test decides it on the batch path, but only
+ * when every covering test the batch phases try before it (`getBatchOrder`) has
+ * a valid cached reached pass, so a test whose entry is gone, such as one that
+ * now runs out of time, runs first as in a fresh run. Decided mutants are
+ * `cached` and take no batch try; the others run as usual.
  *
  * @param state - State of the run with its cache, updated in place.
  */
 export function applyCachedBatch(state: RunState): void {
-  let { analysis, cache } = state
+  let { cache } = state
   if (cache === null) {
     return
   }
@@ -22,35 +31,62 @@ export function applyCachedBatch(state: RunState): void {
     if (mutant.path !== 'batch' || mutant.verdict !== null) {
       continue
     }
-    let files = new Set(
-      mutant.coveredBy.map(test => getTestFileKey(analysis.tests.get(test)!)),
-    )
-    let survived = 0
-    for (let file of files) {
+    let ranked = rankMutantFiles(state, mutant)
+    let evidence: MutantState['evidence'] = new Map()
+    for (let file of ranked) {
       let found = cache.lookupUnit(mutant, file)
-      if (found === 'survived') {
-        survived += 1
-      } else if (found !== null) {
-        mutant.verdict = found
+      if (found === null) {
+        break
+      }
+      evidence.set(file, found === 'survived' ? 'none' : found)
+      if (found !== 'survived') {
         break
       }
     }
-    if (mutant.verdict === null && survived === files.size) {
-      mutant.survived = true
-    }
-    if (mutant.verdict !== null || mutant.survived) {
-      mutant.path = 'isolated'
-    } else {
-      for (let test of mutant.coveredBy) {
-        mutant.verdict = cache.lookupBatch(mutant, test)
-        if (mutant.verdict !== null) {
+    let decided = decideEvidence({ evidence, ranked })
+    if (decided === null) {
+      for (let test of getBatchOrder(state, mutant)) {
+        let found = cache.lookupBatch(mutant, test)
+        if (found !== 'survived') {
+          mutant.verdict = found
           break
         }
       }
+    } else {
+      mutant.path = 'isolated'
+      mutant.verdict = decided.verdict
+      mutant.survived = decided.verdict === null
+      mutant.ranked = ranked
+      mutant.evidence = evidence
     }
     if (mutant.verdict !== null || mutant.survived) {
       mutant.cached = true
       mutant.queue = []
     }
   }
+}
+
+/**
+ * Lists the covering tests of a mutant in the order the batch phases apply
+ * their tries (`runBatchPhases`, `planBatch`): the cheapest in phase 1, then
+ * the others of phase 2 by test file key and file order.
+ *
+ * @param state - State of the run.
+ * @param mutant - Mutant on the batch path.
+ * @returns Ids of its covering tests.
+ */
+function getBatchOrder(state: RunState, mutant: MutantState): string[] {
+  let { analysis } = state
+  let [first, ...rest] = mutant.coveredBy
+  let keys = new Map(
+    rest.map(test => [test, getTestFileKey(analysis.tests.get(test)!)]),
+  )
+  return [
+    first!,
+    ...rest.toSorted(
+      (left, right) =>
+        compareCodeUnits(keys.get(left)!, keys.get(right)!) ||
+        analysis.order.get(left)! - analysis.order.get(right)!,
+    ),
+  ]
 }
