@@ -10,11 +10,11 @@ describe('watchUnitEnds', () => {
     vi.useRealTimers()
   })
 
-  it('calls back once per finished unit, on every look and at the stop', () => {
+  it('calls back once per finished unit with its name, on every look and at the stop', () => {
     vi.useFakeTimers()
     let directory = mkdtempSync(path.join(tmpdir(), 'mootant-done-'))
     mkdirSync(path.join(directory, 'done'))
-    let ends = vi.fn<() => void>()
+    let ends = vi.fn<(name: string) => void>()
     let watch = watchUnitEnds(directory, ends)
 
     writeFileSync(path.join(directory, 'done', 'a-0'), '')
@@ -31,7 +31,7 @@ describe('watchUnitEnds', () => {
     watch.stop()
     vi.advanceTimersByTime(1000)
 
-    expect(ends).toHaveBeenCalledTimes(3)
+    expect(ends.mock.calls).toStrictEqual([['a-0'], ['a-1'], ['b-0']])
 
     rmSync(directory, { recursive: true })
   })

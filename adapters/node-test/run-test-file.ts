@@ -13,8 +13,7 @@ import { runTestProcess } from './run-test-process'
  * mootant's preload and the project's flags, then the test file, in the project
  * root, with the unit in `MOOTANT_UNIT` and an out file of its own in the work
  * directory, removed once read. What the process writes goes to the context's
- * `onOutput` with the test file. The end of the process is reported to the
- * context's `onUnitEnd`.
+ * `onOutput` with the test file.
  *
  * @param handle - Live session.
  * @param input - Test file, what the process runs and its deadline.
@@ -55,6 +54,5 @@ export async function runTestFile(
     })
   } finally {
     rmSync(out, { force: true })
-    context.onUnitEnd?.()
   }
 }

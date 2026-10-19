@@ -62,15 +62,11 @@ describe('runTestFile', () => {
     await rm(directory, { recursive: true, force: true })
   })
 
-  it('runs the file with its unit, routes output and reports the end', async () => {
+  it('runs the file with its unit and routes output', async () => {
     let output: [string, string | null][] = []
-    let ends = 0
     let handle = await createHandle({
       onOutput: (text, file) => {
         output.push([text, file])
-      },
-      onUnitEnd: () => {
-        ends += 1
       },
     })
     let unit: NodeTestUnit | null = null
@@ -125,7 +121,6 @@ describe('runTestFile', () => {
       bail: false,
     })
     expect(output).toStrictEqual([['text', '/project/a.test.js']])
-    expect(ends).toBe(1)
     expect(handle.state.count).toBe(4)
     await expect(readdir(path.join(directory, 'out'))).resolves.toStrictEqual(
       [],

@@ -1,10 +1,12 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
-import type { VitestOutRecord, VitestHeartbeat } from './types/vitest-worker'
+import type { IsolatedFacts } from '../../types/adapter/isolated-result'
 import type { IsolatedUnit } from '../../types/adapter/isolated-plan'
 import type { VitestHandle } from './types/vitest-session-state'
 import type { BatchUnit } from '../../types/adapter/batch-plan'
+import type { VitestHeartbeat } from './types/vitest-worker'
+import type { UnitOutcome } from './types/unit-outcome'
 
 import { resetRunDirectory } from './reset-run-directory'
 import { runSpecifications } from './run-specifications'
@@ -13,32 +15,7 @@ import { stopHungWorker } from './stop-hung-worker'
 import { writePlanFiles } from './write-plan-files'
 import { watchUnitEnds } from './watch-unit-ends'
 import { readOutFiles } from './read-out-files'
-
-/**
- * What one unit of a run left behind.
- */
-interface UnitOutcome {
-  /**
-   * Last heartbeat of the worker the watchdog stopped, or null.
-   */
-  hung: VitestHeartbeat | null
-
-  /**
-   * Records the worker wrote, in order.
-   */
-  records: VitestOutRecord[]
-
-  /**
-   * Process id of the worker that claimed the unit, or null when no worker
-   * claimed it.
-   */
-  pid: number | null
-
-  /**
-   * Whether a worker claimed the unit.
-   */
-  claimed: boolean
-}
+import { readOutFile } from './read-out-file'
 
 /**
  * Runs the units of a batch or isolated plan in one Vitest run: writes the plan
@@ -49,7 +26,9 @@ interface UnitOutcome {
  * twice at once. A concurrency lowers every project's `maxWorkers` for this
  * run. A unit counts as finished when its worker marks it done or, once the run
  * is over, when a worker claimed it and died or was stopped before it could, so
- * the progress reaches the number of units that ran.
+ * the progress reaches the number of units that ran. The context's `onUnitEnd`
+ * gets the index of each finished unit and, for a unit its worker marked done,
+ * its facts with `describe`, else how long it ran, from its records.
  *
  * @param handle - Live Vitest instance of the session.
  * @param plan - Kind of the run, units in plan order and the most units at
@@ -58,12 +37,18 @@ interface UnitOutcome {
  * @param plan.units - Units in plan order.
  * @param plan.concurrency - Most units at once, or undefined to keep the
  *   setting.
+ * @param plan.describe - Builds the facts of a unit its worker marked done, if
+ *   given.
  * @returns What each unit left behind, in plan order, and the first unhandled
  *   error of the run, or null.
  */
 export async function runPlan(
   handle: VitestHandle,
   plan: {
+    describe?(
+      unit: number,
+      outcome: Omit<UnitOutcome, 'claimed'>,
+    ): IsolatedFacts
     units: readonly (IsolatedUnit | BatchUnit)[]
     mode: 'isolated' | 'batch'
     concurrency?: number
@@ -91,7 +76,34 @@ export async function runPlan(
       hung.set(beat.unit, beat)
     }
   })
-  let ends = watchUnitEnds(directory, handle.context.onUnitEnd)
+  let { onUnitEnd } = handle.context
+  let indexes = new Map(names.map((name, index) => [name, index]))
+  let ends = watchUnitEnds(
+    directory,
+    onUnitEnd === undefined ? undefined : (
+      name => {
+        let unit = indexes.get(name)!
+        let records = readOutFile(path.join(directory, 'out', `${name}.jsonl`))
+        if (plan.describe === undefined) {
+          let end = records.find(record => record.kind === 'end')
+          onUnitEnd(
+            end === undefined ? { unit } : { duration: end.duration, unit },
+          )
+          return
+        }
+        onUnitEnd({
+          facts: plan.describe(unit, {
+            pid: Number(
+              readFileSync(path.join(directory, 'claim', name), 'utf8'),
+            ),
+            hung: null,
+            records,
+          }),
+          unit,
+        })
+      }
+    ),
+  )
   let error: string | null
   try {
     error = await runSpecifications(
@@ -109,9 +121,9 @@ export async function runPlan(
   let records = readOutFiles(directory)
   let claims = new Set(readdirSync(path.join(directory, 'claim')))
   let done = new Set(readdirSync(path.join(directory, 'done')))
-  for (let name of names) {
+  for (let [unit, name] of names.entries()) {
     if (claims.has(name) && !done.has(name)) {
-      handle.context.onUnitEnd?.()
+      onUnitEnd?.({ unit })
     }
   }
   return {

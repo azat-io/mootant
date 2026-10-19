@@ -20,6 +20,7 @@ import { selectChangedMutants } from './files/select-changed-mutants'
 import { loadSvelteCompiler } from './parser/load-svelte-compiler'
 import { getPackageDirectory } from './run/get-package-directory'
 import { createWorkDirectory } from './run/create-work-directory'
+import { previewIsolatedUnit } from './run/preview-isolated-unit'
 import { resolveMutantIds } from './identity/resolve-mutant-ids'
 import { markOutsideMutants } from './run/mark-outside-mutants'
 import { applyCachedBatch } from './cache/apply-cached-batch'
@@ -41,6 +42,7 @@ import { resolveAdapter } from './run/resolve-adapter'
 import { saveRunCache } from './cache/save-run-cache'
 import { readRunCache } from './cache/read-run-cache'
 import { getCachePath } from './cache/get-cache-path'
+import { countVerdicts } from './run/count-verdicts'
 import { decideResults } from './run/decide-results'
 import { runDryPhase } from './run/run-dry-phase'
 import { prepareRun } from './config/prepare-run'
@@ -244,16 +246,27 @@ export async function runMutants(
   let work = await createWorkDirectory()
   try {
     let switched: SwitchedFile[] = []
+    let live: { state: RunState | null } = { state: null }
     let session = await adapter.start({
+      onUnitEnd:
+        options.onProgress === undefined ?
+          undefined
+        : end => {
+            if (end !== undefined && live.state !== null) {
+              previewIsolatedUnit(live.state, end)
+            }
+            report({
+              duration: end?.facts?.duration ?? end?.duration ?? null,
+              unit: end?.unit ?? null,
+              kind: 'unit-end',
+            })
+          },
       onOutput: (text, file) => {
         report({
           file: file === null ? null : getDisplayPath(file, root),
           kind: 'output',
           text,
         })
-      },
-      onUnitEnd: () => {
-        report({ kind: 'unit-end' })
       },
       concurrency: options.concurrency ?? run.concurrency ?? null,
       workDirectory: work.path,
@@ -274,6 +287,7 @@ export async function runMutants(
         files,
         since,
         setup,
+        live,
         fast,
         run,
       })
@@ -304,10 +318,13 @@ export async function runMutants(
  *   with batch mode.
  * @param context.setup - Prepared configuration.
  * @param context.run - Run settings of the configuration.
+ * @param context.live - Holder of the state of the run once it exists, so the
+ *   units that end count in the live verdict counts.
  * @returns Result of the run.
  */
 async function execute(context: {
   setup: Awaited<ReturnType<typeof prepareRun>>
+  live: { state: RunState | null }
   since: SinceRevision | null
   options: RunMutantsOptions
   diagnostics: Diagnostic[]
@@ -424,8 +441,8 @@ async function execute(context: {
     imports: await readTestImports(
       [...analysis.testFiles.values()].map(entry => entry.file),
     ),
-    report: event => options.onProgress?.(event),
     batch: context.adapter.batch,
+    report: options.onProgress,
     mutants: pending,
     analysis,
     limits,
@@ -437,6 +454,10 @@ async function execute(context: {
     state.runs.dry = dryPhase.runs
   }
   state.cache = cache
+  if (state.live !== null) {
+    state.live.outside = new Set(dryPhase.dry.outside)
+  }
+  context.live.state = state
   if (fast && analysis.unrepeatable.size > 0) {
     options.onProgress?.({ message: describeUnrepeatable(state), kind: 'note' })
   }
@@ -465,6 +486,7 @@ async function execute(context: {
   let isolatedStarted = performance.now()
   await runIsolatedRounds(session, state)
   markOutsideMutants(state, dryPhase.dry.outside)
+  countVerdicts(state)
   diagnostics.push(...state.diagnostics)
   if (cache !== null) {
     let skipped = await saveRunCache({

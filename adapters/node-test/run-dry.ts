@@ -39,7 +39,8 @@ const REQUIRED_ESM =
  * or suite, are kept for later runs. A switched file in the `require` cache of
  * a process whose module hooks run in a thread of their own, never served nor
  * found changed, is reported in `unserved`, since only `require()` of an ES
- * module loads it so.
+ * module loads it so. The end of every test file is reported to the context's
+ * `onUnitEnd`.
  *
  * @param handle - Live session.
  * @param request - Test files or related files, budgets and whether to serve
@@ -91,8 +92,8 @@ export async function runDry(
     })
   let outcomes = await runInPool(
     files.map(file => ({
-      run: () =>
-        runTestFile(handle, {
+      run: async () => {
+        let outcome = await runTestFile(handle, {
           deadline: watch =>
             getDryDeadline(watch, request.timeouts, handle.testTimeout),
           hitLimit: null,
@@ -102,7 +103,10 @@ export async function runDry(
           bail: false,
           plan,
           file,
-        }),
+        })
+        context.onUnitEnd?.()
+        return outcome
+      },
       key: file,
     })),
     handle.workers,

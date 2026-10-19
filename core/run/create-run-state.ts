@@ -18,9 +18,9 @@ interface RunStateInput {
 
   /**
    * Receives the events of the run, such as the start of each run of the test
-   * runner.
+   * runner; when omitted, nothing counts the decided mutants as they come.
    */
-  report(event: RunEvent): void
+  report?(event: RunEvent): void
 
   /**
    * Messages of the files whose mutants get no verdict, by display path.
@@ -75,9 +75,20 @@ interface RunStateInput {
 export function createRunState(input: RunStateInput): RunState {
   let { analysis, mutants, errors } = input
   let state: RunState = {
+    live:
+      input.report === undefined ?
+        null
+      : {
+          counts: { survived: 0, timeout: 0, killed: 0, error: 0 },
+          statuses: new Map(),
+          outside: new Set(),
+          preview: new Map(),
+          reported: null,
+          running: null,
+        },
+    report: input.report ?? (() => {}),
     workers: input.workers,
     imports: input.imports,
-    report: input.report,
     limits: input.limits,
     mutants: new Map(),
     root: input.root,

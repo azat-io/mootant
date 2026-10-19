@@ -1,4 +1,5 @@
 import type { SwitchedFile } from './switched-file'
+import type { UnitEnd } from './unit-end'
 
 /**
  * What the core gives an adapter when a session starts.
@@ -10,6 +11,16 @@ export interface AdapterContext {
    * it, or null when unknown. Optional; an adapter may print it when omitted.
    */
   onOutput?(text: string, file: string | null): void
+
+  /**
+   * Called once each time a unit of a run finishes: a test file of a dry run, a
+   * unit of a batch or isolated plan. Optional; only drives progress.
+   *
+   * @param end - Which unit of a batch or isolated plan finished, with the
+   *   facts of an isolated unit when the adapter knows them already; omitted
+   *   for a test file of a dry run and by adapters that cannot tell.
+   */
+  onUnitEnd?(end?: UnitEnd): void
 
   /**
    * Files to serve switched. A module whose loaded text differs from `original`
@@ -32,12 +43,6 @@ export interface AdapterContext {
    * creates it and removes it after `close`.
    */
   workDirectory: string
-
-  /**
-   * Called each time a unit of a run finishes: a test file of a dry run, a unit
-   * of a batch or isolated plan. Optional; only drives progress.
-   */
-  onUnitEnd?(): void
 
   /**
    * Project root: the directory of the mootant configuration, else the working

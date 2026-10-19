@@ -1,10 +1,13 @@
 import type { AdapterSession } from '../../types/adapter/adapter-session'
 import type { PlannedTry, RunState } from '../../types/run/run-state'
 import type { MutantState } from '../../types/run/mutant-state'
+import type { BatchPlan } from '../../types/adapter/batch-plan'
 import type { RunKind } from '../../types/run/run-kind'
 
+import { getBatchUnitCost } from './get-batch-unit-cost'
 import { applyBatchResult } from './apply-batch-result'
 import { getDisplayPath } from './get-display-path'
+import { countVerdicts } from './count-verdicts'
 import { routeIsolated } from './route-isolated'
 import { planBatch } from './plan-batch'
 import { countRun } from './count-run'
@@ -72,14 +75,15 @@ export async function runBatchPhases(
     )
     let plan = planBatch(state, tries, 2)
     countRun(state, 'confirmation', {
+      ...describeBatch(state, plan, 2),
       mutants: confirming.length,
-      units: plan.units.length,
     })
     let missing = applyBatchResult(state, {
       result: await session.runBatch(plan),
       confirming: true,
       plan,
     })
+    countVerdicts(state)
     for (let { mutant } of missing) {
       routeIsolated(state, mutant, 'recovery')
     }
@@ -156,14 +160,38 @@ async function runBatchOnce(
   let plan = planBatch(state, work.tries, 1)
   let mutants = new Set(work.tries.map(({ mutant }) => mutant))
   countRun(state, work.kind, {
-    units: plan.units.length,
+    ...describeBatch(state, plan, 1),
     mutants: mutants.size,
   })
   let result = await session.runBatch(plan)
   for (let incomplete of result.incomplete) {
     work.messages.set(plan.units[incomplete.unit]!.file, incomplete.message)
   }
-  return applyBatchResult(state, { confirming: false, result, plan })
+  let missing = applyBatchResult(state, { confirming: false, result, plan })
+  countVerdicts(state)
+  return missing
+}
+
+/**
+ * Describes the units of a batch plan for the progress: their expected costs
+ * (`getBatchUnitCost`), one serial chain per unit, as a batch plan has one unit
+ * per test file, and the workers of the plan.
+ *
+ * @param state - State of the run.
+ * @param plan - Plan of the run.
+ * @param scale - 1, or 2 for a run that confirms timeouts.
+ * @returns Work of the run without its mutants.
+ */
+function describeBatch(
+  state: RunState,
+  plan: BatchPlan,
+  scale: number,
+): { chains: number[]; workers: number; costs: number[] } {
+  return {
+    costs: plan.units.map(unit => getBatchUnitCost(state, unit, scale)),
+    chains: plan.units.map((_unit, index) => index),
+    workers: plan.concurrency!,
+  }
 }
 
 /**

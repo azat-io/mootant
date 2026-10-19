@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
+import type { RunEvent } from '../../../types/run/run-event'
+
+import { previewIsolatedUnit } from '../../../core/run/preview-isolated-unit'
 import { runIsolatedRounds } from '../../../core/run/run-isolated-rounds'
 import { createTestRun } from '../../helpers/create-test-run'
 
@@ -137,6 +140,37 @@ describe('runIsolatedRounds', () => {
       message: 'The test runner did not report this mutant.',
       status: 'Error',
     })
+  })
+
+  it('counts the verdicts of the last round without facts of its units', async () => {
+    let { session, state, fake } = await createTestRun(
+      {
+        onIsolated: result => ({
+          units: result.units.map(facts => ({
+            ...facts,
+            incomplete: 'hang' as const,
+          })),
+        }),
+        tests: [{ file: '/t/a.test.ts', covers: ['hung'], id: 'a1' }],
+      },
+      { mutants: ['hung'], isolate: true },
+    )
+    let events: (RunEvent | string)[] = []
+    state.report = event => {
+      events.push(event.kind === 'run-start' ? `run ${event.round}` : event)
+    }
+    fake.context!.onUnitEnd = end => {
+      previewIsolatedUnit(state, { unit: end!.unit })
+    }
+
+    await runIsolatedRounds(session, state)
+
+    expect(events).toStrictEqual([
+      { kind: 'verdicts', survived: 0, timeout: 0, killed: 0, error: 0 },
+      'run 1',
+      'run 2',
+      { kind: 'verdicts', survived: 0, timeout: 1, killed: 0, error: 0 },
+    ])
   })
 
   it('confirms a timeout found in a later round in the round after it', async () => {

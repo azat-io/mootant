@@ -428,12 +428,15 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
     runIsolated: plan => {
       fake.calls.isolated.push(plan)
       let result = { units: plan.units.map(runIsolatedUnit) }
-      for (let _unit of plan.units) {
-        fake.context!.onUnitEnd?.()
+      let reported =
+        world.onIsolated?.(result, plan, fake.calls.isolated.length) ?? result
+      for (let unit of plan.units.keys()) {
+        let facts = reported.units.find(entry => entry.unit === unit)
+        fake.context!.onUnitEnd?.(
+          facts === undefined ? { unit } : { facts, unit },
+        )
       }
-      return Promise.resolve(
-        world.onIsolated?.(result, plan, fake.calls.isolated.length) ?? result,
-      )
+      return Promise.resolve(reported)
     },
     listTestFiles: () =>
       Promise.resolve(

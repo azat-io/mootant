@@ -159,5 +159,22 @@ describe('runIsolated', () => {
       ],
     })
     expect(readUnitInputs).toHaveBeenCalledTimes(2)
+
+    let [[, { describe: describeUnit }]] = vi.mocked(runPlan).mock.calls as [
+      Parameters<typeof runPlan>,
+    ]
+
+    expect(describeUnit!(2, { hung: null, pid: 102, records })).toStrictEqual({
+      incomplete: 'crash',
+      timedOut: false,
+      hookError: null,
+      loadError: null,
+      reached: true,
+      tests: tries,
+      duration: 6,
+      strays: [],
+      hits: 4,
+      unit: 2,
+    })
   })
 })

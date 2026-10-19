@@ -1,3 +1,4 @@
+// spell-checker:ignore survi
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { RunEvent } from '../../types/run/run-event'
@@ -41,6 +42,40 @@ describe('createRunProgress', () => {
     }
   }
 
+  /**
+   * Builds the start of a run of the test runner whose units each cost a second
+   * and have test files of their own.
+   *
+   * @param fields - Fields that differ.
+   * @returns The event.
+   */
+  function startRun(
+    fields: Partial<Extract<RunEvent, { kind: 'run-start' }>> = {},
+  ): Extract<RunEvent, { kind: 'run-start' }> {
+    let units = fields.units ?? 12
+    return {
+      chains: Array.from({ length: units }, (_, index) => index),
+      costs: Array.from({ length: units }, () => 1000),
+      kind: 'run-start',
+      run: 'isolated',
+      mutants: 12,
+      workers: 1,
+      round: 1,
+      ...fields,
+      units,
+    }
+  }
+
+  /**
+   * Builds the end of a unit.
+   *
+   * @param unit - Index of the unit, or null.
+   * @returns The event.
+   */
+  function endUnit(unit: number | null = null): RunEvent {
+    return { kind: 'unit-end', duration: null, unit }
+  }
+
   beforeEach(() => {
     now = 1000
     lines = []
@@ -75,27 +110,20 @@ describe('createRunProgress', () => {
     texts.push(getText())
     feed(progress, [
       [100, { kind: 'dry-start', files: 2 }],
-      [300, { kind: 'unit-end' }],
+      [300, endUnit()],
     ])
     texts.push(getText())
     feed(progress, [[100, { kind: 'dry-end', duration: 400, tests: 5 }]])
     texts.push(getText())
     feed(progress, [
-      [
-        50,
-        {
-          kind: 'run-start',
-          run: 'isolated',
-          mutants: 12,
-          units: 12,
-          round: 1,
-        },
-      ],
-      [1000, { kind: 'unit-end' }],
-      [1000, { kind: 'unit-end' }],
+      [50, startRun()],
+      [1000, endUnit(0)],
+      [1000, endUnit(1)],
     ])
     texts.push(getText())
-    feed(progress, [[1000, { kind: 'unit-end' }]])
+    feed(progress, [[1000, endUnit(2)]])
+    texts.push(getText())
+    now += 4000
     texts.push(getText())
     progress.finish()
     progress.finish()
@@ -106,7 +134,8 @@ describe('createRunProgress', () => {
       'dry run  1 test file · 0.3s',
       'planning  0.0s',
       'testing 12 mutants  2/12 test runs · 2.0s',
-      'testing 12 mutants  3/12 test runs · 3.0s · ~9.0s left',
+      'testing 12 mutants  3/12 test runs · 3.0s · ~10s left in round',
+      'testing 12 mutants  3/12 test runs · 7.0s · ~5s left in round',
     ])
     expect(lines).toStrictEqual([])
     expect(stops).toBe(1)
@@ -128,7 +157,13 @@ describe('createRunProgress', () => {
       ['isolated', 3, 2],
     ]
     let texts = runs.map(([run, round, mutants]) => {
-      progress.handle({ kind: 'run-start', units: 9, mutants, round, run })
+      progress.handle(startRun({ units: 9, mutants, round, run }))
+      return getText()
+    })
+    vi.mocked(createSpinner).mockClear()
+    let narrow = createRunProgress(createTextStyle({ width: 40 }), false)
+    let shorts = runs.map(([run, round, mutants]) => {
+      narrow.handle(startRun({ units: 9, mutants, round, run }))
       return getText()
     })
 
@@ -141,6 +176,183 @@ describe('createRunProgress', () => {
       'testing 3 survivors with more test files  0/9 test runs · 0.0s',
       'testing 2 survivors with more test files  0/9 test runs · 0.0s',
     ])
+    expect(shorts).toStrictEqual([
+      'batch 4 mutants  0/9',
+      'batch round 2: 1 survivor  0/9',
+      'recovering 2 mutants  0/9',
+      'confirming 1  0/9',
+      '1 mutant  0/9',
+      'round 2: 3 survivors  0/9',
+      'round 3: 2 survivors  0/9',
+    ])
+  })
+
+  it('counts decided mutants in runs and marks the time left of a round', () => {
+    let progress = createRunProgress(createTextStyle({ colors: true }), false)
+
+    feed(progress, [
+      [0, { kind: 'verdicts', survived: 0, timeout: 0, killed: 3, error: 0 }],
+    ])
+    let planning = getText()
+    feed(progress, [
+      [0, startRun()],
+      [1000, endUnit(0)],
+      [0, { kind: 'verdicts', survived: 2, killed: 120, timeout: 1, error: 4 }],
+      [1000, endUnit(1)],
+      [1000, endUnit(2)],
+    ])
+
+    expect(showEscapes(planning)).toBe('preparing  <90>0.0s<39>')
+    expect(showEscapes(getText())).toBe(
+      'testing 12 mutants  <90>3/12 test runs<39> · <90>killed 120<39> · <90>survived<39> <92>2<39> · <90>timeout 1<39> · <90>error<39> <31>4<39> · <90>3.0s<39> · <90>~10s left in round<39>',
+    )
+
+    feed(progress, [
+      [0, { kind: 'verdicts', survived: 0, timeout: 0, killed: 5, error: 0 }],
+    ])
+
+    expect(showEscapes(getText())).toBe(
+      'testing 12 mutants  <90>3/12 test runs<39> · <90>killed 5<39> · <90>survived<39> <90>0<39> · <90>3.0s<39> · <90>~10s left in round<39>',
+    )
+  })
+
+  it('leaves parts out of the line instead of wrapping it', () => {
+    let texts = [80, 60, 50, 40, 30, 20].map(width => {
+      now = 1000
+      vi.mocked(createSpinner).mockClear()
+      let progress = createRunProgress(createTextStyle({ width }), false)
+      feed(progress, [
+        [
+          0,
+          { kind: 'verdicts', survived: 14, killed: 120, timeout: 2, error: 1 },
+        ],
+        [0, startRun({ round: 2 })],
+        [1000, endUnit(0)],
+        [1000, endUnit(1)],
+        [1000, endUnit(2)],
+      ])
+      return getText()
+    })
+
+    expect(texts).toStrictEqual([
+      'round 2: 12 survivors  3/12 · killed 120 · survived 14 · ~10s left',
+      'round 2: 12 survivors  3/12 · survived 14 · ~10s left',
+      'round 2: 12 survivors  3/12 · survived 14',
+      'round 2: 12 survivors  3/12',
+      'round 2: 12 survivors  3/12',
+      'round 2: 12 survi…',
+    ])
+    for (let [index, width] of [80, 60, 50, 40, 30, 20].entries()) {
+      expect(texts[index]!.length).toBeLessThanOrEqual(width - 2)
+    }
+  })
+
+  it('keeps the time left of a large run and the same parts as counts grow', () => {
+    let texts = [100, 80, 60].map(width => {
+      now = 1000
+      vi.mocked(createSpinner).mockClear()
+      let progress = createRunProgress(createTextStyle({ width }), false)
+      let shown: string[] = []
+      feed(progress, [
+        [0, { kind: 'mutants', total: 1450, ignored: 0, files: 9 }],
+        [0, { kind: 'verdicts', survived: 0, timeout: 0, killed: 0, error: 0 }],
+        [
+          0,
+          startRun({
+            chains: Array.from({ length: 4980 }, (_, index) => index % 60),
+            costs: Array.from({ length: 4980 }, () => 400),
+            mutants: 1450,
+            units: 4980,
+            workers: 4,
+          }),
+        ],
+      ])
+      shown.push(getText())
+      for (let unit = 0; unit < 2210; unit++) {
+        feed(progress, [[100, { kind: 'unit-end', duration: 380, unit }]])
+        if (unit === 8) {
+          feed(progress, [
+            [
+              0,
+              {
+                kind: 'verdicts',
+                survived: 1,
+                timeout: 0,
+                killed: 7,
+                error: 0,
+              },
+            ],
+          ])
+          shown.push(getText())
+        }
+      }
+      feed(progress, [
+        [
+          0,
+          {
+            kind: 'verdicts',
+            survived: 145,
+            killed: 1203,
+            timeout: 0,
+            error: 0,
+          },
+        ],
+      ])
+      shown.push(getText())
+      return shown
+    })
+
+    expect(texts).toStrictEqual([
+      [
+        'testing 1450 mutants  0/4980 test runs · killed 0 · survived 0',
+        'testing 1450 mutants  9/4980 test runs · killed 7 · survived 1',
+        'testing 1450 mutants  2210/4980 test runs · killed 1203 · survived 145 · ~4m 40s left in round',
+      ],
+      [
+        '1450 mutants  0/4980 · killed 0 · survived 0',
+        '1450 mutants  9/4980 · killed 7 · survived 1',
+        '1450 mutants  2210/4980 · killed 1203 · survived 145 · ~4m 40s in round',
+      ],
+      [
+        '1450 mutants  0/4980 · survived 0',
+        '1450 mutants  9/4980 · survived 1',
+        '1450 mutants  2210/4980 · survived 145 · ~4m 40s in round',
+      ],
+    ])
+  })
+
+  it('hides the time left once every unit ended or its end passed', () => {
+    let progress = createRunProgress(createTextStyle(), false)
+    feed(progress, [
+      [0, startRun({ units: 4 })],
+      [1000, endUnit(0)],
+      [1000, endUnit(1)],
+      [1000, endUnit(2)],
+    ])
+    let texts = [getText()]
+    now += 1500
+    texts.push(getText())
+    feed(progress, [[1000, endUnit(3)]])
+    texts.push(getText())
+
+    expect(texts).toStrictEqual([
+      'testing 12 mutants  3/4 test runs · 3.0s · ~5s left in round',
+      'testing 12 mutants  3/4 test runs · 4.5s',
+      'testing 12 mutants  4/4 test runs · 5.5s',
+    ])
+  })
+
+  it('follows the width of the terminal as it changes', () => {
+    Object.defineProperty(process.stderr, 'columns', {
+      configurable: true,
+      value: 40,
+    })
+    let progress = createRunProgress(createTextStyle({ width: 200 }), false)
+    feed(progress, [[0, startRun()]])
+    let text = getText()
+    Reflect.deleteProperty(process.stderr, 'columns')
+
+    expect(text).toBe('12 mutants  0/12')
   })
 
   it('prints a line per finished phase outside a terminal', () => {
@@ -151,13 +363,12 @@ describe('createRunProgress', () => {
       [0, { kind: 'mutants', ignored: 0, total: 3, files: 1 }],
       [0, { kind: 'dry-start', files: 1 }],
       [400, { kind: 'dry-end', duration: 400, tests: 1 }],
-      [0, { kind: 'run-start', run: 'batch', mutants: 3, round: 1, units: 1 }],
-      [200, { kind: 'unit-end' }],
-      [
-        0,
-        { kind: 'run-start', run: 'isolated', mutants: 1, round: 1, units: 1 },
-      ],
-      [100, { kind: 'unit-end' }],
+      [0, { kind: 'verdicts', survived: 0, timeout: 0, killed: 0, error: 0 }],
+      [0, startRun({ run: 'batch', mutants: 3, units: 1 })],
+      [0, { kind: 'verdicts', survived: 0, timeout: 0, killed: 2, error: 0 }],
+      [200, endUnit()],
+      [0, startRun({ mutants: 1, units: 1 })],
+      [100, endUnit()],
     ])
     progress.finish()
 

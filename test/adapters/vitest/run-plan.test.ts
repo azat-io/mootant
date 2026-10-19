@@ -5,6 +5,7 @@ import path from 'node:path'
 
 import type { VitestSessionState } from '../../../adapters/vitest/types/vitest-session-state'
 import type { VitestHeartbeat } from '../../../adapters/vitest/types/vitest-worker'
+import type { IsolatedFacts } from '../../../types/adapter/isolated-result'
 import type { IsolatedUnit } from '../../../types/adapter/isolated-plan'
 
 import { watchHeartbeats } from '../../../adapters/vitest/watch-heartbeats'
@@ -82,6 +83,7 @@ describe('runPlan', () => {
             '{"kind":"late","message":"x","mutant":null,"test":"t"}\n',
           )
           await writeFile(path.join(directory, 'claim', `${other}-0`), '13')
+          await writeFile(path.join(directory, 'out', `${other}-0.jsonl`), '')
           await writeFile(path.join(directory, 'done', `${other}-0`), '')
           return { unhandledErrors: [new Error('worker died')] }
         },
@@ -104,8 +106,16 @@ describe('runPlan', () => {
       { file: '/a.test.ts', project: 'b', mutant: 'c', limits },
     ]
 
+    let facts = { unit: 1 } as IsolatedFacts
+    let describeUnit = vi.fn(() => facts)
+
     await expect(
-      runPlan(handle, { mode: 'isolated', concurrency: 2, units }),
+      runPlan(handle, {
+        describe: describeUnit,
+        mode: 'isolated',
+        concurrency: 2,
+        units,
+      }),
     ).resolves.toStrictEqual({
       units: [
         {
@@ -125,10 +135,61 @@ describe('runPlan', () => {
       'b /a.test.ts',
     ])
     expect(seen).toStrictEqual([2, 1, 0])
-    // The unit marked done counts as it ends; the claimed unit without a
-    // mark counts once the run is over.
-    expect(onUnitEnd).toHaveBeenCalledTimes(2)
+    // The unit marked done counts as it ends, with its facts; the claimed
+    // unit without a mark counts once the run is over.
+    expect(onUnitEnd.mock.calls).toStrictEqual([
+      [{ unit: 1, facts }],
+      [{ unit: 0 }],
+    ])
+    expect(describeUnit.mock.calls).toStrictEqual([
+      [1, { records: [], hung: null, pid: 13 }],
+    ])
     expect(configs).toStrictEqual([{ maxWorkers: 4 }, { maxWorkers: 1 }])
+  })
+
+  it('reports how long a batch unit marked done ran, if it tells', async () => {
+    let hash = getFileHash('/a.test.ts', '')
+    let onUnitEnd = vi.fn()
+    let handle = {
+      vitest: {
+        runTestSpecifications: async () => {
+          await Promise.all(
+            ['{"kind":"end","duration":40}\n', ''].map(
+              async (records, index) => {
+                let name = `${hash}-${index}`
+                await writeFile(
+                  path.join(directory, 'out', `${name}.jsonl`),
+                  records,
+                )
+                await writeFile(path.join(directory, 'claim', name), '12')
+                await writeFile(path.join(directory, 'done', name), '')
+              },
+            ),
+          )
+          return { unhandledErrors: [] }
+        },
+        getProjectByName: () => ({
+          createSpecification: (file: string) => ({ moduleId: file }),
+        }),
+        provide: vi.fn(),
+        projects: [],
+      },
+      context: { workDirectory: directory, onUnitEnd },
+      state: { spawns: new Map() },
+    } as never
+    let unit = {
+      limits: { load: { hitLimit: 1, timeout: 1 }, tests: [], total: 1 },
+      file: '/a.test.ts',
+      project: '',
+      tests: [],
+    }
+
+    await runPlan(handle, { units: [unit, unit] as never, mode: 'batch' })
+
+    expect(onUnitEnd.mock.calls).toStrictEqual([
+      [{ duration: 40, unit: 0 }],
+      [{ unit: 1 }],
+    ])
   })
 
   it('stops the watchdog when the run fails', async () => {

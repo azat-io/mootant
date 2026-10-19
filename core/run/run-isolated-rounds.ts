@@ -2,7 +2,10 @@ import type { IsolatedRequest, RunState } from '../../types/run/run-state'
 import type { AdapterSession } from '../../types/adapter/adapter-session'
 
 import { applyIsolatedResult } from './apply-isolated-result'
+import { countVerdicts } from './count-verdicts'
+import { numberChains } from './number-chains'
 import { planIsolated } from './plan-isolated'
+import { getFileCost } from './get-file-cost'
 import { countRun } from './count-run'
 
 /**
@@ -21,7 +24,9 @@ import { countRun } from './count-run'
  * does not depend on the batches or the workers. A round also runs the retries
  * and confirmations of the round before. A request lives at most four rounds,
  * as a unit missing twice gets an `Error` verdict and a timeout is confirmed
- * once, so the rounds end.
+ * once, so the rounds end. While a round runs, its units count in the live
+ * verdict counts as they end (`previewIsolatedUnit`), and every mutant is
+ * counted again once its result is recorded (`countVerdicts`).
  *
  * @param session - Live test runner.
  * @param state - State of the run, updated in place.
@@ -81,11 +86,26 @@ async function runRound(
   let plan = planIsolated(state, requests)
   let mutants = new Set(requests.map(({ mutant }) => mutant))
   countRun(state, 'isolated', {
-    units: plan.units.length,
+    costs: requests.map((request, index) =>
+      request.confirming ?
+        plan.units[index]!.limits.timeout
+      : getFileCost(state, request.file),
+    ),
+    chains: numberChains(requests.map(request => request.file)),
+    workers: state.workers,
     mutants: mutants.size,
   })
+  if (state.live !== null) {
+    state.live.running = { requests, plan }
+  }
   let result = await session.runIsolated(plan)
-  return applyIsolatedResult(state, { requests, plan }, result)
+  if (state.live !== null) {
+    state.live.running = null
+    state.live.preview.clear()
+  }
+  let pending = applyIsolatedResult(state, { requests, plan }, result)
+  countVerdicts(state)
+  return pending
 }
 
 /**

@@ -306,6 +306,46 @@ describe('runMutants', () => {
     expect(result.unrepeatable).toStrictEqual([])
   })
 
+  it('counts kills of a run decided on the batch path in its last verdicts', async () => {
+    let added = ids['src/math.ts']!
+    let events: RunEvent[] = []
+    let { result, fake } = await run(
+      {
+        tests: [
+          {
+            kills: Object.fromEntries(added.map(id => [id, 'boom'])),
+            file: path.join(root, 'test/math.test.ts'),
+            covers: added,
+            id: 'math',
+          },
+        ],
+      },
+      {
+        onProgress: event => {
+          events.push(event)
+        },
+        paths: ['src/math.ts'],
+        fast: true,
+      },
+    )
+
+    expect(result.runs).toStrictEqual({ batch: 1, dry: 1 })
+    expect(fake.context!.onUnitEnd).toBeTypeOf('function')
+    expect(events.findLast(event => event.kind === 'verdicts')).toStrictEqual({
+      killed: added.length,
+      kind: 'verdicts',
+      survived: 0,
+      timeout: 0,
+      error: 0,
+    })
+  })
+
+  it('counts nothing as units end without a receiver of progress', async () => {
+    let { fake } = await run({ tests: [] }, { paths: ['src/math.ts'] })
+
+    expect(fake.context!.onUnitEnd).toBeUndefined()
+  })
+
   it('selects a mutant by a prefix of its id, reports the warnings of the session first and plans for its workers', async () => {
     let [add] = ids['src/math.ts']!
     let warning: Diagnostic = {
@@ -552,6 +592,7 @@ describe('runMutants', () => {
           events.push(event)
         },
         paths: ['src/flag.ts'],
+        concurrency: 2,
         fast: true,
       },
     )
@@ -565,16 +606,28 @@ describe('runMutants', () => {
       { kind: 'dry-start', files: 1 },
       { file: 'test/flag.test.ts', kind: 'output', text: 'log\n' },
       { text: 'warning\n', kind: 'output', file: null },
-      { kind: 'unit-end' },
+      { kind: 'unit-end', duration: null, unit: null },
       { kind: 'dry-end', duration: 0, tests: 2 },
       {
         message:
           '1 test is not repeatable; the 2 mutants it reaches run isolated.',
         kind: 'note',
       },
-      { kind: 'run-start', run: 'isolated', mutants: 2, round: 1, units: 2 },
-      { kind: 'unit-end' },
-      { kind: 'unit-end' },
+      { kind: 'verdicts', survived: 0, timeout: 0, killed: 0, error: 0 },
+      {
+        kind: 'run-start',
+        run: 'isolated',
+        chains: [0, 0],
+        costs: [2, 2],
+        workers: 2,
+        mutants: 2,
+        round: 1,
+        units: 2,
+      },
+      { kind: 'verdicts', survived: 1, timeout: 0, killed: 0, error: 0 },
+      { kind: 'unit-end', duration: 2, unit: 0 },
+      { kind: 'verdicts', survived: 2, timeout: 0, killed: 0, error: 0 },
+      { kind: 'unit-end', duration: 2, unit: 1 },
     ])
     expect(result.unrepeatable).toStrictEqual(['flaky'])
     expect(result.diagnostics).toStrictEqual([

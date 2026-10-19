@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import type { NodeTestHandle } from '../../../adapters/node-test/types/node-test-handle'
+import type { UnitEnd } from '../../../types/adapter/unit-end'
 
 import { runTestFile } from '../../../adapters/node-test/run-test-file'
 import { runIsolated } from '../../../adapters/node-test/run-isolated'
@@ -28,24 +29,26 @@ describe('runIsolated', () => {
 
   it('runs every unit with its mutant and reports facts and inputs', async () => {
     directory = await mkdtemp(path.join(tmpdir(), 'mootant-isolated-'))
+    let onUnitEnd = vi.fn<(end?: UnitEnd) => void>()
     let plain = path.join(directory, 'a.test.js')
     let todo = path.join(directory, 'b.test.js')
     await writeFile(plain, 'test("a", () => {})')
     await writeFile(todo, 'test("b")')
     await writeFile(path.join(directory, 'package.json'), '{}')
     let handle: NodeTestHandle = {
+      context: {
+        files: [{ file: '/p/src/a.js', switched: 's', original: 'o' }],
+        workDirectory: directory,
+        concurrency: null,
+        root: directory,
+        onUnitEnd,
+      },
       state: {
         expected: new Map([[todo, [{ occurrence: 0, name: 'b' }]]]),
         todo: new Map([[todo, true]]),
         modules: new Map(),
         plan: null,
         count: 0,
-      },
-      context: {
-        files: [{ file: '/p/src/a.js', switched: 's', original: 'o' }],
-        workDirectory: directory,
-        concurrency: null,
-        root: directory,
       },
       preload: '/m/preload/preload.js',
       checkTypeScript: () => null,
@@ -108,6 +111,11 @@ describe('runIsolated', () => {
       ],
       [2, false, null],
     ])
+    expect(
+      onUnitEnd.mock.calls
+        .map(([end]) => end!)
+        .toSorted((left, right) => left.unit - right.unit),
+    ).toStrictEqual(result.units.map(facts => ({ unit: facts.unit, facts })))
     let inputs = vi.mocked(runTestFile).mock.calls.map(call => call[1])
     expect(
       inputs.map(input => [input.mutant, input.bail, input.expected]),

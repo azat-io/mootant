@@ -9,7 +9,7 @@ import type {
 import type { VitestHandle } from './types/vitest-session-state'
 import type { VitestOutRecord } from './types/vitest-worker'
 
-import { isTimeoutMessage } from './worker/is-timeout-message'
+import { buildIsolatedFacts } from './build-isolated-facts'
 import { readUnitInputs } from './read-unit-inputs'
 import { runPlan } from './run-plan'
 
@@ -21,13 +21,9 @@ type VitestEndRecord = Extract<VitestOutRecord, { kind: 'end' }>
 /**
  * Executes isolated units in one Vitest run, each on its whole test file and
  * the worker's teardown. A unit no worker claimed has no facts; a claimed unit
- * without an end record is `hang` when the watchdog stopped its worker, else
- * `crash`. A failed cleanup of worker-scoped fixtures or a failed teardown of
- * the test environment is the unit's hook error; a suite hook that hit Vitest's
- * hook timeout marks the unit as timed out. A unit that ended reports what it
- * read (`readUnitInputs`) and how long its process took to start: from the
- * moment the pool started the worker to the moment the worker began the unit,
- * before it waited for its turn.
+ * gets its facts from what its worker left (`buildIsolatedFacts`), as the unit
+ * ends too, for the context's `onUnitEnd`. A unit that ended reports what it
+ * read (`readUnitInputs`).
  *
  * @param handle - Live Vitest instance of the session.
  * @param plan - Units to run.
@@ -37,46 +33,21 @@ export async function runIsolated(
   handle: VitestHandle,
   plan: IsolatedPlan,
 ): Promise<IsolatedResult> {
-  let outcome = await runPlan(handle, { units: plan.units, mode: 'isolated' })
+  let outcome = await runPlan(handle, {
+    describe: (unit, ended) => buildIsolatedFacts(handle, unit, ended),
+    units: plan.units,
+    mode: 'isolated',
+  })
   let units: IsolatedFacts[] = []
   let ended: [IsolatedFacts, IsolatedUnit, VitestEndRecord][] = []
-  for (let [unit, { records, claimed, hung, pid }] of outcome.units.entries()) {
-    if (!claimed) {
+  for (let [unit, found] of outcome.units.entries()) {
+    if (!found.claimed) {
       continue
     }
-    let tests = records.flatMap(record =>
-      record.kind === 'test' ? record.tries : [],
-    )
-    let end = records.find(record => record.kind === 'end')
-    if (end === undefined) {
-      units.push({
-        duration: tests.reduce((sum, facts) => sum + facts.duration, 0),
-        hits: tests.reduce((sum, facts) => sum + facts.hits, 0),
-        incomplete: hung === null ? 'crash' : 'hang',
-        reached: tests.some(facts => facts.reached),
-        timedOut: false,
-        hookError: null,
-        loadError: null,
-        strays: [],
-        tests,
-        unit,
-      })
-    } else {
-      let spawned = handle.state.spawns.get(pid!)
-      let facts: IsolatedFacts = {
-        startup: spawned === undefined ? 0 : Math.max(0, end.booted - spawned),
-        timedOut: end.hookError !== null && isTimeoutMessage(end.hookError),
-        hookError: end.hookError,
-        loadError: end.loadError,
-        duration: end.duration,
-        reached: end.reached,
-        strays: end.strays,
-        incomplete: null,
-        hits: end.hits,
-        tests,
-        unit,
-      }
-      units.push(facts)
+    let facts = buildIsolatedFacts(handle, unit, found)
+    units.push(facts)
+    let end = found.records.find(record => record.kind === 'end')
+    if (end !== undefined) {
       ended.push([facts, plan.units[unit]!, end])
     }
   }

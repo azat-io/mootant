@@ -19,29 +19,32 @@ const POLL_INTERVAL = 200
 
 /**
  * Watches the `done` folder of a run, where a worker creates one file as each
- * unit or dry test file ends, and calls back once per new file. Without a
- * callback nothing is watched.
+ * unit or dry test file ends, and calls back once per new file with its name.
+ * Without a callback nothing is watched.
  *
  * @param directory - Work directory of the session.
- * @param onUnitEnd - Called once per finished unit, if given.
+ * @param onUnitEnd - Called once per finished unit with the name of its file,
+ *   if given.
  * @returns Watch to stop after the run.
  */
 export function watchUnitEnds(
   directory: string,
-  onUnitEnd: (() => void) | undefined,
+  onUnitEnd: ((name: string) => void) | undefined,
 ): UnitEndWatch {
   if (onUnitEnd === undefined) {
     return { stop: () => {} }
   }
   let folder = path.join(directory, 'done')
-  let seen = 0
+  let seen = new Set<string>()
   /**
-   * Counts the finished units and calls back for the new ones.
+   * Calls back for the units that finished since the last look.
    */
   function look(): void {
-    let count = readdirSync(folder).length
-    for (; seen < count; seen++) {
-      onUnitEnd!()
+    for (let name of readdirSync(folder).toSorted()) {
+      if (!seen.has(name)) {
+        seen.add(name)
+        onUnitEnd!(name)
+      }
     }
   }
   let timer = setInterval(look, POLL_INTERVAL)

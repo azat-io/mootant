@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../mutant/diagnostic'
+import type { LiveVerdicts } from './live-verdicts'
 import type { RunCache } from '../cache/run-cache'
 import type { DryAnalysis } from './dry-analysis'
 import type { MutantState } from './mutant-state'
@@ -36,6 +37,12 @@ export interface RunState {
    * Problems found while running, such as hung or crashed workers.
    */
   diagnostics: Diagnostic[]
+
+  /**
+   * Counts of decided mutants for the live progress, or null when nothing
+   * receives the events of the run.
+   */
+  live: LiveVerdicts | null
 
   /**
    * Verdicts of earlier runs to reuse and the evidence of this run to store, or

@@ -70,7 +70,15 @@ export async function runDry(
         hung.push(beat)
       }
     })
-    let ends = watchUnitEnds(context.workDirectory, context.onUnitEnd)
+    let { onUnitEnd } = context
+    let ends = watchUnitEnds(
+      context.workDirectory,
+      onUnitEnd === undefined ? undefined : (
+        () => {
+          onUnitEnd()
+        }
+      ),
+    )
     let error: string | null
     try {
       error = await runSpecifications(

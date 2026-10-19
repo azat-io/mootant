@@ -112,6 +112,8 @@ describe('runDry', () => {
 
   it('runs every test file first and reports those that load related files', async () => {
     let handle = await createHandle()
+    let onUnitEnd = vi.fn<() => void>()
+    handle.context.onUnitEnd = onUnitEnd
     mockRuns({
       '/p/a.test.js': [
         [
@@ -158,6 +160,7 @@ describe('runDry', () => {
       '/p/src/a.js': path.join(directory, 'switched', '0.json'),
     })
     expect(input.deadline({ records: [], spawned: 0, last: 5 })).toBe(1005)
+    expect(onUnitEnd.mock.calls).toStrictEqual([[], []])
   })
 
   it('runs later only the files whose modules include a related file', async () => {

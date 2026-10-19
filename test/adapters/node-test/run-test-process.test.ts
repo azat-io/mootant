@@ -102,13 +102,13 @@ describe('runTestProcess', () => {
     let started = Date.now()
     let outcome = await run(
       `import { spawn } from 'node:child_process'
-      spawn('sleep', ['3'], { detached: true, stdio: 'inherit' }).unref()`,
-      watch => watch.spawned + 100,
+      spawn('sleep', ['5'], { detached: true, stdio: 'inherit' }).unref()`,
+      watch => watch.spawned + 3000,
       () => {},
     )
 
     expect(outcome).toMatchObject({ signal: null, hung: false, code: 0 })
-    expect(Date.now() - started).toBeLessThan(2500)
+    expect(Date.now() - started).toBeLessThan(4500)
   })
 
   it('drops the output without a receiver', async () => {

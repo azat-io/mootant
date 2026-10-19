@@ -28,7 +28,7 @@ import { runInPool } from './run-in-pool'
  * mutant made todo, runs again without stopping (`checkTodoBail`). A watchdog
  * stops a unit past its timeout (`getUnitDeadline`). Every unit reports its
  * facts (`buildIsolatedFacts`) and, once its process reached its end, what it
- * read.
+ * read, to the result and, as it ends, to the context's `onUnitEnd`.
  *
  * @param handle - Live session.
  * @param plan - Units to run.
@@ -90,6 +90,7 @@ export async function runIsolated(
               environment: end.environment,
             }
           )
+        context.onUnitEnd?.({ unit: index, facts })
         return facts
       },
       key: unit.file,

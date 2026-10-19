@@ -12,16 +12,39 @@ describe('countRun', () => {
     state.report = event => {
       events.push(event)
     }
+    let work = { chains: [0, 1], costs: [5, 7], workers: 2 }
 
-    countRun(state, 'batch', { mutants: 3, units: 2 })
-    countRun(state, 'batch', { mutants: 1, units: 1 })
-    countRun(state, 'isolated', { mutants: 2, units: 5 })
+    countRun(state, 'batch', { ...work, mutants: 3 })
+    countRun(state, 'batch', { ...work, mutants: 1 })
+    countRun(state, 'isolated', { ...work, mutants: 2 })
 
     expect(state.runs).toStrictEqual({ isolated: 1, batch: 2 })
     expect(events).toStrictEqual([
-      { kind: 'run-start', run: 'batch', mutants: 3, round: 1, units: 2 },
-      { kind: 'run-start', run: 'batch', mutants: 1, round: 2, units: 1 },
-      { kind: 'run-start', run: 'isolated', mutants: 2, round: 1, units: 5 },
+      { kind: 'verdicts', survived: 0, timeout: 0, killed: 0, error: 0 },
+      {
+        ...work,
+        kind: 'run-start',
+        run: 'batch',
+        mutants: 3,
+        round: 1,
+        units: 2,
+      },
+      {
+        ...work,
+        kind: 'run-start',
+        run: 'batch',
+        mutants: 1,
+        round: 2,
+        units: 2,
+      },
+      {
+        ...work,
+        kind: 'run-start',
+        run: 'isolated',
+        mutants: 2,
+        round: 1,
+        units: 2,
+      },
     ])
   })
 })
