@@ -16,22 +16,24 @@ describe('createRunState', () => {
       },
       { mutants: ['m1', 'm2', 'm3', 'm4'] },
     )
+    let mutants = [
+      createMutant({ start: 0, id: 'm1', end: 1 }),
+      createMutant({ start: 0, id: 'm3', end: 1 }),
+      createMutant({ file: 'b.ts', start: 0, id: 'm4', end: 1 }),
+      createMutant({ file: 'c.ts', start: 0, id: 'm5', end: 1 }),
+    ]
     let state = createRunState({
-      mutants: [
-        createMutant({ start: 0, id: 'm1', end: 1 }),
-        createMutant({ start: 0, id: 'm3', end: 1 }),
-        createMutant({ file: 'b.ts', start: 0, id: 'm4', end: 1 }),
-        createMutant({ file: 'c.ts', start: 0, id: 'm5', end: 1 }),
-      ],
       errors: new Map([['b.ts', 'Broken.']]),
       analysis: base.analysis,
       limits: TEST_LIMITS,
       imports: new Map(),
       report: () => {},
+      hosted: mutants,
       root: '/root',
       batch: true,
       fast: true,
       workers: 3,
+      mutants,
     })
 
     expect(state).toMatchObject({ diagnostics: [], workers: 3, runs: {} })

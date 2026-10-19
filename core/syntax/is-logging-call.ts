@@ -2,6 +2,7 @@ import type { CallExpression } from 'oxc-parser'
 
 import { unwrapParentheses } from '../tree/unwrap-parentheses'
 import { getMemberPath } from './get-member-path'
+import { isConsolePath } from './is-console-path'
 import { isLoggerName } from './is-logger-name'
 
 /**
@@ -24,11 +25,12 @@ let logMethods = new Set([
 
 /**
  * Tells whether a call writes a log entry, by the names of the `loggers`
- * setting (see `isLoggerName`): any method of `console` when `console` is a
- * logger, a log method of another logger receiver, such as `logger.info()`, or
- * a bare logger function, such as `log()` or `debug()`, called with a string or
- * template literal first. A name the setting leaves out is ordinary code. Reads
- * only the callee and the first argument.
+ * setting (see `isLoggerName`): any method of the global console when `console`
+ * is a logger, also through a global object (`isConsolePath`), such as
+ * `globalThis.console.table()`, a log method of another logger receiver, such
+ * as `logger.info()`, or a bare logger function, such as `log()` or `debug()`,
+ * called with a string or template literal first. A name the setting leaves out
+ * is ordinary code. Reads only the callee and the first argument.
  *
  * @param node - Call to check.
  * @param loggers - Names of the `loggers` setting.
@@ -55,8 +57,8 @@ export function isLoggingCall(
       (value.type === 'Literal' && typeof value.value === 'string')
     )
   }
-  if (first === 'console' && path.length === 2) {
-    return isLoggerName(first, loggers)
+  if (isConsolePath(path)) {
+    return isLoggerName('console', loggers)
   }
 
   return logMethods.has(path.at(-1)!) && isLoggerName(path.at(-2)!, loggers)

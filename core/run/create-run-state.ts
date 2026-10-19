@@ -3,6 +3,7 @@ import type { DryAnalysis } from '../../types/run/dry-analysis'
 import type { RunEvent } from '../../types/run/run-event'
 import type { Mutant } from '../../types/mutant/mutant'
 
+import { indexModuleTests } from './index-module-tests'
 import { classifyMutants } from './classify-mutants'
 import { routeIsolated } from './route-isolated'
 
@@ -26,6 +27,12 @@ interface RunStateInput {
    * Messages of the files whose mutants get no verdict, by display path.
    */
   errors: Map<string, string>
+
+  /**
+   * Pending mutants of the files of the run that the dry run hosted, selected
+   * or not.
+   */
+  hosted: readonly Mutant[]
 
   /**
    * Coverage and stability of the dry run.
@@ -86,6 +93,7 @@ export function createRunState(input: RunStateInput): RunState {
           reported: null,
           running: null,
         },
+    moduleTests: indexModuleTests(input.hosted, analysis),
     report: input.report ?? (() => {}),
     workers: input.workers,
     imports: input.imports,

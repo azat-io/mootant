@@ -11,6 +11,12 @@ import type { RunKind } from './run-kind'
  */
 export interface RunState {
   /**
+   * Ids of the tests that reached any mutant of a module in the dry run,
+   * selected or not, by the path of the module (`indexModuleTests`).
+   */
+  moduleTests: ReadonlyMap<string, ReadonlySet<string>>
+
+  /**
    * Absolute paths each test file imports through relative specifiers, as
    * written (`readTestImports`), by test file path; a test file left out
    * imports nothing.

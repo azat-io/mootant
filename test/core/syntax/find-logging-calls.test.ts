@@ -90,11 +90,14 @@ describe('findLoggingCalls', () => {
   it('takes the statement of a method of the console of a global object', () => {
     expect(
       describeCalls(
-        "globalThis.console.log('a'); window.console.warn('b')",
+        "globalThis.console.log('a'); window.console.warn('b');" +
+          'globalThis.console.groupEnd(); window.console.table()',
       ).map(call => call['statement']),
     ).toStrictEqual([
       "globalThis.console.log('a');",
-      "window.console.warn('b')",
+      "window.console.warn('b');",
+      'globalThis.console.groupEnd();',
+      'window.console.table()',
     ])
   })
 

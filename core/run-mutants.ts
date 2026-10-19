@@ -276,6 +276,7 @@ export async function runMutants(
     try {
       return await execute({
         diagnostics: listing.diagnostics,
+        listed: listing.files,
         startedAt,
         listedIds,
         threshold,
@@ -311,6 +312,9 @@ export async function runMutants(
  * @param context.started - Start time of the run.
  * @param context.startedAt - Start of the run in milliseconds since the epoch.
  * @param context.files - Listed files with the selected mutants.
+ * @param context.listed - Listed files with all their mutants. The dry run
+ *   hosts every pending mutant of the files of the run, selected or not, so the
+ *   plan of a mutant does not depend on the selection.
  * @param context.listedIds - Ids of every listed mutant of the paths.
  * @param context.threshold - Lowest total score that passes, or null.
  * @param context.since - Revision of `--since` with its merge base, or null.
@@ -331,6 +335,7 @@ async function execute(context: {
   threshold: number | null
   switched: SwitchedFile[]
   session: AdapterSession
+  listed: FileMutants[]
   adapter: TestAdapter
   files: FileMutants[]
   listedIds: string[]
@@ -357,7 +362,9 @@ async function execute(context: {
   let frameworks = new Set(
     selected.files.map(file => getComponentFramework(file.file)),
   )
-  let built = createSwitchedFiles(selected.files, {
+  let listed = new Map(context.listed.map(file => [file.absolute, file]))
+  let hosting = selected.files.map(file => listed.get(file.absolute)!)
+  let built = createSwitchedFiles(hosting, {
     svelte: frameworks.has('svelte') ? await loadSvelteCompiler() : null,
     vue: frameworks.has('vue') ? await loadVueCompiler() : null,
   })
@@ -369,6 +376,9 @@ async function execute(context: {
   }
   let mutants = selected.files.flatMap(file => file.mutants)
   let pending = mutants.filter(mutant => mutant.status === 'Pending')
+  let hosted = hosting
+    .flatMap(file => file.mutants)
+    .filter(mutant => mutant.status === 'Pending')
   let displays = new Map(selected.files.map(file => [file.absolute, file.file]))
   let absolutes = new Map(
     selected.files.map(file => [file.file, file.absolute]),
@@ -377,7 +387,7 @@ async function execute(context: {
   let dryStarted = performance.now()
   let dryPhase = await runDryPhase(session, {
     mutantFiles: new Map(
-      pending.map(mutant => [mutant.id, absolutes.get(mutant.file)!]),
+      hosted.map(mutant => [mutant.id, absolutes.get(mutant.file)!]),
     ),
     report: event => options.onProgress?.(event),
     switched: context.switched,
@@ -445,6 +455,7 @@ async function execute(context: {
     report: options.onProgress,
     mutants: pending,
     analysis,
+    hosted,
     limits,
     errors,
     fast,

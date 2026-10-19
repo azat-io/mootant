@@ -23,6 +23,10 @@ describe('isLoggingCall', () => {
     "(console.log as Function)('a')",
     'globalThis.console.log(message)',
     'window.console.log(message)',
+    'globalThis.console.groupEnd()',
+    'window.console.table(rows)',
+    'globalThis.console.count()',
+    'window.console.assert(ok)',
     'LOG.error(message)',
   ])('accepts %s with the default loggers', source => {
     expect(
@@ -50,6 +54,8 @@ describe('isLoggingCall', () => {
     'f()(message)',
     'loggers[0].info(message)',
     "consola.info('found')",
+    'self.console.groupEnd()',
+    'globalThis.groupEnd()',
   ])('rejects %s with the default loggers', source => {
     expect(
       isLoggingCall(

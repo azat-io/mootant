@@ -8,12 +8,9 @@ import { unwrapExpression } from '../tree/unwrap-expression'
 import { findMessageTexts } from './find-message-texts'
 import { isPlainMessage } from './is-plain-message'
 import { isLoggingCall } from './is-logging-call'
+import { getMemberPath } from './get-member-path'
+import { isConsolePath } from './is-console-path'
 import { isFormatFree } from './is-format-free'
-
-/**
- * Global objects whose `console` property a removable logging call may read.
- */
-let consoleOwners = new Set(['globalThis', 'window'])
 
 /**
  * Methods every console has, whose call a removable logging call may be.
@@ -147,8 +144,9 @@ function isLocalCode(node: CallExpression, scopes: ScopeAnalysis): boolean {
 }
 
 /**
- * Tells whether a logging call is a method call of the global console, such as
- * `console.log` or `globalThis.console.log`, without optional links, non-null
+ * Tells whether a logging call is a method call of the global console
+ * (`isConsolePath`), such as `console.log` or `globalThis.console.log`, whose
+ * root name is not bound in the file, without optional links, non-null
  * assertions, computed keys or parentheses. Only then can evaluating the callee
  * not throw, so removing the call can only remove what it writes: any other
  * receiver or bare function may be nullish, not yet initialized or not a
@@ -170,16 +168,14 @@ function isConsoleCall(node: CallExpression, scopes: ScopeAnalysis): boolean {
     return false
   }
   let { object } = callee
-  if (object.type === 'Identifier') {
-    return object.name === 'console' && !scopes.bindings.has(object)
-  }
+  let root =
+    object.type === 'MemberExpression' && !object.computed ?
+      object.object
+    : object
   return (
-    object.type === 'MemberExpression' &&
-    !object.computed &&
-    object.property.name === 'console' &&
-    object.object.type === 'Identifier' &&
-    consoleOwners.has(object.object.name) &&
-    !scopes.bindings.has(object.object)
+    root.type === 'Identifier' &&
+    !scopes.bindings.has(root) &&
+    isConsolePath(getMemberPath(callee)!)
   )
 }
 

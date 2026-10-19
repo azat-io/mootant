@@ -4,20 +4,18 @@ import { routeIsolated } from '../../../core/run/route-isolated'
 import { createTestRun } from '../../helpers/create-test-run'
 
 describe('routeIsolated', () => {
-  it('lists the test files of one rank cheapest first and keeps an earlier reason', async () => {
+  it('lists the test files of one rank by key and keeps an earlier reason', async () => {
     let { state } = await createTestRun(
       {
         tests: [
-          { file: '/t/b.test.ts', covers: ['m1'], duration: 1, id: 'b1' },
           { file: '/t/c.test.ts', covers: ['m1'], duration: 1, id: 'c1' },
-          { file: '/t/d.test.ts', covers: ['m1'], duration: 5, id: 'd1' },
+          { file: '/t/d.test.ts', covers: ['m1'], duration: 0, id: 'd1' },
+          { file: '/t/b.test.ts', covers: ['m1'], duration: 5, id: 'b1' },
         ],
         files: [{ file: '/t/c.test.ts', loadDuration: 2 }],
       },
       { mutants: ['m1'] },
     )
-    state.analysis.loads.delete('/t/b.test.ts')
-    state.analysis.fileTests.delete('/t/b.test.ts')
     let mutant = state.mutants.get('m1')!
     mutant.confirm.push({ cause: 'time-limit', test: 'b1' })
 
@@ -33,13 +31,13 @@ describe('routeIsolated', () => {
     })
   })
 
-  it('costs a file by all its tests and drops batch passes', async () => {
+  it('lists files with more tests that reach the mutant first and drops batch passes', async () => {
     let { state } = await createTestRun(
       {
         tests: [
-          { file: '/t/d.test.ts', covers: ['m1'], duration: 1, id: 'd1' },
-          { file: '/t/d.test.ts', duration: 10, id: 'd2' },
-          { file: '/t/b.test.ts', covers: ['m1'], duration: 5, id: 'b1' },
+          { file: '/t/d.test.ts', covers: ['m1'], duration: 9, id: 'd1' },
+          { file: '/t/d.test.ts', covers: ['m1'], duration: 9, id: 'd2' },
+          { file: '/t/b.test.ts', covers: ['m1'], duration: 1, id: 'b1' },
         ],
       },
       { mutants: ['m1'] },
@@ -50,7 +48,7 @@ describe('routeIsolated', () => {
     routeIsolated(state, 'm1', 'batch-survivor')
 
     expect(mutant).toMatchObject({
-      files: ['/t/b.test.ts', '/t/d.test.ts'],
+      files: ['/t/d.test.ts', '/t/b.test.ts'],
       isolatedBecause: 'batch-survivor',
       survived: false,
     })
@@ -98,8 +96,8 @@ describe('routeIsolated', () => {
     routeIsolated(state, 'm1', 'batch-survivor')
 
     expect(mutant.files).toStrictEqual([
-      '/test/a.spec.ts',
       '/src/a.test.ts',
+      '/test/a.spec.ts',
       '/t/imports.test.ts',
       '/other/a.test.ts',
       '/t/cheap.test.ts',

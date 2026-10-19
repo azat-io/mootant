@@ -381,6 +381,35 @@ describe('runMutants', () => {
     expect(fake.calls.batch[0]!.concurrency).toBe(4)
   })
 
+  it('hosts the other pending mutants of the files of the selected mutants in the dry run', async () => {
+    let [ratio, ...others] = ids['src/flag.ts']!
+    let { result, fake } = await run(
+      {
+        tests: [
+          {
+            file: path.join(root, 'test/flag.test.ts'),
+            covers: [ratio!, ...others],
+            id: 'flag',
+          },
+        ],
+      },
+      { mutantIds: [ratio!] },
+    )
+
+    expect(result.results.map(({ mutant }) => mutant.id)).toStrictEqual([ratio])
+    expect(
+      vi
+        .mocked(createSwitchedFiles)
+        .mock.calls[0]![0].map(file => [
+          file.file,
+          file.mutants
+            .filter(mutant => mutant.status === 'Pending')
+            .map(mutant => mutant.id),
+        ]),
+    ).toStrictEqual([['src/flag.ts', ids['src/flag.ts']]])
+    expect(fake.calls.isolated.flatMap(call => call.units)).toHaveLength(1)
+  })
+
   it('takes paths relative to its directory, runner and settings from the configuration', async () => {
     let [add] = ids['src/math.ts']!
     let fake = createFakeAdapter({

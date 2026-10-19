@@ -43,6 +43,8 @@ interface TestRun {
  * @param world - Simulated project.
  * @param options - Mutants and run settings.
  * @param options.mutants - Ids of the pending mutants.
+ * @param options.hosted - Ids of the mutants the switched file hosts, selected
+ *   or not; the pending mutants when omitted.
  * @param options.isolate - Whether every covered mutant runs isolated, as
  *   outside fast mode; fast mode when omitted.
  * @param options.workers - Test files expected to run at once; 1 when omitted.
@@ -50,13 +52,19 @@ interface TestRun {
  */
 export async function createTestRun(
   world: FakeWorld,
-  options: { isolate?: boolean; mutants: string[]; workers?: number },
+  options: {
+    isolate?: boolean
+    hosted?: string[]
+    mutants: string[]
+    workers?: number
+  },
 ): Promise<TestRun> {
+  let hosted = options.hosted ?? options.mutants
   let fake = createFakeAdapter(world)
   let session = await fake.adapter.start({
     files: [
       {
-        switched: options.mutants.map(id => `hit("${id}")`).join(';'),
+        switched: hosted.map(id => `hit("${id}")`).join(';'),
         file: '/src/a.ts',
         original: '',
       },
@@ -73,10 +81,11 @@ export async function createTestRun(
     files: null,
   })
   fake.calls.dry = []
+  let mutants = hosted.map(id =>
+    createMutant({ file: 'src/a.ts', start: 0, end: 1, id }),
+  )
   let state = createRunState({
-    mutants: options.mutants.map(id =>
-      createMutant({ file: 'src/a.ts', start: 0, end: 1, id }),
-    ),
+    mutants: mutants.filter(mutant => options.mutants.includes(mutant.id)),
     fast: options.isolate !== true,
     workers: options.workers ?? 1,
     batch: fake.adapter.batch,
@@ -85,6 +94,7 @@ export async function createTestRun(
     imports: new Map(),
     errors: new Map(),
     report: () => {},
+    hosted: mutants,
     root: '/',
   })
   return { session, state, fake }

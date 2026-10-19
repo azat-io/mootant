@@ -244,11 +244,10 @@ describe('runIsolatedRounds', () => {
 
   it('takes the verdict of the first decisive file whatever files ran together', async () => {
     /**
-     * Runs a mutant that hangs in `b` and fails in `c`, with `a` and the given
-     * extra files passing before them and `e` passing after them; `b`, `c` and
-     * `e` cost the same.
+     * Runs a mutant that hangs in `c` and fails in `d`, with `a` and the given
+     * extra files passing before them and `f` passing after them.
      *
-     * @param extra - Names of extra passing files cheaper than `b`.
+     * @param extra - Names of extra passing files ordered between `a` and `c`.
      * @param workers - Test files expected to run at once.
      * @returns Final state and the units of every run.
      */
@@ -256,23 +255,22 @@ describe('runIsolatedRounds', () => {
       extra: string[],
       workers: number,
     ): Promise<{ units: string[][]; verdict: unknown }> {
-      let names = ['a', ...extra, 'b', 'c', 'e']
+      let names = ['a', ...extra, 'c', 'd', 'f']
       let { session, state, fake } = await createTestRun(
         {
-          tests: names.map((name, index) => ({
-            kills: name === 'c' ? { m1: 'boom' } : undefined,
-            duration: Math.min(index, extra.length + 1),
-            file: `/t/${name}.test.ts`,
-            covers: ['m1'],
-            id: name,
-          })),
           onIsolated: (result, plan) => ({
             units: result.units.map(facts =>
-              plan.units[facts.unit]!.file === '/t/b.test.ts' ?
+              plan.units[facts.unit]!.file === '/t/c.test.ts' ?
                 { ...facts, incomplete: 'hang' as const }
               : facts,
             ),
           }),
+          tests: names.map(name => ({
+            kills: name === 'd' ? { m1: 'boom' } : undefined,
+            file: `/t/${name}.test.ts`,
+            covers: ['m1'],
+            id: name,
+          })),
         },
         { mutants: ['m1'], isolate: true, workers },
       )
@@ -284,13 +282,13 @@ describe('runIsolatedRounds', () => {
         verdict: state.mutants.get('m1')!.verdict,
       }
     }
-    let timeout = { file: '/t/b.test.ts', status: 'Timeout', cause: 'hang' }
+    let timeout = { file: '/t/c.test.ts', status: 'Timeout', cause: 'hang' }
 
     let alone = await run([], 4)
-    let together = await run(['d'], 1)
+    let together = await run(['b'], 1)
 
-    expect(alone.units).toStrictEqual([['a'], ['b'], ['b']])
-    expect(together.units).toStrictEqual([['a'], ['d'], ['b', 'c'], ['b']])
+    expect(alone.units).toStrictEqual([['a'], ['c'], ['c']])
+    expect(together.units).toStrictEqual([['a'], ['b'], ['c', 'd'], ['c']])
     expect(alone.verdict).toMatchObject(timeout)
     expect(together.verdict).toMatchObject(timeout)
   })
