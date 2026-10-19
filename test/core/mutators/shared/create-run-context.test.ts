@@ -46,6 +46,39 @@ describe('createRunContext', () => {
     },
   )
 
+  it('never counts a justifier that only changes a log message', () => {
+    let { context, find } = createTestContext(
+      "function k(a) { let ok = a > 2; console.log('x'); return ok }",
+    )
+    let runContext = createRunContext(context)
+    let returned = {
+      node: find('Identifier', 'ok', 1),
+      mutator: 'return-value',
+    }
+
+    expect(
+      runContext.runs(
+        { node: find('Literal', "'x'"), mutator: 'string-literal' },
+        returned,
+      ),
+    ).toBe(false)
+    expect(
+      runContext.runs(
+        {
+          node: find('ExpressionStatement', "console.log('x');"),
+          mutator: 'statement-removal',
+        },
+        returned,
+      ),
+    ).toBe(false)
+    expect(
+      runContext.runs(
+        { node: find('BinaryExpression'), mutator: 'comparison-operator' },
+        returned,
+      ),
+    ).toBe(true)
+  })
+
   it('keeps the members of the context', () => {
     let { context } = createTestContext('x = 1')
     let runContext = createRunContext(context)

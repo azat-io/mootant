@@ -6,6 +6,7 @@ import type { TestFile } from './create-test-file'
 import { parseIgnoreDirectives } from '../../core/ignore/parse-ignore-directives'
 import { createIgnoreRules } from '../../core/ignore/create-ignore-rules'
 import { getSourcePosition } from '../../core/text/get-source-position'
+import { DEFAULT_LOGGERS } from '../../core/presets/default-loggers'
 import { findIgnoreRule } from '../../core/ignore/find-ignore-rule'
 import { corePlugin } from '../../core/plugins/core-plugin'
 import { createTestFile } from './create-test-file'
@@ -80,9 +81,9 @@ export function createTestContext(
       },
       settings: {
         timeouts: setup.timeouts ?? false,
+        loggers: DEFAULT_LOGGERS,
         coarseMutants: false,
         templates: true,
-        loggers: [],
       },
       isEnabled(id: string): boolean {
         return enabled.has(id)

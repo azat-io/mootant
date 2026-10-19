@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import type { SyntaxHelpers } from '../../../types/syntax/syntax-helpers'
 
 import { createSyntaxHelpers } from '../../../core/syntax/create-syntax-helpers'
+import { findLoggingCalls } from '../../../core/syntax/find-logging-calls'
+import { DEFAULT_LOGGERS } from '../../../core/presets/default-loggers'
 import { createTestFile } from '../../helpers/create-test-file'
 
 let { scopes, find, tree } = createTestFile(
@@ -128,7 +130,7 @@ describe('createSyntaxHelpers', () => {
     [
       'isRuntimeNode',
       syntax => syntax.isRuntimeNode(find('Literal', "'x'", 1)),
-      false,
+      true,
     ],
     [
       'isTimerDelay',
@@ -157,7 +159,9 @@ describe('createSyntaxHelpers', () => {
       find('TSAsExpression'),
     ],
   ])('binds %s', (_name, call, expected) => {
-    let syntax = createSyntaxHelpers(tree, scopes)
+    let syntax = createSyntaxHelpers(tree, scopes, {
+      loggers: DEFAULT_LOGGERS,
+    })
 
     expect(call(syntax)).toStrictEqual(expected)
   })
@@ -168,6 +172,26 @@ describe('createSyntaxHelpers', () => {
     })
 
     expect(syntax.isResultUnused(file.find('Identifier', 'a'))).toBe(true)
+  })
+
+  it('binds the logging calls of the program to isLogMessage', () => {
+    let file = createTestFile("console.info('x'); run('y')")
+    let syntax = createSyntaxHelpers(file.tree, file.scopes, {
+      loggingCalls: findLoggingCalls(file.tree, file.scopes, ['console']),
+    })
+
+    expect(syntax.isLogMessage(file.find('Literal', "'x'"))).toBe(true)
+    expect(
+      syntax.isLogMessage(
+        file.find('ExpressionStatement', "console.info('x');"),
+      ),
+    ).toBe(true)
+    expect(syntax.isLogMessage(file.find('Literal', "'y'"))).toBe(false)
+    expect(
+      createSyntaxHelpers(file.tree, file.scopes).isLogMessage(
+        file.find('Literal', "'x'"),
+      ),
+    ).toBe(false)
   })
 
   it('binds the names of the loggers setting to isLoggingCall', () => {

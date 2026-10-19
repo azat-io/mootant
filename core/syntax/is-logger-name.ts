@@ -1,24 +1,22 @@
 /**
- * Receivers named `log` or `logger`, in any letter case.
- */
-const LOGGER_NAME_PATTERN = /^log(?:ger)?$/iu
-
-/**
- * Tells whether a receiver name is a logger: `log` or `logger` in any letter
- * case, a name ending with `Logger`, or one of the names of the `loggers`
- * setting.
+ * Tells whether a name is a logger of the `loggers` setting: an entry equal to
+ * the name in any letter case, so `logger` matches `Logger` and `LOGGER`, or an
+ * entry `*Suffix` whose suffix, as written, ends the name, so `*Logger` matches
+ * `requestLogger` but not `blogger`.
  *
- * @param name - Name of the receiver.
- * @param loggers - Exact names the `loggers` setting adds.
+ * @param name - Name of the receiver or of a bare function.
+ * @param loggers - Names of the `loggers` setting.
  * @returns Whether the name is a logger.
  */
 export function isLoggerName(
   name: string,
   loggers: readonly string[],
 ): boolean {
-  return (
-    LOGGER_NAME_PATTERN.test(name) ||
-    name.endsWith('Logger') ||
-    loggers.includes(name)
-  )
+  let lower = name.toLowerCase()
+  return loggers.some(entry => {
+    let exact = entry.startsWith('*') ? entry.slice(1) : entry
+    return (
+      exact.toLowerCase() === lower || (exact !== entry && name.endsWith(exact))
+    )
+  })
 }

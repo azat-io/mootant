@@ -3,12 +3,14 @@
  */
 export interface PresetSettings {
   /**
-   * Exact names of receivers that are loggers besides the built-in ones
-   * (`console`, `log` and `logger` in any letter case, names ending with
-   * `Logger`), such as `['consola', 'signale']`: the arguments of their log
-   * methods and the labels of their child-logger factories are not mutated.
-   * Empty unless a preset or the configuration sets it; a later value replaces
-   * an earlier one.
+   * Names of the loggers, such as `['console', 'logger', '*Logger']`: a
+   * receiver whose log methods write log entries, or a bare function, such as
+   * `log`, whose call with a text first does. A name matches in any letter
+   * case; a leading `*` matches any prefix before the rest as written. The
+   * mutants that can only change the text their log calls write are skipped,
+   * and the labels of their child-logger factories are not mutated. A name left
+   * out is ordinary code. Empty unless a preset or the configuration sets it; a
+   * later value replaces an earlier one.
    */
   loggers: readonly string[]
 

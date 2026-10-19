@@ -2,6 +2,7 @@ import type { Node } from 'oxc-parser'
 
 import type { SyntaxHelpers } from '../../types/syntax/syntax-helpers'
 import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
+import type { LoggingCall } from '../../types/syntax/logging-call'
 import type { TreeIndex } from '../../types/syntax/tree-index'
 
 import { getEnclosingFunction } from './get-enclosing-function'
@@ -24,6 +25,7 @@ import { isPropertyKey } from './is-property-key'
 import { getMemberPath } from './get-member-path'
 import { isLoggingCall } from './is-logging-call'
 import { readTimerCall } from './read-timer-call'
+import { isLogMessage } from './is-log-message'
 import { isTimerDelay } from './is-timer-delay'
 import { getChainRoot } from './get-chain-root'
 import { advancesLoop } from './advances-loop'
@@ -34,14 +36,20 @@ import { isLoopTest } from './is-loop-test'
  */
 interface SyntaxHelperOptions {
   /**
+   * Logging calls of the program (see `findLoggingCalls`), whose message
+   * mutants are skipped; none when omitted.
+   */
+  loggingCalls?: readonly LoggingCall[]
+
+  /**
    * Arrow functions whose result nothing reads, such as the event handlers of a
    * component template; none when omitted.
    */
   discarded?: ReadonlySet<Node>
 
   /**
-   * Exact receiver names the `loggers` setting adds to the loggers of logging
-   * calls; none when omitted.
+   * Names of the `loggers` setting, which tell logging calls; none when
+   * omitted.
    */
   loggers?: readonly string[]
 }
@@ -52,8 +60,8 @@ interface SyntaxHelperOptions {
  *
  * @param tree - Runtime tree of the file.
  * @param scopes - Scope analysis of the file.
- * @param options - Discarded arrow functions and the logger names of the
- *   settings.
+ * @param options - Discarded arrow functions, the logging calls of the program
+ *   and the logger names of the settings.
  * @returns Questions about the syntactic position of nodes of the file.
  */
 export function createSyntaxHelpers(
@@ -61,8 +69,10 @@ export function createSyntaxHelpers(
   scopes: ScopeAnalysis,
   options: SyntaxHelperOptions = {},
 ): SyntaxHelpers {
-  let { discarded = new Set(), loggers = [] } = options
+  let { discarded = new Set(), loggingCalls = [], loggers = [] } = options
   return {
+    isLogMessage: node =>
+      isLogMessage(loggingCalls, node, node.type === 'ExpressionStatement'),
     isBooleanContext: node => isBooleanContext(tree, scopes, node),
     getEnclosingFunction: node => getEnclosingFunction(tree, node),
     isResultUnused: node => isResultUnused(tree, node, discarded),

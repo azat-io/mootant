@@ -59,10 +59,10 @@ export interface SyntaxHelpers {
   getChainRoot(node: Node): ChainExpression | null
 
   /**
-   * Whether the node is a logging call: a `console` method, a log method of a
-   * receiver named `log`, `logger`, `...Logger` or a name of the `loggers`
-   * setting, or `log` and `debug` called with a string or template literal
-   * first. Its callee and arguments are never mutated.
+   * Whether the node is a logging call of the `loggers` setting: a `console`
+   * method, a log method of another logger receiver, or a bare logger function
+   * called with a string or template literal first. The mutants that can only
+   * change the text it writes are skipped (see `isLogMessage`).
    */
   isLoggingCall(node: CallExpression): boolean
 
@@ -158,6 +158,14 @@ export interface SyntaxHelpers {
    * of logging calls, which the tree-bound helpers do not accept.
    */
   isRuntimeNode(node: Node): boolean
+
+  /**
+   * Whether a mutant of the node can only change the text a logging call
+   * writes, so it is skipped: the node is a literal text of the call, or the
+   * statement of a call whose removal can only remove that text (see
+   * `isLogMessage`).
+   */
+  isLogMessage(node: Node): boolean
 
   /**
    * Whether the value of the node only reaches the delay argument of a known

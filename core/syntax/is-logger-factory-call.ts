@@ -11,13 +11,13 @@ let factoryMethods = new Set(['withContext', 'getLogger', 'withTag', 'child'])
 
 /**
  * Tells whether a call creates a child logger: a `withContext`, `child`,
- * `getLogger` or `withTag` method of a receiver named `log`, `logger`,
- * `...Logger` or a name of the `loggers` setting, or of another child logger,
- * such as `logger.withContext('Build')` and
- * `logger.withContext('A').withContext('B')`. Reads only the callee.
+ * `getLogger` or `withTag` method of a receiver that the `loggers` setting
+ * names (see `isLoggerName`), or of another child logger, such as
+ * `logger.withContext('Build')` and `logger.withContext('A').withContext('B')`.
+ * Reads only the callee.
  *
  * @param node - Call to check.
- * @param loggers - Exact receiver names the `loggers` setting adds.
+ * @param loggers - Names of the `loggers` setting.
  * @returns Whether the call creates a child logger.
  */
 export function isLoggerFactoryCall(

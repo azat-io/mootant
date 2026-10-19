@@ -191,9 +191,9 @@ function getForcedThenSkip(
 
 /**
  * Tells whether an expression statement has an effect the mutator removes: a
- * call (not of `super`, not a logging call), also in an optional chain, `new`,
- * `await`, an assignment, an update, `delete`, `void` applied to a call, `new`
- * or `await`, and with `jumps` a `yield`.
+ * call (not of `super`), also in an optional chain, `new`, `await`, an
+ * assignment, an update, `delete`, `void` applied to a call, `new` or `await`,
+ * and with `jumps` a `yield`.
  *
  * @param node - Expression statement.
  * @param context - Mutator context of the file.
@@ -212,11 +212,7 @@ function hasEffect(
         expression.type === 'ChainExpression' ?
           expression.expression
         : expression
-      return (
-        call.type === 'CallExpression' &&
-        call.callee.type !== 'Super' &&
-        !syntax.isLoggingCall(call)
-      )
+      return call.type === 'CallExpression' && call.callee.type !== 'Super'
     }
     case 'UnaryExpression':
       return (

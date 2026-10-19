@@ -38,7 +38,8 @@ export interface MutantSite {
  * Adds the test of the redundancy rules to a mutator context (catalog 2.7): a
  * justifying mutant counts when it will run, or when its mutator is enabled and
  * the candidate itself is ignored, so that an ignore comment never adds or
- * removes an ignored entry.
+ * removes an ignored entry. A justifying mutant that only changes a log message
+ * never counts, since it is skipped (see `isLogMessage`).
  *
  * @param context - Mutator context of the file.
  * @returns The context with the test of mutants that will run.
@@ -48,9 +49,10 @@ export function createRunContext(context: MutatorContext): RunContext {
     ...context,
     runs(justifier: MutantSite, candidate: MutantSite): boolean {
       return (
-        context.isActive(justifier.mutator, justifier.node) ||
-        (context.isEnabled(justifier.mutator) &&
-          !context.isActive(candidate.mutator, candidate.node))
+        !context.syntax.isLogMessage(justifier.node) &&
+        (context.isActive(justifier.mutator, justifier.node) ||
+          (context.isEnabled(justifier.mutator) &&
+            !context.isActive(candidate.mutator, candidate.node)))
       )
     },
   }

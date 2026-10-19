@@ -72,6 +72,12 @@ describe('statementRemoval', () => {
     ).toStrictEqual([])
   })
 
+  it('removes a logging call like any call', () => {
+    expect(
+      listMutantTexts('statement-removal', ['console.log(x)']),
+    ).toStrictEqual(['console.log(x) -> ;'])
+  })
+
   it('marks a removal as a block mutant', () => {
     expect(runMutator('statement-removal', 'save(x)')).toMatchObject([
       { original: 'save(x)', replacement: ';', kind: 'block' },
@@ -79,7 +85,6 @@ describe('statementRemoval', () => {
   })
 
   it.each([
-    'console.log(x)',
     "emit('done', x)",
     'async function f() { await flush() }',
     'if (x) notify(x)',

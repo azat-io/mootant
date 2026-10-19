@@ -58,7 +58,7 @@ describe('validateConfig', () => {
     ],
     [
       { settings: { loggers: ['consola', ''] } },
-      '"settings" are invalid: "loggers" item 1 is not a non-empty string',
+      '"settings" are invalid: "loggers" item 1 is not a name, such as "logger" or "*Logger"',
     ],
     [{ run: [] }, '"run" is invalid: it must be an object'],
     [

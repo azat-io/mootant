@@ -63,7 +63,11 @@ describe('prepareRun', () => {
 
     expect(loadConfig).toHaveBeenCalledExactlyOnceWith(undefined, '/work')
     expect(setup).toMatchObject({
-      settings: { coarseMutants: false, timeouts: false, loggers: [] },
+      settings: {
+        loggers: ['console', 'log', 'logger', '*Logger', 'debug'],
+        coarseMutants: false,
+        timeouts: false,
+      },
       preset: 'recommended',
       root: '/work',
       run: {},

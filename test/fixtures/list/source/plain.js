@@ -13,7 +13,7 @@ export function canView(user) {
 
 export function visible(list) {
   if (list.filter(Boolean).length > 0) {
-    log('found %d', list.length) // logging call: not mutated, not removed
+    log('found %d', list.length) // logging call: a format string is mutated
     render(list)
   }
 }

@@ -5,6 +5,7 @@ import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 import { createMutatorRegistry } from '../../../core/plugins/create-mutator-registry'
 import { isKebabCaseName } from '../../../core/plugins/is-kebab-case-name'
+import { DEFAULT_LOGGERS } from '../../../core/presets/default-loggers'
 import { resolvePreset } from '../../../core/plugins/resolve-preset'
 import { createTestFile } from '../../helpers/create-test-file'
 import { corePlugin } from '../../../core/plugins/core-plugin'
@@ -125,10 +126,10 @@ describe('corePlugin', () => {
       ),
     ).toStrictEqual([])
     expect(settings).toStrictEqual({
+      loggers: DEFAULT_LOGGERS,
       coarseMutants: false,
       templates: true,
       timeouts: false,
-      loggers: [],
     })
   })
 
@@ -140,10 +141,10 @@ describe('corePlugin', () => {
       recommended.mutators.map(active => active.id),
     )
     expect(strict.settings).toStrictEqual({
+      loggers: DEFAULT_LOGGERS,
       coarseMutants: true,
       templates: true,
       timeouts: true,
-      loggers: [],
     })
   })
 

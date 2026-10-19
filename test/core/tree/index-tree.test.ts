@@ -2,6 +2,7 @@ import type { Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
+import { DEFAULT_LOGGERS } from '../../../core/presets/default-loggers'
 import { createTestFile } from '../../helpers/create-test-file'
 import { indexTree } from '../../../core/tree/index-tree'
 
@@ -30,7 +31,7 @@ interface IndexedSnippet {
  */
 function indexSnippet(source: string, file = 'example.ts'): IndexedSnippet {
   let { program, text } = createTestFile(source, file).parsed
-  let tree = indexTree(program)
+  let tree = indexTree(program, DEFAULT_LOGGERS)
   return {
     indexed: Array.from(tree.slots.keys(), node => describeNode(node, text)),
     dispatched: tree.order.map(node => describeNode(node, text)),
@@ -213,13 +214,6 @@ describe('indexTree', () => {
       "import.meta.glob('./a/*.ts', { eager: true })",
       'Literal true',
     ],
-    [
-      'the callee of a logging call',
-      "console.log('a', b)",
-      'Identifier console',
-    ],
-    ['the arguments of a logging call', "console.log('a', b)", 'Identifier b'],
-    ['a logger argument', 'this.logger.warn(message)', 'Identifier message'],
     ['a child-logger label', "logger.withContext('Build')", "Literal 'Build'"],
     [
       'child-logger bindings',
@@ -241,6 +235,13 @@ describe('indexTree', () => {
       "console.log('a', b)",
       "CallExpression console.log('a', b)",
     ],
+    [
+      'the callee of a logging call',
+      "console.log('a', b)",
+      'MemberExpression console.log',
+    ],
+    ['an argument of a logging call', "console.log('a', b)", 'Identifier b'],
+    ['a logger argument', 'this.logger.warn(message)', 'Identifier message'],
     [
       'a dynamic import',
       "await import('./a')",
@@ -321,7 +322,6 @@ describe('indexTree', () => {
   })
 
   it.each([
-    ['a logging call', "consola.info('a', b)", 'Identifier b'],
     ['a child-logger label', "consola.withTag('Build')", "Literal 'Build'"],
     [
       'a chained child-logger label',

@@ -4,7 +4,6 @@ import type { TreeIndex } from '../../types/syntax/tree-index'
 import type { NodeSlot } from '../../types/syntax/node-slot'
 
 import { isLoggerFactoryCall } from '../syntax/is-logger-factory-call'
-import { isLoggingCall } from '../syntax/is-logging-call'
 import { isLoggerLabel } from '../syntax/is-logger-label'
 import { isModuleCall } from '../syntax/is-module-call'
 import { isNamePosition } from './is-name-position'
@@ -49,14 +48,14 @@ let skippedTypes = new Set<string>([
  * Builds the runtime tree of a program in one walk: the raw slot of every node
  * that holds runtime code, and the nodes that visitors receive in pre-order.
  * Type positions, type-only and ambient declarations, module specifiers,
- * directives, the callee and arguments of logging calls, the label of a
- * child-logger factory such as `logger.withContext('Build')` and the arguments
- * of `import.meta.glob` are left out. Names that are never values, such as
- * non-computed keys, are indexed but not dispatched.
+ * directives, the label of a child-logger factory such as
+ * `logger.withContext('Build')` and the arguments of `import.meta.glob` are
+ * left out. Names that are never values, such as non-computed keys, are indexed
+ * but not dispatched.
  *
  * @param program - Root of the file.
- * @param loggers - Exact receiver names the `loggers` setting adds to the
- *   loggers of logging calls and child-logger factories; none when omitted.
+ * @param loggers - Names of the `loggers` setting, which tell child-logger
+ *   factories; none when omitted.
  * @returns Slots and dispatch order of the runtime tree.
  */
 export function indexTree(
@@ -79,11 +78,11 @@ export function indexTree(
 }
 
 /**
- * Tells whether a slot holds module metadata, a type, a namespace name or the
- * part of a call that only a log or a module specifier depends on.
+ * Tells whether a slot holds module metadata, a type, a namespace name, the
+ * label of a child logger or a module specifier.
  *
  * @param slot - Raw slot of a node.
- * @param loggers - Exact receiver names the `loggers` setting adds.
+ * @param loggers - Names of the `loggers` setting.
  * @returns Whether the node in the slot is left out of the runtime tree.
  */
 function isSkippedSlot(slot: NodeSlot, loggers: readonly string[]): boolean {
@@ -104,7 +103,6 @@ function isSkippedSlot(slot: NodeSlot, loggers: readonly string[]): boolean {
       return true
     case 'CallExpression':
       return (
-        isLoggingCall(parent, loggers) ||
         (index === 0 &&
           isLoggerFactoryCall(parent, loggers) &&
           isLoggerLabel(parent.arguments[0]!)) ||

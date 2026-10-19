@@ -23,19 +23,15 @@ let logMethods = new Set([
 ])
 
 /**
- * Bare functions that are logging calls when their first argument is a text.
- */
-let bareLogFunctions = new Set(['debug', 'log'])
-
-/**
- * Tells whether a call writes a log entry: a `console` method, a log method of
- * a receiver named `log`, `logger`, `...Logger` or a name of the `loggers`
- * setting, or `log` and `debug` called with a string or template literal first.
- * Only the log output depends on the callee and the arguments of such a call,
- * so they are never mutated. Reads only the callee and the first argument.
+ * Tells whether a call writes a log entry, by the names of the `loggers`
+ * setting (see `isLoggerName`): any method of `console` when `console` is a
+ * logger, a log method of another logger receiver, such as `logger.info()`, or
+ * a bare logger function, such as `log()` or `debug()`, called with a string or
+ * template literal first. A name the setting leaves out is ordinary code. Reads
+ * only the callee and the first argument.
  *
  * @param node - Call to check.
- * @param loggers - Exact receiver names the `loggers` setting adds.
+ * @param loggers - Names of the `loggers` setting.
  * @returns Whether the call is a logging call.
  */
 export function isLoggingCall(
@@ -50,7 +46,7 @@ export function isLoggingCall(
   let [first] = path
   if (path.length === 1) {
     let [argument] = node.arguments
-    if (!argument || !bareLogFunctions.has(first!)) {
+    if (!argument || !isLoggerName(first!, loggers)) {
       return false
     }
     let value = unwrapParentheses(argument)
@@ -60,7 +56,7 @@ export function isLoggingCall(
     )
   }
   if (first === 'console' && path.length === 2) {
-    return true
+    return isLoggerName(first, loggers)
   }
 
   return logMethods.has(path.at(-1)!) && isLoggerName(path.at(-2)!, loggers)

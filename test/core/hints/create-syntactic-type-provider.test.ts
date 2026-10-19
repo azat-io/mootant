@@ -139,7 +139,7 @@ describe('createSyntacticTypeProvider', () => {
 
   it.each([
     ['let a: string = x', 'string', 'TSStringKeyword'],
-    ['console.log(1)', '1', 'Literal'],
+    ["import.meta.glob('./a')", "'./a'", 'Literal'],
     ['let a = 1', 'let a = 1', 'VariableDeclaration'],
     ['let a = 1', 'let a = 1', 'Program'],
   ])('gives unknown for %s at %s', (source, text, type) => {

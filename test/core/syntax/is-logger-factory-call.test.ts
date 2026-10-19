@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { isLoggerFactoryCall } from '../../../core/syntax/is-logger-factory-call'
+import { DEFAULT_LOGGERS } from '../../../core/presets/default-loggers'
 import { createTestFile } from '../../helpers/create-test-file'
 
 describe('isLoggerFactoryCall', () => {
@@ -10,7 +11,7 @@ describe('isLoggerFactoryCall', () => {
     "logger['withContext']('Build')",
     "this.logger.child({ module: 'build' })",
     "log.getLogger('build')",
-    "LOG.withTag('build')",
+    "Logger.withTag('build')",
     "app.buildLogger.child('build')",
     'logger.withContext(name)',
     "(logger.child as Function)('build')",
@@ -21,7 +22,10 @@ describe('isLoggerFactoryCall', () => {
     "(logger.withContext('a')?.withTag)('b')",
   ])('accepts %s', source => {
     expect(
-      isLoggerFactoryCall(createTestFile(source).find('CallExpression'), []),
+      isLoggerFactoryCall(
+        createTestFile(source).find('CallExpression'),
+        DEFAULT_LOGGERS,
+      ),
     ).toBe(true)
   })
 

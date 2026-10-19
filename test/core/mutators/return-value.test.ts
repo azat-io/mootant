@@ -377,7 +377,7 @@ describe('returnValue', () => {
     },
     {
       code: 'function k(a: number) { let ok = false; console.log((ok = a > 1)); return ok }',
-      expected: ['ok -> false'],
+      expected: [],
     },
   ])(
     'leaves names and writes outside the runtime tree out in $code',

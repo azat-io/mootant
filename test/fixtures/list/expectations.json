@@ -5133,6 +5133,108 @@
       "reason": null,
       "ignoredBy": null,
       "presets": ["strict"]
+    },
+    {
+      "file": "test/fixtures/list/source/catalog.ts",
+      "line": 170,
+      "original": "console.log('debug', id)",
+      "mutator": "statement-removal",
+      "replacement": ";",
+      "kind": "block",
+      "scope": "strings",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "file": "test/fixtures/list/source/plain.js",
+      "line": 16,
+      "original": "'found %d'",
+      "mutator": "string-literal",
+      "replacement": "''",
+      "kind": "expression",
+      "scope": "visible",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "file": "test/fixtures/list/source/plain.js",
+      "line": 16,
+      "original": "log('found %d', list.length)",
+      "mutator": "statement-removal",
+      "replacement": ";",
+      "kind": "block",
+      "scope": "visible",
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null,
+      "presets": ["strict"]
+    },
+    {
+      "file": "test/fixtures/list/source/script.js",
+      "line": 18,
+      "original": "'total %d'",
+      "mutator": "string-literal",
+      "replacement": "''",
+      "kind": "expression",
+      "scope": null,
+      "status": "Ignored",
+      "reason": "messages are checked by snapshot tests",
+      "ignoredBy": {
+        "directive": "mootant-ignore-file",
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "file": "test/fixtures/list/source/script.js",
+      "line": 18,
+      "original": "count([]) * 2",
+      "mutator": "arithmetic-operator",
+      "replacement": "count([]) / 2",
+      "kind": "expression",
+      "scope": null,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "file": "test/fixtures/list/source/script.js",
+      "line": 18,
+      "original": "[]",
+      "mutator": "array-element",
+      "replacement": "[undefined]",
+      "kind": "expression",
+      "scope": null,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "file": "test/fixtures/list/source/script.js",
+      "line": 18,
+      "original": "2",
+      "mutator": "number-literal",
+      "replacement": "3",
+      "kind": "expression",
+      "scope": null,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "file": "test/fixtures/list/source/script.js",
+      "line": 18,
+      "original": "console.log('total %d', count([]) * 2)",
+      "mutator": "statement-removal",
+      "replacement": ";",
+      "kind": "block",
+      "scope": null,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null,
+      "presets": ["strict"]
     }
   ]
 }

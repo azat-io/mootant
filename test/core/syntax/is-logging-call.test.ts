@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { DEFAULT_LOGGERS } from '../../../core/presets/default-loggers'
 import { isLoggingCall } from '../../../core/syntax/is-logging-call'
 import { createTestFile } from '../../helpers/create-test-file'
 
@@ -11,7 +12,6 @@ describe('isLoggingCall', () => {
     'console?.warn(message)',
     'logger.info(message)',
     'Logger.warn(message)',
-    'LOG.error(message)',
     'app.logger.fatal(message)',
     'this.logger.warn(message)',
     'context.log.debug(message)',
@@ -21,9 +21,15 @@ describe('isLoggingCall', () => {
     'debug(`found`)',
     "log(('found'))",
     "(console.log as Function)('a')",
-  ])('accepts %s', source => {
+    'globalThis.console.log(message)',
+    'window.console.log(message)',
+    'LOG.error(message)',
+  ])('accepts %s with the default loggers', source => {
     expect(
-      isLoggingCall(createTestFile(source).find('CallExpression'), []),
+      isLoggingCall(
+        createTestFile(source).find('CallExpression'),
+        DEFAULT_LOGGERS,
+      ),
     ).toBe(true)
   })
 
@@ -36,7 +42,6 @@ describe('isLoggingCall', () => {
     'log(...entries)',
     "info('found')",
     "print('found')",
-    'window.console.log(message)',
     'logger.push(entry)',
     'catalog.info(message)',
     'this.loggers.info(message)',
@@ -45,10 +50,41 @@ describe('isLoggingCall', () => {
     'f()(message)',
     'loggers[0].info(message)',
     "consola.info('found')",
-  ])('rejects %s', source => {
+  ])('rejects %s with the default loggers', source => {
     expect(
-      isLoggingCall(createTestFile(source).find('CallExpression'), []),
+      isLoggingCall(
+        createTestFile(source).find('CallExpression'),
+        DEFAULT_LOGGERS,
+      ),
     ).toBe(false)
+  })
+
+  it.each(["console.log('a')", 'logger.info(message)', "log('found')"])(
+    'rejects %s without loggers',
+    source => {
+      expect(
+        isLoggingCall(createTestFile(source).find('CallExpression'), []),
+      ).toBe(false)
+    },
+  )
+
+  it.each(["console.log('a')", "log('found')", 'requestLogger.info(message)'])(
+    'rejects %s when the loggers setting leaves its name out',
+    source => {
+      expect(
+        isLoggingCall(createTestFile(source).find('CallExpression'), [
+          'consola',
+        ]),
+      ).toBe(false)
+    },
+  )
+
+  it('accepts a bare call of a name the loggers setting names', () => {
+    expect(
+      isLoggingCall(createTestFile("trace('found')").find('CallExpression'), [
+        'trace',
+      ]),
+    ).toBe(true)
   })
 
   it.each(["consola.info('found')", 'this.signale.warn(message)'])(

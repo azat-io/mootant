@@ -30,7 +30,7 @@ describe('numberLiteral', () => {
     { source: "x = { 1: 'one' }", expected: [] },
     { source: 'switch (x) { case 2: run() }', expected: [] },
     { source: 'setTimeout(run, 100)', expected: [] },
-    { source: "console.log('n', 5)", expected: [] },
+    { source: "console.log('n', 5)", expected: ['5 -> 6'] },
     { source: 'x = 9007199254740993', expected: [] },
     { source: 'x = path.slice(-1)', expected: [] },
     { source: 'function f(n: number) { x = n || -1 }', expected: [] },

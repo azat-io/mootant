@@ -20,8 +20,23 @@ describe('getSettingsProblem', () => {
     [{ loggers: [] }, null],
     [{ loggers: ['consola', 'signale'], timeouts: true }, null],
     [{ loggers: 'consola' }, '"loggers" is not an array of receiver names'],
-    [{ loggers: ['consola', 1] }, '"loggers" item 1 is not a non-empty string'],
-    [{ loggers: [''] }, '"loggers" item 0 is not a non-empty string'],
+    [{ loggers: ['*Logger', '$log', '_log'] }, null],
+    [
+      { loggers: ['consola', 1] },
+      '"loggers" item 1 is not a name, such as "logger" or "*Logger"',
+    ],
+    [
+      { loggers: [''] },
+      '"loggers" item 0 is not a name, such as "logger" or "*Logger"',
+    ],
+    [
+      { loggers: ['*'] },
+      '"loggers" item 0 is not a name, such as "logger" or "*Logger"',
+    ],
+    [
+      { loggers: ['app.logger'] },
+      '"loggers" item 0 is not a name, such as "logger" or "*Logger"',
+    ],
     [{ logger: [] }, '"logger" is not a setting (did you mean "loggers"?)'],
   ])('describes %o', (value, expected) => {
     expect(getSettingsProblem(value)).toBe(expected)

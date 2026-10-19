@@ -9,6 +9,7 @@ import type { Diagnostic } from '../../../types/mutant/diagnostic'
 import { runReferenceMutants } from '../../helpers/run-reference-mutants'
 import { compareCodeUnits } from '../../../core/compare-code-units'
 import { vitestAdapter } from '../../../adapters/vitest/index'
+import { listMutants } from '../../../core/list-mutants'
 import { runMutants } from '../../../core/run-mutants'
 
 /**
@@ -822,4 +823,74 @@ describe('verdict equivalence', () => {
       'outside-workers | src/port.ts | ',
     ])
   }, 30_000)
+
+  it('skips only the message mutants of logging calls and runs the rest as by hand', async () => {
+    let directory = path.join(root, 'logging')
+    let { original, isolated, rows } = await runAllPaths(directory, [
+      'src/report.ts',
+    ])
+    let listing = await listMutants({
+      paths: ['src'],
+      cwd: directory,
+      skipped: true,
+    })
+    let { skipped, source } = listing.files[0]!
+
+    expect(original).toBe(true)
+    expectAgreement(rows)
+    // Texts of messages and removals of global console calls with plain
+    // arguments are skipped, and never run.
+    expect(
+      skipped
+        .filter(entry => entry.rule === 'log-message')
+        .map(entry => [
+          source!.slice(entry.start, entry.end),
+          entry.replacement,
+        ]),
+    ).toStrictEqual([
+      ["'skipped'", "''"],
+      ["console.warn('done')", ';'],
+      ["'done'", "''"],
+      ["'sent'", "''"],
+      ["'done'", "''"],
+      ['console.error()', ';'],
+      ["'ready'", "''"],
+    ])
+    // The rest runs like other code: the branch of a template, removals whose
+    // argument or receiver throws, `?.`, format directives, also escaped, and
+    // the messages of a `log` function the file declares and of a `console`
+    // parameter, and the removal of a call of a parameter that may be null.
+    expect(
+      isolated.results.map(result => [
+        source!.slice(result.mutant.start, result.mutant.end),
+        result.mutant.replacement,
+        result.status,
+      ]),
+    ).toStrictEqual([
+      [
+        `\`found \${count} \${count === 1 ? 'entry' : 'entries'}\``,
+        `\`\${count}\${count === 1 ? 'entry' : 'entries'}\``,
+        'Killed',
+      ],
+      ['count === 1', 'count <= 1', 'Survived'],
+      ['count === 1', 'count >= 1', 'Killed'],
+      ['count === 1', 'false', 'Survived'],
+      ["'entry'", "''", 'NoCoverage'],
+      ["'entries'", "''", 'Killed'],
+      ["console.warn('skipped', reason)", ';', 'Survived'],
+      ['reason.length', '0', 'Killed'],
+      ['console.log(user.name)', ';', 'Killed'],
+      ["context.logger.info('sent')", ';', 'Killed'],
+      ["logger?.info('done')", "logger.info('done')", 'Killed'],
+      ["logger?.info('done')", ';', 'Survived'],
+      ["'finished'", "''", 'Killed'],
+      ["'%j'", "''", 'Killed'],
+      ['`\\x25j`', '``', 'Killed'],
+      ['[]', '[undefined]', 'Killed'],
+      ['entries.push(text)', ';', 'Killed'],
+      ["'built'", "''", 'Killed'],
+      ["logger.info('ready')", ';', 'Killed'],
+      ["'kept'", "''", 'Killed'],
+    ])
+  }, 60_000)
 })

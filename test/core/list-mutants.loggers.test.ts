@@ -30,19 +30,29 @@ describe('listMutants with the loggers setting', () => {
    * Lists the mutants of `app.ts` with a configuration file in the directory.
    *
    * @param settings - Settings of the configuration file.
-   * @returns Ids of the mutants and their changes, as `original ->
-   *   replacement`.
+   * @returns Ids of the mutants, their changes and the changes skipped as log
+   *   messages, as `original -> replacement`.
    */
   async function list(
     settings: object,
-  ): Promise<{ changes: string[]; ids: string[] }> {
+  ): Promise<{ messages: string[]; changes: string[]; ids: string[] }> {
     await writeFile(
       path.join(directory, '.mootantrc.json'),
       JSON.stringify({ settings }),
     )
-    let { files } = await listMutants({ paths: ['app.ts'], cwd: directory })
-    let { mutants, source } = files[0]!
+    let { files } = await listMutants({
+      paths: ['app.ts'],
+      cwd: directory,
+      skipped: true,
+    })
+    let { mutants, skipped, source } = files[0]!
     return {
+      messages: skipped
+        .filter(candidate => candidate.rule === 'log-message')
+        .map(
+          candidate =>
+            `${source!.slice(candidate.start, candidate.end)} -> ${candidate.replacement}`,
+        ),
       changes: mutants.map(
         mutant =>
           `${source!.slice(mutant.start, mutant.end)} -> ${mutant.replacement}`,
@@ -51,22 +61,32 @@ describe('listMutants with the loggers setting', () => {
     }
   }
 
-  it('mutates the arguments of consola calls by default', async () => {
-    let { changes } = await list({})
+  it('skips the messages of the default loggers and mutates consola calls as code', async () => {
+    let { messages, changes } = await list({})
 
-    expect(changes).toStrictEqual(["'x' -> ''", "'Build' -> ''"])
+    expect(changes).toStrictEqual([
+      "'x' -> ''",
+      "'Build' -> ''",
+      "logger.info('y') -> ;",
+    ])
+    expect(messages).toStrictEqual(["'y' -> ''"])
   })
 
-  it('leaves the consola log text and tag alone when the setting names consola', async () => {
-    let { changes } = await list({ loggers: ['consola'] })
+  it('skips only the messages of the loggers the setting names and leaves their labels alone', async () => {
+    let { messages, changes } = await list({ loggers: ['consola'] })
 
-    expect(changes).toStrictEqual(["consola.withTag('Build') -> ;"])
+    expect(changes).toStrictEqual([
+      "consola.info('x') -> ;",
+      "consola.withTag('Build') -> ;",
+      "'y' -> ''",
+    ])
+    expect(messages).toStrictEqual(["'x' -> ''"])
   })
 
-  it('keeps the mutants and ids when the setting names no receiver of the file', async () => {
-    let without = await list({})
-    let unrelated = await list({ loggers: ['signale'] })
+  it('mutates every call as code with an empty setting', async () => {
+    let { messages, changes } = await list({ loggers: [] })
 
-    expect(unrelated).toStrictEqual(without)
+    expect(changes).toStrictEqual(["'x' -> ''", "'Build' -> ''", "'y' -> ''"])
+    expect(messages).toStrictEqual([])
   })
 })

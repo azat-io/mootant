@@ -9,8 +9,10 @@ import type { TypeHints } from '../../types/hints/type-hints'
 
 import { createSyntacticTypeProvider } from '../../core/hints/create-syntactic-type-provider'
 import { createSyntaxHelpers } from '../../core/syntax/create-syntax-helpers'
+import { findLoggingCalls } from '../../core/syntax/find-logging-calls'
 import { createSourceCode } from '../../core/text/create-source-code'
 import { createTypeHints } from '../../core/hints/create-type-hints'
+import { DEFAULT_LOGGERS } from '../../core/presets/default-loggers'
 import { analyzeScopes } from '../../core/hints/analyze-scopes'
 import { parseFile } from '../../core/parser/parse-file'
 import { indexTree } from '../../core/tree/index-tree'
@@ -86,7 +88,7 @@ export function createTestFile(source: string, file = 'example.ts'): TestFile {
   }
 
   let { parsed } = outcome
-  let tree = indexTree(parsed.program)
+  let tree = indexTree(parsed.program, DEFAULT_LOGGERS)
   let scopes = analyzeScopes(parsed.program)
   return {
     find<Type extends Node['type']>(
@@ -113,9 +115,12 @@ export function createTestFile(source: string, file = 'example.ts'): TestFile {
       }
       return match
     },
+    syntax: createSyntaxHelpers(tree, scopes, {
+      loggingCalls: findLoggingCalls(tree, scopes, DEFAULT_LOGGERS),
+      loggers: DEFAULT_LOGGERS,
+    }),
     hints: createTypeHints(createSyntacticTypeProvider(parsed, tree, scopes)),
     sourceCode: createSourceCode(parsed, tree, scopes),
-    syntax: createSyntaxHelpers(tree, scopes),
     parsed,
     scopes,
     tree,

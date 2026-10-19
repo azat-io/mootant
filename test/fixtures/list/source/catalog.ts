@@ -167,7 +167,7 @@ export function strings(id: string, mode: string, s: string, map: Map<string, st
   let joined = `${id}${mode}` // no static text: no mutant
   let found = s.includes('foo') // value context: the needle is kept
   if (map.has('key')) run() // lookup key in a test: no string mutant
-  console.log('debug', id) // logging call: nothing
+  console.log('debug', id) // logging call: the text is skipped, the removal stays
   throw new Error(`bad ${id}`) // error message: only the statement removal
 }
 

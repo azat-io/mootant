@@ -1,8 +1,11 @@
 import type { Preset } from '../../types/config/preset'
 
+import { DEFAULT_LOGGERS } from './default-loggers'
+
 /**
  * Default preset: every built-in mutator with its default options, without
- * mutants that only a timeout can kill.
+ * mutants that only a timeout can kill, and the usual loggers, whose message
+ * texts are not mutated.
  */
 export let recommended: Preset = {
   mutators: {
@@ -29,5 +32,5 @@ export let recommended: Preset = {
   },
   description:
     'Precise, low-noise mutators without subsumed or equivalent variants.',
-  settings: { coarseMutants: false, timeouts: false },
+  settings: { loggers: DEFAULT_LOGGERS, coarseMutants: false, timeouts: false },
 }

@@ -259,6 +259,10 @@ export let skipRules = {
     category: 'duplicate',
     heuristic: false,
   },
+  'log-message': {
+    category: 'noise',
+    heuristic: true,
+  },
   'case-label': {
     category: 'noise',
     heuristic: false,

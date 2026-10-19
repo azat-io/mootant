@@ -8,6 +8,7 @@ import type { PresetSettings } from '../../types/config/preset-settings'
 import type { ActiveMutator } from '../../types/mutator/active-mutator'
 import type { SkippedMutant } from '../../types/mutant/skipped-mutant'
 import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
+import type { LoggingCall } from '../../types/syntax/logging-call'
 import type { FileMutants } from '../../types/mutant/file-mutants'
 import type { ParsedFile } from '../../types/source/parsed-file'
 import type { IgnoreRule } from '../../types/mutant/ignore-rule'
@@ -21,6 +22,7 @@ import { parseIgnoreDirectives } from '../ignore/parse-ignore-directives'
 import { createSyntaxHelpers } from '../syntax/create-syntax-helpers'
 import { createIgnoreRules } from '../ignore/create-ignore-rules'
 import { deduplicateCandidates } from './deduplicate-candidates'
+import { findLoggingCalls } from '../syntax/find-logging-calls'
 import { getSourcePosition } from '../text/get-source-position'
 import { assignMutantIds } from '../identity/assign-mutant-ids'
 import { createSourceCode } from '../text/create-source-code'
@@ -30,11 +32,63 @@ import { findIgnoreRule } from '../ignore/find-ignore-rule'
 import { applySolitaryRule } from './apply-solitary-rule'
 import { collectCandidates } from './collect-candidates'
 import { compareCandidates } from './compare-candidates'
+import { isLogMessage } from '../syntax/is-log-message'
 import { analyzeScopes } from '../hints/analyze-scopes'
 import { parseFile } from '../parser/parse-file'
 import { skipRules } from '../skips/skip-rules'
 import { indexTree } from '../tree/index-tree'
 import { pickFocus } from './pick-focus'
+
+/**
+ * Program of a file that parsed, with what its mutators need.
+ */
+interface PreparedProgram {
+  /**
+   * Code of a template in source order, or null for a script.
+   */
+  expressions: readonly TemplateExpression[] | null
+
+  /**
+   * Nodes of a template that are never replaced, or null for a script.
+   */
+  hosts: ReadonlySet<Node> | null
+
+  /**
+   * Arrow functions whose result nothing reads: the event handlers of a
+   * template.
+   */
+  handlers: ReadonlySet<Node>
+
+  /**
+   * Logging calls of the program, whose message mutants are skipped.
+   */
+  loggingCalls: LoggingCall[]
+
+  /**
+   * Warnings about the ignore directives of the program.
+   */
+  diagnostics: Diagnostic[]
+
+  /**
+   * Scope analysis of the program.
+   */
+  scopes: ScopeAnalysis
+
+  /**
+   * Ignore rules of the directives in the program.
+   */
+  rules: IgnoreRule[]
+
+  /**
+   * Parsed program.
+   */
+  parsed: ParsedFile
+
+  /**
+   * Runtime tree of the program.
+   */
+  tree: TreeIndex
+}
 
 /**
  * One file to generate mutants for, with the mutators of the run.
@@ -80,52 +134,6 @@ interface GenerateFileInput {
 }
 
 /**
- * Program of a file that parsed, with what its mutators need.
- */
-interface PreparedProgram {
-  /**
-   * Code of a template in source order, or null for a script.
-   */
-  expressions: readonly TemplateExpression[] | null
-
-  /**
-   * Nodes of a template that are never replaced, or null for a script.
-   */
-  hosts: ReadonlySet<Node> | null
-
-  /**
-   * Arrow functions whose result nothing reads: the event handlers of a
-   * template.
-   */
-  handlers: ReadonlySet<Node>
-
-  /**
-   * Warnings about the ignore directives of the program.
-   */
-  diagnostics: Diagnostic[]
-
-  /**
-   * Scope analysis of the program.
-   */
-  scopes: ScopeAnalysis
-
-  /**
-   * Ignore rules of the directives in the program.
-   */
-  rules: IgnoreRule[]
-
-  /**
-   * Parsed program.
-   */
-  parsed: ParsedFile
-
-  /**
-   * Runtime tree of the program.
-   */
-  tree: TreeIndex
-}
-
-/**
  * Candidates of a file at the end of the pipeline, with what dropped the
  * others.
  */
@@ -168,15 +176,16 @@ interface Selection {
  * blocks are still mutated; a template that does not parse gets a warning, and
  * when only oxc rejects its expressions, its HTML comments still hold ignore
  * directives. Ignore directives are read first, so mutators know which mutants
- * will run; then the mutators collect candidates, no-ops are dropped, the
- * candidates of every block are sorted together and every candidate gets its id
- * before the solitary rule drops coarse ones, unless the `coarseMutants`
- * setting is on, and deduplication drops duplicate ones. Kept candidates become
- * pending mutants, or ignored ones with the reason and comment of their ignore
- * rule. On request, the candidates that a mutator, the collection, the solitary
- * rule or deduplication did not keep are listed as skipped, in canonical order,
- * except no-ops; they never change the mutants or their ids. Depends only on
- * its input.
+ * will run; then the mutators collect candidates, no-ops are dropped, those
+ * that can only change the text of a logging call are skipped (see
+ * `isLogMessage`), the candidates of every block are sorted together and every
+ * candidate gets its id before the solitary rule drops coarse ones, unless the
+ * `coarseMutants` setting is on, and deduplication drops duplicate ones. Kept
+ * candidates become pending mutants, or ignored ones with the reason and
+ * comment of their ignore rule. On request, the candidates that a mutator, the
+ * collection, the solitary rule or deduplication did not keep are listed as
+ * skipped, in canonical order, except no-ops; they never change the mutants or
+ * their ids. Depends only on its input.
  *
  * @param input - File, text, active mutators, preset settings, known mutator
  *   ids and the template compilers.
@@ -239,8 +248,20 @@ export function generateFileMutants(
     ].toSorted((left, right) => left.order - right.order)
     let collection = collectProgramCandidates(input, program, rules)
     diagnostics.push(...collection.diagnostics, ...program.diagnostics)
-    collected.push(...collection.candidates)
     collectedSkipped.push(...collection.skipped)
+    for (let candidate of collection.candidates) {
+      if (
+        isLogMessage(
+          program.loggingCalls,
+          candidate,
+          candidate.kind === 'block',
+        )
+      ) {
+        collectedSkipped.push(createLogMessageSkip(candidate))
+      } else {
+        collected.push(candidate)
+      }
+    }
   }
 
   let candidates = collected
@@ -397,6 +418,7 @@ function collectProgramCandidates(
         )
       },
       syntax: createSyntaxHelpers(tree, scopes, {
+        loggingCalls: program.loggingCalls,
         loggers: settings.loggers,
         discarded: handlers,
       }),
@@ -419,8 +441,8 @@ function collectProgramCandidates(
 
 /**
  * Builds what the mutators of one program need besides the ignore rules of the
- * other programs: its tree, with the logger names of the settings, scopes and
- * own ignore rules.
+ * other programs: its tree, with the logger names of the settings, logging
+ * calls, scopes and own ignore rules.
  *
  * @param parsed - Program that parsed.
  * @param input - File input with every registered mutator id and the settings.
@@ -439,15 +461,18 @@ function prepareProgram(
     directiveParse.directives,
     template ? 'template' : 'script',
   )
+  let tree = indexTree(parsed.program, input.settings.loggers)
+  let scopes = analyzeScopes(parsed.program)
   return {
     diagnostics: [...directiveParse.diagnostics, ...ruleCreation.diagnostics],
-    tree: indexTree(parsed.program, input.settings.loggers),
+    loggingCalls: findLoggingCalls(tree, scopes, input.settings.loggers),
     expressions: template?.expressions ?? null,
     handlers: template?.handlers ?? new Set(),
-    scopes: analyzeScopes(parsed.program),
     hosts: template?.hosts ?? null,
     rules: ruleCreation.rules,
+    scopes,
     parsed,
+    tree,
   }
 }
 
@@ -480,5 +505,32 @@ function createMutant(
     ...pickFocus(candidate),
     file,
     id,
+  }
+}
+
+/**
+ * Builds the skip of a candidate that can only change the text a logging call
+ * writes (see `isLogMessage`).
+ *
+ * @param candidate - Literal text of a logging call, or the removal of its
+ *   statement.
+ * @returns Skipped candidate with the `log-message` rule.
+ */
+function createLogMessageSkip(candidate: MutantCandidate): SkippedCandidate {
+  return {
+    reason:
+      candidate.kind === 'block' ?
+        'it only removes a log message'
+      : 'it only changes the text of a log message',
+    registered: candidate.registered,
+    emission: candidate.emission,
+    start: candidate.start,
+    text: candidate.text,
+    kind: candidate.kind,
+    rule: 'log-message',
+    end: candidate.end,
+    heuristic: false,
+    ...pickFocus(candidate),
+    by: null,
   }
 }
