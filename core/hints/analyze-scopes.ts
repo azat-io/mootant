@@ -57,6 +57,11 @@ interface Analysis {
    * Names to resolve after the walk.
    */
   names: PendingName[]
+
+  /**
+   * Whether the program has a direct `eval` call or a `with` statement.
+   */
+  opaque: boolean
 }
 
 /**
@@ -221,7 +226,8 @@ let noValueTypes = new Set<string>([
  *
  * @param program - Root of the file.
  * @returns Bindings with their references and writes, the same-file
- *   declarations of type names and the owners of type parameters.
+ *   declarations of type names, the owners of type parameters and whether a
+ *   direct `eval` call or a `with` statement makes the program opaque.
  */
 export function analyzeScopes(program: Program): ScopeAnalysis {
   let analysis: Analysis = {
@@ -230,6 +236,7 @@ export function analyzeScopes(program: Program): ScopeAnalysis {
     typeParameters: new Map(),
     contexts: new Map(),
     bindings: new Map(),
+    opaque: false,
     typeNames: [],
     writes: [],
     names: [],
@@ -247,6 +254,7 @@ export function analyzeScopes(program: Program): ScopeAnalysis {
     recordDeclarations(node, outer.scope, analysis)
     recordTypes(node, slot, analysis)
     recordWrites(node, analysis)
+    recordOpacity(node, analysis)
     if (node.type === 'Identifier') {
       recordName(node, slot, analysis)
     }
@@ -279,6 +287,7 @@ export function analyzeScopes(program: Program): ScopeAnalysis {
     typeReferences: analysis.typeReferences,
     typeParameters: analysis.typeParameters,
     bindings: analysis.bindings,
+    opaque: analysis.opaque,
   }
 }
 
@@ -671,6 +680,28 @@ function enterNamedScope(
     analysis,
   )
   return scope
+}
+
+/**
+ * Records the code that hides uses of names from the analysis: a `with`
+ * statement, and a call that may be a direct `eval`. A call is direct when its
+ * callee is the name `eval` and the name holds the built-in `eval` when the
+ * code runs, whatever declaration binds it: code that is not strict may give a
+ * parameter or a variable that name. An optional call of `eval` is never
+ * direct.
+ *
+ * @param node - Node being entered.
+ * @param analysis - Collections of the walk.
+ */
+function recordOpacity(node: Node, analysis: Analysis): void {
+  if (node.type === 'WithStatement') {
+    analysis.opaque = true
+  } else if (node.type === 'CallExpression' && !node.optional) {
+    let callee = unwrapExpression(node.callee)
+    if (callee.type === 'Identifier' && callee.name === 'eval') {
+      analysis.opaque = true
+    }
+  }
 }
 
 /**

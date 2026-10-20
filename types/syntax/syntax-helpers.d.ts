@@ -81,7 +81,8 @@ export interface SyntaxHelpers {
 
   /**
    * Smallest value the expression can have, when syntax alone tells it, also
-   * through a `const` or a never-written `let` binding.
+   * through a `const` or a never-written `let` binding, unless code may write
+   * the binding where the scope analysis sees no write.
    */
   getLowerBound(node: Node): number | null
 

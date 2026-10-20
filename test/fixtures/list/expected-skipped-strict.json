@@ -2472,6 +2472,66 @@
     },
     {
       "by": {
+        "column": 10,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "cursor === -1",
+      "replacement": "true",
+      "heuristic": false,
+      "category": "subsumed",
+      "mutator": "condition",
+      "reason": "a comparison-operator mutant makes the comparison true on part of the inputs where the constant does",
+      "column": 10,
+      "start": 171,
+      "file": "test/fixtures/list/source/cursor.vue",
+      "rule": "comparison-region",
+      "line": 6,
+      "end": 184
+    },
+    {
+      "by": {
+        "column": 10,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "cursor === -1",
+      "replacement": "false",
+      "heuristic": false,
+      "category": "owned",
+      "mutator": "condition",
+      "reason": "comparison-operator emits the same constant",
+      "column": 10,
+      "start": 171,
+      "file": "test/fixtures/list/source/cursor.vue",
+      "rule": "O1",
+      "line": 6,
+      "end": 184
+    },
+    {
+      "by": {
+        "column": 10,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "-1",
+      "replacement": "0",
+      "heuristic": false,
+      "category": "subsumed",
+      "mutator": "number-literal",
+      "reason": "a comparison-operator mutant changes the comparison on part of the inputs where this change does",
+      "column": 21,
+      "start": 182,
+      "file": "test/fixtures/list/source/cursor.vue",
+      "rule": "O4",
+      "line": 6,
+      "end": 184
+    },
+    {
+      "by": {
         "column": 17,
         "line": 3,
         "mutator": "logical-operator",
@@ -2657,6 +2717,81 @@
     },
     {
       "by": null,
+      "original": "label = at === -1 ? 'missing' : 'found'",
+      "replacement": ";",
+      "heuristic": false,
+      "category": "invalid",
+      "mutator": "statement-removal",
+      "reason": "the mutant switch cannot wrap the body of a label",
+      "column": 6,
+      "start": 163,
+      "file": "test/fixtures/list/source/prop.svelte",
+      "rule": "invalid-target",
+      "line": 6,
+      "end": 202
+    },
+    {
+      "by": {
+        "column": 14,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "at === -1",
+      "replacement": "true",
+      "heuristic": false,
+      "category": "subsumed",
+      "mutator": "condition",
+      "reason": "a comparison-operator mutant makes the comparison true on part of the inputs where the constant does",
+      "column": 14,
+      "start": 171,
+      "file": "test/fixtures/list/source/prop.svelte",
+      "rule": "comparison-region",
+      "line": 6,
+      "end": 180
+    },
+    {
+      "by": {
+        "column": 14,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "at === -1",
+      "replacement": "false",
+      "heuristic": false,
+      "category": "owned",
+      "mutator": "condition",
+      "reason": "comparison-operator emits the same constant",
+      "column": 14,
+      "start": 171,
+      "file": "test/fixtures/list/source/prop.svelte",
+      "rule": "O1",
+      "line": 6,
+      "end": 180
+    },
+    {
+      "by": {
+        "column": 14,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "-1",
+      "replacement": "0",
+      "heuristic": false,
+      "category": "subsumed",
+      "mutator": "number-literal",
+      "reason": "a comparison-operator mutant changes the comparison on part of the inputs where this change does",
+      "column": 21,
+      "start": 178,
+      "file": "test/fixtures/list/source/prop.svelte",
+      "rule": "O4",
+      "line": 6,
+      "end": 180
+    },
+    {
+      "by": null,
       "original": "\"list\"",
       "replacement": "\"\"",
       "heuristic": false,
@@ -2796,11 +2931,11 @@
       "equivalent": 30,
       "noise": 16,
       "timeout": 0,
-      "owned": 50,
-      "subsumed": 58,
+      "owned": 52,
+      "subsumed": 62,
       "duplicate": 1,
-      "invalid": 0
+      "invalid": 1
     },
-    "totalSkipped": 155
+    "totalSkipped": 162
   }
 }

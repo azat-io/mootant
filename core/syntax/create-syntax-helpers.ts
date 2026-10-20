@@ -42,6 +42,12 @@ interface SyntaxHelperOptions {
   loggingCalls?: readonly LoggingCall[]
 
   /**
+   * Scopes of the program whose names code outside them may read and write (see
+   * `getSharedScopes`); none when omitted.
+   */
+  sharedScopes?: ReadonlySet<Node>
+
+  /**
    * Arrow functions whose result nothing reads, such as the event handlers of a
    * component template; none when omitted.
    */
@@ -60,8 +66,8 @@ interface SyntaxHelperOptions {
  *
  * @param tree - Runtime tree of the file.
  * @param scopes - Scope analysis of the file.
- * @param options - Discarded arrow functions, the logging calls of the program
- *   and the logger names of the settings.
+ * @param options - Discarded arrow functions, the logging calls and shared
+ *   scopes of the program and the logger names of the settings.
  * @returns Questions about the syntactic position of nodes of the file.
  */
 export function createSyntaxHelpers(
@@ -69,10 +75,16 @@ export function createSyntaxHelpers(
   scopes: ScopeAnalysis,
   options: SyntaxHelperOptions = {},
 ): SyntaxHelpers {
-  let { discarded = new Set(), loggingCalls = [], loggers = [] } = options
+  let {
+    sharedScopes = new Set(),
+    discarded = new Set(),
+    loggingCalls = [],
+    loggers = [],
+  } = options
   return {
     isLogMessage: node =>
       isLogMessage(loggingCalls, node, node.type === 'ExpressionStatement'),
+    getLowerBound: node => getLowerBound(scopes, sharedScopes, node),
     isBooleanContext: node => isBooleanContext(tree, scopes, node),
     getEnclosingFunction: node => getEnclosingFunction(tree, node),
     isResultUnused: node => isResultUnused(tree, node, discarded),
@@ -85,7 +97,6 @@ export function createSyntaxHelpers(
     isValuePosition: node => isValuePosition(tree, node),
     isLoggingCall: node => isLoggingCall(node, loggers),
     readTimerCall: node => readTimerCall(scopes, node),
-    getLowerBound: node => getLowerBound(scopes, node),
     getContextSlot: node => getContextSlot(tree, node),
     isErrorMessage: node => isErrorMessage(tree, node),
     getExitedLoops: node => getExitedLoops(tree, node),

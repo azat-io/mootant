@@ -194,6 +194,20 @@ describe('createSyntaxHelpers', () => {
     ).toBe(false)
   })
 
+  it('binds the shared scopes of the program to getLowerBound', () => {
+    let file = createTestFile("let at = s.indexOf(':'); f(at)")
+    let [argument] = file.find('CallExpression', 'f(at)').arguments
+
+    expect(
+      createSyntaxHelpers(file.tree, file.scopes).getLowerBound(argument!),
+    ).toBe(-1)
+    expect(
+      createSyntaxHelpers(file.tree, file.scopes, {
+        sharedScopes: new Set([file.parsed.program]),
+      }).getLowerBound(argument!),
+    ).toBeNull()
+  })
+
   it('binds the names of the loggers setting to isLoggingCall', () => {
     let file = createTestFile("consola.info('x')")
     let call = file.find('CallExpression')

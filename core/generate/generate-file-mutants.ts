@@ -27,6 +27,7 @@ import { getSourcePosition } from '../text/get-source-position'
 import { assignMutantIds } from '../identity/assign-mutant-ids'
 import { createSourceCode } from '../text/create-source-code'
 import { getSourceBlocks } from '../parser/get-source-blocks'
+import { getSharedScopes } from '../parser/get-shared-scopes'
 import { createTypeHints } from '../hints/create-type-hints'
 import { findIgnoreRule } from '../ignore/find-ignore-rule'
 import { applySolitaryRule } from './apply-solitary-rule'
@@ -172,20 +173,22 @@ interface Selection {
  * `mootant-ignore-file` directive in any block covers every block. With the
  * compiler of its framework and the `templates` setting on, the template of a
  * Svelte or Vue component is one more program, whose expressions are mutated
- * only as expressions. A block that fails to parse is reported and the other
- * blocks are still mutated; a template that does not parse gets a warning, and
- * when only oxc rejects its expressions, its HTML comments still hold ignore
- * directives. Ignore directives are read first, so mutators know which mutants
- * will run; then the mutators collect candidates, no-ops are dropped, those
- * that can only change the text of a logging call are skipped (see
- * `isLogMessage`), the candidates of every block are sorted together and every
- * candidate gets its id before the solitary rule drops coarse ones, unless the
- * `coarseMutants` setting is on, and deduplication drops duplicate ones. Kept
- * candidates become pending mutants, or ignored ones with the reason and
- * comment of their ignore rule. On request, the candidates that a mutator, the
- * collection, the solitary rule or deduplication did not keep are listed as
- * skipped, in canonical order, except no-ops; they never change the mutants or
- * their ids. Depends only on its input.
+ * only as expressions. The syntax helpers of a program know the scopes whose
+ * names code outside them may read and write (see `getSharedScopes`). A block
+ * that fails to parse is reported and the other blocks are still mutated; a
+ * template that does not parse gets a warning, and when only oxc rejects its
+ * expressions, its HTML comments still hold ignore directives. Ignore
+ * directives are read first, so mutators know which mutants will run; then the
+ * mutators collect candidates, no-ops are dropped, those that can only change
+ * the text of a logging call are skipped (see `isLogMessage`), the candidates
+ * of every block are sorted together and every candidate gets its id before the
+ * solitary rule drops coarse ones, unless the `coarseMutants` setting is on,
+ * and deduplication drops duplicate ones. Kept candidates become pending
+ * mutants, or ignored ones with the reason and comment of their ignore rule. On
+ * request, the candidates that a mutator, the collection, the solitary rule or
+ * deduplication did not keep are listed as skipped, in canonical order, except
+ * no-ops; they never change the mutants or their ids. Depends only on its
+ * input.
  *
  * @param input - File, text, active mutators, preset settings, known mutator
  *   ids and the template compilers.
@@ -418,6 +421,11 @@ function collectProgramCandidates(
         )
       },
       syntax: createSyntaxHelpers(tree, scopes, {
+        sharedScopes: getSharedScopes(
+          input.file,
+          parsed.program,
+          program.expressions,
+        ),
         loggingCalls: program.loggingCalls,
         loggers: settings.loggers,
         discarded: handlers,

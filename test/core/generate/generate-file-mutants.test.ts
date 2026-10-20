@@ -83,6 +83,22 @@ const SKIPPER: Mutator = {
 }
 
 /**
+ * Writes the lower bound of the identifier argument of every call, as the
+ * syntax helpers tell it.
+ */
+const BOUND: Mutator = {
+  create: context => ({
+    CallExpression(node) {
+      let [argument] = node.arguments
+      return argument?.type === 'Identifier' ?
+          [{ text: String(context.syntax.getLowerBound(argument)), node }]
+        : []
+    },
+  }),
+  meta: { description: 'Bound.' },
+}
+
+/**
  * Generates the `arithmetic` and `removal` mutants of a Svelte component with
  * the Svelte compiler.
  *
@@ -677,6 +693,55 @@ describe('generateFileMutants', () => {
       expect(
         result.mutants.every(mutant => mutant.scope === '<template>'),
       ).toBe(true)
+    },
+  )
+
+  it.each([
+    {
+      source: "let at = s.indexOf(':'); f(at)",
+      title: 'a let of a module',
+      file: 'src/a.ts',
+      expected: '-1',
+    },
+    {
+      source: "<script>let at = s.indexOf(':'); f(at)</script>",
+      title: 'a top-level let of a component',
+      file: 'src/Card.svelte',
+      expected: 'null',
+    },
+    {
+      source: "{let at = s.indexOf(':'), b = f(at)}",
+      title: 'a let of a Svelte declaration tag',
+      file: 'src/Card.svelte',
+      expected: 'null',
+    },
+    {
+      source:
+        '<template><i @click="let at = s.indexOf(\':\'); f(at)" /></template>',
+      title: 'a let of a Vue event handler',
+      file: 'src/App.vue',
+      expected: '-1',
+    },
+  ])(
+    'tells the syntax helpers whether other code shares $title',
+    ({ expected, source, file }) => {
+      let result = generateFileMutants({
+        settings: Object.freeze({
+          coarseMutants: false,
+          templates: true,
+          timeouts: false,
+          loggers: [],
+        }),
+        mutators: [activate('bound', 0, BOUND)],
+        compilers: { svelte, vue },
+        knownMutatorIds,
+        source,
+        file,
+      })
+
+      expect(result.mutants.map(mutant => mutant.replacement)).toStrictEqual([
+        expected,
+      ])
     },
   )
 

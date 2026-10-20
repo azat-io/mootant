@@ -3017,6 +3017,86 @@
     },
     {
       "by": {
+        "column": 10,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": "t7w7ckaj4zdx"
+      },
+      "original": "cursor === -1 ? 'none' : 'some'",
+      "replacement": "''",
+      "heuristic": true,
+      "category": "subsumed",
+      "mutator": "return-value",
+      "reason": "a finer comparison-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
+      "column": 10,
+      "start": 171,
+      "file": "test/fixtures/list/source/cursor.vue",
+      "rule": "solitary",
+      "line": 6,
+      "end": 202
+    },
+    {
+      "by": {
+        "column": 10,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "cursor === -1",
+      "replacement": "true",
+      "heuristic": false,
+      "category": "subsumed",
+      "mutator": "condition",
+      "reason": "a comparison-operator mutant makes the comparison true on part of the inputs where the constant does",
+      "column": 10,
+      "start": 171,
+      "file": "test/fixtures/list/source/cursor.vue",
+      "rule": "comparison-region",
+      "line": 6,
+      "end": 184
+    },
+    {
+      "by": {
+        "column": 10,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "cursor === -1",
+      "replacement": "false",
+      "heuristic": false,
+      "category": "owned",
+      "mutator": "condition",
+      "reason": "comparison-operator emits the same constant",
+      "column": 10,
+      "start": 171,
+      "file": "test/fixtures/list/source/cursor.vue",
+      "rule": "O1",
+      "line": 6,
+      "end": 184
+    },
+    {
+      "by": {
+        "column": 10,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "-1",
+      "replacement": "0",
+      "heuristic": false,
+      "category": "subsumed",
+      "mutator": "number-literal",
+      "reason": "a comparison-operator mutant changes the comparison on part of the inputs where this change does",
+      "column": 21,
+      "start": 182,
+      "file": "test/fixtures/list/source/cursor.vue",
+      "rule": "O4",
+      "line": 6,
+      "end": 184
+    },
+    {
+      "by": {
         "column": 17,
         "line": 3,
         "mutator": "logical-operator",
@@ -3354,6 +3434,81 @@
       "rule": "solitary",
       "line": 32,
       "end": 895
+    },
+    {
+      "by": null,
+      "original": "label = at === -1 ? 'missing' : 'found'",
+      "replacement": ";",
+      "heuristic": false,
+      "category": "invalid",
+      "mutator": "statement-removal",
+      "reason": "the mutant switch cannot wrap the body of a label",
+      "column": 6,
+      "start": 163,
+      "file": "test/fixtures/list/source/prop.svelte",
+      "rule": "invalid-target",
+      "line": 6,
+      "end": 202
+    },
+    {
+      "by": {
+        "column": 14,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "at === -1",
+      "replacement": "true",
+      "heuristic": false,
+      "category": "subsumed",
+      "mutator": "condition",
+      "reason": "a comparison-operator mutant makes the comparison true on part of the inputs where the constant does",
+      "column": 14,
+      "start": 171,
+      "file": "test/fixtures/list/source/prop.svelte",
+      "rule": "comparison-region",
+      "line": 6,
+      "end": 180
+    },
+    {
+      "by": {
+        "column": 14,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "at === -1",
+      "replacement": "false",
+      "heuristic": false,
+      "category": "owned",
+      "mutator": "condition",
+      "reason": "comparison-operator emits the same constant",
+      "column": 14,
+      "start": 171,
+      "file": "test/fixtures/list/source/prop.svelte",
+      "rule": "O1",
+      "line": 6,
+      "end": 180
+    },
+    {
+      "by": {
+        "column": 14,
+        "line": 6,
+        "mutator": "comparison-operator",
+        "id": null
+      },
+      "original": "-1",
+      "replacement": "0",
+      "heuristic": false,
+      "category": "subsumed",
+      "mutator": "number-literal",
+      "reason": "a comparison-operator mutant changes the comparison on part of the inputs where this change does",
+      "column": 21,
+      "start": 178,
+      "file": "test/fixtures/list/source/prop.svelte",
+      "rule": "O4",
+      "line": 6,
+      "end": 180
     },
     {
       "by": {
@@ -4036,11 +4191,11 @@
       "equivalent": 32,
       "noise": 23,
       "timeout": 11,
-      "owned": 47,
-      "subsumed": 108,
+      "owned": 49,
+      "subsumed": 113,
       "duplicate": 1,
-      "invalid": 0
+      "invalid": 1
     },
-    "totalSkipped": 222
+    "totalSkipped": 230
   }
 }

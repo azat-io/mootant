@@ -1009,4 +1009,53 @@ describe('analyzeScopes', () => {
       'FunctionExpression <U>() {}',
     ])
   })
+
+  it.each([
+    { title: 'a direct eval', source: 'eval(code)', file: 'example.ts' },
+    {
+      source: 'function f() { (eval as Function)(code) }',
+      title: 'a wrapped direct eval in a function',
+      file: 'example.ts',
+    },
+    { source: 'with (scope) { x }', title: 'a with statement', file: 'a.js' },
+    {
+      source: 'declare function eval(code: string): unknown; eval(code)',
+      title: 'a direct eval of an ambient function',
+      file: 'example.ts',
+    },
+    {
+      source: 'declare let eval: (code: string) => unknown; eval(code)',
+      title: 'a direct eval of an ambient variable',
+      file: 'example.ts',
+    },
+    {
+      source: 'var eval = run; eval(code)',
+      title: 'a local binding named eval',
+      file: 'a.js',
+    },
+    {
+      source: "function check(eval) { let n = ''.length; eval('n = -1') }",
+      title: 'a parameter named eval',
+      file: 'a.cjs',
+    },
+  ])('finds the program with $title opaque', ({ source, file }) => {
+    expect(createTestFile(source, file).scopes.opaque).toBe(true)
+  })
+
+  it.each([
+    {
+      title: 'an indirect eval',
+      source: '(0, eval)(code)',
+      file: 'example.ts',
+    },
+    {
+      title: 'an eval of the global object',
+      source: 'globalThis.eval(code)',
+      file: 'example.ts',
+    },
+    { title: 'an optional eval call', source: 'eval?.(code)', file: 'a.ts' },
+    { source: 'let x = run(code)', file: 'example.ts', title: 'neither' },
+  ])('does not find the program with $title opaque', ({ source, file }) => {
+    expect(createTestFile(source, file).scopes.opaque).toBe(false)
+  })
 })

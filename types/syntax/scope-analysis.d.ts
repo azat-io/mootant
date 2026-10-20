@@ -25,4 +25,15 @@ export interface ScopeAnalysis {
    * Globals and undeclared names are missing.
    */
   bindings: ReadonlyMap<Node, Binding>
+
+  /**
+   * Whether the program has a direct `eval` call or a `with` statement, which
+   * may read, write and shadow its names where the analysis does not see it. A
+   * call may be a direct `eval` when it is not optional and its callee, through
+   * parentheses and TypeScript expression wrappers, is the name `eval`, however
+   * the file binds that name: the call is direct whenever the name holds the
+   * built-in `eval` at run time. Any other call of `eval` runs in the global
+   * scope.
+   */
+  opaque: boolean
 }

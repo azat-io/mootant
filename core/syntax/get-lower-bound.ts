@@ -3,6 +3,7 @@ import type { VariableDeclarator, MemberExpression, Node } from 'oxc-parser'
 import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
 
 import { unwrapExpression } from '../tree/unwrap-expression'
+import { getBindingClosure } from './get-binding-closure'
 
 /**
  * Properties that hold a size, which is never negative, whatever the receiver.
@@ -28,22 +29,31 @@ let positionMethods = new Set([
  * Finds the smallest value an expression can have when syntax alone tells it: 0
  * for a `length` member, -1 for an `indexOf`, `lastIndexOf`, `findIndex`,
  * `findLastIndex` or `search` call, and the bound of the initializer for a
- * `const` binding or a `let` binding that is never written. Members and methods
- * are recognized by name. An optional chain has no bound, because it may be
- * `undefined`.
+ * `const` binding or a `let` binding that is never written, unless code may
+ * write the binding where the scope analysis sees no write (see
+ * `getBindingClosure`): a top-level `let` of a component or a `let` of a Svelte
+ * declaration tag, which a parent, the template or another script block may
+ * assign; an exported variable of a TypeScript namespace, which compiles to a
+ * property of the namespace object that any code may assign; and any binding of
+ * a program with a direct `eval` call or a `with` statement. Members and
+ * methods are recognized by name. An optional chain has no bound, because it
+ * may be `undefined`.
  *
- * @param scopes - Scope analysis of the file.
+ * @param scopes - Scope analysis of the program.
+ * @param shared - Scopes of the program whose names code outside them may read
+ *   and write (see `getSharedScopes`).
  * @param node - Expression to bound.
  * @returns The lower bound, or null when it is not known.
  */
 export function getLowerBound(
   scopes: ScopeAnalysis,
+  shared: ReadonlySet<Node>,
   node: Node,
 ): number | null {
   let seen = new Set<Node>()
   let current = unwrapExpression(node)
   while (current.type === 'Identifier') {
-    let initializer = getFixedInitializer(scopes, current)
+    let initializer = getFixedInitializer(scopes, shared, current)
     if (initializer === null || seen.has(initializer)) {
       return null
     }
@@ -71,20 +81,25 @@ export function getLowerBound(
 /**
  * Finds the initializer that always gives an identifier its value: the
  * initializer of the `const` declarator or never-written `let` declarator that
- * declares the name as a whole.
+ * declares the name as a whole, when no code may write the name where the scope
+ * analysis sees no write.
  *
- * @param scopes - Scope analysis of the file.
+ * @param scopes - Scope analysis of the program.
+ * @param shared - Scopes of the program whose names code outside them may read
+ *   and write.
  * @param identifier - Identifier that refers to or declares a name.
  * @returns The initializer, or null for any other name.
  */
 function getFixedInitializer(
   scopes: ScopeAnalysis,
+  shared: ReadonlySet<Node>,
   identifier: Node,
 ): Node | null {
   let binding = scopes.bindings.get(identifier)
   if (
-    binding?.kind !== 'const' &&
-    (binding?.kind !== 'let' || binding.writes.length > 0)
+    (binding?.kind !== 'const' &&
+      (binding?.kind !== 'let' || binding.writes.length > 0)) ||
+    getBindingClosure(scopes, shared, binding) === 'open'
   ) {
     return null
   }
