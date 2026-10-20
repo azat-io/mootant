@@ -22,6 +22,12 @@ const ACTIONABLE_STATUSES = new Set<RunStatus>([
 ])
 
 /**
+ * Most test files a mutant of the report names in `testFiles`, besides the file
+ * of its first covering test.
+ */
+const MAX_TEST_FILES = 3
+
+/**
  * What a run report holds beyond the result.
  */
 interface RunReportOptions {
@@ -41,10 +47,12 @@ interface RunReportOptions {
  * Turns the result of a run into the report that every formatter reads: the
  * list report's positions, fragments, source lines and sorted diagnostics, plus
  * each mutant's verdict, the test that kills it or, for a mutant not killed,
- * the tests that cover it, the command that runs it again, counts, scores and
- * durations. Only the mutants to act on (`Survived`, `NoCoverage`, `Error`) are
- * listed unless every mutant is asked for; the summary counts them all. Paths
- * are relative to the project root.
+ * the tests that cover it with their count, its likeliest test files (at most
+ * three, then the file of the first covering test when it ranks lower, with
+ * their counts of covering tests) and the first covering test, the command that
+ * runs it again, counts, scores and durations. Only the mutants to act on
+ * (`Survived`, `NoCoverage`, `Error`) are listed unless every mutant is asked
+ * for; the summary counts them all. Paths are relative to the project root.
  *
  * @param result - Outcome of the run.
  * @param options - Command line of a re-check and whether to list every mutant.
@@ -73,13 +81,11 @@ export function buildRunReport(
     if (!options.all && !ACTIONABLE_STATUSES.has(verdict.status)) {
       return []
     }
+    let decided = verdict.status === 'Killed' || verdict.status === 'Timeout'
+    let coveredBy = verdict.coveredBy.map(id => tests.get(id)!)
     return [
       {
         ...entry,
-        coveredBy:
-          verdict.status === 'Killed' || verdict.status === 'Timeout' ?
-            null
-          : verdict.coveredBy.map(id => tests.get(id)!),
         killedIn:
           verdict.killedIn === null ?
             null
@@ -88,10 +94,15 @@ export function buildRunReport(
           verdict.status === 'Ignored' ?
             null
           : `${options.recheck} --mutant ${entry.id}`,
+        testFiles:
+          decided ? null : countTestFiles(verdict.testFiles, coveredBy, result),
         killedBy:
           verdict.killedBy === null ? null : tests.get(verdict.killedBy)!,
+        test: decided ? null : (coveredBy[0] ?? null),
+        tests: decided ? null : coveredBy.length,
         isolatedBecause: verdict.isolatedBecause,
         duration: Math.round(verdict.duration),
+        coveredBy: decided ? null : coveredBy,
         message: verdict.message,
         cached: verdict.cached,
         status: verdict.status,
@@ -180,10 +191,45 @@ export function buildRunReport(
     since: result.since,
     mode: result.mode,
     files: list.files,
-    schemaVersion: 2,
+    schemaVersion: 3,
     command: 'run',
     mutants,
   }
+}
+
+/**
+ * Counts the covering tests of a mutant in each of its likeliest test files and
+ * in the file of its first covering test, which the report names as the test to
+ * start from, when that file ranks lower.
+ *
+ * @param files - Absolute paths of its test files, the likeliest first.
+ * @param coveredBy - Report entries of its covering tests, in the order of the
+ *   files.
+ * @param result - Outcome of the run, for the project root.
+ * @returns Display paths of at most three files, then the file of the first
+ *   covering test when it is not among them, in order, with their counts.
+ */
+function countTestFiles(
+  files: readonly string[],
+  coveredBy: readonly RunReportTest[],
+  result: RunResult,
+): Record<string, number> {
+  let counts = new Map(
+    files
+      .slice(0, MAX_TEST_FILES)
+      .map(file => [getDisplayPath(file, result.root), 0]),
+  )
+  let [first] = coveredBy
+  if (first !== undefined && !counts.has(first.file)) {
+    counts.set(first.file, 0)
+  }
+  for (let test of coveredBy) {
+    let count = counts.get(test.file)
+    if (count !== undefined) {
+      counts.set(test.file, count + 1)
+    }
+  }
+  return Object.fromEntries(counts)
 }
 
 /**

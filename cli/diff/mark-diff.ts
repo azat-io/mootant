@@ -55,27 +55,30 @@ export interface MarkedGrapheme {
  * line, so a line cut at its start shifts them.
  *
  * @param mutant - Mutant with its position and source lines.
- * @param mutant.diff - Source lines before and after the mutant.
+ * @param mutant.before - Source lines before the mutant.
+ * @param mutant.after - Source lines after the mutant.
+ * @param mutant.cutStart - Code units left out at the start of the first line.
+ * @param mutant.cutEnd - Code units left out at the end of the last line.
  * @param mutant.column - 1-based column of the first replaced character.
  * @param mutant.endColumn - 1-based column past the last replaced character.
  * @param mutant.line - 1-based line of the first replaced character.
  * @param mutant.focus - Part of the range the change amounts to, if any.
  * @returns Lines with the changed characters marked.
  */
-export function markDiff(mutant: {
-  focus?: ListReportFocus
-  diff: ListReportDiff
-  endColumn: number
-  column: number
-  line: number
-}): MarkedDiff {
-  let { cutStart, cutEnd } = mutant.diff
-  let before = mutant.diff.before.join('\n')
-  let after = mutant.diff.after.join('\n')
+export function markDiff(
+  mutant: {
+    focus?: ListReportFocus
+    endColumn: number
+    column: number
+    line: number
+  } & ListReportDiff,
+): MarkedDiff {
+  let { cutStart, cutEnd } = mutant
+  let before = mutant.before.join('\n')
+  let after = mutant.after.join('\n')
   let start = mutant.column - 1 - cutStart
-  let lastCut = mutant.diff.before.length === 1 ? cutStart : 0
-  let trail =
-    mutant.diff.before.at(-1)!.length - (mutant.endColumn - 1 - lastCut)
+  let lastCut = mutant.before.length === 1 ? cutStart : 0
+  let trail = mutant.before.at(-1)!.length - (mutant.endColumn - 1 - lastCut)
   let ranges = {
     replacementEnd: after.length - trail,
     originalEnd: before.length - trail,
@@ -84,7 +87,7 @@ export function markDiff(mutant: {
   let { focus } = mutant
   if (focus) {
     let focusStart =
-      mutant.diff.before
+      mutant.before
         .slice(0, focus.line - mutant.line)
         .reduce((offset, text) => offset + text.length + 1, 0) +
       focus.column -

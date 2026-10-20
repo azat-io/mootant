@@ -22,8 +22,8 @@ import { pluralize } from './pluralize'
  */
 export interface RunTextOptions {
   /**
-   * Whether to add the covering tests of survivors and the runs of the test
-   * runner.
+   * Whether to add the covering test of survivors and the runs of the test
+   * runner; the JSON format prints the full report with it.
    */
   verbose: boolean
 
@@ -97,14 +97,15 @@ const STATIC_COST_TIME = 30_000
  * and time; the counts by status and the score; a section for each status to
  * act on (`survived`, `no coverage`, `errors`) with its count and its mutants
  * grouped by file, each as a diff of its source lines under a heading with the
- * location, mutator and short id, the reason of an error under the diff; and a
- * hint to re-check the first survivor, else the first listed mutant. Killed,
- * timed-out and ignored mutants are only counted. In fast mode a note tells how
- * many verdicts came from batch tries and may be false; when a run of half a
- * minute or more spent more than a quarter of its time in isolated units, the
- * source files whose mutants took the largest share of the isolated test time
- * are named. Verbose output adds the covering tests of survivors and the runs
- * of the test runner.
+ * location, mutator and short id, the reason of an error or the likeliest test
+ * file to extend of another mutant under the diff; and a hint to re-check the
+ * first survivor, else the first listed mutant. Killed, timed-out and ignored
+ * mutants are only counted. In fast mode a note tells how many verdicts came
+ * from batch tries and may be false; when a run of half a minute or more spent
+ * more than a quarter of its time in isolated units, the source files whose
+ * mutants took the largest share of the isolated test time are named. Verbose
+ * output adds the first covering test of survivors and the runs of the test
+ * runner.
  *
  * @param report - Report of a run.
  * @param options - Command, hint, id length, style and verbosity.
@@ -283,24 +284,32 @@ function formatScore(summary: RunReportSummary, style: TextStyle): string {
 }
 
 /**
- * Builds the lines under a listed mutant: the reason of an error and, in
- * verbose output, the first covering test of a survivor.
+ * Builds the lines under a listed mutant: the reason of an error; for a mutant
+ * with test files, the likeliest one, the file to add a killing test to, as a
+ * path that a narrow terminal cuts at its start, and, in verbose output, the
+ * first covering test.
  *
  * @param mutant - Listed mutant.
  * @param verbose - Whether to name the covering test.
  * @returns Lines without indentation, possibly none.
  */
-function getDetails(mutant: RunReportMutant, verbose: boolean): string[] {
+function getDetails(
+  mutant: RunReportMutant,
+  verbose: boolean,
+): DiffEntry['details'] {
   if (mutant.status === 'Error') {
     return mutant.message === null ? [] : [mutant.message]
   }
-  let [test] = mutant.coveredBy!
-  if (!verbose || test === undefined) {
-    return []
+  let [file] = Object.keys(mutant.testFiles!)
+  let details: DiffEntry['details'] =
+    file === undefined ? [] : [{ label: 'test: ', path: file }]
+  let { test } = mutant
+  if (verbose && test !== null) {
+    let where = test.line === null ? test.file : `${test.file}:${test.line}`
+    let more = mutant.tests! - 1
+    details.push(
+      `covered by ${test.name} (${where})${more > 0 ? ` and ${more} more` : ''}`,
+    )
   }
-  let where = test.line === null ? test.file : `${test.file}:${test.line}`
-  let more = mutant.coveredBy!.length - 1
-  return [
-    `covered by ${test.name} (${where})${more > 0 ? ` and ${more} more` : ''}`,
-  ]
+  return details
 }

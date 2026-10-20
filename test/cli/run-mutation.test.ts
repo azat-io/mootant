@@ -8,6 +8,7 @@ import type { RunReport } from '../../types/report/run-report'
 import { formatRunTextReport } from '../../cli/report/format-run-text-report'
 import { buildRunReport } from '../../cli/report/build-run-report'
 import { createRunProgress } from '../../cli/create-run-progress'
+import { slimRunReport } from '../../cli/report/slim-run-report'
 import { getBuiltInAdapters } from '../../cli/built-in-adapters'
 import { createTextStyle } from '../helpers/create-text-style'
 import { createRunResult } from '../helpers/create-run-result'
@@ -221,10 +222,12 @@ describe('runMutation', () => {
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
       JSON.stringify(
-        buildRunReport(createPassingResult(), {
-          recheck: 'mootant run src',
-          all: false,
-        }),
+        slimRunReport(
+          buildRunReport(createPassingResult(), {
+            recheck: 'mootant run src',
+            all: false,
+          }),
+        ),
       ),
     )
     expect(consoleWarnSpy).not.toHaveBeenCalled()
@@ -243,10 +246,12 @@ describe('runMutation', () => {
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
       JSON.stringify(
-        buildRunReport(createRunResult(), {
-          recheck: 'mootant run src',
-          all: false,
-        }),
+        slimRunReport(
+          buildRunReport(createRunResult(), {
+            recheck: 'mootant run src',
+            all: false,
+          }),
+        ),
       ),
     )
     expect(process.exitCode).toBe(1)
@@ -273,6 +278,30 @@ describe('runMutation', () => {
     expect(report.mutants[2]!.recheck).toBe(
       'mootant run src --preset strict --no-fast --mutant survived0001',
     )
+    expect(report.mutants[0]).not.toHaveProperty('before')
+  })
+
+  it('prints the full JSON report with --verbose', async () => {
+    vi.mocked(runMutants).mockResolvedValue(createRunResult())
+
+    await runMutation({
+      paths: ['src'],
+      mutantIds: [],
+      verbose: true,
+      json: true,
+      all: false,
+    })
+
+    let report = JSON.parse(
+      consoleInfoSpy.mock.calls[0]![0] as string,
+    ) as RunReport
+
+    expect(report).toHaveProperty('mutators')
+    expect(report.mutants[0]).toMatchObject({
+      recheck: 'mootant run src --mutant survived0001',
+      cutStart: 0,
+      start: 83,
+    })
   })
 
   it('reports a failed run and sets exit code 1', async () => {

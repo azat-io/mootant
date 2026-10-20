@@ -97,6 +97,7 @@ describe('formatRunTextReport', () => {
         4:10  comparison-operator  surv
           - return size < limit
           + return size <= limit
+          test: test/cart.test.ts
 
       no coverage 1
 
@@ -143,6 +144,7 @@ describe('formatRunTextReport', () => {
           <90>4:10<39>  <90>comparison-operator<39>  surv
             <31>-<39> return size <31><<39> limit
             <32>+<39> return size <32><=<39> limit
+            <90>test: test/cart.test.ts<39>
 
         <1><33>no coverage<39><22> 1
 
@@ -196,6 +198,7 @@ describe('formatRunTextReport', () => {
           4:10  comparison-operator  surv
             - return size < limit
             + return size <= limit
+            test: test/cart.test.ts
             covered by fits > small sizes (test/cart.test.ts:12) and 1 more
 
         no coverage 1
@@ -234,7 +237,7 @@ describe('formatRunTextReport', () => {
 
   it('cuts a long line around the change, both sides at the same columns', () => {
     let report = createReport()
-    report.mutants[2]!.diff = {
+    Object.assign(report.mutants[2]!, {
       before: [
         `  if (${'value.'.repeat(12)}size < limit && ${'other.'.repeat(8)}ok) {`,
       ],
@@ -243,7 +246,7 @@ describe('formatRunTextReport', () => {
       ],
       cutStart: 0,
       cutEnd: 0,
-    }
+    })
     report.mutants[2]!.column = 79
     report.mutants[2]!.endColumn = 91
 
@@ -251,30 +254,33 @@ describe('formatRunTextReport', () => {
       .toMatchInlineSnapshot(`
         "  4:79  comparison-operator  surv
             - ….value.value.value.size < limit && other.other.other…
-            + ….value.value.value.size <= limit && other.other.othe…"
+            + ….value.value.value.size <= limit && other.other.othe…
+            test: test/cart.test.ts"
       `)
     expect(getSection(format(report, { unicode: false, width: 60 }), 'surv'))
       .toMatchInlineSnapshot(`
         "  4:79  comparison-operator  surv
             - ...value.value.value.size < limit && other.other.ot...
-            + ...value.value.value.size <= limit && other.other.o..."
+            + ...value.value.value.size <= limit && other.other.o...
+            test: test/cart.test.ts"
       `)
     expect(getSection(format(report, { width: 200 }), 'surv'))
       .toMatchInlineSnapshot(`
         "  4:79  comparison-operator  surv
             - if (value.value.value.value.value.value.value.value.value.value.value.value.size < limit && other.other.other.other.other.other.other.other.ok) {
-            + if (value.value.value.value.value.value.value.value.value.value.value.value.size <= limit && other.other.other.other.other.other.other.other.ok) {"
+            + if (value.value.value.value.value.value.value.value.value.value.value.value.size <= limit && other.other.other.other.other.other.other.other.ok) {
+            test: test/cart.test.ts"
       `)
   })
 
   it('starts a change too wide for the line a few columns before it', () => {
     let report = createReport()
-    report.mutants[2]!.diff = {
+    Object.assign(report.mutants[2]!, {
       before: [`call(first, ${'a'.repeat(70)})`],
       after: [`call(first, ${'b'.repeat(70)})`],
       cutStart: 0,
       cutEnd: 0,
-    }
+    })
     report.mutants[2]!.column = 13
     report.mutants[2]!.endColumn = 83
 
@@ -282,13 +288,14 @@ describe('formatRunTextReport', () => {
       .toMatchInlineSnapshot(`
         "  4:13  comparison-operator  surv
             - …, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa…
-            + …, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb…"
+            + …, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb…
+            test: test/cart.test.ts"
       `)
   })
 
   it('shows the first and last lines of a long multi-line change', () => {
     let report = createReport()
-    report.mutants[2]!.diff = {
+    Object.assign(report.mutants[2]!, {
       before: [
         '    if (ready) {',
         '      start()',
@@ -300,7 +307,7 @@ describe('formatRunTextReport', () => {
       after: ['    ;'],
       cutStart: 0,
       cutEnd: 0,
-    }
+    })
     report.mutants[2]!.column = 5
     report.mutants[2]!.endColumn = 6
 
@@ -310,18 +317,19 @@ describe('formatRunTextReport', () => {
           -   start()
           - … 3 lines
           - }
-          + ;"
+          + ;
+          test: test/cart.test.ts"
     `)
   })
 
   it('keeps short multi-line changes whole and trims their indentation', () => {
     let report = createReport()
-    report.mutants[2]!.diff = {
+    Object.assign(report.mutants[2]!, {
       before: ['\t\tlet total =', '\t\t\tfirst + second'],
       after: ['\t\tlet total =', '\t\t\tfirst - second'],
       cutStart: 0,
       cutEnd: 0,
-    }
+    })
     report.mutants[2]!.column = 7
     report.mutants[2]!.endColumn = 18
 
@@ -330,7 +338,8 @@ describe('formatRunTextReport', () => {
           - let total =
           -   first + second
           + let total =
-          +   first - second"
+          +   first - second
+          test: test/cart.test.ts"
     `)
   })
 
@@ -338,12 +347,12 @@ describe('formatRunTextReport', () => {
     let report = createReport()
     report.mutants[2]!.file = `src/${'deep/'.repeat(12)}cart.ts`
     report.mutants[2]!.mutator = 'acme/a-very-long-mutator-name-of-a-plugin'
-    report.mutants[2]!.diff = {
+    Object.assign(report.mutants[2]!, {
       before: [`let label = '${'大きい数字です'.repeat(4)}' + suffix`],
       after: ["let label = '' + suffix"],
       cutStart: 0,
       cutEnd: 0,
-    }
+    })
     report.mutants[2]!.column = 14
     report.mutants[2]!.endColumn = 42
     report.summary.staticCost = []
@@ -355,7 +364,8 @@ describe('formatRunTextReport', () => {
       .toMatchInlineSnapshot(`
         "  4:14  acme/a-very-long-mutator-…  surv
             - … = '大きい数字です大きい数字です…
-            + … = '' + suffix"
+            + … = '' + suffix
+            test: test/cart.test.ts"
       `)
   })
 
@@ -378,9 +388,12 @@ describe('formatRunTextReport', () => {
 
   it('names a single covering test without a line, and no reason', () => {
     let report = createReport()
-    report.mutants[2]!.coveredBy = [
-      { file: 'test/cart.test.ts', name: 'cart > unit', line: null },
-    ]
+    report.mutants[2]!.test = {
+      file: 'test/cart.test.ts',
+      name: 'cart > unit',
+      line: null,
+    }
+    report.mutants[2]!.tests = 1
     report.mutants[3]!.message = null
 
     let text = format(report, { verbose: true })
@@ -397,13 +410,51 @@ describe('formatRunTextReport', () => {
     )
   })
 
-  it('prints no covering line for a survivor reached only at load', () => {
+  it('names the test file but no covering test of a survivor reached only at load', () => {
     let report = createReport()
+    report.mutants[2]!.testFiles = { 'test/other.test.ts': 0 }
     report.mutants[2]!.coveredBy = []
+    report.mutants[2]!.test = null
+    report.mutants[2]!.tests = 0
 
-    expect(getSection(format(report, { verbose: true }), 'surv')).not.toContain(
-      'covered by',
+    let section = getSection(format(report, { verbose: true }), 'surv')
+
+    expect(section).toContain('\n    test: test/other.test.ts')
+    expect(section).not.toContain('covered by')
+  })
+
+  it('names the test file to extend of a mutant without coverage', () => {
+    let report = createReport()
+    report.mutants[4]!.testFiles = { 'test/cart.test.ts': 0 }
+
+    expect(getSection(format(report), 'unco')).toBe(
+      [
+        '  6:20  arithmetic-operator  unco',
+        '    - export let ratio = 2 * 3',
+        '    + export let ratio = 2 / 3',
+        '    test: test/cart.test.ts',
+      ].join('\n'),
     )
+  })
+
+  it('keeps the end of a long test file path in a narrow terminal', () => {
+    let report = createReport()
+    let file =
+      'test/features/billing/invoices/calculations/compute-invoice-total.test.ts'
+    report.mutants[4]!.testFiles = { [file]: 0 }
+
+    expect(
+      getSection(format(report, { width: 40 }), 'unco')
+        .split('\n')
+        .at(-1),
+    ).toBe(`    test: …${file.slice(-29)}`)
+  })
+
+  it('names no test file of a mutant without one', () => {
+    let report = createReport()
+    report.mutants[2]!.testFiles = {}
+
+    expect(getSection(format(report), 'surv')).not.toContain('test:')
   })
 
   it('prints neither the list nor the hint when no mutant needs action', () => {
@@ -558,12 +609,12 @@ describe('formatRunTextReport', () => {
 
   it('marks the focus of a mutant that the replacement applies as it is', () => {
     let report = createReport()
-    report.mutants[2]!.diff = {
+    Object.assign(report.mutants[2]!, {
       before: ['  return /^a+b$/u.test(size)'],
       after: ['  return /^a+b/u.test(size)'],
       cutStart: 0,
       cutEnd: 0,
-    }
+    })
     report.mutants[2]!.column = 10
     report.mutants[2]!.endColumn = 18
     report.mutants[2]!.focus = {
@@ -579,18 +630,19 @@ describe('formatRunTextReport', () => {
       .toMatchInlineSnapshot(`
         "  <90>4:15<39>  <90>comparison-operator<39>  surv
             <31>-<39> return /^a+b<31>$<39>/u.test(size)
-            <32>+<39> return /^a+b/u.test(size)"
+            <32>+<39> return /^a+b/u.test(size)
+            <90>test: test/cart.test.ts<39>"
       `)
   })
 
   it('marks the changed words of a focus the replacement does not apply as it is', () => {
     let report = createReport()
-    report.mutants[2]!.diff = {
+    Object.assign(report.mutants[2]!, {
       before: ["  return new RegExp('x[0-9]')"],
       after: ["  return new RegExp('x[^]')"],
       cutStart: 0,
       cutEnd: 0,
-    }
+    })
     report.mutants[2]!.column = 22
     report.mutants[2]!.endColumn = 31
     report.mutants[2]!.focus = {
@@ -606,7 +658,8 @@ describe('formatRunTextReport', () => {
       .toMatchInlineSnapshot(`
         "  <90>4:24<39>  <90>comparison-operator<39>  surv
             <31>-<39> return new RegExp('x[<31>0-9<39>]')
-            <32>+<39> return new RegExp('x[<32>^<39>]')"
+            <32>+<39> return new RegExp('x[<32>^<39>]')
+            <90>test: test/cart.test.ts<39>"
       `)
   })
 })

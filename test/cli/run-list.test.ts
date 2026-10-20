@@ -123,6 +123,7 @@ describe('runList', () => {
     await runList({
       paths: ['src', 'lib'],
       preset: 'strict',
+      verbose: false,
       skipped: true,
       since: 'main',
       json: false,
@@ -144,6 +145,7 @@ describe('runList', () => {
       preset: 'recommended',
       paths: ['src'],
       skipped: false,
+      verbose: false,
       json: false,
     })
 
@@ -171,6 +173,7 @@ describe('runList', () => {
       preset: 'recommended',
       paths: ['src'],
       skipped: false,
+      verbose: false,
       json: false,
     })
 
@@ -202,6 +205,7 @@ describe('runList', () => {
       preset: 'recommended',
       paths: ['src'],
       skipped: false,
+      verbose: false,
       json: true,
     })
 
@@ -213,11 +217,32 @@ describe('runList', () => {
     expect(JSON.parse(output)).toMatchObject({
       summary: { totalWarnings: 1, totalErrors: 1 },
       diagnostics: [skippedPath, readError],
-      schemaVersion: 2,
+      schemaVersion: 3,
     })
+    expect(JSON.parse(output)).not.toHaveProperty('mutators')
     expect(consoleErrorSpy).not.toHaveBeenCalled()
     expect(consoleWarnSpy).not.toHaveBeenCalled()
     expect(process.exitCode).toBe(1)
+  })
+
+  it('prints the full JSON report with --verbose', async () => {
+    vi.mocked(listMutants).mockResolvedValue(createResult([]))
+
+    await runList({
+      preset: 'recommended',
+      paths: ['src'],
+      skipped: false,
+      verbose: true,
+      json: true,
+    })
+
+    let [[output]] = consoleInfoSpy.mock.calls as [[string]]
+
+    expect(JSON.parse(output)).toMatchObject({
+      mutants: [{ kind: 'expression', start: 11 }],
+      mutators: [{ id: 'string-literal' }],
+      since: null,
+    })
   })
 
   it('reports a failed run and sets the exit code', async () => {
@@ -229,6 +254,7 @@ describe('runList', () => {
       preset: 'recommended',
       paths: ['src'],
       skipped: false,
+      verbose: false,
       json: false,
     })
 

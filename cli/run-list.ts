@@ -8,8 +8,9 @@ import { formatReport } from './report/format-report'
 import { listMutants } from '../core/list-mutants'
 
 /**
- * Runs the list command and prints its report. Never rejects: failures set the
- * exit code, so piped output is never cut.
+ * Runs the list command and prints its report: `--json` prints the slim report,
+ * `--json --verbose` the full one. Never rejects: failures set the exit code,
+ * so piped output is never cut.
  *
  * @param options - Options of the list command.
  */
@@ -31,6 +32,7 @@ export async function runList(options: ListOptions): Promise<void> {
       formatReport(report, options.json ? 'json' : 'text', {
         command: formatCommand('list', options),
         style: getTextStyle(process.stdout),
+        verbose: options.verbose,
       }),
     )
     if (report.summary.totalErrors > 0) {

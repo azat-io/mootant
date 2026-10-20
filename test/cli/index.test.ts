@@ -91,6 +91,7 @@ describe('run', () => {
 
     expect(runList).toHaveBeenCalledExactlyOnceWith({
       paths: ['src'],
+      verbose: false,
       skipped: true,
       json: true,
     })

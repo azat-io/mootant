@@ -25,7 +25,8 @@ const HELP_TEXT = [
   '                       <ref> and HEAD, uncommitted changes and untracked files',
   '                       included',
   '  --json               Print the report as JSON; for run, only the mutants to',
-  '                       act on (survived, no coverage, error)',
+  '                       act on (survived, no coverage, error), each with its',
+  '                       likeliest test files and one covering test',
   '  --all                run: with --json, list every mutant',
   '  --no-color           Print without colors (also NO_COLOR=1); --color forces',
   '                       them',
@@ -42,7 +43,9 @@ const HELP_TEXT = [
   '  --mutant <id>        run: run only this mutant, by its id or a unique prefix',
   '                       of 4 characters or more, as reports print it; repeat',
   '                       for more',
-  '  --verbose            run: show what the tests print, the covering test of',
+  '  --verbose            With --json, print the full report (offsets, original',
+  '                       and replacement texts, every covering test, timings);',
+  '                       run: show what the tests print, the covering test of',
   '                       each survivor and the runs of the test runner',
   '  -h, --help           Display this message',
   '  -v, --version        Display version number',
@@ -110,6 +113,7 @@ describe('parseArguments', () => {
     expect(result).toStrictEqual({
       options: {
         paths: ['src', 'lib/a.ts'],
+        verbose: false,
         skipped: false,
         json: false,
       },
@@ -117,7 +121,7 @@ describe('parseArguments', () => {
     })
   })
 
-  it('reads --json, --skipped, --preset and --config wherever they appear', () => {
+  it('reads --json, --skipped, --preset, --config and --verbose wherever they appear', () => {
     let result = parseArguments(
       [
         '--json',
@@ -128,6 +132,7 @@ describe('parseArguments', () => {
         '--skipped',
         '--config',
         'mootant.config.ts',
+        '--verbose',
       ],
       '1.0.0',
     )
@@ -137,6 +142,7 @@ describe('parseArguments', () => {
         config: 'mootant.config.ts',
         preset: 'strict',
         paths: ['src'],
+        verbose: true,
         skipped: true,
         json: true,
       },
@@ -150,6 +156,7 @@ describe('parseArguments', () => {
     expect(result).toStrictEqual({
       options: {
         paths: ['--json', 'src'],
+        verbose: false,
         skipped: false,
         json: false,
       },
@@ -247,6 +254,7 @@ describe('parseArguments', () => {
       options: {
         since: 'origin/main',
         paths: ['src'],
+        verbose: false,
         skipped: false,
         json: false,
       },
@@ -312,7 +320,7 @@ describe('parseArguments', () => {
       argv: ['list', 'src', '--no-cache'],
     },
     {
-      message: '--verbose applies to the run command only.',
+      message: '--verbose applies to the JSON report of list only; add --json.',
       argv: ['list', 'src', '--verbose'],
     },
     {

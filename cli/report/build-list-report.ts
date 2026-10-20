@@ -58,7 +58,6 @@ export function buildListReport(result: ListResult): ListReport {
       counts.set(mutant.mutator, counts.get(mutant.mutator)! + 1)
       mutants.push({
         original: source.slice(mutant.start, mutant.end),
-        diff: getDiffLines(source, lineStarts, mutant),
         replacement: mutant.replacement,
         endColumn: endPosition.column,
         column: startPosition.column,
@@ -74,6 +73,7 @@ export function buildListReport(result: ListResult): ListReport {
         kind: mutant.kind,
         end: mutant.end,
         id: mutant.id,
+        ...getDiffLines(source, lineStarts, mutant),
         ...createFocusEntry(mutant, source, lineStarts),
       })
     }
@@ -118,7 +118,7 @@ export function buildListReport(result: ListResult): ListReport {
     diagnostics: sortedDiagnostics,
     preset: result.preset,
     since: result.since,
-    schemaVersion: 2,
+    schemaVersion: 3,
     command: 'list',
     mutants,
   }

@@ -14,6 +14,12 @@ import { pluralize } from './pluralize'
  */
 export interface ListTextOptions {
   /**
+   * Whether the JSON format prints the full report rather than the slim one;
+   * the text format does not read it.
+   */
+  verbose: boolean
+
+  /**
    * Colors, width and symbols of the output.
    */
   style: TextStyle

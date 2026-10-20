@@ -2,6 +2,7 @@ import type { ListReport } from '../../types/report/list-report'
 import type { ListTextOptions } from './format-text-report'
 
 import { formatTextReport } from './format-text-report'
+import { slimListReport } from './slim-list-report'
 
 /**
  * Output format of a report. A Markdown format joins this union later.
@@ -15,7 +16,8 @@ let formatters: Record<
   ReportFormat,
   (report: ListReport, options: ListTextOptions) => string
 > = {
-  json: report => JSON.stringify(report),
+  json: (report, options) =>
+    JSON.stringify(options.verbose ? report : slimListReport(report)),
   text: formatTextReport,
 }
 
@@ -24,7 +26,8 @@ let formatters: Record<
  *
  * @param report - Report of a list run.
  * @param format - Requested output format.
- * @param options - Command and style of the text format; JSON ignores them.
+ * @param options - Command and style of the text format; whether JSON prints
+ *   the full report or the slim one (`slimListReport`).
  * @returns Text printed to stdout.
  */
 export function formatReport(

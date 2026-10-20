@@ -24,13 +24,11 @@ function show(lines: MarkedGrapheme[][]): string[] {
 describe('markDiff', () => {
   it('marks the changed words of a mutant', () => {
     let marked = markDiff({
-      diff: {
-        before: ['  x = a ?? b'],
-        after: ['  x = a || b'],
-        cutStart: 0,
-        cutEnd: 0,
-      },
+      before: ['  x = a ?? b'],
+      after: ['  x = a || b'],
       endColumn: 13,
+      cutStart: 0,
+      cutEnd: 0,
       column: 7,
       line: 3,
     })
@@ -41,13 +39,11 @@ describe('markDiff', () => {
 
   it('marks across lines', () => {
     let marked = markDiff({
-      diff: {
-        before: ['if (a) {', '  b()', '}'],
-        after: [';'],
-        cutStart: 0,
-        cutEnd: 0,
-      },
+      before: ['if (a) {', '  b()', '}'],
+      after: [';'],
       endColumn: 2,
+      cutStart: 0,
+      cutEnd: 0,
       column: 1,
       line: 1,
     })
@@ -66,13 +62,11 @@ describe('markDiff', () => {
         line: 2,
         end: 25,
       },
-      diff: {
-        before: ['f(', '/x[0-9]/'],
-        after: ['f(', '/x[^]/'],
-        cutStart: 0,
-        cutEnd: 0,
-      },
+      before: ['f(', '/x[0-9]/'],
+      after: ['f(', '/x[^]/'],
       endColumn: 9,
+      cutStart: 0,
+      cutEnd: 0,
       column: 1,
       line: 1,
     })
@@ -91,13 +85,11 @@ describe('markDiff', () => {
         line: 1,
         end: 20,
       },
-      diff: {
-        before: ['= /x[0-9]/.test(a)'],
-        after: ['= /x[^]/.test(a)'],
-        cutStart: 10,
-        cutEnd: 30,
-      },
+      before: ['= /x[0-9]/.test(a)'],
+      after: ['= /x[^]/.test(a)'],
       endColumn: 21,
+      cutStart: 10,
+      cutEnd: 30,
       column: 13,
       line: 1,
     })
@@ -109,13 +101,11 @@ describe('markDiff', () => {
 
   it('shifts only the first line of a multi-line mutant the report cut', () => {
     let marked = markDiff({
-      diff: {
-        before: ['x = f(', '  a,', ') ?? b'],
-        after: ['x = f(', '  a,', ') || b'],
-        cutStart: 4,
-        cutEnd: 0,
-      },
+      before: ['x = f(', '  a,', ') ?? b'],
+      after: ['x = f(', '  a,', ') || b'],
       endColumn: 7,
+      cutStart: 4,
+      cutEnd: 0,
       column: 9,
       line: 1,
     })

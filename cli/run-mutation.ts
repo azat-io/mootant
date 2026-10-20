@@ -18,7 +18,8 @@ import { runMutants } from '../core/run-mutants'
  * error diagnostic, a mutant without a verdict, a score below the threshold) or
  * fails, so piped output is never cut. Re-check commands leave `--since` out:
  * `--mutant` already pins the mutant, which the changed lines may no longer
- * hold after a commit or a rebase.
+ * hold after a commit or a rebase. `--json` prints the slim report, `--json
+ * --verbose` the full one.
  *
  * @param options - Options of the run command.
  */

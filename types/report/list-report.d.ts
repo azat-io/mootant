@@ -7,7 +7,8 @@ import type { ListReportFile } from './list-report-file'
 import type { Diagnostic } from '../mutant/diagnostic'
 
 /**
- * Result of `mootant list`, shaped for AI agents. `--json` prints it as is.
+ * Result of `mootant list`, shaped for AI agents. `--json --verbose` prints it
+ * as is; `--json` prints its slim form (`SlimListReport`).
  */
 export interface ListReport {
   /**
@@ -52,7 +53,7 @@ export interface ListReport {
    * Version of this schema. It changes when a field changes meaning or is
    * removed; new fields do not change it.
    */
-  schemaVersion: 2
+  schemaVersion: 3
 
   /**
    * Command that produced the report.

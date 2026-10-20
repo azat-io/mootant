@@ -34,15 +34,11 @@ describe('buildRunReport', () => {
     expect(report.mutants[1]!.coveredBy).toBeNull()
     expect(report.mutants[5]!.coveredBy).toStrictEqual([])
     expect(report.mutants[0]).toStrictEqual({
-      diff: {
-        before: ["export let unit = 'cm'"],
-        after: ["export let unit = ''"],
-        cutStart: 0,
-        cutEnd: 0,
-      },
       killedBy: { file: 'test/cart.test.ts', name: 'cart > unit', line: 4 },
       recheck: 'mootant run src --mutant killed000001',
+      before: ["export let unit = 'cm'"],
       message: "expected '' to be 'cm'",
+      after: ["export let unit = ''"],
       killedIn: 'test/cart.test.ts',
       mutator: 'string-literal',
       isolatedBecause: null,
@@ -54,15 +50,20 @@ describe('buildRunReport', () => {
       status: 'Killed',
       original: "'cm'",
       coveredBy: null,
+      testFiles: null,
       ignoredBy: null,
       path: 'batch',
       cached: false,
       endColumn: 23,
       reason: null,
+      cutStart: 0,
+      tests: null,
       duration: 2,
       scope: null,
+      test: null,
       column: 19,
       endLine: 1,
+      cutEnd: 0,
       start: 18,
       line: 1,
       end: 22,
@@ -78,8 +79,11 @@ describe('buildRunReport', () => {
       reason: 'shown elsewhere',
       status: 'Ignored',
       killedIn: null,
+      testFiles: {},
       recheck: null,
+      test: null,
       path: null,
+      tests: 0,
     })
     expect(report.listed).toBe('all')
   })
@@ -92,14 +96,73 @@ describe('buildRunReport', () => {
       'errored00001',
       'uncovered001',
     ])
-    expect(report.mutants[0]!.coveredBy).toStrictEqual([
-      { name: 'fits > small sizes', file: 'test/cart.test.ts', line: 12 },
-      { file: 'test/cart.test.ts', name: 'cart > unit', line: 4 },
-    ])
+    expect(report.mutants[0]).toMatchObject({
+      coveredBy: [
+        { name: 'fits > small sizes', file: 'test/cart.test.ts', line: 12 },
+        { file: 'test/cart.test.ts', name: 'cart > unit', line: 4 },
+      ],
+      test: {
+        name: 'fits > small sizes',
+        file: 'test/cart.test.ts',
+        line: 12,
+      },
+      testFiles: { 'test/other.test.ts': 0, 'test/cart.test.ts': 2 },
+      recheck: 'mootant run src --mutant survived0001',
+      tests: 2,
+    })
+    expect(report.mutants[2]).toMatchObject({
+      testFiles: {},
+      test: null,
+      tests: 0,
+    })
     expect(report).toMatchObject({
       summary: { totalMutants: 6, totalKilled: 1 },
       listed: 'actionable',
     })
+  })
+
+  it('names at most three test files of a mutant, in their order', () => {
+    let result = createRunResult()
+    result.results[2]!.testFiles = ['d', 'c', 'b', 'a'].map(
+      name => `/repo/test/${name}.test.ts`,
+    )
+    result.tests.push(
+      { ...result.tests[0]!, file: '/repo/test/c.test.ts', id: 'c-test' },
+      { ...result.tests[0]!, file: '/repo/test/a.test.ts', id: 'a-test' },
+    )
+    result.results[2]!.coveredBy = ['c-test', 'a-test']
+
+    let report = build(result)
+
+    expect(Object.entries(report.mutants[2]!.testFiles!)).toStrictEqual([
+      ['test/d.test.ts', 0],
+      ['test/c.test.ts', 1],
+      ['test/b.test.ts', 0],
+    ])
+    expect(report.mutants[2]!.tests).toBe(2)
+  })
+
+  it('adds the file of the first covering test after the three likeliest when it ranks lower', () => {
+    let result = createRunResult()
+    result.results[2]!.testFiles = ['d', 'c', 'b', 'a'].map(
+      name => `/repo/test/${name}.test.ts`,
+    )
+    result.tests.push({
+      ...result.tests[0]!,
+      file: '/repo/test/a.test.ts',
+      id: 'a-test',
+    })
+    result.results[2]!.coveredBy = ['a-test']
+
+    let report = build(result)
+
+    expect(Object.entries(report.mutants[2]!.testFiles!)).toStrictEqual([
+      ['test/d.test.ts', 0],
+      ['test/c.test.ts', 0],
+      ['test/b.test.ts', 0],
+      ['test/a.test.ts', 1],
+    ])
+    expect(report.mutants[2]!.test).toMatchObject({ file: 'test/a.test.ts' })
   })
 
   it('counts, scores and rounds the summary', () => {
@@ -118,7 +181,7 @@ describe('buildRunReport', () => {
       runnerVersion: '5.0.4',
       preset: 'recommended',
       runner: 'vitest',
-      schemaVersion: 2,
+      schemaVersion: 3,
       command: 'run',
       mode: 'fast',
     })

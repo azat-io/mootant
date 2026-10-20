@@ -55,7 +55,9 @@ Options:
 - `--since <ref>`: only mutants on lines changed since `<ref>`, uncommitted
   changes included
 - `--json`: print the list as JSON for tools and AI agents, every mutant with
-  its source lines before and after the change, long lines cut around it
+  its source lines before and after the change, long lines cut around it;
+  `--verbose` adds offsets, kinds, the original and replacement texts and
+  mutator descriptions
 - `--no-color`: print without colors (also `NO_COLOR=1`)
 - `--skipped`: also list the mutants Mootant considered and did not emit, each
   with a category (`equivalent`, `noise`, `timeout`, `owned`, `subsumed`,
@@ -87,12 +89,12 @@ Uses the project's [Vitest](https://vitest.dev) 5 installation and
 configuration, or [`node:test`](#nodetest), selecting tests related to the
 mutated files. Progress is shown as the run goes; the report lists surviving and
 uncovered mutants and mutants with errors in a section each, by file, every one
-as its source lines before and after the change, with a short id. `--json` lists
-the same mutants with full ids, source lines, covering tests and the command to
-re-check each; `--json --all` lists every mutant, a killed one with the test
-that killed it instead of the covering tests. What the tests print is hidden,
-unless tests fail without mutants: then the output of their test files is shown.
-Tests must pass without mutants first.
+as its source lines before and after the change, with a short id and the test
+file to extend. `--json` lists the same mutants with full ids, source lines,
+their likeliest test files, one covering test and the command to re-check each;
+`--json --all` lists every mutant, a killed one with the test file that killed
+it. What the tests print is hidden, unless tests fail without mutants: then the
+output of their test files is shown. Tests must pass without mutants first.
 
 Options:
 
@@ -106,7 +108,8 @@ Options:
 - `--mutant <id>`: run only this mutant, by its id or a unique prefix of 4
   characters or more; repeat for more
 - `--verbose`: show what the tests print, the covering test of each survivor and
-  the runs of the test runner
+  the runs of the test runner; with `--json`, print the full report with every
+  covering test, offsets and timings
 - `--all`: with `--json`, list every mutant, not only the ones to act on
 
 The score is killed and timed-out mutants over all scored mutants; `Ignored` and

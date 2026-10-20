@@ -18,13 +18,9 @@ import { showEscapes } from '../../helpers/show-escapes'
  */
 function createMutant(overrides: Partial<ListReportMutant>): ListReportMutant {
   return {
-    diff: {
-      before: ["let unit = 'cm'"],
-      after: ["let unit = ''"],
-      cutStart: 0,
-      cutEnd: 0,
-    },
+    before: ["let unit = 'cm'"],
     mutator: 'string-literal',
+    after: ["let unit = ''"],
     id: '000000000001',
     kind: 'expression',
     file: 'example.ts',
@@ -34,9 +30,11 @@ function createMutant(overrides: Partial<ListReportMutant>): ListReportMutant {
     ignoredBy: null,
     endColumn: 16,
     reason: null,
+    cutStart: 0,
     scope: null,
     column: 12,
     endLine: 1,
+    cutEnd: 0,
     start: 11,
     line: 1,
     end: 15,
@@ -67,7 +65,7 @@ function createReport(
       ...summary,
     },
     preset: 'recommended',
-    schemaVersion: 2,
+    schemaVersion: 3,
     command: 'list',
     diagnostics: [],
     mutators: [],
@@ -118,6 +116,7 @@ function format(
   return formatTextReport(report, {
     style: createTextStyle(style),
     command: 'mootant list src',
+    verbose: false,
   })
 }
 

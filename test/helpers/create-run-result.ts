@@ -29,8 +29,8 @@ const SOURCE = [
 /**
  * Builds the result of a fast-mode run on one file, `src/cart.ts`, with a
  * mutant of every status: a batch kill, a static timeout, a survivor covered by
- * two tests, a mutant without coverage, one without a verdict, and an ignored
- * one.
+ * two tests of one file with a second file that reached it while loading, a
+ * mutant without coverage, one without a verdict, and an ignored one.
  *
  * @returns Result of the run; a fresh object on every call.
  */
@@ -68,6 +68,7 @@ export function createRunResult(): RunResult {
   return {
     results: [
       createVerdict(killed, {
+        testFiles: [`${ROOT}/test/cart.test.ts`],
         killedIn: `${ROOT}/test/cart.test.ts`,
         message: "expected '' to be 'cm'",
         coveredBy: ['cart-unit'],
@@ -84,6 +85,7 @@ export function createRunResult(): RunResult {
         duration: 250.4,
       }),
       createVerdict(survived, {
+        testFiles: [`${ROOT}/test/cart.test.ts`, `${ROOT}/test/other.test.ts`],
         coveredBy: ['fits-small', 'cart-unit'],
         isolatedBecause: 'batch-survivor',
         status: 'Survived',
@@ -91,6 +93,7 @@ export function createRunResult(): RunResult {
       }),
       createVerdict(errored, {
         message: 'Tries of test/cart.test.ts went missing twice.',
+        testFiles: [`${ROOT}/test/cart.test.ts`],
         isolatedBecause: 'recovery',
         coveredBy: ['fits-small'],
         path: 'isolated',
@@ -185,6 +188,7 @@ function createVerdict(
     killedBy: null,
     killedIn: null,
     coveredBy: [],
+    testFiles: [],
     message: null,
     path: 'batch',
     cached: false,

@@ -22,8 +22,8 @@ interface ListedStatements {
 }
 
 /**
- * Fields of a mutant that applying it needs; a mutant of the `--json` report
- * has them too.
+ * Fields of a mutant that applying it needs; a mutant of the full report
+ * (`--json --verbose`) has them too.
  */
 type AppliedMutant = Pick<
   Mutant,

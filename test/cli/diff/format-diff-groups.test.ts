@@ -19,14 +19,12 @@ function createEntry(
   let { file = 'src/a.ts', line = 1, ...rest } = fields
   return {
     mutant: {
-      diff: {
-        before: ['if (a > b) {'],
-        after: ['if (a >= b) {'],
-        cutStart: 0,
-        cutEnd: 0,
-      },
       mutator: 'comparison-operator',
+      before: ['if (a > b) {'],
+      after: ['if (a >= b) {'],
       endColumn: 10,
+      cutStart: 0,
+      cutEnd: 0,
       column: 5,
       line,
       file,
@@ -127,6 +125,30 @@ describe('formatDiffGroups', () => {
     expect(lines.every(line => getDisplayWidth(line) <= 30)).toBe(true)
   })
 
+  it('keeps the label and the end of the path of a detail line', () => {
+    let file =
+      'test/features/billing/invoices/calculations/compute-invoice-total.test.ts'
+    let entry = createEntry({ details: [{ label: 'test: ', path: file }] })
+
+    let wide = formatDiffGroups([entry], createTextStyle({ width: 80 }))
+    let narrow = formatDiffGroups(
+      [entry],
+      createTextStyle({ unicode: false, width: 40 }),
+    )
+
+    expect(wide.split('\n').at(-1)).toBe(`    test: …${file.slice(-69)}`)
+    expect(narrow.split('\n').at(-1)).toBe(`    test: ...${file.slice(-27)}`)
+    expect(wide.split('\n').every(line => getDisplayWidth(line) <= 80)).toBe(
+      true,
+    )
+    expect(narrow.split('\n').every(line => getDisplayWidth(line) <= 40)).toBe(
+      true,
+    )
+    expect(
+      formatDiffGroups([entry], createTextStyle()).split('\n').at(-1),
+    ).toBe(`    test: ${file}`)
+  })
+
   it('returns an empty text without entries', () => {
     expect(formatDiffGroups([], createTextStyle())).toBe('')
   })
@@ -139,14 +161,12 @@ describe('formatDiffGroups', () => {
         createEntry({
           mutant: {
             ...createEntry().mutant,
-            diff: {
-              after: [line.replace('>', '>=')],
-              before: [line],
-              cutStart: 0,
-              cutEnd: 0,
-            },
+            after: [line.replace('>', '>=')],
+            before: [line],
             endColumn: 107,
+            cutStart: 0,
             column: 104,
+            cutEnd: 0,
           },
           details: [detail],
         }),

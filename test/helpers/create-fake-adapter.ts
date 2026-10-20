@@ -185,6 +185,11 @@ interface FakeTest {
   loops?: string[]
 
   /**
+   * 1-based line in its test file; null when omitted.
+   */
+  line?: number
+
+  /**
    * Absolute path of its test file.
    */
   file: string
@@ -351,11 +356,11 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
                   createDryTry(test, both, failedSecond),
                 ]
               : [createDryTry(test, first, failedFirst)],
+            line: test.line ?? null,
             file: test.file,
             name: test.id,
             project: '',
             id: test.id,
-            line: null,
           }
         }),
         mismatched: fake

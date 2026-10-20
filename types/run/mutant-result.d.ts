@@ -41,10 +41,19 @@ export interface MutantResult {
   cause: TryCause | null
 
   /**
-   * Ids of tests that reached it, cheapest first; empty for `NoCoverage`,
-   * `Ignored` and mutants reached only at load.
+   * Ids of tests that reached it, in the order of `testFiles`, then by line and
+   * name; empty for `NoCoverage`, `Ignored` and mutants reached only at load.
    */
   coveredBy: string[]
+
+  /**
+   * Absolute paths of its test files, each once, the likeliest to kill it first
+   * (`rankMutantFiles`): those of its covering tests and of the test files that
+   * reached it while loading. A `NoCoverage` mutant without any lists the test
+   * files to add a test to, related to its module (`rankModuleFiles`). Empty
+   * for `Ignored` and when no test file is related.
+   */
+  testFiles: string[]
 
   /**
    * Final state.

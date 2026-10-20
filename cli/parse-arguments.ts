@@ -27,7 +27,8 @@ Options:
                        <ref> and HEAD, uncommitted changes and untracked files
                        included
   --json               Print the report as JSON; for run, only the mutants to
-                       act on (survived, no coverage, error)
+                       act on (survived, no coverage, error), each with its
+                       likeliest test files and one covering test
   --all                run: with --json, list every mutant
   --no-color           Print without colors (also NO_COLOR=1); --color forces
                        them
@@ -44,7 +45,9 @@ Options:
   --mutant <id>        run: run only this mutant, by its id or a unique prefix
                        of 4 characters or more, as reports print it; repeat
                        for more
-  --verbose            run: show what the tests print, the covering test of
+  --verbose            With --json, print the full report (offsets, original
+                       and replacement texts, every covering test, timings);
+                       run: show what the tests print, the covering test of
                        each survivor and the runs of the test runner
   -h, --help           Display this message
   -v, --version        Display version number`
@@ -79,7 +82,6 @@ let runOnlyOptions = [
   'cache',
   'fast',
   'mutant',
-  'verbose',
   'all',
 ] as const
 
@@ -103,7 +105,8 @@ export interface RunOptions {
   threshold?: number
 
   /**
-   * Whether to show what the tests print, covering tests and runs.
+   * Whether to show what the tests print, covering tests and runs, and to print
+   * the full JSON report.
    */
   verbose: boolean
 
@@ -157,6 +160,11 @@ export interface ListOptions {
    * Whether to list skipped candidates too.
    */
   skipped: boolean
+
+  /**
+   * Whether the JSON report is the full one rather than the slim one.
+   */
+  verbose: boolean
 
   /**
    * Files and directories to list, as given on the command line.
@@ -271,6 +279,14 @@ export function parseArguments(
       }
     }
 
+    if (values.verbose === true && values.json !== true) {
+      return {
+        message:
+          '--verbose applies to the JSON report of list only; add --json.',
+        kind: 'error',
+      }
+    }
+
     if (paths.length === 0) {
       return {
         message:
@@ -284,6 +300,7 @@ export function parseArguments(
         ...(values.config !== undefined && { config: values.config }),
         ...(values.preset !== undefined && { preset: values.preset }),
         ...(values.since !== undefined && { since: values.since }),
+        verbose: values.verbose ?? false,
         skipped: values.skipped ?? false,
         json: values.json ?? false,
         paths,

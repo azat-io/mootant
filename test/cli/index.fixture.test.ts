@@ -3,6 +3,7 @@ import type { MockInstance } from 'vitest'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { readFile } from 'node:fs/promises'
 
+import type { SlimListReport } from '../../types/report/slim-list-report'
 import type { ListReport } from '../../types/report/list-report'
 
 import expectedStrictSkipped from '../fixtures/list/expected-skipped-strict.json'
@@ -11,6 +12,7 @@ import { getShortIdLength } from '../../cli/report/get-short-id-length'
 import { getSourceBlocks } from '../../core/parser/get-source-blocks'
 import expectedSkipped from '../fixtures/list/expected-skipped.json'
 import expectedReport from '../fixtures/list/expected-mutants.json'
+import { slimListReport } from '../../cli/report/slim-list-report'
 import { parseFile } from '../../core/parser/parse-file'
 import { applyMutant } from '../helpers/apply-mutant'
 import { run } from '../../cli/index'
@@ -64,7 +66,7 @@ describe('run', () => {
   })
 
   it('lists the fixture exactly as expected-mutants.json', async () => {
-    await runCli('list', 'test/fixtures/list/source', '--json')
+    await runCli('list', 'test/fixtures/list/source', '--json', '--verbose')
 
     let report = JSON.parse(
       consoleInfoSpy.mock.calls[0]![0] as string,
@@ -76,11 +78,32 @@ describe('run', () => {
     expect(process.exitCode).toBeUndefined()
   })
 
+  it('prints the slim form of expected-mutants.json without --verbose', async () => {
+    await runCli('list', 'test/fixtures/list/source', '--json')
+
+    let report = JSON.parse(
+      consoleInfoSpy.mock.calls[0]![0] as string,
+    ) as SlimListReport
+    expect(report).toStrictEqual(slimListReport(expected))
+    let marked = expected.mutants.map(({ cutStart, cutEnd, before, after }) => {
+      let start = cutStart > 0 ? '…' : ''
+      let end = cutEnd > 0 ? '…' : ''
+      return [before, after].map(lines =>
+        `${start}${lines.join('\n')}${end}`.split('\n'),
+      )
+    })
+    expect(
+      report.mutants.map(({ before, after }) => [before, after]),
+    ).toStrictEqual(marked)
+    expect(process.exitCode).toBeUndefined()
+  })
+
   it('lists the fixture with the strict preset exactly as expected-mutants-strict.json', async () => {
     await runCli(
       'list',
       'test/fixtures/list/source',
       '--json',
+      '--verbose',
       '--preset',
       'strict',
     )
@@ -181,6 +204,7 @@ describe('run', () => {
         'list',
         'test/fixtures/list/source',
         '--json',
+        '--verbose',
         '--skipped',
         '--preset',
         preset,

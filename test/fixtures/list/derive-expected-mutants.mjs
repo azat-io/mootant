@@ -3,9 +3,9 @@
  * hand-written expectations.json next to it and the listed source files, adds
  * only the mechanical, spec-defined arithmetic (offsets, positions, source
  * lines before and after each mutant, canonical order, ids, descriptions,
- * counts) and writes the whole expected `--json` report once per preset:
- * expected-mutants.json for `recommended` and expected-mutants-strict.json for
- * `strict`.
+ * counts) and writes the whole expected `--json --verbose` report once per
+ * preset: expected-mutants.json for `recommended` and
+ * expected-mutants-strict.json for `strict`.
  *
  * It never imports the implementation; which mutants exist is decided by the
  * expectations alone. Run it by hand from any directory, as `node
@@ -359,10 +359,10 @@ function getDiff(source, start, end, replacement) {
   }
   let lineBreak = /\r\n|[\n\r\u{2028}\u{2029}]/u
   return {
+    before: text.slice(from, to).split(lineBreak),
     after: (text.slice(from, start) + replacement + text.slice(end, to)).split(
       lineBreak,
     ),
-    before: text.slice(from, to).split(lineBreak),
     cutStart: from - lineStarts[first - 1],
     cutEnd: lineEnd - to,
   }
@@ -540,7 +540,7 @@ function readSources(files) {
  * @param {Map<string, { text: string; lineStarts: number[] }>} sources - Text
  *   and line starts of every listed file by display path.
  * @param {string} preset - Preset id.
- * @returns {object} The whole expected `--json` report.
+ * @returns {object} The whole expected `--json --verbose` report.
  */
 function buildReport(expectations, sources, preset) {
   let mutatorIds = PRESET_MUTATOR_IDS[preset].toSorted(compareCodeUnits)
@@ -608,7 +608,7 @@ function buildReport(expectations, sources, preset) {
       kind: expectation.kind,
       original: source.text.slice(start, end),
       replacement: expectation.replacement,
-      diff: getDiff(source, start, end, expectation.replacement),
+      ...getDiff(source, start, end, expectation.replacement),
       status: expectation.status,
       reason: expectation.reason,
       ignoredBy:
@@ -634,7 +634,7 @@ function buildReport(expectations, sources, preset) {
     .toSorted(compareDiagnostics)
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     command: 'list',
     preset,
     since: null,

@@ -4,9 +4,10 @@ import type { ListReportFocus } from './list-report-focus'
 import type { ListReportDiff } from './list-report-diff'
 
 /**
- * Mutant as an agent needs it, without reading the file.
+ * Mutant as an agent needs it, without reading the file, with its source lines
+ * before and after it is applied.
  */
-export interface ListReportMutant {
+export interface ListReportMutant extends ListReportDiff {
   /**
    * Ignore directive comment that excluded the mutant, or null while pending.
    */
@@ -39,11 +40,6 @@ export interface ListReportMutant {
    * Whether the mutant will be tested.
    */
   status: MutantStatus
-
-  /**
-   * Source lines of the mutant before and after it is applied.
-   */
-  diff: ListReportDiff
 
   /**
    * Text written in place of `original`.

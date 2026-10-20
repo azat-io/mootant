@@ -227,8 +227,8 @@ node test/fixtures/list/derive-expected-mutants.mjs
 candidates of `--skipped` with their summary counts. They come from the CLI, not
 from the oracle, so review the diff by hand before you commit it. To regenerate
 them, build first with `pnpm build`, then run
-`node bin/mootant.js list test/fixtures/list/source --json --skipped` (add
-`--preset strict` for the strict file) and keep only `skipped`,
+`node bin/mootant.js list test/fixtures/list/source --json --verbose --skipped`
+(add `--preset strict` for the strict file) and keep only `skipped`,
 `summary.totalSkipped` and `summary.skippedByCategory`.
 
 ## Code Style

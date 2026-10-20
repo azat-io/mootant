@@ -18,18 +18,19 @@ export interface DiffEntry {
    */
   mutant: {
     focus?: ListReportFocus
-    diff: ListReportDiff
     endColumn: number
     mutator: string
     column: number
     file: string
     line: number
-  }
+  } & ListReportDiff
 
   /**
-   * Lines under the diff, such as the reason of an error, without indentation.
+   * Lines under the diff without indentation: a text, such as the reason of an
+   * error, cut at its end when too wide, or a label and a path, such as `test:
+   * ` and a test file, whose path is cut at its start, so the file name stays.
    */
-  details: string[]
+  details: ({ label: string; path: string } | string)[]
 
   /**
    * Id as printed, cut to the length that tells mutants apart.
@@ -71,8 +72,8 @@ const MIN_WIDTH = 8
  * `line:column` of the change, the mutator and the id, columns aligned within
  * the file, the source lines before and after the mutant under it (see
  * `formatDiff`), at most 160 columns wide, and the detail lines in gray, cut to
- * the width. Mutants are separated by an empty line; files keep the order their
- * first mutant has.
+ * the width, a path from its start. Mutants are separated by an empty line;
+ * files keep the order their first mutant has.
  *
  * @param entries - Mutants in the order to print.
  * @param style - Colors, width and symbols of the output.
@@ -147,7 +148,18 @@ function formatGroup(entries: readonly DiffEntry[], style: TextStyle): string {
         heading,
         ...formatDiff(markDiff(entry.mutant), diffStyle),
         ...entry.details.map(detail =>
-          colors.gray(cutToWidth(detail, { width: bodyWidth, ellipsis })),
+          colors.gray(
+            typeof detail === 'string' ?
+              cutToWidth(detail, { width: bodyWidth, ellipsis })
+            : `${detail.label}${cutToWidth(detail.path, {
+                width: Math.max(
+                  MIN_WIDTH,
+                  bodyWidth - getDisplayWidth(detail.label),
+                ),
+                side: 'start',
+                ellipsis,
+              })}`,
+          ),
         ),
       ]
         .map((line, lineIndex) =>
