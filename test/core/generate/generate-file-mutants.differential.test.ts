@@ -15,6 +15,53 @@ import { applyMutant } from '../../helpers/apply-mutant'
 import { runProgram } from '../../helpers/run-program'
 
 /**
+ * Idiom of the differential run whose comparisons have entries that a lower
+ * bound rules out (catalog 3.4): a function `f`, the inputs it is called with,
+ * and the skips that rest on the bound, which the run executes.
+ */
+interface BoundIdiom {
+  /**
+   * Skipped candidates whose outputs contradict their category under both
+   * presets, documented with the idiom.
+   */
+  unsoundSkips?: Partial<UnsoundSkips>
+
+  /**
+   * Preset settings over those of the preset, such as `timeouts: false` for an
+   * idiom whose loop mutants would hang.
+   */
+  settings?: { timeouts: boolean }
+
+  /**
+   * Arguments of `f`, one list per input.
+   */
+  inputs: unknown[][]
+
+  /**
+   * Skipped candidates that rest on a lower bound, as `mutator original ->
+   * replacement (rule)`, in canonical order.
+   */
+  bounded: string[]
+
+  /**
+   * Mutants the run must emit, as `mutator original -> replacement`: entries
+   * that the bound would leave constant in a guard it rests on, whose timeout
+   * skips the run would not execute, and entries that no bound rules out.
+   */
+  kept?: string[]
+
+  /**
+   * Source lines of `f`.
+   */
+  lines: string[]
+
+  /**
+   * Name of the idiom.
+   */
+  name: string
+}
+
+/**
  * Idiom of the differential run: a function `f`, the inputs it is called with,
  * and the findings the catalog documents for it.
  */
@@ -88,6 +135,63 @@ interface RegexIdiom {
    * Name of the file, `example.ts` when not given.
    */
   file?: string
+
+  /**
+   * Name of the idiom.
+   */
+  name: string
+}
+
+/**
+ * Idiom of the differential run whose `??` or `||` keeps the same value with
+ * the other operator (catalog 4.8): a function `f`, the inputs it is called
+ * with, and the skips of the swap and of the default that the run executes.
+ */
+interface DefaultIdiom {
+  /**
+   * Arguments of `f`, one list per input.
+   */
+  inputs: unknown[][]
+
+  /**
+   * Skipped candidates with the rules `never-falsy` and `falsy-default`, as
+   * `mutator original -> replacement (rule)`, in canonical order.
+   */
+  defaults: string[]
+
+  /**
+   * Source lines of `f`.
+   */
+  lines: string[]
+
+  /**
+   * Name of the idiom.
+   */
+  name: string
+}
+
+/**
+ * Idiom of the differential run whose array or regex match makes an
+ * `[undefined]` or `?.` mutant change nothing (catalog 4.2 and 4.13): a
+ * function `f`, the inputs it is called with, and the skips of the array and of
+ * the links that the run executes.
+ */
+interface ShapeIdiom {
+  /**
+   * Arguments of `f`, one list per input.
+   */
+  inputs: unknown[][]
+
+  /**
+   * Skipped candidates with the rules `joined-array` and `named-groups`, as
+   * `mutator original -> replacement (rule)`, in canonical order.
+   */
+  shapes: string[]
+
+  /**
+   * Source lines of `f`.
+   */
+  lines: string[]
 
   /**
    * Name of the idiom.
@@ -239,6 +343,426 @@ const REGEX_STRINGS = [
   'acb',
   'bc',
   'b',
+]
+
+/**
+ * Idioms whose lower bounds come from the data flow of the function: a counter,
+ * a guarded counter, a count map, the size of a Set, and a loop operand whose
+ * entry a bound makes the constant that logical-operator owns; and a Set with a
+ * size of its own, which has no bound.
+ */
+const BOUND_IDIOMS: BoundIdiom[] = [
+  {
+    lines: [
+      'function f(items: string[]) {',
+      "  let out = ''",
+      '  let row = 0',
+      '  for (let item of items) {',
+      "    out += row === 0 ? item : ',' + row + ':' + item",
+      '    row++',
+      '  }',
+      '  return out',
+      '}',
+    ],
+    bounded: ['comparison-operator row === 0 -> row <= 0 (lower-bound)'],
+    inputs: [[[]], [['a']], [['a', 'b', 'c']]],
+    name: 'a counter compared with its start',
+  },
+  {
+    lines: [
+      'function f(text: string) {',
+      '  let depth = 0',
+      '  for (let char of text) {',
+      "    if (char === '(') depth++",
+      '    else if (depth > 0) depth--',
+      '  }',
+      '  return depth === 0',
+      '}',
+    ],
+    bounded: [
+      'comparison-operator depth > 0 -> depth != 0 (lower-bound)',
+      'comparison-operator depth === 0 -> depth <= 0 (lower-bound)',
+    ],
+    inputs: ['', '(', ')', '()', '())', '(()', ')(', '(())', '(()())'].map(
+      text => [text],
+    ),
+    name: 'a counter that goes down only after a guard',
+  },
+  {
+    lines: [
+      'function f(names: string[]) {',
+      '  let counts = new Map<string, number>()',
+      '  for (let name of names) counts.set(name, (counts.get(name) ?? 0) + 1)',
+      '  if (counts.size === 0) return null',
+      '  let out: string[] = []',
+      '  for (let [name, count] of counts) out.push(count > 1 ? name + count : name)',
+      '  return out',
+      '}',
+    ],
+    bounded: [
+      'comparison-operator counts.size === 0 -> counts.size <= 0 (lower-bound)',
+      'comparison-operator count > 1 -> count != 1 (lower-bound)',
+    ],
+    inputs: [[[]], [['a']], [['a', 'a']], [['a', 'b', 'a', 'a']]],
+    name: 'the values and the size of a count map',
+  },
+  {
+    lines: [
+      'function f(items: string[]) {',
+      '  let seen = new Set(items)',
+      '  return seen.size > 0',
+      '}',
+    ],
+    bounded: [
+      'comparison-operator seen.size > 0 -> seen.size != 0 (lower-bound)',
+    ],
+    inputs: [[[]], [['a']], [['a', 'b']], [['a', 'a']]],
+    name: 'the size of a Set',
+  },
+  {
+    lines: [
+      'function f(items: string[], limit: number) {',
+      '  let queue = [...items]',
+      '  let out: string[] = []',
+      '  for (let i = 0; i < limit && queue.length > 0; i++) {',
+      '    out.push(queue.shift()!.toUpperCase())',
+      '  }',
+      '  return out',
+      '}',
+    ],
+    /*
+     * The constants of the loop test and the false of `i < limit` belong to
+     * logical-operator, whose constant and drop of `i < limit` the running
+     * mutant `i <= limit` makes redundant (R2), as it does without the bound.
+     */
+    unsoundSkips: {
+      owned: [
+        'condition i < limit && queue.length > 0 -> true (O1)',
+        'condition i < limit && queue.length > 0 -> false (O1)',
+        'comparison-operator i < limit -> false (O3)',
+      ],
+    },
+    bounded: [
+      'comparison-operator queue.length > 0 -> queue.length >= 0 (O3)',
+      'comparison-operator queue.length > 0 -> queue.length != 0 (lower-bound)',
+    ],
+    inputs: combine([[], ['a'], ['a', 'b']], [0, 1, 3]),
+    name: 'a loop operand that a bound makes constant',
+    settings: { timeouts: false },
+  },
+  {
+    lines: [
+      'function f(limit: number) {',
+      '  let retries = 3',
+      '  let calls = 0',
+      '  while (retries > 0) {',
+      '    retries--',
+      '    calls++',
+      '    if (calls === limit) return calls',
+      '  }',
+      '  return -calls',
+      '}',
+    ],
+    bounded: ['comparison-operator retries > 0 -> retries != 0 (lower-bound)'],
+    name: 'a loop test that guards the decrement of its operand',
+    kept: ['comparison-operator retries > 0 -> retries >= 0'],
+    inputs: [[1], [3], [4], [10]],
+    settings: { timeouts: false },
+  },
+  {
+    lines: [
+      'function f(queue: string[], tokens: string) {',
+      '  let budget = 0',
+      '  let out: string[] = []',
+      "  for (let token of tokens) if (token === '+') budget++",
+      '  while (queue.length > 0 && budget > 0) {',
+      '    budget--',
+      '    out.push(queue.shift()!.toUpperCase())',
+      '  }',
+      '  return out',
+      '}',
+    ],
+    bounded: [
+      'comparison-operator queue.length > 0 -> queue.length >= 0 (O3)',
+      'comparison-operator queue.length > 0 -> queue.length != 0 (lower-bound)',
+      'comparison-operator budget > 0 -> budget != 0 (lower-bound)',
+    ],
+    /*
+     * The constants of the loop test belong to logical-operator, which emits
+     * neither of them here, as without the bound.
+     */
+    unsoundSkips: {
+      owned: [
+        'condition queue.length > 0 && budget > 0 -> true (O1)',
+        'condition queue.length > 0 && budget > 0 -> false (O1)',
+      ],
+    },
+    inputs: combine([[], ['a'], ['a', 'b', 'c']], ['', '+', '++', '+-+']),
+    name: 'a last loop operand that guards the decrement of its operand',
+    kept: ['comparison-operator budget > 0 -> budget >= 0'],
+    settings: { timeouts: false },
+  },
+  {
+    lines: [
+      'function f(steps: string) {',
+      '  let left = 0',
+      '  let seen: string[] = []',
+      "  for (let step of steps) if (step === '+') left += 1",
+      '  while (left >= 1) {',
+      '    left -= 1',
+      '    seen.push(steps[left]!.trim())',
+      '  }',
+      '  return seen',
+      '}',
+    ],
+    name: 'a guard whose shifted literal its decrement crosses',
+    inputs: ['', '+', '++', '+-+'].map(steps => [steps]),
+    kept: ['comparison-operator left >= 1 -> left >= 0'],
+    settings: { timeouts: false },
+    bounded: [],
+  },
+  {
+    lines: [
+      'function f(items: string[], hide: boolean) {',
+      '  const unique = new Set(items)',
+      "  if (hide) Object.defineProperty(unique, 'size', { value: -1 })",
+      "  return unique.size === 0 ? 'empty' : 'full'",
+      '}',
+    ],
+    kept: ['comparison-operator unique.size === 0 -> unique.size <= 0'],
+    name: 'a Set whose size an own property shadows',
+    inputs: combine([[], ['a']], [false, true]),
+    bounded: [],
+  },
+]
+
+/**
+ * Idioms whose swap between `??` and `||` the left side makes equivalent, as it
+ * is never falsy when defined, and a falsy default whose name is only read for
+ * its truth.
+ */
+const DEFAULT_IDIOMS: DefaultIdiom[] = [
+  {
+    lines: [
+      'function f(time: number | undefined) {',
+      '  let date = time === undefined ? undefined : new Date(time)',
+      '  return date?.toISOString() ?? null',
+      '}',
+    ],
+    defaults: [
+      'logical-operator date?.toISOString() ?? null -> date?.toISOString() || null (never-falsy)',
+    ],
+    inputs: [[undefined], [0], [1000], [Number.NaN]],
+    name: 'a date formatter',
+  },
+  {
+    lines: [
+      'function f(value: number | undefined) {',
+      "  return value?.toFixed(1) || 'n/a'",
+      '}',
+    ],
+    defaults: [
+      "logical-operator value?.toFixed(1) || 'n/a' -> value?.toFixed(1) ?? 'n/a' (never-falsy)",
+    ],
+    inputs: [[undefined], [0], [-0], [1.25], [Number.NaN]],
+    name: 'a number formatter',
+  },
+  {
+    defaults: [
+      "logical-operator /[a-z]+$/u.exec(hue)?.[0] ?? 'deg' -> /[a-z]+$/u.exec(hue)?.[0] || 'deg' (never-falsy)",
+    ],
+    lines: [
+      'function f(hue: string) {',
+      "  return /[a-z]+$/u.exec(hue)?.[0] ?? 'deg'",
+      '}',
+    ],
+    inputs: ['', '10', '10deg', '1.5turn', 'rad', '0 '].map(hue => [hue]),
+    name: 'the whole match of a regex',
+  },
+  {
+    lines: [
+      'function f(names: string[]) {',
+      '  let counts = new Map<string, number>()',
+      '  for (let name of names) counts.set(name, (counts.get(name) ?? 0) + 1)',
+      "  return names.map(name => counts.get(name) ?? 0).join(',')",
+      '}',
+    ],
+    defaults: [
+      'logical-operator counts.get(name) ?? 0 -> counts.get(name) || 0 (never-falsy)',
+      'logical-operator counts.get(name) ?? 0 -> counts.get(name) || 0 (never-falsy)',
+    ],
+    inputs: [[[]], [['a']], [['a', 'b', 'a']]],
+    name: 'the values of a count map',
+  },
+  {
+    lines: [
+      'function f(options: { quiet?: unknown }) {',
+      '  let quiet = options.quiet ?? false',
+      "  let out = quiet ? 'quiet' : 'loud'",
+      "  if (!quiet) out += '!'",
+      '  return out',
+      '}',
+    ],
+    defaults: [
+      'logical-operator options.quiet ?? false -> options.quiet || false (falsy-default)',
+      'logical-operator options.quiet ?? false -> options.quiet (falsy-default)',
+    ],
+    inputs: [true, false, 0, '', null, undefined, 'yes'].map(quiet => [
+      { quiet },
+    ]),
+    name: 'a falsy default read only for its truth',
+  },
+  {
+    lines: [
+      'class Store {',
+      '  values: unknown[] = []',
+      '  find(callback: () => unknown) {',
+      '    this.values.push(callback())',
+      '  }',
+      '}',
+      'function f(options: { live?: unknown }) {',
+      '  let store = new Store()',
+      '  let live = options.live ?? false',
+      '  store.find(() => live)',
+      '  return store.values',
+      '}',
+    ],
+    name: 'a falsy default that a callback named like a predicate returns',
+    inputs: [true, false, 0, null, undefined].map(live => [{ live }]),
+    defaults: [],
+  },
+  {
+    lines: [
+      'function note(text: string): undefined {',
+      '  save(text)',
+      '  return undefined',
+      '}',
+      'function f(options: { strict?: unknown }) {',
+      "  let strict = options.strict ?? void note('defaulted')",
+      "  return strict ? 'strict' : 'loose'",
+      '}',
+    ],
+    inputs: [true, false, 0, null, undefined].map(strict => [{ strict }]),
+    name: 'a falsy default that calls a function',
+    defaults: [],
+  },
+  {
+    lines: [
+      'const word = /[a-z]+/u',
+      'function relax() {',
+      "  word.compile('[a-z]*', 'u')",
+      '}',
+      'function f(text: string, relaxed: boolean) {',
+      '  if (relaxed) relax()',
+      "  return word.exec(text)?.[0] ?? 'none'",
+      '}',
+    ],
+    name: 'the whole match of a regex that compile changes in place',
+    inputs: combine(['', '!', 'ab'], [false, true]),
+    defaults: [],
+  },
+]
+
+/**
+ * Idioms whose `[undefined]` an array that is only pushed to and joined with an
+ * empty separator makes equivalent, and whose `?.` links the groups of a regex
+ * match make equivalent, with an optional group whose link stays.
+ */
+const SHAPE_IDIOMS: ShapeIdiom[] = [
+  {
+    lines: [
+      'function f(items: string[]) {',
+      '  let parts: string[] = []',
+      '  for (let item of items) parts.push(item.trim())',
+      "  return parts.join('')",
+      '}',
+    ],
+    shapes: ['array-element [] -> [undefined] (joined-array)'],
+    name: 'an array that is only pushed to and joined',
+    inputs: [[[]], [['a']], [[' a', 'b ', '']]],
+  },
+  {
+    lines: [
+      'function f(items: string[], undefined: string) {',
+      '  let parts: string[] = []',
+      '  for (let item of items) parts.push(item.trim())',
+      "  return parts.join('')",
+      '}',
+    ],
+    inputs: [
+      [[], 'prefix'],
+      [['a'], 'prefix'],
+    ],
+    name: 'a parameter named undefined beside a joined array',
+    shapes: [],
+  },
+  {
+    shapes: [
+      "optional-chaining match?.groups?.['key']?.trim() -> match?.groups['key']?.trim() (named-groups)",
+      "optional-chaining match?.groups?.['key']?.trim() -> match?.groups?.['key'].trim() (named-groups)",
+    ],
+    lines: [
+      'function f(text: string) {',
+      '  let match = text.match(/(?<key>[^:]+):/u)',
+      "  return match?.groups?.['key']?.trim()",
+      '}',
+    ],
+    inputs: ['', 'a', 'a:', ' key : value', ':'].map(text => [text]),
+    name: 'a named group that takes part in every match',
+  },
+  {
+    shapes: [
+      'optional-chaining /(?:x(?<tail>y))?z/u.exec(text)?.groups?.tail?.length -> /(?:x(?<tail>y))?z/u.exec(text)?.groups.tail?.length (named-groups)',
+    ],
+    lines: [
+      'function f(text: string) {',
+      '  return /(?:x(?<tail>y))?z/u.exec(text)?.groups?.tail?.length',
+      '}',
+    ],
+    inputs: ['', 'z', 'xyz', 'xz', 'q'].map(text => [text]),
+    name: 'a named group that a match may leave out',
+  },
+  {
+    lines: [
+      'function f(text: string, clear: boolean) {',
+      '  const found = /(?<key>[a-z]+)=/u.exec(text)',
+      '  if (clear) {',
+      '    if (found) found.groups = undefined',
+      '  }',
+      '  return found?.groups?.key',
+      '}',
+    ],
+    inputs: combine(['', 'a=1'], [false, true]),
+    name: 'a match whose groups are cleared',
+    shapes: [],
+  },
+  {
+    lines: [
+      'function f(text: string) {',
+      '  const found = /(?<key>[a-z]+)=/u.exec(text)',
+      '  if (found?.groups) delete found.groups.key',
+      '  return found?.groups!.key?.toUpperCase()',
+      '}',
+    ],
+    inputs: ['', 'a=1'].map(text => [text]),
+    name: 'a match whose group is deleted',
+    shapes: [],
+  },
+  {
+    lines: [
+      'const assignment = /(?<key>[a-z]+)=/u',
+      'function relax() {',
+      "  assignment.compile('[a-z]*=', 'u')",
+      '}',
+      'function f(text: string, relaxed: boolean) {',
+      '  if (relaxed) relax()',
+      '  return assignment.exec(text)?.groups?.key',
+      '}',
+    ],
+    inputs: combine(['', '=', 'a=1'], [false, true]),
+    name: 'a regex that compile changes in place',
+    shapes: [],
+  },
 ]
 
 /**
@@ -1249,7 +1773,7 @@ interface IdiomProbes {
   /**
    * Skipped candidates of `f` whose category the outputs can check.
    */
-  skipProbes: ({ mutator: string; rule: string } & SkipProbe)[]
+  skipProbes: ({ mutator: string; reason: string; rule: string } & SkipProbe)[]
 
   /**
    * Skipped candidates of `f` in a timer delay or a timer wait, with their
@@ -1320,6 +1844,7 @@ async function probeIdiom(
         label: `${candidate.mutator} ${source.slice(candidate.start, candidate.end)} -> ${candidate.replacement} (${candidate.rule})`,
         category: candidate.category,
         mutator: candidate.mutator,
+        reason: candidate.reason,
         rule: candidate.rule,
         by: candidate.by,
       })),
@@ -1494,6 +2019,99 @@ describe('generateFileMutants', () => {
         ...unsoundSkips,
       })
       expect(findDelayChanges(original, delayProbes)).toStrictEqual([])
+    },
+  )
+
+  it.each(
+    BOUND_IDIOMS.flatMap(idiom => [
+      { preset: 'recommended', ...idiom },
+      { preset: 'strict', ...idiom },
+    ]),
+  )(
+    'runs the entries that a bound rules out in $name under $preset',
+    async ({
+      unsoundSkips,
+      kept = [],
+      settings,
+      bounded,
+      inputs,
+      preset,
+      lines,
+    }) => {
+      let { skipProbes, original, probes } = await probeIdiom(
+        lines.join('\n'),
+        inputs,
+        { file: 'example.ts', settings, preset },
+      )
+
+      expect(
+        skipProbes
+          .filter(probe => probe.reason.startsWith('a lower bound'))
+          .map(probe => probe.label),
+      ).toStrictEqual(bounded)
+      expect(probes.map(probe => probe.label)).toStrictEqual(
+        expect.arrayContaining(kept),
+      )
+      expect(findUnsoundSkips(original, probes, skipProbes)).toStrictEqual({
+        ...SOUND,
+        ...unsoundSkips,
+      })
+    },
+  )
+
+  it.each(
+    DEFAULT_IDIOMS.flatMap(idiom => [
+      { preset: 'recommended', ...idiom },
+      { preset: 'strict', ...idiom },
+    ]),
+  )(
+    'runs the swaps and defaults that || keeps in $name under $preset',
+    async ({ defaults, inputs, preset, lines }) => {
+      let { skipProbes, original, probes } = await probeIdiom(
+        lines.join('\n'),
+        inputs,
+        { file: 'example.ts', preset },
+      )
+
+      expect(
+        skipProbes
+          .filter(
+            probe =>
+              probe.rule === 'never-falsy' || probe.rule === 'falsy-default',
+          )
+          .map(probe => probe.label),
+      ).toStrictEqual(defaults)
+      expect(findUnsoundSkips(original, probes, skipProbes)).toStrictEqual(
+        SOUND,
+      )
+    },
+  )
+
+  it.each(
+    SHAPE_IDIOMS.flatMap(idiom => [
+      { preset: 'recommended', ...idiom },
+      { preset: 'strict', ...idiom },
+    ]),
+  )(
+    'runs the arrays and links that join and regex groups keep in $name under $preset',
+    async ({ inputs, preset, shapes, lines }) => {
+      let { skipProbes, original, probes } = await probeIdiom(
+        lines.join('\n'),
+        inputs,
+        { file: 'example.ts', preset },
+      )
+
+      expect(
+        skipProbes
+          .filter(
+            probe =>
+              probe.rule === 'joined-array' || probe.rule === 'named-groups',
+          )
+          .map(probe => probe.label),
+      ).toStrictEqual(shapes)
+      expect(findUnsoundSkips(original, probes, skipProbes)).toStrictEqual(
+        SOUND,
+      )
     },
   )
 

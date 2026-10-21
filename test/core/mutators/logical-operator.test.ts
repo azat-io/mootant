@@ -363,6 +363,30 @@ describe('logicalOperator', () => {
       source: 'x = (a instanceof B) && c',
       file: 'example.ts',
     },
+    {
+      expected: [
+        'date?.toISOString() ?? null -> null',
+        "date?.toISOString() || 'never' -> 'never'",
+        "date?.toISOString() || 'never' -> date?.toISOString()",
+      ],
+      source: [
+        'function f(date: Date | undefined) {',
+        '  x = date?.toISOString() ?? null',
+        "  y = date?.toISOString() || 'never'",
+        '}',
+      ].join('\n'),
+      file: 'example.ts',
+    },
+    {
+      source: [
+        'function f(options: { quiet?: boolean }) {',
+        '  let quiet = options.quiet ?? false',
+        '  return quiet ? 1 : 2',
+        '}',
+      ].join('\n'),
+      expected: ['options.quiet ?? false -> false'],
+      file: 'example.ts',
+    },
   ])('mutates $source in value mode', ({ expected, source, file }) => {
     expect(
       runMutator('logical-operator', source, { file }).map(formatMutant),
@@ -814,6 +838,15 @@ describe('logicalOperator', () => {
       ['b && a > 0 -> b (subsumed R2)', 'b && a > 0 -> false (subsumed R2)'],
     ],
     ['while (a || b) step()', ['a || b -> true (timeout loop-running)']],
+    [
+      'function f(o, d?: Date) { const quiet = o.quiet ?? false; if (quiet) run(); x = d?.toISOString() ?? null }',
+      [
+        'o.quiet ?? false -> o.quiet || false (equivalent falsy-default)',
+        'o.quiet ?? false -> o.quiet (equivalent falsy-default)',
+        'd?.toISOString() ?? null -> d?.toISOString() || null (equivalent never-falsy)',
+        'd?.toISOString() ?? null -> d?.toISOString() (noise nullish-normalization)',
+      ],
+    ],
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('logical-operator', source)).toStrictEqual(expected)
   })

@@ -1038,6 +1038,42 @@ describe('analyzeScopes', () => {
       title: 'a parameter named eval',
       file: 'a.cjs',
     },
+    {
+      source: 'namespace N { export let x = 1 }',
+      title: 'a namespace',
+      file: 'example.ts',
+    },
+    {
+      source: 'module N { export let x = 1 }',
+      title: 'a module with a name',
+      file: 'example.ts',
+    },
+    {
+      source: 'namespace A.B { export let x = 1 }',
+      title: 'a dotted namespace',
+      file: 'example.ts',
+    },
+    {
+      source: 'namespace N { export let x = 1 } namespace N { f(x) }',
+      title: 'two bodies of a namespace',
+      file: 'example.ts',
+    },
+    { title: 'an empty namespace', source: 'namespace N {}', file: 'a.ts' },
+    {
+      source: 'namespace N { export type T = 1 }',
+      title: 'a namespace of types',
+      file: 'example.ts',
+    },
+    {
+      source: 'let x = 0; namespace N { declare let x: number; x = 1 }',
+      title: 'an ambient let in a namespace',
+      file: 'example.ts',
+    },
+    {
+      source: 'function f() { namespace N { export let x = 1 } }',
+      title: 'a namespace in a function',
+      file: 'example.ts',
+    },
   ])('finds the program with $title opaque', ({ source, file }) => {
     expect(createTestFile(source, file).scopes.opaque).toBe(true)
   })
@@ -1055,6 +1091,32 @@ describe('analyzeScopes', () => {
     },
     { title: 'an optional eval call', source: 'eval?.(code)', file: 'a.ts' },
     { source: 'let x = run(code)', file: 'example.ts', title: 'neither' },
+    {
+      source: 'declare namespace N { const x: number }',
+      title: 'an ambient namespace',
+      file: 'example.ts',
+    },
+    {
+      source: 'declare global { namespace NodeJS { interface Env {} } }',
+      title: 'a namespace in a global augmentation',
+      file: 'example.ts',
+    },
+    {
+      source: "declare module 'm' { namespace N { const x: number } }",
+      title: 'a namespace in an ambient module',
+      file: 'example.ts',
+    },
+    {
+      source:
+        'declare namespace N { const x: number } declare namespace N { const y: number }',
+      title: 'two ambient bodies of a namespace',
+      file: 'example.ts',
+    },
+    {
+      source: 'interface I {} type T = 1; enum E { a } class C {}',
+      title: 'types, an enum and a class but no namespace',
+      file: 'example.ts',
+    },
   ])('does not find the program with $title opaque', ({ source, file }) => {
     expect(createTestFile(source, file).scopes.opaque).toBe(false)
   })

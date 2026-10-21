@@ -1,126 +1,19 @@
-import type { VariableDeclarator, MemberExpression, Node } from 'oxc-parser'
+import type { Node } from 'oxc-parser'
 
-import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
+import type { ValueBounds } from '../../types/syntax/value-bounds'
 
-import { unwrapExpression } from '../tree/unwrap-expression'
-import { getBindingClosure } from './get-binding-closure'
-
-/**
- * Properties that hold a size, which is never negative, whatever the receiver.
- * Only `length` counts: arrays, strings, functions and typed arrays have it,
- * and an object with a negative `length` is rare. `size` and `byteLength` are
- * left out, because type hints cannot tell a Map, a Set or an array buffer from
- * any object that may hold a negative `size`.
- */
-let sizeProperties = new Set(['length'])
+import { getValueBound } from './get-value-bound'
 
 /**
- * Methods that return a position or -1 when nothing is found.
- */
-let positionMethods = new Set([
-  'findLastIndex',
-  'lastIndexOf',
-  'findIndex',
-  'indexOf',
-  'search',
-])
-
-/**
- * Finds the smallest value an expression can have when syntax alone tells it: 0
- * for a `length` member, -1 for an `indexOf`, `lastIndexOf`, `findIndex`,
- * `findLastIndex` or `search` call, and the bound of the initializer for a
- * `const` binding or a `let` binding that is never written, unless code may
- * write the binding where the scope analysis sees no write (see
- * `getBindingClosure`): a top-level `let` of a component or a `let` of a Svelte
- * declaration tag, which a parent, the template or another script block may
- * assign; an exported variable of a TypeScript namespace, which compiles to a
- * property of the namespace object that any code may assign; and any binding of
- * a program with a direct `eval` call or a `with` statement. Members and
- * methods are recognized by name. An optional chain has no bound, because it
- * may be `undefined`.
+ * Finds the lower bound of an expression that is never nullish, as
+ * `getValueBound` finds it, for plugins that need only the number.
  *
- * @param scopes - Scope analysis of the program.
- * @param shared - Scopes of the program whose names code outside them may read
- *   and write (see `getSharedScopes`).
+ * @param bounds - Bounds of the names of the program whose values change.
  * @param node - Expression to bound.
- * @returns The lower bound, or null when it is not known.
+ * @returns The lower bound, or null when it is not known or the value may be
+ *   nullish.
  */
-export function getLowerBound(
-  scopes: ScopeAnalysis,
-  shared: ReadonlySet<Node>,
-  node: Node,
-): number | null {
-  let seen = new Set<Node>()
-  let current = unwrapExpression(node)
-  while (current.type === 'Identifier') {
-    let initializer = getFixedInitializer(scopes, shared, current)
-    if (initializer === null || seen.has(initializer)) {
-      return null
-    }
-    seen.add(initializer)
-    current = unwrapExpression(initializer)
-  }
-
-  switch (current.type) {
-    case 'MemberExpression':
-      return hasPropertyName(current, sizeProperties) ? 0 : null
-    case 'CallExpression': {
-      let callee = unwrapExpression(current.callee)
-      return (
-          callee.type === 'MemberExpression' &&
-            hasPropertyName(callee, positionMethods)
-        ) ?
-          -1
-        : null
-    }
-    default:
-      return null
-  }
-}
-
-/**
- * Finds the initializer that always gives an identifier its value: the
- * initializer of the `const` declarator or never-written `let` declarator that
- * declares the name as a whole, when no code may write the name where the scope
- * analysis sees no write.
- *
- * @param scopes - Scope analysis of the program.
- * @param shared - Scopes of the program whose names code outside them may read
- *   and write.
- * @param identifier - Identifier that refers to or declares a name.
- * @returns The initializer, or null for any other name.
- */
-function getFixedInitializer(
-  scopes: ScopeAnalysis,
-  shared: ReadonlySet<Node>,
-  identifier: Node,
-): Node | null {
-  let binding = scopes.bindings.get(identifier)
-  if (
-    (binding?.kind !== 'const' &&
-      (binding?.kind !== 'let' || binding.writes.length > 0)) ||
-    getBindingClosure(scopes, shared, binding) === 'open'
-  ) {
-    return null
-  }
-  let declarator = binding.declaration as VariableDeclarator
-  return declarator.id === binding.identifier ? declarator.init : null
-}
-
-/**
- * Tells whether a member has a non-computed property with one of the names.
- *
- * @param node - Member expression.
- * @param names - Accepted property names.
- * @returns Whether the property is an identifier with one of the names.
- */
-function hasPropertyName(
-  node: MemberExpression,
-  names: ReadonlySet<string>,
-): boolean {
-  return (
-    !node.computed &&
-    node.property.type === 'Identifier' &&
-    names.has(node.property.name)
-  )
+export function getLowerBound(bounds: ValueBounds, node: Node): number | null {
+  let bound = getValueBound(bounds, node)
+  return bound && !bound.nullable ? bound.lower : null
 }

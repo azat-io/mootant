@@ -185,4 +185,59 @@ describe('optionalChaining', () => {
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('optional-chaining', source)).toStrictEqual(expected)
   })
+
+  it.each<{ setup: MutatorSetup }>([
+    { setup: {} },
+    {
+      setup: {
+        mutators: { 'optional-chaining': ['on', { nonNullable: true }] },
+      },
+    },
+    { setup: { preset: 'strict' } },
+  ])(
+    'keeps the links after the groups of a regex match with $setup',
+    ({ setup }) => {
+      let source = [
+        'function key(text: string) {',
+        '  let match = text.match(/(?<key>[^:]+):/u)',
+        "  return match?.groups?.['key']?.trim()",
+        '}',
+      ].join('\n')
+
+      expect(
+        runMutator('optional-chaining', source, setup).map(formatMutant),
+      ).toStrictEqual([
+        "match?.groups?.['key']?.trim() -> match.groups?.['key']?.trim()",
+      ])
+      expect(listSkipped('optional-chaining', source, setup)).toStrictEqual([
+        "match?.groups?.['key']?.trim() -> match?.groups['key']?.trim() (equivalent named-groups)",
+        "match?.groups?.['key']?.trim() -> match?.groups?.['key'].trim() (equivalent named-groups)",
+      ])
+    },
+  )
+
+  it.each<{ expected: string[]; source: string }>([
+    {
+      expected: [
+        "/(?:x(?<tail>y))?z/u.exec(text)?.groups?.['tail']?.trim() -> /(?:x(?<tail>y))?z/u.exec(text).groups?.['tail']?.trim()",
+        "/(?:x(?<tail>y))?z/u.exec(text)?.groups?.['tail']?.trim() -> /(?:x(?<tail>y))?z/u.exec(text)?.groups?.['tail'].trim()",
+      ],
+      source:
+        "function tail(text: string) { return /(?:x(?<tail>y))?z/u.exec(text)?.groups?.['tail']?.trim() }",
+    },
+    {
+      expected: [
+        String.raw`text.match(/(?<word>\w+)/gu)?.groups?.['word'] -> text.match(/(?<word>\w+)/gu).groups?.['word']`,
+        String.raw`text.match(/(?<word>\w+)/gu)?.groups?.['word'] -> text.match(/(?<word>\w+)/gu)?.groups['word']`,
+      ],
+      source: String.raw`function word(text: string) { return text.match(/(?<word>\w+)/gu)?.groups?.['word'] }`,
+    },
+  ])(
+    'replaces the links that a match may leave nullish in $source',
+    ({ expected, source }) => {
+      expect(
+        runMutator('optional-chaining', source).map(formatMutant),
+      ).toStrictEqual(expected)
+    },
+  )
 })

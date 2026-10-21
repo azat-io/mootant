@@ -96,9 +96,85 @@ describe('getComparisonPlan', () => {
       'list.length >= 0n',
       ['list.length > 0n', 'list.length == 0n'],
     ],
+    ['let n = 3; while (n > 0) { n--; use(n) }', 'n > 0', ['n >= 0', 'n > 1']],
+    ['let n = 3; while (0 < n) { n--; use(n) }', '0 < n', ['0 <= n', '1 < n']],
+    [
+      'let n = 3; while (a > b && n > 0) { n--; use(n) }',
+      'n > 0',
+      ['n >= 0', 'n > 1'],
+    ],
+    [
+      'let n = 3; while (n >= 1) { n -= 1; use(n) }',
+      'n >= 1',
+      ['n > 1', 'n == 1', 'n >= 0'],
+    ],
   ])('skips impossible regions in %s', (body, comparison, expected) => {
     expect(planOf(body, comparison)).toEqual(expected)
   })
+
+  it.each<[string, string, string[]]>([
+    [
+      'x = list.length === 0n',
+      'list.length === 0n',
+      ['list.length <= 0n', 'list.length >= 0n', 'false'],
+    ],
+    [
+      'x = 0n !== list.length',
+      '0n !== list.length',
+      ['0n < list.length', '0n > list.length', 'true'],
+    ],
+    [
+      'let n = 0 as number | bigint; for (let c of s) n++; x = n === 0n',
+      'n === 0n',
+      ['n <= 0n', 'n >= 0n', 'false'],
+    ],
+    [
+      'x = list.length == 0n',
+      'list.length == 0n',
+      ['list.length >= 0n', 'false'],
+    ],
+  ])(
+    'reads a bound against a BigInt literal only in a loose comparison: %s',
+    (body, comparison, expected) => {
+      expect(planOf(body, comparison)).toEqual(expected)
+    },
+  )
+
+  it.each<[string, string, string[]]>([
+    [
+      'x = n > 9007199254740993n',
+      'n > 9007199254740993n',
+      [
+        'n >= 9007199254740993n',
+        'n != 9007199254740993n',
+        'n > 9007199254740994n',
+      ],
+    ],
+    [
+      'x = 9007199254740993n >= n',
+      '9007199254740993n >= n',
+      [
+        '9007199254740993n > n',
+        '9007199254740993n == n',
+        '9007199254740994n >= n',
+      ],
+    ],
+    [
+      'x = n == 9007199254740993n',
+      'n == 9007199254740993n',
+      ['n <= 9007199254740993n', 'n >= 9007199254740993n', 'false'],
+    ],
+  ])(
+    'reads no bound against a BigInt literal that a number rounds: %s',
+    (body, comparison, expected) => {
+      expect(
+        planOf(
+          `let n = 9007199254740992; for (let c of s) n += 2; ${body}`,
+          comparison,
+        ),
+      ).toEqual(expected)
+    },
+  )
 
   it.each<[string, string, string[]]>([
     ["x = typeof value === 'string'", "typeof value === 'string'", ['false']],
@@ -476,6 +552,35 @@ describe('getComparisonPlan', () => {
         ['list.length != 0', 'lower-bound', null],
       ],
     ],
+    [
+      'while (a > b && list.length > 0) list.pop()',
+      'list.length > 0',
+      [
+        ['list.length >= 0', 'O3', 'logical-operator'],
+        ['list.length != 0', 'lower-bound', null],
+      ],
+    ],
+    [
+      'while (a > b && list.length >= 1) list.pop()',
+      'list.length >= 1',
+      [['list.length >= 0', 'O3', 'logical-operator']],
+    ],
+    [
+      'let row = 0; for (let item of list) { x = row === 0; row++ }',
+      'row === 0',
+      [['row <= 0', 'lower-bound', null]],
+    ],
+    [
+      'let n = 3; while (n > 0) { n--; use(n) }',
+      'n > 0',
+      [['n != 0', 'lower-bound', null]],
+    ],
+    [
+      'let n = 3; while (a > b && n > 0) { n--; use(n) }',
+      'n > 0',
+      [['n != 0', 'lower-bound', null]],
+    ],
+    ['let n = 3; while (n >= 1) { n -= 1; use(n) }', 'n >= 1', []],
   ])(
     'names the rule of each skipped entry of %s',
     (body, comparison, expected) => {
@@ -504,11 +609,91 @@ describe('getComparisonPlan', () => {
     let { skipped } = getComparisonPlan(find('BinaryExpression'), context)
 
     expect(skipped[0]!.skip!.reason).toBe(
-      'a lower bound of an operand makes it the constant true, and true keeps the loop running forever, so only a timeout could kill it',
+      'a lower bound of an operand makes it the constant true (a length is never negative), and true keeps the loop running forever, so only a timeout could kill it',
     )
     expect(skipped[0]!.skip).toMatchObject({
       rule: 'loop-running',
       heuristic: true,
+    })
+  })
+
+  it('skips an entry that the bound of a counter leaves constant in a comparison that is not its guard', () => {
+    let { context, find } = createTestContext(
+      'function f() { let n = 3; if (n > 0) n--; while (n > 0) use(n) }',
+    )
+    let { skipped } = getComparisonPlan(
+      find('BinaryExpression', 'n > 0', 1),
+      context,
+    )
+
+    expect(
+      skipped.map(replacement => [replacement.text, replacement.skip!.reason]),
+    ).toStrictEqual([
+      [
+        'n >= 0',
+        'a lower bound of an operand makes it the constant true (`n` starts at 3 and goes down only right after `n > 0`), and true keeps the loop running forever, so only a timeout could kill it',
+      ],
+      [
+        'n != 0',
+        'a lower bound of an operand makes the inputs where it differs impossible (`n` starts at 3 and goes down only right after `n > 0`)',
+      ],
+    ])
+  })
+
+  it('gives an entry that the lower bound leaves at an owned loop constant the skip of the owner', () => {
+    let { context, find } = createTestContext(
+      'function f(list: string[], ready: boolean) { while (ready && list.length > 0) list.pop() }',
+    )
+    let { skippedConstants, skipped } = getComparisonPlan(
+      find('BinaryExpression'),
+      context,
+    )
+
+    expect(skipped[0]!.skip).toStrictEqual({
+      reason:
+        'a lower bound of an operand makes it the constant true (a length is never negative), and logical-operator owns the truth value of a boolean-mode operand',
+      by: { node: find('LogicalExpression'), mutator: 'logical-operator' },
+      heuristic: true,
+      rule: 'O3',
+    })
+    expect(skippedConstants.get(true)).toBe(skipped[0]!.skip)
+  })
+
+  it.each([
+    {
+      reason:
+        'a lower bound of an operand makes the inputs where it differs impossible (`row` starts at 0 and only grows)',
+      source:
+        'function f(list: string[]) { let row = 0; for (let item of list) { use(row > 0); row++ } }',
+    },
+    {
+      reason:
+        'a lower bound of an operand makes the inputs where it differs impossible (`seen` is a Set, whose size is never negative)',
+      source:
+        'function f(list: string[]) { let seen = new Set(list); return seen.size > 0 }',
+    },
+  ])('names why the bound holds in $source', ({ reason, source }) => {
+    let { context, find } = createTestContext(source)
+    let { skipped } = getComparisonPlan(find('BinaryExpression'), context)
+
+    expect(skipped.map(replacement => replacement.skip!.reason)).toStrictEqual([
+      reason,
+    ])
+  })
+
+  it('names why the bound rules out every input where a constant differs', () => {
+    let { context, find } = createTestContext(
+      'function f(list: string[]) { return list.length <= -1 }',
+    )
+    let { skippedConstants } = getComparisonPlan(
+      find('BinaryExpression'),
+      context,
+    )
+
+    expect(skippedConstants.get(false)).toStrictEqual({
+      reason:
+        'a lower bound of an operand makes every input where the comparison is not false impossible (a length is never negative)',
+      rule: 'lower-bound',
     })
   })
 })

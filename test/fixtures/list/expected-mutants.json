@@ -4,9 +4,9 @@
   "preset": "recommended",
   "since": null,
   "summary": {
-    "totalFiles": 10,
-    "totalMutants": 366,
-    "totalPending": 340,
+    "totalFiles": 13,
+    "totalMutants": 403,
+    "totalPending": 377,
     "totalIgnored": 26,
     "totalErrors": 0,
     "totalWarnings": 3
@@ -15,7 +15,7 @@
     {
       "id": "arithmetic-operator",
       "description": "Swaps an arithmetic operator, or drops the right operand of a + that is not known to be numeric.",
-      "mutants": 37
+      "mutants": 38
     },
     {
       "id": "array-element",
@@ -25,7 +25,7 @@
     {
       "id": "assignment-operator",
       "description": "Swaps a compound assignment operator, or makes a logical assignment unconditional, never happen, or swapped between ?? and ||.",
-      "mutants": 13
+      "mutants": 14
     },
     {
       "id": "bitwise-operator",
@@ -35,27 +35,27 @@
     {
       "id": "boolean-literal",
       "description": "Inverts a boolean literal.",
-      "mutants": 3
+      "mutants": 5
     },
     {
       "id": "comparison-operator",
       "description": "Moves a comparison's boundary or literal, flips its direction, or makes it constant: the minimal set that subsumes all other comparison mutants.",
-      "mutants": 65
+      "mutants": 79
     },
     {
       "id": "condition",
       "description": "Forces a condition that is not a comparison or a logical expression to true or false.",
-      "mutants": 26
+      "mutants": 28
     },
     {
       "id": "logical-operator",
       "description": "Drops one operand of &&, || or ??, swaps ?? and || where falsy values differ, or makes a whole condition constant.",
-      "mutants": 40
+      "mutants": 44
     },
     {
       "id": "method-call",
       "description": "Swaps a method with its opposite (startsWith/endsWith, min/max, ...) or removes a transforming call (trim, filter, sort, ...).",
-      "mutants": 16
+      "mutants": 17
     },
     {
       "id": "missing-await",
@@ -65,7 +65,7 @@
     {
       "id": "number-literal",
       "description": "Adds one to a numeric constant.",
-      "mutants": 36
+      "mutants": 41
     },
     {
       "id": "object-property",
@@ -75,7 +75,7 @@
     {
       "id": "optional-chaining",
       "description": "Replaces ?. with ., as if the value could never be nullish.",
-      "mutants": 10
+      "mutants": 12
     },
     {
       "id": "regex-flag",
@@ -95,12 +95,12 @@
     {
       "id": "statement-removal",
       "description": "Removes one statement with an effect: a call, assignment, delete, throw, early return or case break.",
-      "mutants": 27
+      "mutants": 28
     },
     {
       "id": "string-literal",
       "description": "Empties a string or the static text of a template literal, or fills an empty one.",
-      "mutants": 46
+      "mutants": 48
     },
     {
       "id": "unary-operator",
@@ -110,10 +110,15 @@
     {
       "id": "update-operator",
       "description": "Swaps ++ and --, or prefix and postfix when the value is used.",
-      "mutants": 5
+      "mutants": 7
     }
   ],
   "files": [
+    {
+      "file": "test/fixtures/list/source/bounds.ts",
+      "parsed": true,
+      "mutants": 25
+    },
     {
       "file": "test/fixtures/list/source/catalog.ts",
       "parsed": true,
@@ -135,7 +140,17 @@
       "mutants": 10
     },
     {
+      "file": "test/fixtures/list/source/defaults.ts",
+      "parsed": true,
+      "mutants": 7
+    },
+    {
       "file": "test/fixtures/list/source/page.astro",
+      "parsed": true,
+      "mutants": 5
+    },
+    {
+      "file": "test/fixtures/list/source/parts.ts",
       "parsed": true,
       "mutants": 5
     },
@@ -192,6 +207,608 @@
     }
   ],
   "mutants": [
+    {
+      "id": "v77dbn81t2kh",
+      "mutator": "number-literal",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 5,
+      "column": 14,
+      "endLine": 5,
+      "endColumn": 15,
+      "start": 183,
+      "end": 184,
+      "scope": "counter",
+      "kind": "expression",
+      "original": "0",
+      "replacement": "1",
+      "before": ["  let seen = 0"],
+      "after": ["  let seen = 1"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "aysxw00f2c8q",
+      "mutator": "assignment-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 6,
+      "column": 27,
+      "endLine": 6,
+      "endColumn": 46,
+      "start": 211,
+      "end": 230,
+      "scope": "counter",
+      "kind": "expression",
+      "original": "seen += item.length",
+      "replacement": "seen -= item.length",
+      "before": ["  for (let item of items) seen += item.length"],
+      "after": ["  for (let item of items) seen -= item.length"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "6s4295h5n2aw",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 7,
+      "column": 10,
+      "endLine": 7,
+      "endColumn": 20,
+      "start": 240,
+      "end": 250,
+      "scope": "counter",
+      "kind": "expression",
+      "original": "seen === 0",
+      "replacement": "seen >= 0",
+      "before": [
+        "  return seen === 0 // seen starts at 0 and only grows: no <="
+      ],
+      "after": ["  return seen >= 0 // seen starts at 0 and only grows: no <="],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "s5gzp0qscrtn",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 7,
+      "column": 10,
+      "endLine": 7,
+      "endColumn": 20,
+      "start": 240,
+      "end": 250,
+      "scope": "counter",
+      "kind": "expression",
+      "original": "seen === 0",
+      "replacement": "false",
+      "before": [
+        "  return seen === 0 // seen starts at 0 and only grows: no <="
+      ],
+      "after": ["  return false // seen starts at 0 and only grows: no <="],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "316wf8wvzc03",
+      "mutator": "number-literal",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 11,
+      "column": 15,
+      "endLine": 11,
+      "endColumn": 16,
+      "start": 359,
+      "end": 360,
+      "scope": "guarded",
+      "kind": "expression",
+      "original": "0",
+      "replacement": "1",
+      "before": ["  let depth = 0"],
+      "after": ["  let depth = 1"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "db0txc86r8h6",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 13,
+      "column": 9,
+      "endLine": 13,
+      "endColumn": 21,
+      "start": 396,
+      "end": 408,
+      "scope": "guarded",
+      "kind": "expression",
+      "original": "char === '('",
+      "replacement": "true",
+      "before": ["    if (char === '(') depth++"],
+      "after": ["    if (true) depth++"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "v0fpgkqv25nf",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 13,
+      "column": 9,
+      "endLine": 13,
+      "endColumn": 21,
+      "start": 396,
+      "end": 408,
+      "scope": "guarded",
+      "kind": "expression",
+      "original": "char === '('",
+      "replacement": "false",
+      "before": ["    if (char === '(') depth++"],
+      "after": ["    if (false) depth++"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "mffzf4dnf17g",
+      "mutator": "update-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 13,
+      "column": 23,
+      "endLine": 13,
+      "endColumn": 30,
+      "start": 410,
+      "end": 417,
+      "scope": "guarded",
+      "kind": "expression",
+      "original": "depth++",
+      "replacement": "depth--",
+      "before": ["    if (char === '(') depth++"],
+      "after": ["    if (char === '(') depth--"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "5nqprjzfy8kg",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 14,
+      "column": 14,
+      "endLine": 14,
+      "endColumn": 23,
+      "start": 431,
+      "end": 440,
+      "scope": "guarded",
+      "kind": "expression",
+      "original": "depth > 0",
+      "replacement": "depth >= 0",
+      "before": [
+        "    else if (depth > 0) depth-- // a decrement right after its guard: no !="
+      ],
+      "after": [
+        "    else if (depth >= 0) depth-- // a decrement right after its guard: no !="
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "b8x3ss3z5hcc",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 14,
+      "column": 14,
+      "endLine": 14,
+      "endColumn": 23,
+      "start": 431,
+      "end": 440,
+      "scope": "guarded",
+      "kind": "expression",
+      "original": "depth > 0",
+      "replacement": "depth > 1",
+      "before": [
+        "    else if (depth > 0) depth-- // a decrement right after its guard: no !="
+      ],
+      "after": [
+        "    else if (depth > 1) depth-- // a decrement right after its guard: no !="
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "anngebw94w2z",
+      "mutator": "update-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 14,
+      "column": 25,
+      "endLine": 14,
+      "endColumn": 32,
+      "start": 442,
+      "end": 449,
+      "scope": "guarded",
+      "kind": "expression",
+      "original": "depth--",
+      "replacement": "depth++",
+      "before": [
+        "    else if (depth > 0) depth-- // a decrement right after its guard: no !="
+      ],
+      "after": [
+        "    else if (depth > 0) depth++ // a decrement right after its guard: no !="
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "4xkqcw19e2zr",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 16,
+      "column": 10,
+      "endLine": 16,
+      "endColumn": 21,
+      "start": 507,
+      "end": 518,
+      "scope": "guarded",
+      "kind": "expression",
+      "original": "depth === 0",
+      "replacement": "depth >= 0",
+      "before": ["  return depth === 0 // no <="],
+      "after": ["  return depth >= 0 // no <="],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "e202x6ysn5g5",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 16,
+      "column": 10,
+      "endLine": 16,
+      "endColumn": 21,
+      "start": 507,
+      "end": 518,
+      "scope": "guarded",
+      "kind": "expression",
+      "original": "depth === 0",
+      "replacement": "false",
+      "before": ["  return depth === 0 // no <="],
+      "after": ["  return false // no <="],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "3nt2hfrx5gk6",
+      "mutator": "arithmetic-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 21,
+      "column": 44,
+      "endLine": 21,
+      "endColumn": 71,
+      "start": 667,
+      "end": 694,
+      "scope": "counted",
+      "kind": "expression",
+      "original": "(counts.get(name) ?? 0) + 1",
+      "replacement": "(counts.get(name) ?? 0) - 1",
+      "before": [
+        "  for (let name of names) counts.set(name, (counts.get(name) ?? 0) + 1)"
+      ],
+      "after": [
+        "  for (let name of names) counts.set(name, (counts.get(name) ?? 0) - 1)"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "1qj155v7e6w2",
+      "mutator": "logical-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 21,
+      "column": 45,
+      "endLine": 21,
+      "endColumn": 66,
+      "start": 668,
+      "end": 689,
+      "scope": "counted",
+      "kind": "expression",
+      "original": "counts.get(name) ?? 0",
+      "replacement": "0",
+      "before": [
+        "  for (let name of names) counts.set(name, (counts.get(name) ?? 0) + 1)"
+      ],
+      "after": ["  for (let name of names) counts.set(name, (0) + 1)"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "twh2qpxy4tyq",
+      "mutator": "logical-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 21,
+      "column": 45,
+      "endLine": 21,
+      "endColumn": 66,
+      "start": 668,
+      "end": 689,
+      "scope": "counted",
+      "kind": "expression",
+      "original": "counts.get(name) ?? 0",
+      "replacement": "counts.get(name)",
+      "before": [
+        "  for (let name of names) counts.set(name, (counts.get(name) ?? 0) + 1)"
+      ],
+      "after": [
+        "  for (let name of names) counts.set(name, (counts.get(name)) + 1)"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "4qejcgp907hv",
+      "mutator": "number-literal",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 21,
+      "column": 65,
+      "endLine": 21,
+      "endColumn": 66,
+      "start": 688,
+      "end": 689,
+      "scope": "counted",
+      "kind": "expression",
+      "original": "0",
+      "replacement": "1",
+      "before": [
+        "  for (let name of names) counts.set(name, (counts.get(name) ?? 0) + 1)"
+      ],
+      "after": [
+        "  for (let name of names) counts.set(name, (counts.get(name) ?? 1) + 1)"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "8b5h8czbqhsg",
+      "mutator": "number-literal",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 21,
+      "column": 70,
+      "endLine": 21,
+      "endColumn": 71,
+      "start": 693,
+      "end": 694,
+      "scope": "counted",
+      "kind": "expression",
+      "original": "1",
+      "replacement": "2",
+      "before": [
+        "  for (let name of names) counts.set(name, (counts.get(name) ?? 0) + 1)"
+      ],
+      "after": [
+        "  for (let name of names) counts.set(name, (counts.get(name) ?? 0) + 2)"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "gnfnrssmf6p7",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 22,
+      "column": 37,
+      "endLine": 22,
+      "endColumn": 46,
+      "start": 732,
+      "end": 741,
+      "scope": "counted",
+      "kind": "expression",
+      "original": "count > 1",
+      "replacement": "count >= 1",
+      "before": [
+        "  for (let [, count] of counts) if (count > 1) return true // values are at least 1: no !="
+      ],
+      "after": [
+        "  for (let [, count] of counts) if (count >= 1) return true // values are at least 1: no !="
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "9m37709v0pg5",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 22,
+      "column": 37,
+      "endLine": 22,
+      "endColumn": 46,
+      "start": 732,
+      "end": 741,
+      "scope": "counted",
+      "kind": "expression",
+      "original": "count > 1",
+      "replacement": "count > 2",
+      "before": [
+        "  for (let [, count] of counts) if (count > 1) return true // values are at least 1: no !="
+      ],
+      "after": [
+        "  for (let [, count] of counts) if (count > 2) return true // values are at least 1: no !="
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "p9r58dhemkhh",
+      "mutator": "boolean-literal",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 22,
+      "column": 55,
+      "endLine": 22,
+      "endColumn": 59,
+      "start": 750,
+      "end": 754,
+      "scope": "counted",
+      "kind": "expression",
+      "original": "true",
+      "replacement": "false",
+      "before": [
+        "  for (let [, count] of counts) if (count > 1) return true // values are at least 1: no !="
+      ],
+      "after": [
+        "  for (let [, count] of counts) if (count > 1) return false // values are at least 1: no !="
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "rtmf7hxkdm8q",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 23,
+      "column": 10,
+      "endLine": 23,
+      "endColumn": 27,
+      "start": 796,
+      "end": 813,
+      "scope": "counted",
+      "kind": "expression",
+      "original": "counts.size === 0",
+      "replacement": "counts.size >= 0",
+      "before": ["  return counts.size === 0 // the size of a Map: no <="],
+      "after": ["  return counts.size >= 0 // the size of a Map: no <="],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "849md128sq0y",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 23,
+      "column": 10,
+      "endLine": 23,
+      "endColumn": 27,
+      "start": 796,
+      "end": 813,
+      "scope": "counted",
+      "kind": "expression",
+      "original": "counts.size === 0",
+      "replacement": "false",
+      "before": ["  return counts.size === 0 // the size of a Map: no <="],
+      "after": ["  return false // the size of a Map: no <="],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "c8vvbpg6arn0",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 27,
+      "column": 10,
+      "endLine": 27,
+      "endColumn": 33,
+      "start": 905,
+      "end": 928,
+      "scope": "unique",
+      "kind": "expression",
+      "original": "new Set(items).size > 0",
+      "replacement": "new Set(items).size >= 0",
+      "before": [
+        "  return new Set(items).size > 0 // the size of a Set: no !="
+      ],
+      "after": [
+        "  return new Set(items).size >= 0 // the size of a Set: no !="
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "7twk76052gjb",
+      "mutator": "comparison-operator",
+      "file": "test/fixtures/list/source/bounds.ts",
+      "line": 27,
+      "column": 10,
+      "endLine": 27,
+      "endColumn": 33,
+      "start": 905,
+      "end": 928,
+      "scope": "unique",
+      "kind": "expression",
+      "original": "new Set(items).size > 0",
+      "replacement": "new Set(items).size > 1",
+      "before": [
+        "  return new Set(items).size > 0 // the size of a Set: no !="
+      ],
+      "after": ["  return new Set(items).size > 1 // the size of a Set: no !="],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
     {
       "id": "xfx5adq0nez2",
       "mutator": "arithmetic-operator",
@@ -6231,6 +6848,176 @@
       "ignoredBy": null
     },
     {
+      "id": "ynbz05ya62c3",
+      "mutator": "logical-operator",
+      "file": "test/fixtures/list/source/defaults.ts",
+      "line": 6,
+      "column": 10,
+      "endLine": 6,
+      "endColumn": 37,
+      "start": 280,
+      "end": 307,
+      "scope": "stamp",
+      "kind": "expression",
+      "original": "date?.toISOString() ?? null",
+      "replacement": "null",
+      "before": [
+        "  return date?.toISOString() ?? null // never '': no ||, so the mutant null comes back"
+      ],
+      "after": [
+        "  return null // never '': no ||, so the mutant null comes back"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "zxc6mrdndq0j",
+      "mutator": "optional-chaining",
+      "file": "test/fixtures/list/source/defaults.ts",
+      "line": 6,
+      "column": 10,
+      "endLine": 6,
+      "endColumn": 29,
+      "start": 280,
+      "end": 299,
+      "scope": "stamp",
+      "kind": "expression",
+      "original": "date?.toISOString()",
+      "replacement": "date.toISOString()",
+      "before": [
+        "  return date?.toISOString() ?? null // never '': no ||, so the mutant null comes back"
+      ],
+      "after": [
+        "  return date.toISOString() ?? null // never '': no ||, so the mutant null comes back"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "20vvhmawkdyy",
+      "mutator": "logical-operator",
+      "file": "test/fixtures/list/source/defaults.ts",
+      "line": 10,
+      "column": 15,
+      "endLine": 10,
+      "endColumn": 37,
+      "start": 437,
+      "end": 459,
+      "scope": "quiet",
+      "kind": "expression",
+      "original": "options.quiet ?? false",
+      "replacement": "false",
+      "before": [
+        "  let quiet = options.quiet ?? false // read only for its truth: no || and no drop of false"
+      ],
+      "after": [
+        "  let quiet = false // read only for its truth: no || and no drop of false"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "nm717sdhzv24",
+      "mutator": "boolean-literal",
+      "file": "test/fixtures/list/source/defaults.ts",
+      "line": 10,
+      "column": 32,
+      "endLine": 10,
+      "endColumn": 37,
+      "start": 454,
+      "end": 459,
+      "scope": "quiet",
+      "kind": "expression",
+      "original": "false",
+      "replacement": "true",
+      "before": [
+        "  let quiet = options.quiet ?? false // read only for its truth: no || and no drop of false"
+      ],
+      "after": [
+        "  let quiet = options.quiet ?? true // read only for its truth: no || and no drop of false"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "0e65fpne9dc6",
+      "mutator": "condition",
+      "file": "test/fixtures/list/source/defaults.ts",
+      "line": 11,
+      "column": 10,
+      "endLine": 11,
+      "endColumn": 15,
+      "start": 524,
+      "end": 529,
+      "scope": "quiet",
+      "kind": "expression",
+      "original": "quiet",
+      "replacement": "true",
+      "before": ["  return quiet ? 1 : 2"],
+      "after": ["  return true ? 1 : 2"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "y2hqdj1xbnzv",
+      "mutator": "condition",
+      "file": "test/fixtures/list/source/defaults.ts",
+      "line": 11,
+      "column": 10,
+      "endLine": 11,
+      "endColumn": 15,
+      "start": 524,
+      "end": 529,
+      "scope": "quiet",
+      "kind": "expression",
+      "original": "quiet",
+      "replacement": "false",
+      "before": ["  return quiet ? 1 : 2"],
+      "after": ["  return false ? 1 : 2"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "kgzewawwtk54",
+      "mutator": "number-literal",
+      "file": "test/fixtures/list/source/defaults.ts",
+      "line": 11,
+      "column": 22,
+      "endLine": 11,
+      "endColumn": 23,
+      "start": 536,
+      "end": 537,
+      "scope": "quiet",
+      "kind": "expression",
+      "original": "2",
+      "replacement": "3",
+      "before": ["  return quiet ? 1 : 2"],
+      "after": ["  return quiet ? 1 : 3"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
       "id": "b00pt8msnqgc",
       "mutator": "logical-operator",
       "file": "test/fixtures/list/source/page.astro",
@@ -6347,6 +7134,128 @@
         "line": 9,
         "column": 3
       }
+    },
+    {
+      "id": "2zj9q1fes4xa",
+      "mutator": "statement-removal",
+      "file": "test/fixtures/list/source/parts.ts",
+      "line": 7,
+      "column": 27,
+      "endLine": 7,
+      "endColumn": 43,
+      "start": 366,
+      "end": 382,
+      "scope": "text",
+      "kind": "block",
+      "original": "parts.push(item)",
+      "replacement": ";",
+      "before": ["  for (let item of items) parts.push(item)"],
+      "after": ["  for (let item of items) ;"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "pfxz4c0s88ap",
+      "mutator": "string-literal",
+      "file": "test/fixtures/list/source/parts.ts",
+      "line": 8,
+      "column": 21,
+      "endLine": 8,
+      "endColumn": 23,
+      "start": 403,
+      "end": 405,
+      "scope": "text",
+      "kind": "expression",
+      "original": "''",
+      "replacement": "'mootant'",
+      "before": ["  return parts.join('')"],
+      "after": ["  return parts.join('mootant')"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "9rh7bdj760ed",
+      "mutator": "method-call",
+      "file": "test/fixtures/list/source/parts.ts",
+      "line": 13,
+      "column": 10,
+      "endLine": 13,
+      "endColumn": 40,
+      "start": 514,
+      "end": 544,
+      "scope": "key",
+      "kind": "expression",
+      "original": "match?.groups?.['key']?.trim()",
+      "replacement": "match?.groups?.['key']",
+      "before": [
+        "  return match?.groups?.['key']?.trim() // every match has groups and key: only the first ?. is replaced"
+      ],
+      "after": [
+        "  return match?.groups?.['key'] // every match has groups and key: only the first ?. is replaced"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "27geadk3y5xz",
+      "mutator": "optional-chaining",
+      "file": "test/fixtures/list/source/parts.ts",
+      "line": 13,
+      "column": 10,
+      "endLine": 13,
+      "endColumn": 40,
+      "start": 514,
+      "end": 544,
+      "scope": "key",
+      "kind": "expression",
+      "original": "match?.groups?.['key']?.trim()",
+      "replacement": "match.groups?.['key']?.trim()",
+      "before": [
+        "  return match?.groups?.['key']?.trim() // every match has groups and key: only the first ?. is replaced"
+      ],
+      "after": [
+        "  return match.groups?.['key']?.trim() // every match has groups and key: only the first ?. is replaced"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "y1g4b7gefkna",
+      "mutator": "string-literal",
+      "file": "test/fixtures/list/source/parts.ts",
+      "line": 13,
+      "column": 26,
+      "endLine": 13,
+      "endColumn": 31,
+      "start": 530,
+      "end": 535,
+      "scope": "key",
+      "kind": "expression",
+      "original": "'key'",
+      "replacement": "''",
+      "before": [
+        "  return match?.groups?.['key']?.trim() // every match has groups and key: only the first ?. is replaced"
+      ],
+      "after": [
+        "  return match?.groups?.['']?.trim() // every match has groups and key: only the first ?. is replaced"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
     },
     {
       "id": "w22kwvfdj4sh",

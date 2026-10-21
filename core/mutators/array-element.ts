@@ -1,6 +1,7 @@
 import type { ArrayExpression } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
+import type { Replacement } from '../../types/mutator/replacement'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { getCalleeName } from '../tree/get-callee-name'
@@ -16,11 +17,15 @@ const HOOK_PATTERN = /^use[0-9A-Z]/u
  * one (catalog 4.2). Each removal (T6) is solitary over the removed element, so
  * the pipeline drops it while a mutant inside the element will run. Arrays with
  * holes get nothing; the `[undefined]` of the empty dependency list of a React
- * hook follows as a skipped replacement.
+ * hook, and of an array that is only pushed to and joined with an empty
+ * separator (see `isJoinedArray`), follows as a skipped replacement when the
+ * name `undefined` surely holds the global value (see `isGlobalName`): a
+ * parameter, a local or a declaration that another script block of a component
+ * makes may give it any value.
  */
 export let arrayElement: Mutator = {
   create(context) {
-    let { sourceCode } = context
+    let { sourceCode, syntax } = context
     return {
       ArrayExpression(node) {
         let { elements } = node
@@ -28,19 +33,24 @@ export let arrayElement: Mutator = {
           return []
         }
         if (elements.length === 0) {
-          return [
-            isHookDependencies(node, context) ?
-              {
-                skip: {
-                  reason:
-                    'an empty hook dependency list and [undefined] never change, so the hook behaves the same',
-                  rule: 'hook-dependencies',
-                },
-                text: '[undefined]',
-                node,
-              }
-            : { text: '[undefined]', node },
-          ]
+          let replacement: Replacement = { text: '[undefined]', node }
+          if (!syntax.isGlobalName('undefined')) {
+            return [replacement]
+          }
+          if (isHookDependencies(node, context)) {
+            replacement.skip = {
+              reason:
+                'an empty hook dependency list and [undefined] never change, so the hook behaves the same',
+              rule: 'hook-dependencies',
+            }
+          } else if (syntax.isJoinedArray(node)) {
+            replacement.skip = {
+              reason:
+                "the array is only pushed to and joined with '', which writes undefined as an empty string",
+              rule: 'joined-array',
+            }
+          }
+          return [replacement]
         }
         return elements.map((element, index) => ({
           text: sourceCode.removeListElement(node, index),

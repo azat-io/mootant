@@ -134,6 +134,16 @@ describe('getLogicalDrops', () => {
       "(a && b) || 'x'",
       ['left', 'right'],
     ],
+    [
+      "function f(d?: Date) { x = d?.toISOString() || 'n/a' }",
+      "d?.toISOString() || 'n/a'",
+      ['left', 'right'],
+    ],
+    [
+      'let m = new Map(); m.set(k, 1); x = m.get(k) || 0',
+      'm.get(k) || 0',
+      ['left', 'right'],
+    ],
   ])('drops in value mode: %s', (source, group, expected) => {
     expect(dropsOf(source, group)).toEqual(expected)
   })
@@ -234,6 +244,11 @@ describe('getLogicalDrops', () => {
       ['left', 'swap'],
     ],
     ['x = value || {}', 'value || {}', ['left', 'right']],
+    [
+      "function f(d?: Date) { x = d?.toISOString() || 'n/a' }",
+      "d?.toISOString() || 'n/a'",
+      ['left', 'right'],
+    ],
   ])('swaps in always mode: %s', (source, group, expected) => {
     expect(dropsOf(source, group, { mode: 'always' })).toEqual(expected)
   })
@@ -308,6 +323,11 @@ describe('getLogicalDrops', () => {
       group: 'name || "a"',
     },
     {
+      source: "function f(d?: Date) { x = d?.toISOString() || 'n/a' }",
+      expected: [["d?.toISOString() ?? 'n/a'", 'never-falsy']],
+      group: "d?.toISOString() || 'n/a'",
+    },
+    {
       source: 'if (a && b && c) run()',
       group: 'a && b && c',
       expected: [],
@@ -327,4 +347,19 @@ describe('getLogicalDrops', () => {
       ).toEqual(expected)
     },
   )
+
+  it('explains the swap of a left operand that is never falsy', () => {
+    let { context, find } = createTestContext(
+      'function f(n?: number) { x = n?.toFixed(2) || null }',
+    )
+    let { skipped } = getLogicalDrops(
+      find('LogicalExpression'),
+      createRunContext(context),
+      'always',
+    )
+
+    expect(skipped.map(replacement => replacement.skip!.reason)).toEqual([
+      'the left side is never falsy when defined (`toFixed` never returns an empty string), so || and ?? agree',
+    ])
+  })
 })

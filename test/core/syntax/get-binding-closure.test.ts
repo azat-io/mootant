@@ -71,10 +71,10 @@ function analyzePrograms(file: string, source: string): AnalyzedProgram[] {
 }
 
 /**
- * Tells the closure of the binding that declares the name `n` in a file.
+ * Tells the closure of the binding that first declares the name `n` in a file.
  *
  * @param file - Path of the file, whose extension tells the framework.
- * @param source - Text of the file, which declares `n` once.
+ * @param source - Text of the file, which declares `n`.
  * @returns Closure of the binding in the program that declares it.
  * @throws Error - When no program declares `n`.
  */
@@ -122,14 +122,21 @@ describe('getBindingClosure', () => {
       file: 'a.ts',
     },
     {
-      source: 'namespace N { let n = 1 }',
-      title: 'a namespace let',
-      file: 'a.ts',
-    },
-    {
       title: 'a let of a Svelte module file',
       source: 'let n = $state(0)',
       file: 'store.svelte.ts',
+    },
+    {
+      source:
+        'let n = 0; n++; declare namespace S { const n: number } declare namespace S { const n: number }',
+      title: 'a module let beside two ambient bodies of a namespace',
+      file: 'a.ts',
+    },
+    {
+      source:
+        'let n = 0; n++; declare global { namespace NodeJS { interface Env {} } }',
+      title: 'a module let beside a namespace of a global augmentation',
+      file: 'a.ts',
     },
   ])('finds $title closed', ({ source, file }) => {
     expect(getClosure(file, source)).toBe('closed')
@@ -146,15 +153,18 @@ describe('getBindingClosure', () => {
     'export default function n() {}',
     'export default class n {}',
     'export enum n {}',
-    'namespace N { export function n() {} }',
   ])('finds the binding of %s write-closed', source => {
     expect(getClosure('example.ts', source)).toBe('write-closed')
   })
 
   it.each([
+    'namespace N { let n = 1 }',
+    'namespace N { export function n() {} }',
     'namespace N { export let n = 1 }',
     'namespace N { export var n = 1 }',
     'namespace N { export const n = 1 }',
+    'let n = 0; n++; namespace S { export let n = -5 } namespace S { use(n) }',
+    'let n = 0; n++; namespace S { declare let n: number; export function g() { n = -1 } }',
   ])('finds the binding of %s open', source => {
     expect(getClosure('example.ts', source)).toBe('open')
   })

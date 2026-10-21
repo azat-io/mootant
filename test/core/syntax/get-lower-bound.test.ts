@@ -1,13 +1,18 @@
-import type { CallExpression } from 'oxc-parser'
+import type { CallExpression, Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 import * as svelte from 'svelte/compiler'
 
+import type { TestFile } from '../../helpers/create-test-file'
+
 import { parseComponentTemplate } from '../../../core/parser/parse-component-template'
+import { solveValueBounds } from '../../../core/syntax/solve-value-bounds'
 import { getSharedScopes } from '../../../core/parser/get-shared-scopes'
+import { DEFAULT_LOGGERS } from '../../../core/presets/default-loggers'
 import { getLowerBound } from '../../../core/syntax/get-lower-bound'
 import { analyzeScopes } from '../../../core/hints/analyze-scopes'
 import { createTestFile } from '../../helpers/create-test-file'
+import { indexTree } from '../../../core/tree/index-tree'
 import { walkTree } from '../../../core/tree/walk-tree'
 
 /**
@@ -36,11 +41,26 @@ function boundInSvelteTemplate(source: string): number | null {
     }
     return true
   })
-  return getLowerBound(
+  let bounds = solveValueBounds(
+    indexTree(program, DEFAULT_LOGGERS),
     analyzeScopes(program),
     getSharedScopes(file, program, template.expressions),
-    calls[0]!.arguments[0]!,
   )
+  return getLowerBound(bounds, calls[0]!.arguments[0]!)
+}
+
+/**
+ * Bounds an expression of a snippet, with the scopes that other code shares.
+ *
+ * @param file - Parsed snippet.
+ * @param node - Expression of the snippet.
+ * @param component - Whether the snippet is the script of a component, whose
+ *   top level other code shares; false when omitted.
+ * @returns Lower bound of the expression.
+ */
+function boundOf(file: TestFile, node: Node, component = false): number | null {
+  let shared = new Set(component ? [file.parsed.program] : [])
+  return getLowerBound(solveValueBounds(file.tree, file.scopes, shared), node)
 }
 
 describe('getLowerBound', () => {
@@ -64,23 +84,49 @@ describe('getLowerBound', () => {
     { source: 'f(Math.abs(x))', expected: null },
     { source: 'f(1)', expected: null },
   ])('gives $expected for the argument of $source', ({ expected, source }) => {
-    let { scopes, find } = createTestFile(source)
+    let file = createTestFile(source)
 
-    let node = find('CallExpression', source).arguments[0]!
+    let node = file.find('CallExpression', source).arguments[0]!
 
-    expect(getLowerBound(scopes, new Set(), node)).toBe(expected)
+    expect(boundOf(file, node)).toBe(expected)
   })
 
+  it.each([
+    {
+      source: 'let m = new Map(); m.set(k, 1); f(m.get(k))',
+      call: 'f(m.get(k))',
+      expected: null,
+    },
+    {
+      source: 'let m = new Map(); m.set(k, 1); f(m.get(k) ?? 2)',
+      call: 'f(m.get(k) ?? 2)',
+      expected: 1,
+    },
+    {
+      source: 'let set = new Set(s); f(set.size)',
+      call: 'f(set.size)',
+      expected: 0,
+    },
+    { source: 'let row = 0; row++; f(row)', call: 'f(row)', expected: 0 },
+  ])(
+    'gives only a bound that is never nullish for the argument of f in $source',
+    ({ expected, source, call }) => {
+      let file = createTestFile(source)
+
+      let [argument] = file.find('CallExpression', call).arguments
+
+      expect(boundOf(file, argument!)).toBe(expected)
+    },
+  )
+
   it('gives null for a private length field', () => {
-    let { scopes, find } = createTestFile(
+    let file = createTestFile(
       ['class C {', '  #length = 1', '  m() { return this.#length }', '}'].join(
         '\n',
       ),
     )
 
-    expect(
-      getLowerBound(scopes, new Set(), find('MemberExpression')),
-    ).toBeNull()
+    expect(boundOf(file, file.find('MemberExpression'))).toBeNull()
   })
 
   it.each([
@@ -96,8 +142,10 @@ describe('getLowerBound', () => {
       call: 'f((n!))',
       expected: 0,
     },
-    { source: 'let n = s.length; n = 1; f(n)', expected: null, call: 'f(n)' },
-    { source: 'let n = s.length; n++; f(n)', expected: null, call: 'f(n)' },
+    { source: 'let n = s.length; n *= 2; f(n)', expected: null, call: 'f(n)' },
+    { source: 'let n = s.length; n = -1; f(n)', expected: -1, call: 'f(n)' },
+    { source: 'let n = s.length; n = 1; f(n)', call: 'f(n)', expected: 0 },
+    { source: 'let n = s.length; n++; f(n)', call: 'f(n)', expected: 0 },
     { source: 'var n = s.length; f(n)', expected: null, call: 'f(n)' },
     { source: 'let n; f(n)', expected: null, call: 'f(n)' },
     { source: 'const { length: n } = s; f(n)', expected: null, call: 'f(n)' },
@@ -112,11 +160,11 @@ describe('getLowerBound', () => {
   ])(
     'follows the binding of the argument of f in $source',
     ({ expected, source, call }) => {
-      let { scopes, find } = createTestFile(source)
+      let file = createTestFile(source)
 
-      let [argument] = find('CallExpression', call).arguments
+      let [argument] = file.find('CallExpression', call).arguments
 
-      expect(getLowerBound(scopes, new Set(), argument!)).toBe(expected)
+      expect(boundOf(file, argument!)).toBe(expected)
     },
   )
 
@@ -180,17 +228,11 @@ describe('getLowerBound', () => {
       file: 'a.js',
     },
   ])('gives no bound through $title', ({ component, source, call, file }) => {
-    let { parsed, scopes, find } = createTestFile(source, file)
+    let snippet = createTestFile(source, file)
 
-    let [argument] = find('CallExpression', call).arguments
+    let [argument] = snippet.find('CallExpression', call).arguments
 
-    expect(
-      getLowerBound(
-        scopes,
-        new Set(component ? [parsed.program] : []),
-        argument!,
-      ),
-    ).toBeNull()
+    expect(boundOf(snippet, argument!, component)).toBeNull()
   })
 
   it.each([
@@ -218,17 +260,11 @@ describe('getLowerBound', () => {
   ])(
     'keeps the bound through $title',
     ({ component, expected, source, call }) => {
-      let { parsed, scopes, find } = createTestFile(source)
+      let file = createTestFile(source)
 
-      let [argument] = find('CallExpression', call).arguments
+      let [argument] = file.find('CallExpression', call).arguments
 
-      expect(
-        getLowerBound(
-          scopes,
-          new Set(component ? [parsed.program] : []),
-          argument!,
-        ),
-      ).toBe(expected)
+      expect(boundOf(file, argument!, component)).toBe(expected)
     },
   )
 

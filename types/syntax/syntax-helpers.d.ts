@@ -11,6 +11,7 @@ import type {
   Node,
 } from 'oxc-parser'
 
+import type { ValueBound } from './value-bound'
 import type { TimerCall } from './timer-call'
 import type { NodeSlot } from './node-slot'
 
@@ -59,12 +60,43 @@ export interface SyntaxHelpers {
   getChainRoot(node: Node): ChainExpression | null
 
   /**
+   * Why the object or callee that an optional link guards is never nullish once
+   * the chain reaches the link, worded as a clause, or null when nothing tells
+   * it: the `groups` of an `exec` or `match` result whose regex literal has a
+   * named group, or such a group that takes part in every match (catalog 4.13).
+   * The result is followed through a `const` or a never-written `let` that this
+   * program alone reads, only to test it or read its groups, and the regex
+   * literal through one that it only runs; `match` is recognized by name.
+   */
+  getNamedGroupsFact(node: Node): string | null
+
+  /**
    * Whether the node is a logging call of the `loggers` setting: a `console`
    * method, a log method of another logger receiver, or a bare logger function
    * called with a string or template literal first. The mutants that can only
    * change the text it writes are skipped (see `isLogMessage`).
    */
   isLoggingCall(node: CallExpression): boolean
+
+  /**
+   * Smallest number the expression can be, with whether it may also be nullish,
+   * why the bound holds and the guards it rests on, when the syntax of the
+   * program tells it: lengths, positions, sizes of a proven Map or Set,
+   * counters, guarded decrements and count maps (catalog 3.4), also through a
+   * `const` or a never-written `let` binding, unless the binding is open (see
+   * `getBindingClosure`). A value that number literals alone make has none.
+   */
+  getValueBound(node: Node): ValueBound | null
+
+  /**
+   * Why the expression is never falsy when it is not nullish, worded as a
+   * clause such as "`toISOString` never returns an empty string", or null when
+   * nothing tells it: a call of a date or number formatter by name, the whole
+   * match of a regex literal that cannot match an empty string, or a value with
+   * a lower bound above 0 (catalog 4.8). A name is followed only for a bound,
+   * or to a regex literal that this program alone reads and only runs.
+   */
+  getNeverFalsyFact(node: Node): string | null
 
   /**
    * Statements of the list that holds the statement (a Program, block, static
@@ -74,15 +106,22 @@ export interface SyntaxHelpers {
   getStatementList(node: Node): Node[] | null
 
   /**
+   * Name that the expression initializes, a `const` or a never-written `let`
+   * that this program alone reads, at least once and only for its truth: as the
+   * test of a condition or a loop or the operand of `!`; null for any other
+   * expression.
+   */
+  getTruthOnlyName(node: Node): string | null
+
+  /**
    * Names of an identifier, `this` and non-computed member chain, such as
    * `['this', 'logger', 'info']`, or null when a part has no static name.
    */
   getMemberPath(node: Node): string[] | null
 
   /**
-   * Smallest value the expression can have, when syntax alone tells it, also
-   * through a `const` or a never-written `let` binding, unless code may write
-   * the binding where the scope analysis sees no write.
+   * Smallest value the expression can have, when syntax alone tells it and the
+   * value is never nullish (see `getValueBound`).
    */
   getLowerBound(node: Node): number | null
 
@@ -141,6 +180,22 @@ export interface SyntaxHelpers {
    * Strips ParenthesizedExpression wrappers.
    */
   unwrapParentheses(node: Node): Node
+
+  /**
+   * Whether the name surely refers to the global wherever a mutant writes it
+   * into the program: no declaration of the program binds it, and the program
+   * is not opaque (see `ScopeAnalysis.opaque`: a direct `eval`, a `with` or a
+   * TypeScript namespace that is not ambient) and is not part of a component,
+   * whose other script blocks may declare it.
+   */
+  isGlobalName(name: string): boolean
+
+  /**
+   * Whether the array literal initializes a `const` or a never-written `let`
+   * that this program alone reads, only to push to, with the result unused, and
+   * to join with an empty separator, at least once (catalog 4.2).
+   */
+  isJoinedArray(node: Node): boolean
 
   /**
    * Whether the node is the key of a property, method or class member, computed

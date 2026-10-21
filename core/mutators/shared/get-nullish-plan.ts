@@ -64,9 +64,13 @@ export interface NullishOptions {
  * with `nullishNormalization`. In a truth position with a literal or falsy
  * default, the drop of `L` and the swap are the position's constants and are
  * skipped, and the drop of `R` stays only for a truthy default that no literal
- * mutator flips. Same-operator groups are flattened. Mutants that are not
- * emitted are returned with their rule. The plan is pure: condition and the
- * polarity rules read it.
+ * mutator flips. Elsewhere, under every `nullishSwap` mode, the swap is
+ * equivalent when `L` is never falsy unless nullish (see `getNeverFalsyFact`),
+ * and so are the swap and the drop of `R` when `R` is a falsy literal and the
+ * `??` initializes a name that is only read for its truth (see
+ * `getTruthOnlyName`); the drop of `L` stays, as no swap subsumes it.
+ * Same-operator groups are flattened. Mutants that are not emitted are returned
+ * with their rule. The plan is pure: condition and the polarity rules read it.
  *
  * @param node - `??` expression of the runtime tree.
  * @param context - Mutator context of the file.
@@ -148,12 +152,36 @@ export function getNullishPlan(
     }
     return plan
   }
-  plan.swap = distinguishesNullishSwap(node, context.hints, options.nullishSwap)
-  if (!plan.swap) {
+  let name =
+    isFalsyLiteral(right) ? context.syntax.getTruthOnlyName(node) : null
+  let readForTruth =
+    name === null ? null : (
+      `\`${name}\` is only read for its truth and the default is falsy`
+    )
+  let neverFalsy =
+    readForTruth === null ? context.syntax.getNeverFalsyFact(left) : null
+  if (readForTruth !== null) {
     skip(swapText, {
-      reason:
-        '?? and || differ here only on falsy values that the nullishSwap option does not count, such as the default itself',
-      rule: 'nullish-swap',
+      reason: `${readForTruth}, so ?? and || agree`,
+      rule: 'falsy-default',
+    })
+  } else if (neverFalsy === null) {
+    plan.swap = distinguishesNullishSwap(
+      node,
+      context.hints,
+      options.nullishSwap,
+    )
+    if (!plan.swap) {
+      skip(swapText, {
+        reason:
+          '?? and || differ here only on falsy values that the nullishSwap option does not count, such as the default itself',
+        rule: 'nullish-swap',
+      })
+    }
+  } else {
+    skip(swapText, {
+      reason: `the left side is never falsy when defined (${neverFalsy}), so || and ?? agree`,
+      rule: 'never-falsy',
     })
   }
   if (!isNullishGroup(left)) {
@@ -186,11 +214,38 @@ export function getNullishPlan(
           'dropping a null or undefined default only turns one nullish value into the other (nullishNormalization is off)',
         rule: 'nullish-normalization',
       })
-    } else {
+    } else if (readForTruth === null) {
       plan.dropRight = true
+    } else {
+      skip(leftText, {
+        reason: `${readForTruth}, so dropping it changes nothing`,
+        rule: 'falsy-default',
+      })
     }
   }
   return plan
+}
+
+/**
+ * Tells whether a default is a falsy literal, whose evaluation does nothing but
+ * give its value: `false`, `0`, `-0`, `0n`, `''`, an empty template, `null` or
+ * `void` of a literal. The names `undefined` and `NaN` do not count, since
+ * another script block of a component may declare them, and neither does `void`
+ * of any other expression, which may call a function, read a getter or throw.
+ *
+ * @param node - Right side of `??`.
+ * @returns Whether the default is a falsy literal.
+ */
+function isFalsyLiteral(node: Node): boolean {
+  let value = getLiteralValue(node)
+  if (value !== null) {
+    return !value
+  }
+  let inner = unwrapParentheses(node)
+  return inner.type === 'UnaryExpression' ?
+      inner.operator === 'void' &&
+        unwrapParentheses(inner.argument).type === 'Literal'
+    : inner.type === 'Literal' && inner.raw === 'null'
 }
 
 /**

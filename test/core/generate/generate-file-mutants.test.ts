@@ -12,6 +12,12 @@ import { updateOperator } from '../../../core/mutators/update-operator'
 import { stringLiteral } from '../../../core/mutators/string-literal'
 
 /**
+ * Reason of the groups of a match of a regex with a named group.
+ */
+const GROUPS =
+  'the regex has a named group, so groups is an object whenever the match is'
+
+/**
  * Ids that ignore directives of the snippets may list.
  */
 let knownMutatorIds = new Set([
@@ -96,6 +102,56 @@ const BOUND: Mutator = {
     },
   }),
   meta: { description: 'Bound.' },
+}
+
+/**
+ * Writes, for every `??`, the name it initializes when that name is only read
+ * for its truth and why its left side is never falsy, as the syntax helpers
+ * tell it.
+ */
+const DEFAULTS: Mutator = {
+  create: context => ({
+    LogicalExpression(node) {
+      let { syntax } = context
+      return [
+        {
+          text: `${syntax.getTruthOnlyName(node)}: ${syntax.getNeverFalsyFact(node.left)}`,
+          node,
+        },
+      ]
+    },
+  }),
+  meta: { description: 'Defaults.' },
+}
+
+/**
+ * Writes, for every empty array literal, whether it only collects the parts of
+ * a string that `join('')` builds, and for every optional chain of a member,
+ * why the object of that member is never nullish, as the syntax helpers tell
+ * it.
+ */
+const SHAPES: Mutator = {
+  create: context => ({
+    ChainExpression(node) {
+      let { expression } = node
+      return expression.type === 'MemberExpression' ?
+          [
+            {
+              text: String(
+                context.syntax.getNamedGroupsFact(expression.object),
+              ),
+              node,
+            },
+          ]
+        : []
+    },
+    ArrayExpression(node) {
+      return node.elements.length === 0 ?
+          [{ text: String(context.syntax.isJoinedArray(node)), node }]
+        : []
+    },
+  }),
+  meta: { description: 'Shapes.' },
 }
 
 /**
@@ -722,6 +778,71 @@ describe('generateFileMutants', () => {
       file: 'src/App.vue',
       expected: '-1',
     },
+    {
+      source:
+        '<script>let page = 0; function next() { page += 1 }; f(page)</script>',
+      title: 'a top-level counter of a component',
+      file: 'src/Card.svelte',
+      expected: 'null',
+    },
+    {
+      source: [
+        '<script>',
+        'let opened = 0',
+        'export function track() { opened += 1; f(opened) }',
+        '</script>',
+        '<script setup>',
+        'opened -= 1',
+        '</script>',
+      ].join('\n'),
+      title: 'a counter of one script block of a component',
+      file: 'src/Pager.vue',
+      expected: 'null',
+    },
+    {
+      source: '<script>function g() { let row = 0; row++; f(row) }</script>',
+      title: 'a function-local counter of a component',
+      file: 'src/Card.svelte',
+      expected: '0',
+    },
+    {
+      source: [
+        '<script module>',
+        'export class Set { size = -1 }',
+        '</script>',
+        '<script>',
+        'function g(list) { const size = new Set(list).size; f(size) }',
+        '</script>',
+      ].join('\n'),
+      title: 'a Set that the module script of a Svelte component declares',
+      file: 'src/Tally.svelte',
+      expected: 'null',
+    },
+    {
+      source: [
+        '<script>',
+        'export class Set { size = -1 }',
+        '</script>',
+        '<script setup>',
+        'function g(list) { const size = new Set(list).size; f(size) }',
+        '</script>',
+      ].join('\n'),
+      title: 'a Set that the other script block of a Vue component declares',
+      file: 'src/Tally.vue',
+      expected: 'null',
+    },
+    {
+      source: [
+        '<script setup>',
+        'class Set { size = -1 }',
+        'const items = []',
+        '</script>',
+        '<template><i @click="let size = new Set(items).size; f(size)" /></template>',
+      ].join('\n'),
+      title: 'a Set that the script of a Vue template declares',
+      file: 'src/Tally.vue',
+      expected: 'null',
+    },
   ])(
     'tells the syntax helpers whether other code shares $title',
     ({ expected, source, file }) => {
@@ -742,6 +863,203 @@ describe('generateFileMutants', () => {
       expect(result.mutants.map(mutant => mutant.replacement)).toStrictEqual([
         expected,
       ])
+    },
+  )
+
+  it.each([
+    {
+      source: [
+        'let counts = new Map()',
+        'counts.set(key, 1)',
+        'let found = counts.get(key) ?? false',
+        'if (found) run()',
+      ].join('\n'),
+      expected:
+        'found: it is a number of at least 1, since every value stored in `counts` is at least 1',
+      title: 'names of a module',
+      file: 'src/a.ts',
+    },
+    {
+      source: [
+        '<script>',
+        'let counts = new Map()',
+        'counts.set(key, 1)',
+        'let found = counts.get(key) ?? false',
+        '$: label = found ? 1 : 2',
+        '</script>',
+      ].join('\n'),
+      title: 'top-level names of a Svelte component',
+      file: 'src/Card.svelte',
+      expected: 'null: null',
+    },
+    {
+      source: [
+        '<script setup>',
+        "const note = props.note ?? ''",
+        'if (note) run()',
+        '</script>',
+        '<template><p :data-note="note" /></template>',
+      ].join('\n'),
+      title: 'top-level names of a Vue component',
+      expected: 'null: null',
+      file: 'src/Size.vue',
+    },
+    {
+      source: [
+        '---',
+        'const on = Astro.props.on ?? false',
+        'if (on) run()',
+        '---',
+        '<p>{on}</p>',
+      ].join('\n'),
+      title: 'top-level names of an Astro component',
+      expected: 'null: null',
+      file: 'src/Page.astro',
+    },
+    {
+      source: [
+        '<script>',
+        'function size() {',
+        'let total = 1',
+        'total += items.length',
+        'let found = total ?? false',
+        'return found ? 1 : 2',
+        '}',
+        '</script>',
+      ].join('\n'),
+      expected:
+        'found: it is a number of at least 1, since `total` starts at 1 and only grows',
+      title: 'function locals of a Svelte component',
+      file: 'src/Card.svelte',
+    },
+    {
+      source: [
+        '<script>',
+        'function size() {',
+        'let counts = new Map()',
+        'counts.set(key, 1)',
+        'let found = counts.get(key) ?? false',
+        'return found ? 1 : 2',
+        '}',
+        '</script>',
+      ].join('\n'),
+      title:
+        'a function-local Map of a Svelte component, as Map may be the name of another block',
+      file: 'src/Card.svelte',
+      expected: 'found: null',
+    },
+  ])(
+    'tells the syntax helpers whether other code shares the defaults of $title',
+    ({ expected, source, file }) => {
+      let result = generateFileMutants({
+        settings: Object.freeze({
+          coarseMutants: false,
+          templates: true,
+          timeouts: false,
+          loggers: [],
+        }),
+        mutators: [activate('defaults', 0, DEFAULTS)],
+        compilers: { svelte, vue },
+        knownMutatorIds,
+        source,
+        file,
+      })
+
+      expect(result.mutants.map(mutant => mutant.replacement)).toStrictEqual([
+        expected,
+      ])
+    },
+  )
+
+  it.each([
+    {
+      source: [
+        'let parts = []',
+        'parts.push(a)',
+        "x = parts.join('')",
+        'let match = s.match(/(?<a>b)/u)',
+        'x = match?.groups?.a',
+      ].join('\n'),
+      title: 'names of a module',
+      expected: ['true', GROUPS],
+      file: 'src/a.ts',
+    },
+    {
+      source: [
+        '<script setup lang="ts">',
+        'const labels: string[] = []',
+        "labels.push('a')",
+        "function title() { return labels.join('') }",
+        'const match = s.match(/(?<a>b)/u)',
+        'x = match?.groups?.a',
+        '</script>',
+        '<template><i v-for="label in labels">{{ label }}</i></template>',
+      ].join('\n'),
+      title: 'top-level consts of a Vue component',
+      expected: ['false', 'null'],
+      file: 'src/Size.vue',
+    },
+    {
+      source: [
+        '<script lang="ts">',
+        'export let content: string[] = []',
+        "x = content.join('')",
+        'let match = s.match(/(?<a>b)/u)',
+        'x = match?.groups?.a',
+        '</script>',
+      ].join('\n'),
+      title: 'top-level names of a Svelte component',
+      expected: ['false', 'null'],
+      file: 'src/Note.svelte',
+    },
+    {
+      source: [
+        '---',
+        'const parts = []',
+        'parts.push(a)',
+        "const text = parts.join('')",
+        '---',
+        '<p>{text}</p>',
+      ].join('\n'),
+      title: 'top-level names of an Astro component',
+      file: 'src/Page.astro',
+      expected: ['false'],
+    },
+    {
+      source: [
+        '<script>',
+        'function title() {',
+        'let parts = []',
+        'parts.push(a)',
+        'let match = s.match(/(?<a>b)/u)',
+        "return parts.join('') + match?.groups?.a",
+        '}',
+        '</script>',
+      ].join('\n'),
+      title: 'function locals of a Svelte component',
+      expected: ['true', GROUPS],
+      file: 'src/Card.svelte',
+    },
+  ])(
+    'tells the syntax helpers whether other code shares the arrays and matches of $title',
+    ({ expected, source, file }) => {
+      let result = generateFileMutants({
+        settings: Object.freeze({
+          coarseMutants: false,
+          templates: true,
+          timeouts: false,
+          loggers: [],
+        }),
+        mutators: [activate('shapes', 0, SHAPES)],
+        compilers: { svelte, vue },
+        knownMutatorIds,
+        source,
+        file,
+      })
+
+      expect(result.mutants.map(mutant => mutant.replacement)).toStrictEqual(
+        expected,
+      )
     },
   )
 

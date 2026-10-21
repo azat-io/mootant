@@ -27,13 +27,18 @@ export interface ScopeAnalysis {
   bindings: ReadonlyMap<Node, Binding>
 
   /**
-   * Whether the program has a direct `eval` call or a `with` statement, which
-   * may read, write and shadow its names where the analysis does not see it. A
-   * call may be a direct `eval` when it is not optional and its callee, through
-   * parentheses and TypeScript expression wrappers, is the name `eval`, however
-   * the file binds that name: the call is direct whenever the name holds the
-   * built-in `eval` at run time. Any other call of `eval` runs in the global
-   * scope.
+   * Whether the program has code that may read, write and shadow its names
+   * where the analysis does not see it: a direct `eval` call, a `with`
+   * statement or a TypeScript namespace that is not ambient. A call may be a
+   * direct `eval` when it is not optional and its callee, through parentheses
+   * and TypeScript expression wrappers, is the name `eval`, however the file
+   * binds that name: the call is direct whenever the name holds the built-in
+   * `eval` at run time. Any other call of `eval` runs in the global scope. Any
+   * namespace or module declaration that is not ambient makes the program
+   * opaque, at any depth, because TypeScript resolves bare names across its
+   * bodies and may drop it when it emits no code. A declaration is ambient when
+   * it has `declare` or sits in an ambient one, such as a namespace in `declare
+   * global`, and its body runs no code.
    */
   opaque: boolean
 }

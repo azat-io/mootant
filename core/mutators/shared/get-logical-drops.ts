@@ -52,9 +52,11 @@ export interface LogicalDrops {
  * by the types or by fixed operands, or the polarity rule finds a running
  * mutant that subsumes it. In value mode a `||` whose left side may be nullish
  * gets the nullish swap instead of the drop of its right operand when `??` and
- * `||` differ. Drops and swaps that are not emitted are returned with their
- * rule. The plan is pure: the polarity rule of other mutators reads it without
- * running logical-operator.
+ * `||` differ, which they never do, under every `nullishSwap` mode, when the
+ * left side is never falsy unless nullish (see `getNeverFalsyFact`). Drops and
+ * swaps that are not emitted are returned with their rule. The plan is pure:
+ * the polarity rule of other mutators reads it without running
+ * logical-operator.
  *
  * @param node - `&&` or `||` expression of the runtime tree.
  * @param context - Mutator context with the test of mutants that will run.
@@ -183,14 +185,24 @@ export function getLogicalDrops(
     !booleanMode &&
     mayBeNullish(leftType) &&
     unwrapParentheses(left).type !== 'LogicalExpression'
-  let swap = swapApplies && distinguishesNullishSwap(node, hints, nullishSwap)
+  let neverFalsy = swapApplies ? context.syntax.getNeverFalsyFact(left) : null
+  let swap =
+    swapApplies &&
+    neverFalsy === null &&
+    distinguishesNullishSwap(node, hints, nullishSwap)
   if (swapApplies && !swap) {
     skipped.push({
-      skip: {
-        reason:
-          '?? and || differ here only on falsy values that the nullishSwap option does not count, such as the default itself',
-        rule: 'nullish-swap',
-      },
+      skip:
+        neverFalsy === null ?
+          {
+            reason:
+              '?? and || differ here only on falsy values that the nullishSwap option does not count, such as the default itself',
+            rule: 'nullish-swap',
+          }
+        : {
+            reason: `the left side is never falsy when defined (${neverFalsy}), so || and ?? agree`,
+            rule: 'never-falsy',
+          },
       text: sourceCode.replaceOperator(node, '??'),
       node,
     })

@@ -34,6 +34,12 @@ interface Analysis {
   functionBodies: Set<Node | null>
 
   /**
+   * Bodies of ambient namespace, module and global declarations, which run no
+   * code.
+   */
+  ambientBodies: Set<Node | null>
+
+  /**
    * Same-file type declaration of every resolved type name.
    */
   typeReferences: Map<Node, Node>
@@ -59,7 +65,8 @@ interface Analysis {
   names: PendingName[]
 
   /**
-   * Whether the program has a direct `eval` call or a `with` statement.
+   * Whether the program has a direct `eval` call, a `with` statement or a
+   * namespace that is not ambient.
    */
   opaque: boolean
 }
@@ -227,13 +234,15 @@ let noValueTypes = new Set<string>([
  * @param program - Root of the file.
  * @returns Bindings with their references and writes, the same-file
  *   declarations of type names, the owners of type parameters and whether a
- *   direct `eval` call or a `with` statement makes the program opaque.
+ *   direct `eval` call, a `with` statement or a namespace that is not ambient
+ *   makes the program opaque.
  */
 export function analyzeScopes(program: Program): ScopeAnalysis {
   let analysis: Analysis = {
     typeReferences: new Map(),
     functionBodies: new Set(),
     typeParameters: new Map(),
+    ambientBodies: new Set(),
     contexts: new Map(),
     bindings: new Map(),
     opaque: false,
@@ -254,7 +263,7 @@ export function analyzeScopes(program: Program): ScopeAnalysis {
     recordDeclarations(node, outer.scope, analysis)
     recordTypes(node, slot, analysis)
     recordWrites(node, analysis)
-    recordOpacity(node, analysis)
+    recordOpacity(node, outer.scope, analysis)
     if (node.type === 'Identifier') {
       recordName(node, slot, analysis)
     }
@@ -598,6 +607,40 @@ function enterFunction(
 }
 
 /**
+ * Records the code that hides uses of names from the analysis: a `with`
+ * statement, a call that may be a direct `eval`, and a namespace that is not
+ * ambient. A call is direct when its callee is the name `eval` and the name
+ * holds the built-in `eval` when the code runs, whatever declaration binds it:
+ * code that is not strict may give a parameter or a variable that name. An
+ * optional call of `eval` is never direct. TypeScript resolves bare names
+ * across the bodies of a namespace and may drop a namespace that emits no code,
+ * which the analysis does not follow. A namespace, module or global declaration
+ * is ambient when it has `declare` or sits in the body of an ambient one, and
+ * its body runs no code. A module with a quoted name is always one of these, as
+ * oxc rejects it anywhere else.
+ *
+ * @param node - Node being entered.
+ * @param scope - Scope the node sits in.
+ * @param analysis - Collections of the walk.
+ */
+function recordOpacity(node: Node, scope: Scope, analysis: Analysis): void {
+  if (node.type === 'WithStatement') {
+    analysis.opaque = true
+  } else if (node.type === 'TSModuleDeclaration') {
+    if (node.declare || analysis.ambientBodies.has(scope.node)) {
+      analysis.ambientBodies.add(node.body)
+    } else {
+      analysis.opaque = true
+    }
+  } else if (node.type === 'CallExpression' && !node.optional) {
+    let callee = unwrapExpression(node.callee)
+    if (callee.type === 'Identifier' && callee.name === 'eval') {
+      analysis.opaque = true
+    }
+  }
+}
+
+/**
  * Queues an identifier for resolution unless it declares a name or is a name
  * that never refers to a value.
  *
@@ -680,28 +723,6 @@ function enterNamedScope(
     analysis,
   )
   return scope
-}
-
-/**
- * Records the code that hides uses of names from the analysis: a `with`
- * statement, and a call that may be a direct `eval`. A call is direct when its
- * callee is the name `eval` and the name holds the built-in `eval` when the
- * code runs, whatever declaration binds it: code that is not strict may give a
- * parameter or a variable that name. An optional call of `eval` is never
- * direct.
- *
- * @param node - Node being entered.
- * @param analysis - Collections of the walk.
- */
-function recordOpacity(node: Node, analysis: Analysis): void {
-  if (node.type === 'WithStatement') {
-    analysis.opaque = true
-  } else if (node.type === 'CallExpression' && !node.optional) {
-    let callee = unwrapExpression(node.callee)
-    if (callee.type === 'Identifier' && callee.name === 'eval') {
-      analysis.opaque = true
-    }
-  }
 }
 
 /**

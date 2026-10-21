@@ -37,10 +37,12 @@ interface OptionalChainingOptions {
 /**
  * Replaces `?.` with `.` (catalog 4.13): one mutant per optional link of a
  * chain, in source order, each replacing the whole chain with that one link
- * edited (T10). A link whose object or callee cannot be nullish by type hints
- * is kept unless the `nonNullable` option is set. A chain the mutant switch
- * cannot wrap, such as a `delete` operand or a callee that passes `this`, is
- * kept (catalog 2.1). Skipped mutants follow as skipped replacements.
+ * edited (T10). A link after the groups of a regex match that are never nullish
+ * there (see `getNamedGroupsFact`) is kept, whatever the options. A link whose
+ * object or callee cannot be nullish by type hints is kept unless the
+ * `nonNullable` option is set. A chain the mutant switch cannot wrap, such as a
+ * `delete` operand or a callee that passes `this`, is kept (catalog 2.1).
+ * Skipped mutants follow as skipped replacements.
  */
 export let optionalChaining: Mutator<OptionalChainingOptions> = {
   create(context) {
@@ -55,11 +57,14 @@ export let optionalChaining: Mutator<OptionalChainingOptions> = {
             text: sourceCode.editText(node, [edit]),
             node,
           }
+          let groups = wrapped ? syntax.getNamedGroupsFact(receiver) : null
           if (!wrapped) {
             replacement.skip = {
               reason: 'the mutant switch cannot wrap a chain in this position',
               rule: 'invalid-target',
             }
+          } else if (groups !== null) {
+            replacement.skip = { rule: 'named-groups', reason: groups }
           } else if (
             !options.nonNullable &&
             isNonNullable(hints.getType(receiver))

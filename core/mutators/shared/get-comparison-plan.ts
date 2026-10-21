@@ -8,6 +8,7 @@ import type {
 
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { Replacement } from '../../../types/mutator/replacement'
+import type { ValueBound } from '../../../types/syntax/value-bound'
 import type { SkipNote } from '../../../types/mutant/skip-note'
 import type { RunningValue } from './get-running-value'
 
@@ -192,6 +193,53 @@ let mirroredRegions = new Map<ComparisonRegion, ComparisonRegion>([
 ])
 
 /**
+ * What the skip of an entry that a lower bound leaves constant reads.
+ */
+interface BoundedSkips {
+  /**
+   * Winning skip of each constant: the owned one, or the skip by its value.
+   */
+  constantSkips: ReadonlyMap<boolean, SkipNote>
+
+  /**
+   * Skips of the constants by their value.
+   */
+  valueSkips: ReadonlyMap<boolean, SkipNote>
+
+  /**
+   * Bounded operand of the comparison, or null.
+   */
+  operand: BoundedOperand | null
+
+  /**
+   * Whether the bound of the operand rests on the comparison itself, a guard
+   * right before a decrement of the operand.
+   */
+  guard: boolean
+}
+
+/**
+ * Operand of a comparison with a lower bound that is never nullish, compared
+ * with a number literal.
+ */
+interface BoundedOperand {
+  /**
+   * Whether the bounded operand is on the right.
+   */
+  mirrored: boolean
+
+  /**
+   * Lower bound of the operand.
+   */
+  bound: ValueBound
+
+  /**
+   * Value of the number literal on the other side.
+   */
+  limit: number
+}
+
+/**
  * Shifted literal of a relational comparison.
  */
 interface Shift {
@@ -216,10 +264,13 @@ interface Shift {
  * entry of a min/max idiom, the `!=` or `==` swap of two operands hinted to be
  * objects (it compares references), a first exit test's leave-now constant, and
  * entries that make a no-op callback. A swap or shifted literal that the lower
- * bound leaves constant is skipped like that constant, except for the constants
- * that logical-operator owns. Skipped entries are returned with the rule that
- * skips them. The plan is pure: other mutators read it without running
- * comparison-operator.
+ * bound leaves constant is skipped like that constant when the constant has a
+ * skip by its value, and takes the constant's winning skip: a constant that
+ * logical-operator owns wins as it does for the constant itself, unless the
+ * bound rests on the comparison, a guard of a decrement of the operand. A skip
+ * that rests on the bound names why the bound holds. Skipped entries are
+ * returned with the rule that skips them. The plan is pure: other mutators read
+ * it without running comparison-operator.
  *
  * @param node - Comparison of the runtime tree.
  * @param context - Mutator context of the file.
@@ -245,7 +296,8 @@ export function getComparisonPlan(
     planned = notEqualPlan
   }
   let shift = orderedPlans.has(operator) ? getShift(node, context) : null
-  let impossible = getImpossibleRegions(node, context, 0)
+  let boundedOperand = getBoundedOperand(node, context)
+  let impossible = getImpossibleRegions(boundedOperand, 0)
   let running = settings.timeouts ? null : getRunningValue(node, context)
   let valueSkips = getValueSkips(node, context, running)
   let constantSkips = new Map([
@@ -283,6 +335,12 @@ export function getComparisonPlan(
     operatorSkips.set('==', operatorSkips.get('==') ?? reference)
   }
   let minMax = isMinMaxIdiom(node, context)
+  let boundedSkips: BoundedSkips = {
+    guard: boundedOperand?.bound.guards?.has(node) ?? false,
+    operand: boundedOperand,
+    constantSkips,
+    valueSkips,
+  }
 
   let entries: ComparisonEntry[] = []
   let skipped: Replacement[] = []
@@ -305,8 +363,7 @@ export function getComparisonPlan(
       : sourceCode.replaceOperator(node, to)
     if (region && impossible.has(region)) {
       let note: SkipNote = {
-        reason:
-          'a lower bound of an operand makes the inputs where it differs impossible',
+        reason: `a lower bound of an operand makes the inputs where it differs impossible (${boundedOperand!.bound.because})`,
         rule: 'lower-bound',
       }
       skip(text, note)
@@ -327,8 +384,8 @@ export function getComparisonPlan(
         continue
       }
       let note = getBoundedSkip(
-        valueSkips,
-        getImpossibleRegions(node, context, shift.step),
+        boundedSkips,
+        getImpossibleRegions(boundedOperand, shift.step),
         operator,
       )
       if (note) {
@@ -349,7 +406,7 @@ export function getComparisonPlan(
         }
       : null)
     let bounded =
-      operatorNote ? null : getBoundedSkip(valueSkips, impossible, to)
+      operatorNote ? null : getBoundedSkip(boundedSkips, impossible, to)
     if (operatorNote ?? bounded) {
       skip(text, (operatorNote ?? bounded)!)
       if (bounded && !skippedConstants.has(getEntryConstant(impossible, to)!)) {
@@ -374,7 +431,7 @@ export function getComparisonPlan(
       )
     ) {
       skippedConstants.set(value, {
-        reason: `a lower bound of an operand makes every input where the comparison is not ${value} impossible`,
+        reason: `a lower bound of an operand makes every input where the comparison is not ${value} impossible (${boundedOperand!.bound.because})`,
         rule: 'lower-bound',
       })
     }
@@ -443,51 +500,6 @@ function getValueSkips(
     }
   }
   return skips
-}
-
-/**
- * Finds the regions that a lower bound makes impossible (catalog 4.6, rule 1):
- * with one operand bounded below by `L` and the other a number literal `c`,
- * "bounded < c" is impossible when `c <= L`, and "bounded = c" when `c < L`.
- * With a step, the literal is read moved by it, as in the shifted literal.
- *
- * @param node - Comparison.
- * @param context - Mutator context of the file.
- * @param step - Amount added to the literal: `0`, or the step of the shifted
- *   literal.
- * @returns Impossible regions, named from the left operand.
- */
-function getImpossibleRegions(
-  node: PrivateInExpression | BinaryExpression,
-  context: MutatorContext,
-  step: number,
-): Set<ComparisonRegion> {
-  let impossible = new Set<ComparisonRegion>()
-  for (let [bounded, literal, mirrored] of [
-    [node.left, node.right, false],
-    [node.right, node.left, true],
-  ] as const) {
-    let bound = context.syntax.getLowerBound(bounded)
-    let value = getLiteralValue(literal)
-    if (
-      bound === null ||
-      (typeof value !== 'number' && typeof value !== 'bigint')
-    ) {
-      continue
-    }
-    let limit = Number(value) + step
-    let regions: ComparisonRegion[] = []
-    if (limit <= bound) {
-      regions.push('lt')
-    }
-    if (limit < bound) {
-      regions.push('eq')
-    }
-    for (let region of regions) {
-      impossible.add(mirrored ? mirroredRegions.get(region)! : region)
-    }
-  }
-  return impossible
 }
 
 /**
@@ -611,6 +623,47 @@ function getCounterEntry(
 }
 
 /**
+ * Finds the operand of a comparison that has a lower bound that is never
+ * nullish (see `getValueBound`) while the other operand is a number literal, or
+ * a BigInt literal unless the comparison is strict: an `undefined` operand
+ * makes `!=` true and `>` false, so only such a bound rules inputs out, and a
+ * bounded value is a number, which `===` never finds equal to a BigInt. The
+ * BigInt must be a safe integer: a number compares with a BigInt exactly, and
+ * only a safe integer keeps its value, and that of its shifted literal, as a
+ * number.
+ *
+ * @param node - Comparison.
+ * @param context - Mutator context of the file.
+ * @returns The bound of the operand, the value of the literal and whether the
+ *   bounded operand is on the right, or null.
+ */
+function getBoundedOperand(
+  node: PrivateInExpression | BinaryExpression,
+  context: MutatorContext,
+): BoundedOperand | null {
+  let strict = node.operator === '===' || node.operator === '!=='
+  for (let [bounded, literal, mirrored] of [
+    [node.left, node.right, false],
+    [node.right, node.left, true],
+  ] as const) {
+    let value = getLiteralValue(literal)
+    let bound =
+      (
+        typeof value === 'number' ||
+        (typeof value === 'bigint' &&
+          !strict &&
+          Number.isSafeInteger(Number(value)))
+      ) ?
+        context.syntax.getValueBound(bounded)
+      : null
+    if (bound && !bound.nullable) {
+      return { limit: Number(value), mirrored, bound }
+    }
+  }
+  return null
+}
+
+/**
  * Reads the direction in which an update moves an operand, matched by member
  * path.
  *
@@ -679,27 +732,69 @@ function getShift(
 }
 
 /**
- * Finds why an entry that the lower bound leaves constant is skipped: the entry
- * is that constant, so the skip of the constant applies.
+ * Finds the regions that a lower bound makes impossible (catalog 4.6, rule 1):
+ * with one operand bounded below by `L` and the other a number literal `c`,
+ * "bounded < c" is impossible when `c <= L`, and "bounded = c" when `c < L`.
+ * With a step, the literal is read moved by it, as in the shifted literal.
  *
- * @param valueSkips - Skips of the constants by their value.
+ * @param operand - Bounded operand of the comparison, or null.
+ * @param step - Amount added to the literal: `0`, or the step of the shifted
+ *   literal.
+ * @returns Impossible regions, named from the left operand.
+ */
+function getImpossibleRegions(
+  operand: BoundedOperand | null,
+  step: number,
+): Set<ComparisonRegion> {
+  let impossible = new Set<ComparisonRegion>()
+  if (!operand) {
+    return impossible
+  }
+  let limit = operand.limit + step
+  let regions: ComparisonRegion[] = []
+  if (limit <= operand.bound.lower) {
+    regions.push('lt')
+  }
+  if (limit < operand.bound.lower) {
+    regions.push('eq')
+  }
+  for (let region of regions) {
+    impossible.add(operand.mirrored ? mirroredRegions.get(region)! : region)
+  }
+  return impossible
+}
+
+/**
+ * Finds why an entry that the lower bound leaves constant is skipped: the entry
+ * is that constant, so when the constant has a skip by its value, the entry
+ * takes the winning skip of the constant, and a constant that logical-operator
+ * owns wins as it does for the constant itself (O3): the entry is then the
+ * program of logical-operator's drop of the operand. The entry is that constant
+ * only while the bound holds, so it gets no skip when the bound rests on the
+ * comparison itself, a guard right before a decrement of the operand: the entry
+ * may let the decrement run where the guard stopped it and take the operand
+ * below the bound.
+ *
+ * @param skips - Skips of the constants by their value, the winning skip of
+ *   each constant, the bounded operand of the comparison and whether its bound
+ *   rests on the comparison.
  * @param impossible - Regions the lower bound makes impossible for the entry.
  * @param operator - Operator of the entry's comparison.
  * @returns The skip of the constant, reworded for the entry, or null.
  */
 function getBoundedSkip(
-  valueSkips: ReadonlyMap<boolean, SkipNote>,
+  skips: BoundedSkips,
   impossible: Set<ComparisonRegion>,
   operator: string,
 ): SkipNote | null {
   let constant = getEntryConstant(impossible, operator)
-  let note = constant === null ? undefined : valueSkips.get(constant)
-  if (!note) {
+  if (constant === null || skips.guard || !skips.valueSkips.has(constant)) {
     return null
   }
+  let note = skips.constantSkips.get(constant)!
   return {
     ...note,
-    reason: `a lower bound of an operand makes it the constant ${constant}, and ${note.reason}`,
+    reason: `a lower bound of an operand makes it the constant ${constant} (${skips.operand!.bound.because}), and ${note.reason}`,
     heuristic: true,
   }
 }

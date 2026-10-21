@@ -2,11 +2,11 @@ import type { Node } from 'oxc-parser'
 
 import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
 import type { TreeIndex } from '../../types/syntax/tree-index'
-import type { NodeSlot } from '../../types/syntax/node-slot'
 
 import { getEnclosingFunction } from './get-enclosing-function'
 import { unwrapExpression } from '../tree/unwrap-expression'
 import { getContextSlot } from '../tree/get-context-slot'
+import { passesTruthiness } from './passes-truthiness'
 
 /**
  * Array methods that read only the truthiness of what their first argument
@@ -78,28 +78,6 @@ export function isBooleanContext(
         !scopes.bindings.has(callee)
       )
     }
-    default:
-      return false
-  }
-}
-
-/**
- * Tells whether the node in a slot is in a boolean context exactly when its
- * parent is: an operand of `&&` or `||`, the right operand of `??`, a branch of
- * `?:` or the last expression of a sequence.
- *
- * @param slot - Context slot of a node.
- * @returns Whether the question moves on to the parent.
- */
-function passesTruthiness(slot: NodeSlot): slot is { parent: Node } & NodeSlot {
-  let { parent, index, key } = slot
-  switch (parent?.type) {
-    case 'ConditionalExpression':
-      return key !== 'test'
-    case 'SequenceExpression':
-      return index === parent.expressions.length - 1
-    case 'LogicalExpression':
-      return parent.operator !== '??' || key === 'right'
     default:
       return false
   }

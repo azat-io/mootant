@@ -147,6 +147,10 @@ export let skipRules = {
     category: 'equivalent',
     heuristic: true,
   },
+  'joined-array': {
+    category: 'equivalent',
+    heuristic: false,
+  },
   'unused-flag': {
     category: 'equivalent',
     heuristic: false,
@@ -174,6 +178,14 @@ export let skipRules = {
   'compiler-macro': {
     category: 'invalid',
     heuristic: false,
+  },
+  'named-groups': {
+    category: 'equivalent',
+    heuristic: true,
+  },
+  'never-falsy': {
+    category: 'equivalent',
+    heuristic: true,
   },
   'template-text': {
     category: 'invalid',

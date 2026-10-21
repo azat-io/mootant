@@ -25,6 +25,26 @@ const STRICT: NullishOptions = {
 }
 
 /**
+ * Counts names into a count map `counts`, whose values are at least 1.
+ */
+const COUNTS = [
+  'let counts = new Map<string, number>()',
+  'for (let name of names) counts.set(name, (counts.get(name) ?? 0) + 1)',
+].join('\n')
+
+/**
+ * Reads a flag with a falsy default into a name that is only read for its
+ * truth.
+ */
+const QUIET = [
+  'function f(options: { quiet?: boolean }) {',
+  '  let quiet = options.quiet ?? false',
+  '  if (!quiet) run()',
+  '  return quiet ? 1 : 2',
+  '}',
+].join('\n')
+
+/**
  * Names the mutants a plan emits, in emission order.
  *
  * @param plan - Plan of a `??` group.
@@ -123,6 +143,97 @@ describe('getNullishPlan', () => {
       source: 'x = opts ?? {}',
       options: RECOMMENDED,
       group: 'opts ?? {}',
+    },
+    {
+      source: 'function f(d?: Date) { x = d?.toISOString() ?? null }',
+      group: 'd?.toISOString() ?? null',
+      options: RECOMMENDED,
+      expected: ['left'],
+    },
+    {
+      source: 'function f(d?: Date) { x = d?.toISOString() ?? null }',
+      group: 'd?.toISOString() ?? null',
+      expected: ['left', 'right'],
+      options: STRICT,
+    },
+    {
+      source: `${COUNTS}\nx = counts.get(name) ?? 0`,
+      group: 'counts.get(name) ?? 0',
+      expected: ['left', 'right'],
+      options: RECOMMENDED,
+    },
+    {
+      source: `${COUNTS}\nx = counts.get(name) ?? 0`,
+      group: 'counts.get(name) ?? 0',
+      expected: ['left', 'right'],
+      options: STRICT,
+    },
+    {
+      source: 'function f(s: string) { x = s.length ?? 0 }',
+      group: 's.length ?? 0',
+      options: RECOMMENDED,
+      expected: ['left'],
+    },
+    {
+      source: 'function f(s: string) { x = s.length ?? 0 }',
+      group: 's.length ?? 0',
+      expected: ['swap'],
+      options: STRICT,
+    },
+    {
+      group: 'options.quiet ?? false',
+      options: RECOMMENDED,
+      expected: ['left'],
+      source: QUIET,
+    },
+    {
+      group: 'options.quiet ?? false',
+      expected: ['left'],
+      options: STRICT,
+      source: QUIET,
+    },
+    {
+      source: 'function f(o) { let on = o.on ?? false; return on }',
+      expected: ['right', 'swap'],
+      group: 'o.on ?? false',
+      options: STRICT,
+    },
+    {
+      source: 'function f(o) { const on = o.on ?? void 0; if (on) run() }',
+      group: 'o.on ?? void 0',
+      expected: ['left'],
+      options: STRICT,
+    },
+    {
+      source: 'function f(o) { const on = o.on ?? -0; if (on) run() }',
+      group: 'o.on ?? -0',
+      expected: ['left'],
+      options: STRICT,
+    },
+    {
+      source: 'function f(o) { const on = o.on ?? void note(); if (on) run() }',
+      group: 'o.on ?? void note()',
+      expected: ['right', 'swap'],
+      options: STRICT,
+    },
+    {
+      source: 'function f(o) { const on = o.on ?? undefined; if (on) run() }',
+      expected: ['right', 'swap'],
+      group: 'o.on ?? undefined',
+      options: STRICT,
+    },
+    {
+      source: 'function f(o) { const on = o.on ?? NaN; if (on) run() }',
+      expected: ['right', 'swap'],
+      group: 'o.on ?? NaN',
+      options: STRICT,
+    },
+    {
+      source:
+        'function f(o) { const on = o.on ?? false; store.find(() => on) }',
+      expected: ['right', 'swap'],
+      group: 'o.on ?? false',
+      options: STRICT,
     },
   ])('plans $source', ({ expected, options, source, group }) => {
     let { context, find } = createTestContext(source)
@@ -257,6 +368,64 @@ describe('getNullishPlan', () => {
       options: RECOMMENDED,
       group: 'a ?? b ?? c',
     },
+    {
+      expected: [
+        ['d?.toISOString() || null', 'never-falsy'],
+        ['d?.toISOString()', 'nullish-normalization'],
+      ],
+      source: 'function f(d?: Date) { x = d?.toISOString() ?? null }',
+      group: 'd?.toISOString() ?? null',
+      options: RECOMMENDED,
+    },
+    {
+      source:
+        "function f(hue: string) { x = /[a-z]+$/u.exec(hue)?.[0] ?? 'deg' }",
+      expected: [["/[a-z]+$/u.exec(hue)?.[0] || 'deg'", 'never-falsy']],
+      group: "/[a-z]+$/u.exec(hue)?.[0] ?? 'deg'",
+      options: STRICT,
+    },
+    {
+      expected: [['counts.get(name) || 0', 'never-falsy']],
+      source: `${COUNTS}\nx = counts.get(name) ?? 0`,
+      group: 'counts.get(name) ?? 0',
+      options: STRICT,
+    },
+    {
+      expected: [
+        ['options.quiet || false', 'falsy-default'],
+        ['options.quiet', 'falsy-default'],
+      ],
+      group: 'options.quiet ?? false',
+      options: RECOMMENDED,
+      source: QUIET,
+    },
+    {
+      expected: [
+        ['o.on || null', 'falsy-default'],
+        ['o.on', 'nullish-normalization'],
+      ],
+      source: 'function f(o) { const on = o.on ?? null; if (on) run() }',
+      group: 'o.on ?? null',
+      options: RECOMMENDED,
+    },
+    {
+      expected: [
+        ['o.on || null', 'falsy-default'],
+        ['o.on', 'falsy-default'],
+      ],
+      source: 'function f(o) { const on = o.on ?? null; if (on) run() }',
+      group: 'o.on ?? null',
+      options: STRICT,
+    },
+    {
+      expected: [
+        ['s.length || 0', 'falsy-default'],
+        ['s.length', 'never-nullish'],
+      ],
+      source: 'function f(s: string) { let n = s.length ?? 0; if (n) run() }',
+      group: 's.length ?? 0',
+      options: STRICT,
+    },
   ])(
     'names the rule of each skipped mutant of $source',
     ({ expected, options, source, group }) => {
@@ -272,4 +441,42 @@ describe('getNullishPlan', () => {
       ).toEqual(expected)
     },
   )
+
+  it.each<{ expected: string[]; source: string; group: string }>([
+    {
+      expected: [
+        'the left side is never falsy when defined (it is a number of at least 1, since every value stored in `counts` is at least 1), so || and ?? agree',
+      ],
+      source: `${COUNTS}\nx = counts.get(name) ?? 0`,
+      group: 'counts.get(name) ?? 0',
+    },
+    {
+      expected: [
+        '`quiet` is only read for its truth and the default is falsy, so ?? and || agree',
+        '`quiet` is only read for its truth and the default is falsy, so dropping it changes nothing',
+      ],
+      group: 'options.quiet ?? false',
+      source: QUIET,
+    },
+    {
+      expected: [
+        '`quiet` is only read for its truth and the default is falsy, so ?? and || agree',
+        '`quiet` is only read for its truth and the default is falsy, so dropping it changes nothing',
+      ],
+      source:
+        'function f(o) { const quiet: boolean = (o.quiet ?? 0) as boolean; if (quiet) run() }',
+      group: 'o.quiet ?? 0',
+    },
+  ])('explains the skips of $source', ({ expected, source, group }) => {
+    let { context, find } = createTestContext(source)
+    let { skipped } = getNullishPlan(
+      find('LogicalExpression', group),
+      context,
+      STRICT,
+    )
+
+    expect(skipped.map(replacement => replacement.skip!.reason)).toEqual(
+      expected,
+    )
+  })
 })
