@@ -11,11 +11,37 @@ import { unwrapExpression } from '../../tree/unwrap-expression'
 import { getTypeView } from './get-type-view'
 
 /**
- * Kind of the default that return-value writes in place of a returned value: a
- * type of the catalog's view, or `void` for a function whose result is not
- * used.
+ * Kind of a function that returns a `Promise<T>` without `async`: its default
+ * is a promise resolved with an empty value that `T` allows.
  */
-export type ReturnValueKind = TypeView['type'] | 'void'
+export interface PromiseKind {
+  /**
+   * Kind of the value the default resolves with: the kind of `T` when it has a
+   * default of its own, a boolean, string, number, BigInt or array; `null` when
+   * `T` otherwise holds `null` but not `undefined`; and `void` for any other
+   * `T`, whose default resolves with `undefined`.
+   */
+  promise:
+    'boolean' | 'string' | 'number' | 'bigint' | 'array' | 'null' | 'void'
+}
+
+/**
+ * Kind of the default that return-value writes in place of a returned value: a
+ * type of the catalog's view, `void` for a function whose result is not used,
+ * or a promise for a function that returns a `Promise<T>` without `async`.
+ */
+export type ReturnValueKind = TypeView['type'] | PromiseKind | 'void'
+
+/**
+ * Kinds of `T` whose own default a promise default resolves with.
+ */
+let resolvedKinds = new Set<string>([
+  'boolean',
+  'string',
+  'number',
+  'bigint',
+  'array',
+])
 
 /**
  * Annotations of a function whose result is not used.
@@ -27,11 +53,14 @@ let voidAnnotations = new Set([
 ])
 
 /**
- * Finds the kind of a returned value for return-value (catalog 4.14): the type
- * of the expression; when unknown, the type of the function's return annotation
- * (`Promise<T>` unwrapped for async functions, a type predicate is `boolean`);
- * `boolean` for a predicate callback; and `void` when the annotation is `void`,
- * `undefined`, `never`, `Promise<void>` or an assertion signature.
+ * Finds the kind of a returned value for return-value (catalog 4.14): `void`
+ * when the annotation is `void`, `undefined`, `never`, `Promise<void>` of an
+ * async function or an assertion signature; `boolean` for a predicate callback,
+ * whose caller tests the truth of the result, a promise too; a promise kind for
+ * a function that returns the global `Promise<T>` without `async`, whatever the
+ * value (see `PromiseKind`); otherwise the type of the expression, and when it
+ * is unknown, the type of the return annotation (`Promise<T>` unwrapped for
+ * async functions, a type predicate is `boolean`).
  *
  * @param node - Node of the runtime tree that is, through wrappers, the
  *   argument of a `return` or the concise body of an arrow function.
@@ -70,8 +99,53 @@ export function getReturnValueKind(
   if (syntax.isBooleanContext(node)) {
     return 'boolean'
   }
+  let promise = getPromiseKind(enclosing, context)
+  if (promise) {
+    return promise
+  }
   let { type } = getTypeView(hints.getType(unwrapExpression(node)))
   return type === 'unknown' && annotated !== null ? annotated : type
+}
+
+/**
+ * Reads the promise kind of a function that returns a `Promise<T>` without
+ * `async` (catalog 4.14). The annotation must name the global `Promise` (see
+ * `isGlobalTypeName`), and the program must bind no value of that name (see
+ * `isGlobalName`), so a default written as `Promise.resolve(…)` creates the
+ * promise that the annotation names.
+ *
+ * @param node - Function or arrow function.
+ * @param context - Mutator context of the file.
+ * @returns The kind, or null for any other function.
+ */
+function getPromiseKind(
+  node: ArrowFunctionExpression | FunctionNode,
+  context: MutatorContext,
+): PromiseKind | null {
+  let annotation = node.returnType?.typeAnnotation
+  if (
+    node.async ||
+    annotation?.type !== 'TSTypeReference' ||
+    annotation.typeName.type !== 'Identifier' ||
+    annotation.typeName.name !== 'Promise' ||
+    !context.syntax.isGlobalTypeName(annotation.typeName) ||
+    !context.syntax.isGlobalName('Promise')
+  ) {
+    return null
+  }
+  let result = annotation.typeArguments?.params[0]
+  if (!result || voidAnnotations.has(result.type)) {
+    return { promise: 'void' }
+  }
+  let inferred = context.hints.getAnnotationType(result)
+  let { type } = getTypeView(inferred)
+  if (resolvedKinds.has(type)) {
+    return { promise: type as PromiseKind['promise'] }
+  }
+  let kinds = new Set(inferred.kinds ?? inferred.knownKinds)
+  return {
+    promise: kinds.has('null') && !kinds.has('undefined') ? 'null' : 'void',
+  }
 }
 
 /**

@@ -89,7 +89,7 @@
     },
     {
       "id": "return-value",
-      "description": "Replaces a returned value with an empty default ('', 0, false and true, [] or undefined).",
+      "description": "Replaces a returned value with an empty default ('', 0, false and true, [] or undefined), or a promise of one.",
       "mutants": 38
     },
     {

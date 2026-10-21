@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { MutatorSetup } from '../../helpers/generate-candidates'
 
 import { listMutantTexts } from '../../helpers/list-mutant-texts'
+import { generateMutants } from '../../helpers/generate-mutants'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
@@ -126,7 +127,7 @@ describe('returnValue', () => {
     'function f() { const x = null; return x }',
     'const f = (): void => x',
     'const f = (): void => a?.b',
-    'async function f(): Promise<void> { return x }',
+    `async function f(): Promise<void> { return \`\${x}\` }`,
     'function f(): never { return x }',
     'function f(x: unknown): asserts x { return y }',
   ])('skips a default the value already is in %s', code => {
@@ -227,6 +228,419 @@ describe('returnValue', () => {
       'row.c -> false',
     ])
   })
+
+  it.each([
+    {
+      code: [
+        'class Loader {',
+        '  loading: Promise<void>',
+        '  whenReady(): Promise<void> { return this.loading }',
+        '}',
+      ].join('\n'),
+      expected: ['this.loading -> Promise.resolve(void 0)'],
+    },
+    {
+      code: [
+        'let pending: Promise<void> = Promise.resolve()',
+        'function queue(task: () => Promise<void>): Promise<void> {',
+        '  pending = pending.then(task)',
+        '  return pending',
+        '}',
+      ].join('\n'),
+      expected: ['pending -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<void> { return run() }',
+      expected: ['run() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(e: Error): Promise<void> { return Promise.reject(e) }',
+      expected: ['Promise.reject(e) -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise { return load() }',
+      expected: ['load() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<undefined> { return load() }',
+      expected: ['load() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(undefined: unknown): Promise<undefined> { return load() }',
+      expected: ['load() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<User | undefined> { return find() }',
+      expected: ['find() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<never> { return load() }',
+      expected: ['load() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(id: string): Promise<string> { return load(id) }',
+      expected: ["load(id) -> Promise.resolve('')"],
+    },
+    {
+      code: 'let f = (): Promise<number> => count()',
+      expected: ['count() -> Promise.resolve(0)'],
+    },
+    {
+      code: 'function f(): Promise<bigint> { return big() }',
+      expected: ['big() -> Promise.resolve(0n)'],
+    },
+    {
+      code: 'function f(): Promise<string[]> { return all() }',
+      expected: ['all() -> Promise.resolve([])'],
+    },
+    {
+      expected: [
+        'check() -> Promise.resolve(true)',
+        'check() -> Promise.resolve(false)',
+      ],
+      code: 'class A { has(): Promise<boolean> { return check() } }',
+    },
+    {
+      code: [
+        "import type { Response } from './response'",
+        'function f(): Promise<Response> { return send() }',
+      ].join('\n'),
+      expected: ['send() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<() => void> { return load() }',
+      expected: ['load() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<{ id: string }> { return load() }',
+      expected: ['load() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<null> { return load() }',
+      expected: ['load() -> Promise.resolve(null)'],
+    },
+    {
+      code: 'function f(): Promise<User | null> { return find() }',
+      expected: ['find() -> Promise.resolve(null)'],
+    },
+    {
+      code: [
+        "import type { User } from './user'",
+        'type Result = User | null',
+        'function f(pending: Promise<Result>): Promise<Result> {',
+        '  return pending',
+        '}',
+      ].join('\n'),
+      expected: ['pending -> Promise.resolve(null)'],
+    },
+    {
+      code: 'function f(): Promise<string | null> { return find() }',
+      expected: ["find() -> Promise.resolve('')"],
+    },
+    {
+      code: [
+        'type Done = void',
+        'function f(pending: Promise<Done>): Promise<Done> { return pending }',
+      ].join('\n'),
+      expected: ['pending -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<void | undefined> { return load() }',
+      expected: ['load() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'rows.filter((row): Promise<boolean> => row.allowed)',
+      expected: ['row.allowed -> true', 'row.allowed -> false'],
+    },
+  ])(
+    'writes a resolved promise for a Promise<T> function without async in $code',
+    ({ expected, code }) => {
+      expect(listMutantTexts('return-value', [code])).toStrictEqual(expected)
+    },
+  )
+
+  it.each([
+    {
+      code: 'function f(): Promise<void> { return Promise.resolve() }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<void> { return Promise.resolve(undefined) }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<void> { return Promise.resolve(void 0) }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<void> { return (Promise.resolve<void>()) }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<void> { return (Promise as PromiseConstructor).resolve() }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<void> { return (Promise)!.resolve() }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<undefined> { return Promise.resolve(undefined) }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<undefined> { return Promise.resolve() }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<string> { return Promise.resolve("") }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<number> { return Promise.resolve(0) }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<bigint> { return Promise.resolve(0n) }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<number[]> { return Promise.resolve([]) }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<null> { return Promise.resolve(null) }',
+      expected: [],
+    },
+    {
+      code: 'function f(): Promise<void> { return Promise.resolve(null) }',
+      expected: ['Promise.resolve(null) -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<null> { return Promise.resolve(x) }',
+      expected: ['Promise.resolve(x) -> Promise.resolve(null)'],
+    },
+    {
+      code: 'function f(): Promise<void> { return Promise.resolve(void run()) }',
+      expected: ['Promise.resolve(void run()) -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(undefined: void): Promise<void> { return Promise.resolve(undefined) }',
+      expected: ['Promise.resolve(undefined) -> Promise.resolve(void 0)'],
+    },
+    {
+      expected: [
+        'Promise.resolve(undefined, run()) -> Promise.resolve(void 0)',
+      ],
+      code: 'function f(): Promise<void> { return Promise.resolve(undefined, run()) }',
+    },
+    {
+      code: 'function f(xs: []): Promise<void> { return Promise.resolve(...xs) }',
+      expected: ['Promise.resolve(...xs) -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<void> { return Promise.all(tasks).then(done) }',
+      expected: ['Promise.all(tasks).then(done) -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<void> { return P.resolve() }',
+      expected: ['P.resolve() -> Promise.resolve(void 0)'],
+    },
+    {
+      code: 'function f(): Promise<void> { return Promise.reject() }',
+      expected: ['Promise.reject() -> Promise.resolve(void 0)'],
+    },
+  ])(
+    'leaves out only the promise default the value already is in $code',
+    ({ expected, code }) => {
+      expect(listMutantTexts('return-value', [code])).toStrictEqual(expected)
+    },
+  )
+
+  it.each([
+    [
+      'function f(): Promise<boolean> { return Promise.resolve(true) }',
+      ['Promise.resolve(true) -> Promise.resolve(false) (subsumed solitary)'],
+    ],
+    [
+      'function f(): Promise<number> { return Promise.resolve(-0) }',
+      ['Promise.resolve(-0) -> Promise.resolve(0) (subsumed solitary)'],
+    ],
+    [
+      'function f(): Promise<number[]> { return Promise.resolve([1]) }',
+      ['Promise.resolve([1]) -> Promise.resolve([]) (subsumed solitary)'],
+    ],
+    [
+      "function f(): Promise<void> { return Promise['resolve']() }",
+      ["Promise['resolve']() -> Promise.resolve(void 0) (subsumed solitary)"],
+    ],
+  ])(
+    'keeps every other promise default as a candidate in %s',
+    (source, expected) => {
+      expect(listSkipped('return-value', source)).toStrictEqual(expected)
+    },
+  )
+
+  it.each([
+    {
+      code: [
+        'type Promise<T> = { then(next: (value: T) => void): void }',
+        'function f(): Promise<void> { return load() }',
+      ].join('\n'),
+      title: 'a type of the file',
+    },
+    {
+      code: [
+        'interface Promise<T> { then(next: (value: T) => void): void }',
+        'function f(): Promise<void> { return load() }',
+      ].join('\n'),
+      title: 'an interface of the file',
+    },
+    {
+      code: 'function f<Promise>(): Promise { return load() }',
+      title: 'a type parameter',
+    },
+    {
+      code: [
+        "import { Promise } from 'bluebird'",
+        'function f(): Promise<void> { return load() }',
+      ].join('\n'),
+      title: 'an import',
+    },
+    {
+      code: [
+        "import type { Promise } from 'bluebird'",
+        'function f(): Promise<void> { return load() }',
+      ].join('\n'),
+      title: 'a type-only import',
+    },
+    {
+      code: [
+        "import type Promise = require('bluebird')",
+        'function f(): Promise<void> { return load() }',
+      ].join('\n'),
+      title: 'a type-only import assignment',
+    },
+    {
+      code: [
+        'let Promise = globalThis.Promise',
+        'function f(): Promise<void> { return load() }',
+      ].join('\n'),
+      title: 'a value of the file',
+    },
+    {
+      code: [
+        'namespace N { export let x = 1 }',
+        'function f(): Promise<void> { return load() }',
+      ].join('\n'),
+      title: 'an opaque program',
+    },
+    {
+      code: 'function f(): globalThis.Promise<void> { return load() }',
+      title: 'a qualified name',
+    },
+    {
+      code: [
+        '<script lang="ts">',
+        'const Promise = globalThis.Promise',
+        'export default {}',
+        '</script>',
+        '<script setup lang="ts">',
+        'function f(): Promise<void> { return load() }',
+        '</script>',
+      ].join('\n'),
+      title: 'another script block of a component',
+      file: 'Shadow.vue',
+    },
+  ])(
+    'keeps the old default when $title may stand for Promise',
+    ({ file = 'example.ts', code }) => {
+      expect(
+        generateMutants(code, { file })
+          .filter(mutant => mutant.mutator === 'return-value')
+          .map(mutant => mutant.replacement),
+      ).toStrictEqual(['undefined'])
+    },
+  )
+
+  it('keeps the old default of a Promise in JavaScript', () => {
+    expect(
+      listMutantTexts(
+        'return-value',
+        ['function f() { return Promise.resolve() }'],
+        { file: 'example.js' },
+      ),
+    ).toStrictEqual(['Promise.resolve() -> undefined'])
+  })
+
+  it.each<{ setup: MutatorSetup; expected: string[] }>([
+    { expected: [], setup: {} },
+    {
+      expected: [
+        'check(s.trim()) -> Promise.resolve(true)',
+        'check(s.trim()) -> Promise.resolve(false)',
+      ],
+      setup: { mutators: { 'method-call': 'off' } },
+    },
+  ])(
+    'makes the promise of boolean constants solitary with $setup',
+    ({ expected, setup }) => {
+      expect(
+        listMutantTexts(
+          'return-value',
+          [
+            'function f(s: string): Promise<boolean> { return check(s.trim()) }',
+          ],
+          setup,
+        ),
+      ).toStrictEqual(expected)
+    },
+  )
+
+  it.each([
+    {
+      code: [
+        'class Loader {',
+        '  loading: Promise<void>',
+        '  async whenReady(): Promise<void> { return this.loading }',
+        '}',
+      ].join('\n'),
+      expected: ['this.loading -> undefined'],
+    },
+    {
+      code: 'async function f(): Promise<void> { return x }',
+      expected: ['x -> undefined'],
+    },
+    {
+      code: 'let f = async (): Promise<undefined> => store.ready',
+      expected: ['store.ready -> undefined'],
+    },
+  ])(
+    'removes a returned thenable of an async void result in $code',
+    ({ expected, code }) => {
+      expect(listMutantTexts('return-value', [code])).toStrictEqual(expected)
+    },
+  )
+
+  it.each([
+    {
+      code: 'async function f(): Promise<void> { return a + b }',
+      expected: 'a + b -> undefined (equivalent void-result)',
+    },
+    {
+      expected: '!a -> undefined (equivalent void-result)',
+      code: 'async function f(): Promise { return !a }',
+    },
+    {
+      expected: `\`\${a}\` -> undefined (equivalent void-result)`,
+      code: `let f = async (): Promise<void> => \`\${a}\``,
+    },
+  ])(
+    'skips the default of an async void result that is never a thenable in $code',
+    ({ expected, code }) => {
+      expect(listSkipped('return-value', code)).toStrictEqual([expected])
+    },
+  )
 
   it.each<{ setup: MutatorSetup; lines: string[] }>([
     {
@@ -480,6 +894,15 @@ describe('returnValue', () => {
       ['x > y -> true (subsumed R6)', 'x > y -> false (owned O12)'],
     ],
     ['function f() { return x }', []],
+    ['function f(): Promise<void> { return Promise.resolve() }', []],
+    [
+      'function f(): Promise<void> { return console.log(x) }',
+      ['console.log(x) -> Promise.resolve(void 0) (noise logging-call)'],
+    ],
+    [
+      'items.sort((a: number, b: number): Promise<number> => compare(a, b))',
+      ['compare(a, b) -> Promise.resolve(0) (owned O12)'],
+    ],
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('return-value', source)).toStrictEqual(expected)
   })

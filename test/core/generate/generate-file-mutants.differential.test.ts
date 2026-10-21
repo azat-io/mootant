@@ -94,6 +94,11 @@ interface Idiom {
   lines: string[]
 
   /**
+   * Labels of mutants of `f` that both presets must run; none when omitted.
+   */
+  kept?: string[]
+
+  /**
    * File name, whose extension selects the language.
    */
   file: string
@@ -1436,6 +1441,58 @@ const IDIOMS: Idiom[] = [
   },
   {
     lines: [
+      'function start(key: string): Promise<void> {',
+      "  return key === 'bad' ? fail(key) : settle(key)",
+      '}',
+      'function f(key: string): Promise<void> {',
+      '  return start(key)',
+      '}',
+    ],
+    kept: ['return-value start(key) -> Promise.resolve(void 0)'],
+    name: 'a promise returned without async',
+    inputs: [['ok'], ['bad']],
+    file: 'example.ts',
+  },
+  {
+    lines: [
+      'function load(ok: boolean) {',
+      "  return { loading: ok ? settle('load') : fail('load') }",
+      '}',
+      'async function f(ok: boolean): Promise<void> {',
+      '  const loader = load(ok)',
+      '  return loader.loading',
+      '}',
+    ],
+    name: 'a stored promise returned from an async void function',
+    kept: ['return-value loader.loading -> undefined'],
+    inputs: [[true], [false]],
+    file: 'example.ts',
+  },
+  {
+    gaps: {
+      equivalent: [
+        [
+          'method-call rows.filter(',
+          '    (row): Promise<boolean> => Promise.resolve(row.allowed),',
+          '  ) -> rows',
+        ].join('\n'),
+        'return-value Promise.resolve(row.allowed) -> true',
+      ],
+    },
+    lines: [
+      'function f(rows: { allowed: boolean }[]) {',
+      '  return rows.filter(',
+      '    (row): Promise<boolean> => Promise.resolve(row.allowed),',
+      '  ).length',
+      '}',
+    ],
+    kept: ['return-value Promise.resolve(row.allowed) -> false'],
+    inputs: [[[{ allowed: true }, { allowed: false }]], [[]]],
+    name: 'a predicate callback that returns a promise',
+    file: 'example.ts',
+  },
+  {
+    lines: [
       'function f(options) {',
       '  setTimeout(run, options && options.delay)',
       '}',
@@ -2005,7 +2062,15 @@ describe('generateFileMutants', () => {
     ]),
   )(
     'keeps no weak mutant and no unsound skip in $name under $preset',
-    async ({ unsoundSkips, expected, inputs, preset, lines, file }) => {
+    async ({
+      unsoundSkips,
+      kept = [],
+      expected,
+      inputs,
+      preset,
+      lines,
+      file,
+    }) => {
       let { delayProbes, skipProbes, original, probes } = await probeIdiom(
         lines.join('\n'),
         inputs,
@@ -2013,6 +2078,9 @@ describe('generateFileMutants', () => {
       )
 
       expect(probes.length).toBeGreaterThan(0)
+      expect(probes.map(probe => probe.label)).toStrictEqual(
+        expect.arrayContaining(kept),
+      )
       expect(findWeakMutants(original, probes)).toStrictEqual(expected)
       expect(findUnsoundSkips(original, probes, skipProbes)).toStrictEqual({
         ...SOUND,

@@ -1,3 +1,5 @@
+import type { IdentifierReference } from 'oxc-parser'
+
 import { describe, expect, it, vi } from 'vitest'
 
 import type { SyntaxHelpers } from '../../../types/syntax/syntax-helpers'
@@ -144,6 +146,19 @@ describe('createSyntaxHelpers', () => {
       true,
     ],
     ['isGlobalName', syntax => syntax.isGlobalName('undefined'), true],
+    [
+      'isGlobalTypeName',
+      syntax =>
+        syntax.isGlobalTypeName(
+          find('TSTypeReference', 'T').typeName as IdentifierReference,
+        ),
+      true,
+    ],
+    [
+      'isNonThenable',
+      syntax => syntax.isNonThenable(find('Literal', "'x'")),
+      true,
+    ],
     [
       'isLoggingCall',
       syntax =>

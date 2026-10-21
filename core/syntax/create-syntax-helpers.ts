@@ -14,6 +14,7 @@ import { unwrapExpression } from '../tree/unwrap-expression'
 import { isLoopAdvanceValue } from './is-loop-advance-value'
 import { getNeverFalsyFact } from './get-never-falsy-fact'
 import { getContextSlot } from '../tree/get-context-slot'
+import { isGlobalTypeName } from './is-global-type-name'
 import { getTruthOnlyName } from './get-truth-only-name'
 import { isInsideTryBlock } from './is-inside-try-block'
 import { isBooleanContext } from './is-boolean-context'
@@ -26,6 +27,7 @@ import { getLogicalChain } from './get-logical-chain'
 import { isErrorMessage } from './is-error-message'
 import { isResultUnused } from './is-result-unused'
 import { getExitedLoops } from './get-exited-loops'
+import { isNonThenable } from './is-non-thenable'
 import { isJoinedArray } from './is-joined-array'
 import { getValueBound } from './get-value-bound'
 import { getLowerBound } from './get-lower-bound'
@@ -127,6 +129,7 @@ export function createSyntaxHelpers(
     isResultUnused: node => isResultUnused(tree, node, discarded),
     isLoopAdvanceValue: node => isLoopAdvanceValue(tree, node),
     getTruthOnlyName: node => getTruthOnlyName(program, node),
+    isGlobalTypeName: node => isGlobalTypeName(program, node),
     getValueBound: node => getValueBound(getBounds(), node),
     getLowerBound: node => getLowerBound(getBounds(), node),
     isTimerDelay: node => isTimerDelay(tree, scopes, node),
@@ -141,6 +144,7 @@ export function createSyntaxHelpers(
     getContextSlot: node => getContextSlot(tree, node),
     isErrorMessage: node => isErrorMessage(tree, node),
     getExitedLoops: node => getExitedLoops(tree, node),
+    isNonThenable: node => isNonThenable(scopes, node),
     isGlobalName: name => isGlobalName(program, name),
     isPropertyKey: node => isPropertyKey(tree, node),
     getChainRoot: node => getChainRoot(tree, node),

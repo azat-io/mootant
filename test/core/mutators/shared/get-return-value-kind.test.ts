@@ -142,4 +142,125 @@ describe('getReturnValueKind', () => {
       expected,
     )
   })
+
+  it.each<{ expected: object | string; source: string }>([
+    {
+      source: 'function f(): Promise<string> { return a }',
+      expected: { promise: 'string' },
+    },
+    {
+      source: 'function f(): Promise<void> { return a }',
+      expected: { promise: 'void' },
+    },
+    {
+      source: 'function f(): Promise { return a }',
+      expected: { promise: 'void' },
+    },
+    {
+      source: 'function f(): Promise<undefined> { return a }',
+      expected: { promise: 'void' },
+    },
+    {
+      source: 'function f(): Promise<{ id: string } | undefined> { return a }',
+      expected: { promise: 'void' },
+    },
+    {
+      source:
+        'function f<T>(): Promise<T | undefined> { return a as Promise<T | undefined> }',
+      expected: { promise: 'void' },
+    },
+    {
+      source: 'function f(): Promise<string | undefined> { return a }',
+      expected: { promise: 'string' },
+    },
+    {
+      source: 'function f(): Promise<{ id: string } | null> { return a }',
+      expected: { promise: 'null' },
+    },
+    {
+      source: 'function f(): Promise<User | null> { return a }',
+      expected: { promise: 'null' },
+    },
+    {
+      source: 'function f(): Promise<(User | null)> { return a }',
+      expected: { promise: 'null' },
+    },
+    {
+      source: [
+        "import type { User } from './user'",
+        'type Result = User | null',
+        'function f(): Promise<Result> { return a }',
+      ].join('\n'),
+      expected: { promise: 'null' },
+    },
+    {
+      source:
+        'type Found = User | undefined\nfunction f(): Promise<Found | null> { return a }',
+      expected: { promise: 'void' },
+    },
+    {
+      source: 'function f(): Promise<null | undefined> { return a }',
+      expected: { promise: 'void' },
+    },
+    {
+      source: 'type Done = void\nfunction f(): Promise<Done> { return a }',
+      expected: { promise: 'void' },
+    },
+    {
+      source: 'function f(): Promise<never> { return a }',
+      expected: { promise: 'void' },
+    },
+    {
+      source: 'let f = (): Promise<Set<number>> => a',
+      expected: { promise: 'void' },
+    },
+    {
+      source: 'class A { m(): Promise<boolean> { return a } }',
+      expected: { promise: 'boolean' },
+    },
+    {
+      source: 'rows.filter((r): Promise<boolean> => a)',
+      expected: 'boolean',
+    },
+    {
+      source: 'function f(a: string): Promise<number> { return a }',
+      expected: { promise: 'number' },
+    },
+    {
+      source:
+        'type Promise<T> = T[]; function f(): Promise<string> { return a }',
+      expected: 'array',
+    },
+    {
+      source: [
+        "import { Promise } from 'bluebird'",
+        'function f(): Promise<string> { return a }',
+      ].join('\n'),
+      expected: 'object',
+    },
+    {
+      source: [
+        "import type { Promise } from 'bluebird'",
+        'function f(): Promise<string> { return a }',
+      ].join('\n'),
+      expected: 'object',
+    },
+    {
+      source: [
+        'const Promise = globalThis.Promise',
+        'function f(): Promise<string> { return a }',
+      ].join('\n'),
+      expected: 'object',
+    },
+    {
+      source: 'async function f(): Promise<string> { return a }',
+      expected: 'string',
+    },
+  ])('reads the promise kind in $source', ({ expected, source }) => {
+    let { context, find } = createTestContext(source)
+
+    expect(getReturnValueKind(find('Identifier', 'a'), context)).toStrictEqual(
+      expected,
+    )
+  })
 })

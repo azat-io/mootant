@@ -1,6 +1,7 @@
 import type {
   Function as FunctionNode,
   ArrowFunctionExpression,
+  IdentifierReference,
   LogicalExpression,
   DoWhileStatement,
   ChainExpression,
@@ -45,6 +46,14 @@ export interface SyntaxHelpers {
    * `node:timers/promises` and `scheduler.wait`.
    */
   readTimerCall(node: CallExpression): TimerCall | null
+
+  /**
+   * Whether the name of a type reference surely refers to a type from outside
+   * the file: no same-file type alias, interface, class or enum in scope, no
+   * type parameter and no import of the file, type-only ones included, has it,
+   * and the program is neither opaque nor shares a scope (see `isGlobalName`).
+   */
+  isGlobalTypeName(node: IdentifierReference): boolean
 
   /**
    * Operands of the same-operator chain below the node, left to right. Operands
@@ -189,6 +198,13 @@ export interface SyntaxHelpers {
    * whose other script blocks may declare it.
    */
   isGlobalName(name: string): boolean
+
+  /**
+   * Whether the value of the expression is known from its syntax never to be a
+   * thenable, so that a promise resolved with it does not take on its state
+   * (see `isNonThenable`).
+   */
+  isNonThenable(node: Node): boolean
 
   /**
    * Whether the array literal initializes a `const` or a never-written `let`

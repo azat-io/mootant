@@ -67,7 +67,7 @@ const DESCRIPTIONS = {
   'regex-pattern':
     'Removes an anchor, assertion or alternative of a regular expression, makes an optional part required, or widens a class to any character.',
   'return-value':
-    "Replaces a returned value with an empty default ('', 0, false and true, [] or undefined).",
+    "Replaces a returned value with an empty default ('', 0, false and true, [] or undefined), or a promise of one.",
   'statement-removal':
     'Removes one statement with an effect: a call, assignment, delete, throw, early return or case break.',
   'string-literal':
