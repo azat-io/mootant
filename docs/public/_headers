@@ -1,0 +1,5 @@
+/_astro/*
+  cache-control: max-age=31536000, immutable
+
+/fonts/*
+  cache-control: max-age=31536000, immutable

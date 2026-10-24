@@ -1,0 +1,126 @@
+---
+import type { MarkdownHeading } from 'astro'
+
+import ContentAdditionalPages from '../components/Content/ContentAdditionalPages.astro'
+import ContentEditLink from '../components/Content/ContentEditLink.astro'
+import ContentFooter from '../components/Content/ContentFooter.astro'
+import TableOfContents from '../components/TableOfContents.astro'
+import Sidebar from '../components/Sidebar/Sidebar.astro'
+import Breadcrumbs from '../components/Breadcrumbs.astro'
+import Container from '../components/Container.astro'
+import Header from '../components/Header.astro'
+import Footer from '../components/Footer.astro'
+import Head from '../components/Head.astro'
+import Html from '../components/Html.astro'
+import Body from '../components/Body.astro'
+
+interface Props {
+  keywords?: undefined | string[]
+  headings?: MarkdownHeading[]
+  description: string
+  editLink?: string
+  title: string
+}
+
+let { keywords = [], headings = [], description, editLink, title } = Astro.props
+---
+
+<Html>
+  <Head
+    type="article"
+    {description}
+    {keywords}
+    {title}
+  />
+  <Body class="app">
+    <Header>
+      <Sidebar
+        slot="navigation"
+        isMobileOnly
+      />
+    </Header>
+    <Container class="wrapper">
+      <Sidebar />
+      <main class="main">
+        <Breadcrumbs />
+        <article>
+          <slot />
+        </article>
+        <ContentFooter>
+          <ContentEditLink url={editLink} />
+          <ContentAdditionalPages />
+        </ContentFooter>
+      </main>
+      <TableOfContents {headings} />
+    </Container>
+    <Footer />
+  </Body>
+</Html>
+
+<script>
+  let resetTimers = new WeakMap<
+    HTMLButtonElement,
+    ReturnType<typeof setTimeout>
+  >()
+
+  /* The copy buttons of code blocks come from a Markdown plugin, so a single
+     listener on the document serves them on every page. */
+  document.addEventListener('click', async event => {
+    let button = (event.target as Element).closest<HTMLButtonElement>(
+      '.copy-button',
+    )
+    let code = button?.parentElement?.querySelector('pre')?.textContent
+    if (!button || !code) {
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(code)
+    } catch {
+      return
+    }
+    button.dataset['copied'] = ''
+    clearTimeout(resetTimers.get(button))
+    resetTimers.set(
+      button,
+      setTimeout(() => {
+        delete button.dataset['copied']
+      }, 2000),
+    )
+  })
+</script>
+
+<style>
+  .app {
+    display: flex;
+    flex-flow: column nowrap;
+    min-block-size: 100dvb;
+  }
+
+  .wrapper {
+    display: grid;
+    flex-grow: 1;
+    grid-template-columns: [content] minmax(0, 1fr);
+
+    @media (width >= 800px) {
+      grid-template-columns: [sidebar] 220px [content] minmax(0, 1fr);
+    }
+
+    @media (width >= 1200px) {
+      grid-template-columns:
+        [sidebar] 220px [content] minmax(0, 1fr)
+        [table-of-contents] 220px;
+    }
+  }
+
+  .main {
+    inline-size: 100%;
+    max-inline-size: 50rem;
+    padding-block: var(--space-l) var(--space-xl);
+    margin-inline: auto;
+    container-type: inline-size;
+
+    @media (width >= 800px) {
+      padding-inline: var(--space-xl);
+    }
+  }
+</style>

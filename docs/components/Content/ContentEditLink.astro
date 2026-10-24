@@ -1,0 +1,34 @@
+---
+import ContentFooterLink from './ContentFooterLink.astro'
+import IconEdit from '../../icons/edit.svg'
+
+interface Props {
+  url: undefined | string
+}
+
+let { url } = Astro.props
+---
+
+{
+  url && (
+    <ContentFooterLink
+      rel="noopener noreferrer"
+      target="_blank"
+      {url}
+    >
+      <IconEdit
+        class="icon"
+        slot="icon"
+      />
+      Edit this page
+    </ContentFooterLink>
+  )
+}
+
+<style>
+  .icon {
+    flex-shrink: 0;
+    inline-size: var(--size-icon-s);
+    block-size: var(--size-icon-s);
+  }
+</style>

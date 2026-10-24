@@ -1,0 +1,32 @@
+---
+import type { CollectionEntry } from 'astro:content'
+
+import { getCollection, render } from 'astro:content'
+
+import ContentLayout from '../../../layouts/Content.astro'
+
+type Props = CollectionEntry<'guide'>
+
+let guide = Astro.props
+
+let { headings, Content } = await render(guide)
+
+export async function getStaticPaths() {
+  let guides = await getCollection('guide')
+  return guides.map(currentGuide => ({
+    params: {
+      slug: currentGuide.id,
+    },
+    props: currentGuide,
+  }))
+}
+---
+
+<ContentLayout
+  editLink={`https://github.com/azat-io/mootant/edit/main/docs/content/guide/${guide.id}.md`}
+  {headings}
+  {...guide.data}
+>
+  <h1>{guide.data.title}</h1>
+  <Content />
+</ContentLayout>

@@ -1,0 +1,152 @@
+---
+import type { MarkdownHeading } from 'astro'
+
+import Typography from './Typography.astro'
+
+interface Props {
+  headings: MarkdownHeading[]
+}
+
+let { headings } = Astro.props
+
+let items = headings.filter(({ depth }) => depth === 2 || depth === 3)
+---
+
+{
+  items.length > 0 && (
+    <nav
+      aria-labelledby="table-of-contents-title"
+      class="table-of-contents"
+      id="table-of-contents"
+    >
+      <div class="content">
+        <Typography
+          id="table-of-contents-title"
+          color="primary"
+          class="title"
+          size="s"
+          tag="h2"
+          bold
+        >
+          On this page
+        </Typography>
+        <ul class="list">
+          {items.map(({ depth, slug, text }) => (
+            <li class:list={['item', { subheading: depth === 3 }]}>
+              <a
+                href={`#${slug}`}
+                class="link"
+              >
+                {text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </nav>
+  )
+}
+
+<script>
+  let sections: { heading: HTMLElement; link: HTMLAnchorElement }[] = []
+
+  /* Marks the section the reader is in: the last one whose heading has passed
+     the top quarter of the window, or the last one at the end of the page. */
+  let markCurrentSection = (): void => {
+    let { innerHeight, scrollY } = globalThis
+    let isAtEnd =
+      innerHeight + scrollY >= document.documentElement.scrollHeight - 1
+    let current: HTMLAnchorElement | undefined
+    for (let { heading, link } of sections) {
+      if (!isAtEnd && heading.getBoundingClientRect().top > innerHeight / 4) {
+        break
+      }
+      current = link
+    }
+    for (let { link } of sections) {
+      if (link === current) {
+        link.setAttribute('aria-current', 'true')
+      } else {
+        link.removeAttribute('aria-current')
+      }
+    }
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    sections = [
+      ...document.querySelectorAll<HTMLAnchorElement>('#table-of-contents a'),
+    ].flatMap(link => {
+      let heading = document.getElementById(
+        decodeURIComponent(link.hash.slice(1)),
+      )
+      return heading ? [{ heading, link }] : []
+    })
+    markCurrentSection()
+  })
+
+  document.addEventListener('scroll', markCurrentSection, { passive: true })
+  globalThis.addEventListener('resize', markCurrentSection, { passive: true })
+</script>
+
+<style>
+  .table-of-contents {
+    display: none;
+
+    @media (width >= 1200px) {
+      display: block;
+    }
+  }
+
+  .content {
+    position: sticky;
+    inset-block-start: 0;
+    max-block-size: 100dvb;
+    padding-block: var(--space-l);
+    padding-inline-start: var(--space-s);
+    overflow-block: auto;
+    scrollbar-width: thin;
+  }
+
+  .title {
+    padding: var(--space-2xs) var(--space-s);
+  }
+
+  .list {
+    padding-inline-start: 0;
+    margin-block: 0;
+    list-style-type: '';
+  }
+
+  .item {
+    margin-block: 0;
+  }
+
+  .subheading {
+    padding-inline-start: var(--space-s);
+  }
+
+  .link {
+    display: block;
+    padding: var(--space-2xs) var(--space-s);
+    font: var(--font-xs);
+    color: var(--color-content-secondary);
+    text-decoration: none;
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition:
+        color 200ms,
+        background 200ms;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-content-primary);
+        background: var(--color-background-primary-hover);
+      }
+    }
+
+    &[aria-current='true'] {
+      color: var(--color-content-brand);
+    }
+  }
+</style>

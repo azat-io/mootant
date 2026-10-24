@@ -10,11 +10,15 @@ import IconSun from '../icons/sun.svg'
 import Button from './Button.astro'
 
 let links = [
-  { href: '/docs/getting-started', title: 'Guide' },
-  { href: '/docs/configuration', title: 'Config' },
-  { href: '/docs/mutators', title: 'Mutators' },
-  { href: '/docs/agent-skill', title: 'Agent skill' },
+  { href: '/guide/getting-started', title: 'Guide' },
+  { href: '/configuration', title: 'Config' },
+  { href: '/mutators', title: 'Mutators' },
+  { href: '/agent-skill', title: 'Agent skill' },
 ]
+
+/* Pages can put their own navigation into the mobile menu in place of the
+   links. */
+let hasNavigation = Astro.slots.has('navigation')
 ---
 
 <header class="header">
@@ -33,7 +37,8 @@ let links = [
         aria-label="Main"
         id="navigation"
       >
-        <ul class="links">
+        <slot name="navigation" />
+        <ul class:list={['links', hasNavigation && 'desktop-only']}>
           {
             links.map(link => (
               <li class="item">
@@ -252,6 +257,12 @@ let links = [
 
     @media (width < 800px) {
       flex-direction: column;
+    }
+  }
+
+  .desktop-only {
+    @media (width < 800px) {
+      display: none;
     }
   }
 

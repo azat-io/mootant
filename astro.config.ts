@@ -1,12 +1,14 @@
+import { rehypeHeadingIds, unified } from '@astrojs/markdown-remark'
 import { transformerNotationDiff } from '@shikijs/transformers'
 import { svgoOptimizer, defineConfig } from 'astro/config'
 import rehypeExternalLinks from 'rehype-external-links'
 import { browserslistToTargets } from 'lightningcss'
-import { unified } from '@astrojs/markdown-remark'
 import remarkSectionize from 'remark-sectionize'
 import browserslist from 'browserslist'
 import sitemap from '@astrojs/sitemap'
 
+import { rehypeHeadingAnchors } from './docs/plugins/rehype-heading-anchors'
+import { rehypeCopyButtons } from './docs/plugins/rehype-copy-buttons'
 import { colorTheme } from './docs/utils/shiki-theme'
 
 let site = 'https://mootant.org'
@@ -22,6 +24,9 @@ export default defineConfig({
             target: '_blank',
           },
         ],
+        rehypeHeadingAnchors,
+        rehypeCopyButtons,
+        rehypeHeadingIds,
       ],
       remarkPlugins: [remarkSectionize],
     }),

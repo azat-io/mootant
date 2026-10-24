@@ -1,0 +1,55 @@
+---
+import SidebarLinkBlock from './SidebarLinkBlock.astro'
+import { pages } from '../../utils/pages'
+
+interface Props {
+  isMobileOnly?: boolean
+}
+
+let { isMobileOnly = false } = Astro.props
+---
+
+<nav
+  class:list={['sidebar', isMobileOnly && 'menu-mobile-only']}
+  aria-label="Docs"
+>
+  <div class="content">
+    {pages.map(section => <SidebarLinkBlock {...section} />)}
+  </div>
+</nav>
+
+<style>
+  .sidebar {
+    display: none;
+
+    @media (width >= 800px) {
+      display: block;
+      border-inline-end: 1px solid var(--color-border-primary);
+    }
+  }
+
+  .menu-mobile-only {
+    display: block;
+
+    @media (width >= 800px) {
+      display: none;
+    }
+  }
+
+  .content {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-m);
+
+    @media (width >= 800px) {
+      position: sticky;
+      inset-block-start: 0;
+      max-block-size: 100dvb;
+      padding-block: var(--space-l);
+      padding-inline-end: var(--space-s);
+      margin-inline-start: calc(0px - var(--space-s));
+      overflow-block: auto;
+      scrollbar-width: thin;
+    }
+  }
+</style>

@@ -163,19 +163,6 @@ pre {
   }
 }
 
-h2,
-h3 {
-  position: relative;
-
-  @media (hover: hover) {
-    @media (width >= 768px) {
-      &:hover .heading-anchor {
-        opacity: 100%;
-      }
-    }
-  }
-}
-
 table {
   inline-size: 100%;
   overflow: clip;
@@ -220,10 +207,20 @@ kbd {
   border-radius: var(--border-radius);
 }
 
+.heading {
+  position: relative;
+
+  @media (hover: hover) {
+    &:hover .heading-anchor {
+      opacity: 100%;
+    }
+  }
+}
+
 .heading-anchor {
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-start: calc(0px - var(--space-s) * 2);
+  inset-inline-end: calc(100% + var(--space-2xs));
   display: none;
   inline-size: 24px;
   block-size: 24px;
@@ -244,5 +241,80 @@ kbd {
   @media (width >= 768px) {
     display: flex;
     flex-wrap: nowrap;
+  }
+
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+
+.code-block {
+  position: relative;
+
+  & pre {
+    padding-inline-end: calc(36px + var(--space-xs) * 2);
+  }
+
+  @media (hover: hover) {
+    &:hover .copy-button {
+      opacity: 100%;
+    }
+  }
+}
+
+.copy-button {
+  position: absolute;
+  inset-block-start: var(--space-xs);
+  inset-inline-end: var(--space-xs);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  padding: 0;
+  color: var(--color-content-secondary);
+  outline: none;
+  background: var(--color-background-primary);
+  border: none;
+  border-radius: calc(var(--border-radius) - 4px);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: all 200ms ease-in-out;
+  }
+
+  @media (hover: hover) {
+    opacity: 0%;
+
+    &:hover {
+      color: var(--color-content-primary);
+      background: var(--color-background-primary-hover);
+    }
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px var(--color-border-brand);
+    opacity: 100%;
+  }
+
+  &[data-copied] {
+    color: var(--color-code-ansi-green);
+    opacity: 100%;
+  }
+
+  & svg {
+    inline-size: var(--size-icon-s);
+    block-size: var(--size-icon-s);
+  }
+
+  /* The copy icon comes first and the check icon second. */
+  & svg:last-child,
+  &[data-copied] svg:first-child {
+    display: none;
+  }
+
+  &[data-copied] svg:last-child {
+    display: block;
   }
 }

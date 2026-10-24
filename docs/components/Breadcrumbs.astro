@@ -1,0 +1,101 @@
+---
+import IconChevronRight from '../icons/chevron-right.svg'
+import { getPageUrl, pages } from '../utils/pages'
+import IconHome from '../icons/home.svg'
+
+let url = getPageUrl(Astro.url.pathname)
+let section = pages.find(({ links }) => links.some(link => link.url === url))
+let page = section?.links.find(link => link.url === url)
+---
+
+{
+  section && page && (
+    <nav aria-label="Breadcrumbs">
+      <ol class="list">
+        <li class="item">
+          <a
+            aria-label="Home"
+            class="link"
+            href="/"
+          >
+            <IconHome class="icon" />
+          </a>
+        </li>
+        <li class="item">
+          <IconChevronRight
+            aria-hidden="true"
+            class="icon"
+          />
+          <span class="text">{section.title}</span>
+        </li>
+        <li class="item">
+          <IconChevronRight
+            aria-hidden="true"
+            class="icon"
+          />
+          <span
+            aria-current="page"
+            class="text"
+          >
+            {page.title}
+          </span>
+        </li>
+      </ol>
+    </nav>
+  )
+}
+
+<style>
+  .list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding-inline-start: 0;
+    margin-block: 0;
+    margin-inline-start: calc(0px - var(--space-xs));
+    font: var(--font-xs);
+    color: var(--color-content-secondary);
+    list-style-type: '';
+  }
+
+  .item {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    margin-block: 0;
+  }
+
+  .link {
+    display: flex;
+    flex-wrap: nowrap;
+    padding: var(--space-2xs) var(--space-xs);
+    color: inherit;
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition:
+        color 200ms,
+        background 200ms;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-content-primary);
+        background: var(--color-background-primary-hover);
+      }
+    }
+  }
+
+  .text {
+    padding: var(--space-2xs) var(--space-xs);
+
+    &[aria-current='page'] {
+      color: var(--color-content-primary);
+    }
+  }
+
+  .icon {
+    flex-shrink: 0;
+    inline-size: var(--size-icon-xs);
+    block-size: var(--size-icon-xs);
+  }
+</style>

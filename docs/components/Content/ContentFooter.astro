@@ -1,0 +1,19 @@
+---
+
+---
+
+<footer class="footer">
+  <slot />
+</footer>
+
+<style>
+  .footer {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-l);
+    align-items: start;
+    padding-block-start: var(--space-l);
+    margin-block-start: var(--space-xl);
+    border-block-start: 1px solid var(--color-border-primary);
+  }
+</style>

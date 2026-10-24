@@ -1,0 +1,52 @@
+---
+interface Props {
+  target?: string
+  title?: string
+  class?: string
+  rel?: string
+  url: string
+}
+
+let { class: className, title, url, ...props } = Astro.props
+---
+
+<a
+  class:list={['link', className]}
+  href={url}
+  {...props}
+>
+  <slot name="icon" />
+  <span class="content">
+    {title && <span class="title">{title}</span>}
+    <span class="text">
+      <slot />
+    </span>
+  </span>
+</a>
+
+<style>
+  .link {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: var(--space-s);
+    align-items: center;
+    font: var(--font-xs);
+    text-decoration: none;
+  }
+
+  .content {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-2xs);
+  }
+
+  .title {
+    font-size: var(--font-size-2xs);
+    line-height: 1;
+    color: var(--color-content-secondary);
+  }
+
+  .text {
+    text-decoration: underline;
+  }
+</style>

@@ -1,0 +1,47 @@
+---
+import { getPageUrl } from '../../utils/pages'
+
+interface Props {
+  title: string
+  url: string
+}
+
+let { title, url } = Astro.props
+
+let isActive = getPageUrl(Astro.url.pathname) === url
+---
+
+<a
+  aria-current={isActive ? 'page' : undefined}
+  class="link"
+  href={url}
+>
+  {title}
+</a>
+
+<style>
+  .link {
+    display: block;
+    padding: var(--space-2xs) var(--space-s);
+    font: var(--font-s);
+    color: var(--color-content-secondary);
+    text-decoration: none;
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition:
+        color 200ms,
+        background 200ms;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-content-primary);
+        background: var(--color-background-primary-hover);
+      }
+    }
+
+    &[aria-current='page'] {
+      color: var(--color-content-brand);
+    }
+  }
+</style>

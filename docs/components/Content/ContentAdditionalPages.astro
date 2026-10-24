@@ -1,0 +1,80 @@
+---
+import ContentFooterLink from './ContentFooterLink.astro'
+import IconArrowRight from '../../icons/arrow-right.svg'
+import IconArrowLeft from '../../icons/arrow-left.svg'
+import { getPageUrl, pages } from '../../utils/pages'
+
+let url = getPageUrl(Astro.url.pathname)
+let links = pages.flatMap(section => section.links)
+let index = links.findIndex(link => link.url === url)
+/* On the first page and on pages missing from the list, `index - 1` is
+   negative and finds no page. */
+let previousPage = links[index - 1]
+let nextPage = index === -1 ? undefined : links[index + 1]
+---
+
+{
+  (previousPage ?? nextPage) && (
+    <nav
+      aria-label="Docs pages"
+      class="pages"
+    >
+      {previousPage && (
+        <ContentFooterLink
+          url={previousPage.url}
+          title="Previous page"
+          rel="prev"
+        >
+          <IconArrowLeft
+            class="icon"
+            slot="icon"
+          />
+          {previousPage.title}
+        </ContentFooterLink>
+      )}
+      {nextPage && (
+        <ContentFooterLink
+          url={nextPage.url}
+          title="Next page"
+          class="next"
+          rel="next"
+        >
+          <IconArrowRight
+            class="icon"
+            slot="icon"
+          />
+          {nextPage.title}
+        </ContentFooterLink>
+      )}
+    </nav>
+  )
+}
+
+<style>
+  .pages {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-l);
+    align-items: start;
+    inline-size: 100%;
+
+    @container (inline-size >= 600px) {
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+
+  .next {
+    @container (inline-size >= 600px) {
+      flex-direction: row-reverse;
+      margin-inline-start: auto;
+      text-align: end;
+    }
+  }
+
+  .icon {
+    flex-shrink: 0;
+    inline-size: var(--size-icon-s);
+    block-size: var(--size-icon-s);
+  }
+</style>
