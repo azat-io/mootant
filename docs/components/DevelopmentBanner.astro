@@ -1,0 +1,30 @@
+---
+import Container from './Container.astro'
+---
+
+<div
+  class="banner"
+  role="note"
+>
+  <Container
+    class="text"
+    tag="p"
+  >
+    Mootant is in early development. Expect breaking changes.
+  </Container>
+</div>
+
+<style>
+  .banner {
+    padding-block: var(--space-2xs);
+    color: oklch(20.5% 0.0081 274.52deg);
+    background: var(--color-background-brand);
+  }
+
+  .text {
+    margin-block: 0;
+    font: var(--font-xs);
+    text-align: center;
+    text-wrap: balance;
+  }
+</style>

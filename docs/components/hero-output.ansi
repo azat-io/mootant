@@ -1,0 +1,21 @@
+[92m●[39m [1mmootant run src[22m                                 [90mvitest 5.0.4[39m
+
+[90mdry run         [39m11 tests in 0.2s
+[90mmutants         [39m26 in 3 files
+[90mtime            [39m1.5s (start 0.1s, dry run 0.2s, isolated 1.2s)
+
+[90mkilled          [39m25
+[90msurvived        [39m[92m1[39m
+[90mtimeout         [39m0
+[90mno coverage     [39m0
+[90mscore           [39m[1m96.15%[22m
+
+[1m[92msurvived[39m[22m 1
+
+[1msrc/discount.ts[22m
+  [90m2:7[39m  [90mcomparison-operator[39m  q31p
+    [31m-[39m if (total [31m>=[39m 100 || isMember) {
+    [32m+[39m if (total [32m>[39m 100 || isMember) {
+    [90mtest: test/discount.test.ts[39m
+
+[90mre-check one:[39m mootant run src --mutant q31p

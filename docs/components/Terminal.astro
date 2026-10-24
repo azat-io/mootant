@@ -1,0 +1,54 @@
+---
+import { Code } from 'astro:components'
+
+import { colorTheme } from '../utils/shiki-theme'
+
+interface Props {
+  columns?: number
+  class?: string
+  output: string
+}
+
+let { class: className, columns = 64, output, ...props } = Astro.props
+---
+
+<div
+  class:list={['terminal', className]}
+  style={`--columns: ${columns}`}
+  {...props}
+>
+  <Code
+    theme={colorTheme}
+    code={output}
+    class="code"
+    lang="ansi"
+  />
+</div>
+
+<style>
+  .terminal {
+    container-type: inline-size;
+
+    & :global(pre) {
+      padding: var(--space-l);
+      border-radius: calc(var(--border-radius) * 1.5);
+    }
+
+    & :global(pre),
+    & :global(code) {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(
+        0.75rem,
+        (100cqi - 2 * var(--space-l)) / (var(--columns) * 0.6),
+        var(--font-size-code)
+      );
+    }
+  }
+
+  .code,
+  .code :global(.line) {
+    @media (prefers-reduced-motion: no-preference) {
+      transition: all 300ms;
+    }
+  }
+</style>

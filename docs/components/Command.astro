@@ -1,0 +1,145 @@
+---
+import IconCopyCheck from '../icons/copy-check.svg'
+import IconCopy from '../icons/copy.svg'
+
+interface Props {
+  command: string
+  class?: string
+}
+
+let { class: className, command, ...props } = Astro.props
+---
+
+<div
+  class:list={['command', className]}
+  {...props}
+>
+  <code class="text"><span class="prompt">$ </span>{command}</code>
+  <button
+    aria-label="Copy command"
+    data-command={command}
+    type="button"
+    class="copy"
+  >
+    <IconCopy class="icon icon-default" />
+    <IconCopyCheck class="icon icon-copied" />
+  </button>
+</div>
+
+<script>
+  let resetTimers = new WeakMap<
+    HTMLButtonElement,
+    ReturnType<typeof setTimeout>
+  >()
+
+  let copyCommand = async (event: MouseEvent): Promise<void> => {
+    let button = event.currentTarget as HTMLButtonElement
+    try {
+      await navigator.clipboard.writeText(button.dataset['command'] ?? '')
+    } catch {
+      return
+    }
+    button.dataset['copied'] = ''
+    clearTimeout(resetTimers.get(button))
+    resetTimers.set(
+      button,
+      setTimeout(() => {
+        delete button.dataset['copied']
+      }, 2000),
+    )
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    for (let button of document.querySelectorAll<HTMLButtonElement>(
+      'button[data-command]',
+    )) {
+      button.addEventListener('click', copyCommand)
+    }
+  })
+</script>
+
+<style>
+  .command {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-s);
+    align-items: center;
+    justify-content: space-between;
+    max-inline-size: 100%;
+    block-size: 56px;
+    padding-inline: var(--space-m) var(--space-xs);
+    background: var(--color-code-background);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: all 300ms;
+    }
+  }
+
+  .text {
+    padding: 0;
+    overflow: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--font-size-s);
+    line-height: 1;
+    color: var(--color-code-foreground);
+    white-space: nowrap;
+    scrollbar-width: none;
+    background: none;
+    border: none;
+  }
+
+  .prompt {
+    color: var(--color-code-ansi-bright-black);
+    user-select: none;
+  }
+
+  .copy {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    inline-size: 36px;
+    block-size: 36px;
+    padding: 0;
+    color: var(--color-content-secondary);
+    outline: none;
+    background: var(--color-background-primary);
+    border: none;
+    border-radius: calc(var(--border-radius) - 4px);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: all 200ms ease-in-out;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-content-primary);
+        background: var(--color-background-primary-hover);
+      }
+    }
+
+    &:focus-visible {
+      box-shadow: 0 0 0 3px var(--color-border-brand);
+    }
+
+    &[data-copied] {
+      color: var(--color-code-ansi-green);
+    }
+  }
+
+  .icon {
+    inline-size: var(--size-icon-s);
+    block-size: var(--size-icon-s);
+  }
+
+  .icon-copied,
+  [data-copied] .icon-default {
+    display: none;
+  }
+
+  [data-copied] .icon-copied {
+    display: block;
+  }
+</style>

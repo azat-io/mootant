@@ -1,0 +1,118 @@
+---
+type Props = {
+  color: 'secondary' | 'tertiary' | 'primary'
+  square?: boolean
+  target?: string
+  full?: boolean
+  href?: string
+  rel?: string
+  id?: string
+} & ({ target?: string; href?: string; tag: 'a' } | { tag?: 'button' })
+
+let { tag = 'button', square, color, full, ...props } = Astro.props
+
+let Tag = tag
+---
+
+<Tag
+  class:list={[
+    'button',
+    {
+      secondary: color === 'secondary',
+      tertiary: color === 'tertiary',
+      primary: color === 'primary',
+      square,
+      full,
+    },
+  ]}
+  {...props}
+>
+  <slot />
+</Tag>
+
+<style>
+  .button {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    block-size: 48px;
+    padding: 0 calc(var(--space-xs) / 1.25);
+    font: var(--font-m);
+    font-weight: 500;
+    text-decoration: none;
+    outline: 2px none transparent;
+    outline-offset: 2px;
+    border: none;
+    border-radius: var(--border-radius);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: all 200ms ease-in-out;
+    }
+
+    &:focus-visible {
+      text-decoration: none;
+      outline-style: solid;
+      background: var(--color-overlay-brand);
+      box-shadow: 0 0 0 3px var(--color-border-brand);
+    }
+
+    &:active {
+      transform: scale(95%);
+    }
+  }
+
+  .square {
+    aspect-ratio: 1;
+    padding: 0;
+  }
+
+  .full {
+    inline-size: 180px;
+    padding: 0 var(--space-s);
+
+    @media (width >= 480px) {
+      inline-size: 200px;
+    }
+  }
+
+  .primary {
+    color: oklch(20.5% 0.0081 274.52deg);
+    background: var(--color-background-brand);
+    box-shadow: 0 0 0 1px var(--color-border-brand);
+
+    @media (hover: hover) {
+      &:hover {
+        background: var(--color-background-brand-hover);
+      }
+    }
+
+    &:focus-visible {
+      color: var(--color-content-primary);
+    }
+  }
+
+  .secondary {
+    color: var(--color-content-primary);
+    background: var(--color-background-primary);
+    box-shadow: 0 0 0 1px var(--color-border-secondary);
+
+    @media (hover: hover) {
+      &:hover {
+        background: var(--color-background-primary-hover);
+      }
+    }
+  }
+
+  .tertiary {
+    color: var(--color-content-primary);
+    background: var(--color-background-secondary);
+    box-shadow: 0 0 0 1px var(--color-border-primary);
+
+    @media (hover: hover) {
+      &:hover {
+        background: var(--color-background-secondary-hover);
+      }
+    }
+  }
+</style>

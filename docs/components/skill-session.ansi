@@ -1,0 +1,17 @@
+[92m>[39m fix the surviving mutants in src
+
+[90m$[39m mootant run src --json
+[90m{ …, "mutants": [{ …, "file": "src/discount.ts", "line": 2,[39m
+[90m    "after": ["  if (total > 100 || isMember) {"],[39m
+[90m    "testFiles": { "test/discount.test.ts": 3, … },[39m
+[90m    "recheck": "mootant run src --mutant q31p780qv6yk" }] }[39m
+
+[1mtest/discount.test.ts[22m
+[32m+[39m test('orders of exactly 100 get 10% off', () => {
+[32m+[39m   expect(getDiscount(100, false)).toBe(10)
+[32m+[39m })
+
+[90m$[39m mootant run src --mutant q31p780qv6yk
+[90mkilled          [39m1
+[90msurvived        [39m[92m0[39m
+[90mscore           [39m[1m100%[22m

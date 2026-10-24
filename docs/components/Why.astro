@@ -1,0 +1,161 @@
+---
+import IconGitPullRequest from '../icons/git-pull-request.svg'
+import IconFilter from '../icons/filter.svg'
+import IconShield from '../icons/shield.svg'
+import IconPuzzle from '../icons/puzzle.svg'
+import Typography from './Typography.astro'
+import Container from './Container.astro'
+import IconHook from '../icons/hook.svg'
+import IconBolt from '../icons/bolt.svg'
+import Lead from './Lead.astro'
+
+let cards = [
+  {
+    description:
+      'Mootant skips changes no test could catch or should care about, so every mutant in the report is worth a test.',
+    title: 'No noise',
+    icon: IconFilter,
+  },
+  {
+    description:
+      'It also changes numbers, return values and awaits: places other tools leave unchecked.',
+    title: 'Finds hidden gaps',
+    icon: IconHook,
+  },
+  {
+    description:
+      "Kills and survivors are cached with the files they depended on, so the next run reuses whatever your change didn't touch.",
+    title: 'Fast by design',
+    icon: IconBolt,
+  },
+  {
+    description:
+      'Check only the lines a pull request changed, and fail the build when the score drops.',
+    icon: IconGitPullRequest,
+    title: 'Ready for CI',
+  },
+  {
+    description:
+      'A mutant survives only when your tests ran the changed code and still passed. Code no test reaches is reported as untested.',
+    title: 'Results you can trust',
+    icon: IconShield,
+  },
+  {
+    description:
+      'Picks up Vitest or node:test with your existing config. TypeScript, JavaScript, Vue and Svelte work out of the box.',
+    title: 'Fits your stack',
+    icon: IconPuzzle,
+  },
+]
+---
+
+<section class="why">
+  <Container class="content">
+    <div class="header">
+      <Typography
+        color="primary"
+        class="title"
+        align="start"
+        size="2xl"
+        tag="h2"
+        mbe="m"
+        bold
+      >
+        Why Mootant
+      </Typography>
+      <Lead
+        muted="Mutation testing has a reputation: slow, noisy, and a report nobody acts on."
+        quote
+      >
+        Mootant was built to change all three.
+      </Lead>
+    </div>
+    <ul class="cards">
+      {
+        cards.map(({ description, icon: Icon, title }) => (
+          <li class="card">
+            <div class="card-header">
+              <Typography
+                color="primary"
+                align="start"
+                size="l"
+                tag="h3"
+                bold
+              >
+                {title}
+              </Typography>
+              <Icon class="icon" />
+            </div>
+            <Typography
+              align="start"
+              size="s"
+            >
+              {description}
+            </Typography>
+          </li>
+        ))
+      }
+    </ul>
+  </Container>
+</section>
+
+<style>
+  .why {
+    padding-block: var(--space-xl) var(--space-2xl);
+  }
+
+  .content {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-xl);
+  }
+
+  .header {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-m);
+    max-inline-size: 48rem;
+  }
+
+  .title {
+    line-height: 1.2;
+  }
+
+  .cards {
+    display: grid;
+    gap: var(--space-l);
+    padding-inline-start: 0;
+    margin-block: 0;
+    list-style-type: '';
+
+    @media (width >= 768px) {
+      grid-template-columns: repeat(2, [card] 1fr);
+    }
+  }
+
+  .card {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-xs);
+    padding: var(--space-l);
+    margin-block: 0;
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: calc(var(--border-radius) * 1.5);
+  }
+
+  .card-header {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-s);
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .icon {
+    flex-shrink: 0;
+    inline-size: var(--size-icon-m);
+    block-size: var(--size-icon-m);
+    color: var(--color-content-primary);
+  }
+</style>

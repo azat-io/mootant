@@ -1,0 +1,46 @@
+---
+import Typography from './Typography.astro'
+
+interface Props {
+  color?: 'primary' | 'brand'
+  quote?: boolean
+  muted?: string
+  class?: string
+}
+
+let { class: className, color = 'brand', quote = false, muted } = Astro.props
+---
+
+<Typography
+  class:list={['lead', { quote }, className, color]}
+  color="primary"
+  align="start"
+  size="l"
+>
+  {muted && <span class="muted">{muted}</span>}
+  <slot />
+</Typography>
+
+<style>
+  .lead {
+    text-wrap: balance;
+  }
+
+  .quote {
+    padding-inline-start: var(--space-m);
+    border-inline-start-style: solid;
+    border-inline-start-width: 8px;
+  }
+
+  .brand {
+    border-color: var(--color-border-brand);
+  }
+
+  .primary {
+    border-color: var(--color-border-primary);
+  }
+
+  .muted {
+    color: var(--color-content-secondary);
+  }
+</style>

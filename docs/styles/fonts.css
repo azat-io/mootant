@@ -1,0 +1,69 @@
+@font-face {
+  font-family: Sora;
+  font-weight: normal;
+  src: url('/fonts/sora-regular.woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Sora;
+  font-weight: bold;
+  src: url('/fonts/sora-bold.woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: normal;
+  src: url('/fonts/jetbrains-mono.woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sora Fallback';
+  font-style: normal;
+  font-weight: normal;
+  src: local('Arial');
+  size-adjust: 113.97%;
+  ascent-override: 85.11%;
+  descent-override: 25.44%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono Fallback';
+  font-style: normal;
+  font-weight: normal;
+  src: local('Courier New');
+  size-adjust: 99.98%;
+  ascent-override: 102.02%;
+  descent-override: 30%;
+  line-gap-override: 0%;
+}
+
+:root {
+  --font-family-base: 'Sora', 'Sora Fallback', sans-serif;
+  --font-family-title: 'Sora', 'Sora Fallback', sans-serif;
+  --font-family-code: monospace;
+  --font-size-2xs: clamp(0.82rem, 0.09vi + 0.8rem, 0.88rem);
+  --font-size-xs: clamp(0.88rem, 0.1vi + 0.85rem, 0.93rem);
+  --font-size-s: clamp(0.94rem, 0.11vi + 0.91rem, 1rem);
+  --font-size-m: clamp(1rem, 0.11vi + 0.97rem, 1.06rem);
+  --font-size-l: clamp(1.2rem, 0.23vi + 1.14rem, 1.33rem);
+  --font-size-xl: clamp(1.44rem, 0.4vi + 1.34rem, 1.66rem);
+  --font-size-2xl: clamp(1.73rem, 0.63vi + 1.57rem, 2.08rem);
+  --font-size-3xl: clamp(2.07rem, 0.95vi + 1.84rem, 2.59rem);
+  --font-size-4xl: clamp(2.49rem, 1.37vi + 2.15rem, 3.24rem);
+  --font-size-5xl: clamp(2.99rem, 1.94vi + 2.5rem, 4.05rem);
+  --font-size-code: clamp(0.88rem, 0.11vi + 0.85rem, 0.94rem);
+  --font-xs: 400 var(--font-size-xs) / 1.65 var(--font-family-base);
+  --font-s: 400 var(--font-size-s) / 1.75 var(--font-family-base);
+  --font-m: 400 var(--font-size-m) / 1.75 var(--font-family-base);
+  --font-l: 400 var(--font-size-l) / 1.75 var(--font-family-base);
+  --font-xl: 600 var(--font-size-xl) / 1.75 var(--font-family-title);
+  --font-2xl: 600 var(--font-size-2xl) / 1.5 var(--font-family-title);
+  --font-3xl: 600 var(--font-size-3xl) / 1.5 var(--font-family-title);
+  --font-4xl: 600 var(--font-size-4xl) / 1.5 var(--font-family-title);
+  --font-code: 400 var(--font-size-code) / 1.45 var(--font-family-code);
+}

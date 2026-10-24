@@ -489,6 +489,14 @@ describe('formatRunTextReport', () => {
     expect(getField(format(report), 'score')).toBe('none (no mutants to score)')
   })
 
+  it('leaves out the covered score when it equals the score', () => {
+    let report = createReport()
+    report.summary.coveredScore = 50
+    report.summary.threshold = 50
+
+    expect(getField(format(report), 'score')).toBe('50%  ✔ threshold 50%')
+  })
+
   it('names a covered score without covered mutants', () => {
     let report = createReport()
     report.summary.coveredScore = null

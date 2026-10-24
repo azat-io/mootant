@@ -1,0 +1,283 @@
+---
+import Typography from './Typography.astro'
+import Container from './Container.astro'
+import Lead from './Lead.astro'
+
+/**
+ * Files of `vitest run --coverage` on the example project. Each of them is
+ * fully covered, so every metric shows 100%. The functions column is left out
+ * to keep the table narrow on phones.
+ */
+let files = ['cart.ts', 'discount.ts', 'shipping.ts']
+
+let metrics = ['Stmts', 'Branch', 'Lines']
+
+/**
+ * The file where the mutant survived, highlighted in the table.
+ */
+let survivedFile = 'discount.ts'
+---
+
+<section class="coverage">
+  <Container class="content">
+    <div class="header">
+      <Typography
+        color="primary"
+        class="title"
+        align="start"
+        size="2xl"
+        tag="h2"
+        mbe="m"
+        bold
+      >
+        Coverage lies
+      </Typography>
+      <Lead
+        muted="Coverage shows which lines ran."
+        color="primary"
+        quote
+      >
+        It can't tell whether any test would notice them change.
+      </Lead>
+    </div>
+    <div class="comparison">
+      <div class="stat">
+        <div class="stat-header">
+          <span class="label">Code coverage</span>
+          <span class="source">vitest run --coverage</span>
+        </div>
+        <span class="value value-muted">100%</span>
+        <span class="caption">Every statement, branch and line ran.</span>
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">File</th>
+              {metrics.map(metric => <th scope="col">{metric}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {
+              files.map(file => (
+                <tr class:list={{ survived: file === survivedFile }}>
+                  <th scope="row">{file}</th>
+                  {metrics.map(() => (
+                    <td>100%</td>
+                  ))}
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="stat">
+        <div class="stat-header">
+          <span class="label">Mutation testing</span>
+          <span class="source">mootant run src</span>
+        </div>
+        <span class="value value-survived">1 survived</span>
+        <span class="caption">
+          of 26 mutants · <span class="score">score 96.15%</span>
+        </span>
+        <figure class="diff">
+          <figcaption class="file">
+            src/discount.ts<span class="location">:2:7</span>
+          </figcaption>
+          <pre
+            class="code"><code><span class="removed"><span class="marker">-</span> if (total <span class="change">&gt;=</span> 100 || isMember) &#123;</span>
+<span class="added"><span class="marker">+</span> if (total <span class="change">&gt;</span> 100 || isMember) &#123;</span></code></pre>
+        </figure>
+        <span class="caption">
+          No test checks an order of exactly 100, so all 11 tests still pass.
+        </span>
+      </div>
+    </div>
+  </Container>
+</section>
+
+<style>
+  .coverage {
+    padding-block: var(--space-xl) var(--space-2xl);
+  }
+
+  .content {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-xl);
+  }
+
+  .header {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-m);
+    max-inline-size: 48rem;
+  }
+
+  .title {
+    line-height: 1.2;
+  }
+
+  .comparison {
+    display: grid;
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: calc(var(--border-radius) * 1.5);
+
+    @media (width >= 1024px) {
+      grid-template-columns: [coverage] 1fr [mutation] 1fr;
+    }
+  }
+
+  .stat {
+    --font-size-report: clamp(
+      0.75rem,
+      (100cqi - 2 * var(--space-s) - 2px) / (34 * 0.6),
+      var(--font-size-xs)
+    );
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-xs);
+    min-inline-size: 0;
+    padding: var(--space-m);
+    container-type: inline-size;
+
+    @media (width >= 768px) {
+      padding: var(--space-l);
+    }
+
+    & + & {
+      border-block-start: 1px solid var(--color-border-primary);
+
+      @media (width >= 1024px) {
+        border-block-start: none;
+        border-inline-start: 1px solid var(--color-border-primary);
+      }
+    }
+  }
+
+  .stat-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs) var(--space-s);
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .label {
+    font: var(--font-s);
+    color: var(--color-content-secondary);
+  }
+
+  .source,
+  .score {
+    font:
+      600 var(--font-size-2xs) / 1.5 'JetBrains Mono',
+      monospace;
+    color: var(--color-content-secondary);
+  }
+
+  .value {
+    font: 600 var(--font-size-3xl) / 1.2 var(--font-family-title);
+    color: var(--color-content-primary);
+  }
+
+  .value-survived {
+    color: var(--color-code-ansi-bright-green);
+  }
+
+  .value-muted {
+    opacity: 70%;
+  }
+
+  .caption {
+    font: var(--font-s);
+    color: var(--color-content-secondary);
+  }
+
+  .table {
+    margin-block: var(--space-xs) 0;
+    font:
+      normal var(--font-size-report) / 1.6 'JetBrains Mono',
+      monospace;
+    color: var(--color-code-foreground);
+    background: var(--color-code-background);
+
+    & th,
+    & td {
+      padding-block: var(--space-2xs);
+      padding-inline: var(--space-xs) 0;
+      font: inherit;
+      color: inherit;
+      white-space: nowrap;
+      border-block-end: none;
+    }
+
+    & tr > :first-child {
+      padding-inline-start: var(--space-s);
+    }
+
+    & tr > :last-child {
+      padding-inline-end: var(--space-s);
+    }
+
+    & thead th {
+      color: var(--color-code-ansi-bright-black);
+      border-block-end: 1px solid var(--color-border-primary);
+    }
+
+    & td,
+    & th + th {
+      text-align: end;
+    }
+
+    & .survived {
+      background: var(--color-overlay-brand);
+    }
+  }
+
+  .diff {
+    margin: var(--space-xs) 0;
+    overflow: clip;
+    font:
+      normal var(--font-size-report) / 1.6 'JetBrains Mono',
+      monospace;
+    font-variant-ligatures: none;
+    color: var(--color-code-foreground);
+    background: var(--color-code-background);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+  }
+
+  .file {
+    padding: var(--space-2xs) var(--space-s);
+    background: var(--color-background-secondary-hover);
+    border-block-end: 1px solid var(--color-border-primary);
+  }
+
+  .code {
+    padding: var(--space-xs) var(--space-s);
+    overflow: auto;
+    font: inherit;
+    background: none;
+    border: none;
+    border-radius: 0;
+
+    & code {
+      font: inherit;
+      background: none;
+    }
+  }
+
+  .location {
+    color: var(--color-code-ansi-bright-black);
+  }
+
+  .removed .marker,
+  .removed .change {
+    color: var(--color-code-ansi-red);
+  }
+
+  .added .marker,
+  .added .change {
+    color: var(--color-code-ansi-green);
+  }
+</style>

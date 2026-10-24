@@ -1,0 +1,120 @@
+---
+import Typography from './Typography.astro'
+import output from './hero-output.ansi?raw'
+import Container from './Container.astro'
+import Terminal from './Terminal.astro'
+import Command from './Command.astro'
+import Button from './Button.astro'
+---
+
+<section class="hero">
+  <Container class="content">
+    <div class="info">
+      <span class="slogan">Mutation testing for JavaScript and TypeScript</span>
+      <Typography
+        color="primary"
+        class="title"
+        align="start"
+        size="4xl"
+        tag="h1"
+        bold
+      >
+        Find the tests that test nothing.
+      </Typography>
+      <Typography
+        align="start"
+        size="l"
+      >
+        Mootant changes your code in hundreds of small ways and runs the tests
+        that should notice. The mutants that survive are the gaps in your suite,
+        and the agent skill in the box knows how to close them.
+      </Typography>
+      <div class="actions">
+        <div class="buttons">
+          <Button
+            href="/docs/getting-started"
+            color="primary"
+            tag="a"
+            full
+          >
+            Get Started
+          </Button>
+          <Button
+            href="https://github.com/azat-io/mootant"
+            rel="noopener noreferrer"
+            color="secondary"
+            target="_blank"
+            tag="a"
+            full
+          >
+            View on GitHub
+          </Button>
+        </div>
+        <Command
+          command="npm install -D mootant"
+          class="install"
+        />
+      </div>
+    </div>
+    <Terminal
+      class="output"
+      {output}
+    />
+  </Container>
+</section>
+
+<style>
+  .hero {
+    padding-block: var(--space-2xl);
+  }
+
+  .content {
+    display: grid;
+    gap: var(--space-xl);
+    align-items: start;
+
+    @media (width >= 1152px) {
+      grid-template-columns: [info] 1fr [output] 1fr;
+    }
+  }
+
+  .info {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-m);
+  }
+
+  .slogan {
+    font:
+      600 var(--font-size-2xs) / 2 'JetBrains Mono',
+      monospace;
+    color: var(--color-content-secondary);
+    text-transform: uppercase;
+  }
+
+  .title {
+    line-height: 1.2;
+  }
+
+  .actions {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-m);
+    align-self: start;
+    margin-block-start: var(--space-m);
+  }
+
+  .buttons {
+    display: flex;
+    flex-flow: row wrap;
+    gap: var(--space-m);
+  }
+
+  .install {
+    margin-block-start: var(--space-xs);
+  }
+
+  .output {
+    max-inline-size: 40rem;
+  }
+</style>

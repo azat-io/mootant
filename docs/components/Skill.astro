@@ -1,0 +1,90 @@
+---
+import output from './skill-session.ansi?raw'
+import Typography from './Typography.astro'
+import Container from './Container.astro'
+import Terminal from './Terminal.astro'
+import Command from './Command.astro'
+import Logo from './Logo.astro'
+---
+
+<section class="skill">
+  <Container class="content">
+    <div class="info">
+      <Logo class="logo" />
+      <Typography
+        color="primary"
+        class="title"
+        align="start"
+        size="2xl"
+        tag="h2"
+        bold
+      >
+        Ships with an agent skill
+      </Typography>
+      <Typography
+        align="start"
+        size="m"
+      >
+        Mutation testing produces a to-do list that nobody wants to work through
+        by hand.
+      </Typography>
+      <Typography
+        align="start"
+        size="m"
+      >
+        The skill reads the report, writes the missing tests and asks Mootant to
+        confirm each kill. You review a pull request.
+      </Typography>
+      <Command
+        command="npx skills add azat-io/mootant"
+        class="install"
+      />
+    </div>
+    <Terminal
+      class="session"
+      {output}
+    />
+  </Container>
+</section>
+
+<style>
+  .skill {
+    padding-block: var(--space-2xl);
+    background: var(--color-background-secondary);
+  }
+
+  .content {
+    display: grid;
+    gap: var(--space-xl);
+    align-items: center;
+
+    @media (width >= 1152px) {
+      grid-template-columns: [info] 1fr [session] 1fr;
+    }
+  }
+
+  .info {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-m);
+    min-inline-size: 0;
+  }
+
+  .logo {
+    inline-size: 120px;
+    block-size: 120px;
+  }
+
+  .title {
+    line-height: 1.2;
+  }
+
+  .install {
+    align-self: start;
+    margin-block-start: var(--space-xs);
+  }
+
+  .session {
+    max-inline-size: 40rem;
+  }
+</style>

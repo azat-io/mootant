@@ -1,0 +1,115 @@
+---
+import Typography from './Typography.astro'
+import Container from './Container.astro'
+
+let steps = [
+  {
+    description:
+      'Mootant picks the changes worth testing and compiles them all into your code in memory, each behind a switch. Your files stay untouched.',
+    title: 'Built once, switched at runtime',
+    label: '01 · Instrument',
+  },
+  {
+    description:
+      'A dry run maps which test files reach which mutant. Then every mutant runs alone, on a fresh module graph, with only those files, until a test fails.',
+    title: 'Each mutant on its own',
+    label: '02 · Run',
+  },
+  {
+    description:
+      'Each survivor comes with a diff, the test file to extend and a command to re-check it. Fix it yourself or hand it to the agent skill.',
+    title: 'Survivors become tests',
+    label: '03 · Fix',
+  },
+]
+---
+
+<section
+  class="how-it-works"
+  id="how-it-works"
+>
+  <Container class="content">
+    <Typography
+      color="primary"
+      class="title"
+      align="start"
+      size="2xl"
+      tag="h2"
+      bold
+    >
+      How it works
+    </Typography>
+    <ol class="steps">
+      {
+        steps.map(({ description, title, label }) => (
+          <li class="step">
+            <span class="label">{label}</span>
+            <Typography
+              color="primary"
+              align="start"
+              size="l"
+              tag="h3"
+              bold
+            >
+              {title}
+            </Typography>
+            <Typography
+              align="start"
+              size="s"
+            >
+              {description}
+            </Typography>
+          </li>
+        ))
+      }
+    </ol>
+  </Container>
+</section>
+
+<style>
+  .how-it-works {
+    padding-block: var(--space-xl) var(--space-2xl);
+  }
+
+  .content {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-xl);
+  }
+
+  .title {
+    line-height: 1.2;
+  }
+
+  .steps {
+    display: grid;
+    gap: var(--space-xl);
+    padding-inline-start: 0;
+    margin-block: 0;
+    list-style-type: '';
+
+    @media (width >= 1024px) {
+      grid-template-columns: repeat(3, [step] 1fr);
+    }
+  }
+
+  .step {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-xs);
+    padding-block-start: var(--space-m);
+    margin-block: 0;
+    border-block-start: 2px solid var(--color-border-secondary);
+
+    &:last-child {
+      border-block-start-color: var(--color-border-brand);
+    }
+  }
+
+  .label {
+    font:
+      600 var(--font-size-2xs) / 1.5 'JetBrains Mono',
+      monospace;
+    color: var(--color-content-secondary);
+  }
+</style>

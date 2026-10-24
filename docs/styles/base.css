@@ -1,0 +1,248 @@
+::selection {
+  color: var(--color-content-selection);
+  background: var(--color-background-selection);
+}
+
+* {
+  box-sizing: border-box;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0s !important;
+  }
+}
+
+html {
+  scroll-padding-block-start: var(--header-block-size);
+  background: var(--color-background-primary);
+
+  @media (prefers-reduced-motion: no-preference) {
+    scroll-behavior: smooth;
+    transition: background 200ms ease-in-out;
+  }
+}
+
+body {
+  margin: 0;
+  container-type: inline-size;
+  font: var(--font-s);
+  color: var(--color-content-primary);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: color 200ms ease-in-out;
+  }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+}
+
+h1 {
+  margin-block: var(--space-s) var(--space-l);
+  font: var(--font-4xl);
+}
+
+h2 {
+  margin-block: var(--space-xl) var(--space-m);
+  font: var(--font-2xl);
+}
+
+h3 {
+  margin-block: var(--space-l) var(--space-s);
+  font: var(--font-xl);
+}
+
+p {
+  margin-block: var(--space-s);
+  text-wrap: pretty;
+}
+
+ul,
+ol {
+  padding-inline-start: 16px;
+  margin-block: var(--space-m);
+}
+
+li {
+  margin-block: var(--space-2xs);
+}
+
+button {
+  appearance: auto;
+}
+
+button,
+input,
+select,
+optgroup,
+textarea {
+  font: inherit;
+}
+
+a,
+select:not(:disabled),
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+a {
+  color: var(--color-content-brand);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  outline: none;
+  border-radius: var(--border-radius);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: box-shadow 200ms;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--color-content-brand-hover);
+    }
+  }
+
+  &:focus-visible {
+    text-decoration: none;
+    background: var(--color-overlay-brand);
+    box-shadow: 0 0 0 3px var(--color-border-brand);
+  }
+}
+
+pre,
+code {
+  font: var(--font-code);
+  font-variant-ligatures: none;
+  hyphens: none;
+  background: var(--color-code-background);
+}
+
+code {
+  border-radius: var(--border-radius);
+
+  &:not(pre code) {
+    padding-inline: var(--space-2xs);
+  }
+
+  @media print {
+    white-space: pre-wrap;
+  }
+}
+
+pre,
+code:not(pre code) {
+  border: 1px solid var(--color-border-primary);
+}
+
+pre {
+  position: relative;
+  padding: var(--space-m);
+  margin-block: 0;
+  overflow-block: scroll;
+  outline: none;
+  scrollbar-width: none;
+  border-radius: var(--border-radius);
+
+  &:focus-visible {
+    z-index: 1;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px var(--color-border-brand);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: box-shadow 200ms;
+    }
+  }
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+h2,
+h3 {
+  position: relative;
+
+  @media (hover: hover) {
+    @media (width >= 768px) {
+      &:hover .heading-anchor {
+        opacity: 100%;
+      }
+    }
+  }
+}
+
+table {
+  inline-size: 100%;
+  overflow: clip;
+  font: var(--font-s);
+  border-collapse: collapse;
+  border-style: hidden;
+  border-radius: var(--border-radius);
+  box-shadow: 0 0 0 1px var(--color-border-primary);
+}
+
+th,
+td {
+  padding: var(--space-xs) var(--space-s);
+  border-block-end: 1px solid var(--color-border-primary);
+}
+
+th {
+  font: var(--font-m);
+  font-family: var(--font-family-title);
+  color: var(--color-content-secondary);
+  text-align: start;
+}
+
+thead tr {
+  background: var(--color-background-secondary-hover) !important;
+}
+
+tr:nth-child(even) {
+  background: var(--color-background-primary-hover);
+}
+
+tr:nth-child(odd) {
+  background: var(--color-background-secondary);
+}
+
+kbd {
+  padding: 0 var(--space-2xs);
+  font: var(--font-code);
+  background: var(--color-code-background);
+  border: 1px solid var(--color-border-primary);
+  border-block-end-width: 3px;
+  border-radius: var(--border-radius);
+}
+
+.heading-anchor {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: calc(0px - var(--space-s) * 2);
+  display: none;
+  inline-size: 24px;
+  block-size: 24px;
+  padding-inline: 0;
+  text-decoration: none;
+  opacity: 0%;
+  transform: translateY(-50%);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity 250ms ease-in-out 100ms;
+  }
+
+  &:focus-visible {
+    border-radius: 8px;
+    opacity: 100%;
+  }
+
+  @media (width >= 768px) {
+    display: flex;
+    flex-wrap: nowrap;
+  }
+}

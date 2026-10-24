@@ -1,0 +1,24 @@
+---
+import Typography from './Typography.astro'
+import Container from './Container.astro'
+---
+
+<footer class="footer">
+  <Container class="license">
+    <Typography
+      size="xs"
+      mbe="2xs"
+    >
+      Released under the MIT License
+    </Typography>
+    <Typography size="xs">Copyright © 2026 Azat S. & Contributors</Typography>
+  </Container>
+</footer>
+
+<style>
+  .footer {
+    padding-block: var(--space-xl);
+    border-block-start: 1px solid var(--color-border-primary);
+    transition: border-color 300ms;
+  }
+</style>

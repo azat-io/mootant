@@ -260,8 +260,9 @@ function formatCounts(summary: RunReportSummary, style: TextStyle): string {
 }
 
 /**
- * Formats the score with the covered score and the threshold check when there
- * is a threshold.
+ * Formats the score with the covered score when it differs, since without
+ * uncovered mutants the two are the same, and the threshold check when there is
+ * a threshold.
  *
  * @param summary - Counts of the run.
  * @param style - Colors and symbols of the output.
@@ -272,7 +273,10 @@ function formatScore(summary: RunReportSummary, style: TextStyle): string {
   if (summary.score === null) {
     return `none ${colors.gray('(no mutants to score)')}`
   }
-  let text = `${colors.bold(`${summary.score}%`)} ${colors.gray(`(covered ${summary.coveredScore === null ? 'none' : `${summary.coveredScore}%`})`)}`
+  let text = colors.bold(`${summary.score}%`)
+  if (summary.coveredScore !== summary.score) {
+    text += ` ${colors.gray(`(covered ${summary.coveredScore === null ? 'none' : `${summary.coveredScore}%`})`)}`
+  }
   if (summary.threshold !== null) {
     let { cross, check } = getSymbols(style.unicode)
     text +=

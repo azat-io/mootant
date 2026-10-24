@@ -1,0 +1,31 @@
+---
+import HowItWorks from '../components/HowItWorks.astro'
+import Coverage from '../components/Coverage.astro'
+import Header from '../components/Header.astro'
+import Footer from '../components/Footer.astro'
+import Skill from '../components/Skill.astro'
+import Head from '../components/Head.astro'
+import Hero from '../components/Hero.astro'
+import Html from '../components/Html.astro'
+import Body from '../components/Body.astro'
+import Why from '../components/Why.astro'
+
+let { keywords = [], description } = Astro.props
+---
+
+<Html>
+  <Head
+    type="website"
+    {description}
+    {keywords}
+  />
+  <Body>
+    <Header />
+    <Hero />
+    <Coverage />
+    <Why />
+    <HowItWorks />
+    <Skill />
+    <Footer />
+  </Body>
+</Html>

@@ -1,0 +1,344 @@
+---
+import VersionBadge from './VersionBadge.astro'
+import IconGithub from '../icons/github.svg'
+import IconCross from '../icons/cross.svg'
+import Container from './Container.astro'
+import IconMoon from '../icons/moon.svg'
+import IconMenu from '../icons/menu.svg'
+import Wordmark from './Wordmark.astro'
+import IconSun from '../icons/sun.svg'
+import Button from './Button.astro'
+
+let links = [
+  { href: '/docs/getting-started', title: 'Guide' },
+  { href: '/docs/configuration', title: 'Config' },
+  { href: '/docs/mutators', title: 'Mutators' },
+  { href: '/docs/agent-skill', title: 'Agent skill' },
+]
+---
+
+<header class="header">
+  <Container class="content">
+    <div class="menu">
+      <a
+        aria-label="Mootant Home"
+        class="home-link"
+        href="/"
+      >
+        <Wordmark class="wordmark" />
+      </a>
+      <VersionBadge />
+      <nav
+        class="navigation"
+        aria-label="Main"
+        id="navigation"
+      >
+        <ul class="links">
+          {
+            links.map(link => (
+              <li class="item">
+                <a
+                  href={link.href}
+                  class="link"
+                >
+                  {link.title}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="navigation-tools">
+          <Button
+            aria-label="Toggle theme"
+            data-toggle-theme
+            color="tertiary"
+            square
+          >
+            <IconSun class="icon icon-dark" />
+            <IconMoon class="icon icon-light" />
+          </Button>
+          <Button
+            href="https://github.com/azat-io/mootant"
+            rel="noopener noreferrer"
+            aria-label="GitHub"
+            color="tertiary"
+            target="_blank"
+            tag="a"
+            square
+          >
+            <IconGithub class="icon" />
+          </Button>
+        </div>
+      </nav>
+    </div>
+    <div class="menu">
+      <div class="tools">
+        <Button
+          aria-label="Toggle theme"
+          data-toggle-theme
+          color="tertiary"
+          square
+        >
+          <IconSun class="icon icon-dark" />
+          <IconMoon class="icon icon-light" />
+        </Button>
+        <Button
+          href="https://github.com/azat-io/mootant"
+          rel="noopener noreferrer"
+          aria-label="GitHub"
+          color="tertiary"
+          target="_blank"
+          tag="a"
+          square
+        >
+          <IconGithub class="icon" />
+        </Button>
+      </div>
+      <div class="menu-toggle">
+        <Button
+          aria-controls="navigation"
+          aria-expanded="false"
+          aria-label="Menu"
+          color="tertiary"
+          id="menu-button"
+          square
+        >
+          <IconMenu class="icon icon-menu" />
+          <IconCross class="icon icon-cross" />
+        </Button>
+      </div>
+    </div>
+  </Container>
+</header>
+
+<script>
+  let toggleTheme = (): void => {
+    let theme =
+      document.documentElement.dataset['theme'] === 'dark' ? 'light' : 'dark'
+    document.documentElement.dataset['theme'] = theme
+    localStorage.setItem('theme', theme)
+  }
+
+  let getMenuButton = (): HTMLButtonElement | null =>
+    document.querySelector<HTMLButtonElement>('#menu-button')
+
+  let isMenuOpen = (): boolean =>
+    getMenuButton()?.getAttribute('aria-expanded') === 'true'
+
+  let setMenuOpen = (open: boolean): void => {
+    getMenuButton()?.setAttribute('aria-expanded', String(open))
+  }
+
+  let toggleMenu = (event: MouseEvent): void => {
+    setMenuOpen(!isMenuOpen())
+    /* A click from the keyboard has no detail: move focus into the menu. */
+    if (isMenuOpen() && event.detail === 0) {
+      document.querySelector<HTMLAnchorElement>('#navigation a')?.focus()
+    }
+  }
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && isMenuOpen()) {
+      setMenuOpen(false)
+      getMenuButton()?.focus()
+    }
+  })
+
+  /* Mobile Safari sends no click for a tap on plain content, so a tap outside
+     the menu is caught as a pointer press. */
+  document.addEventListener('pointerdown', event => {
+    let target = event.target as Element
+    if (
+      isMenuOpen() &&
+      !target.closest('#navigation') &&
+      !target.closest('#menu-button')
+    ) {
+      setMenuOpen(false)
+    }
+  })
+
+  document.addEventListener('astro:page-load', () => {
+    for (let button of document.querySelectorAll('[data-toggle-theme]')) {
+      button.addEventListener('click', toggleTheme)
+    }
+    getMenuButton()?.addEventListener('click', toggleMenu)
+  })
+</script>
+
+<style>
+  .header {
+    position: relative;
+    padding-block: var(--space-xs);
+    border-block-end: 1px solid var(--color-border-primary);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: border-color 300ms;
+    }
+  }
+
+  .content {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .menu {
+    display: flex;
+    flex-flow: row nowrap;
+    gap: var(--space-m);
+    align-items: center;
+  }
+
+  .home-link {
+    display: inline-flex;
+    flex-flow: nowrap;
+    padding: var(--space-2xs) var(--space-2xs);
+    outline: none;
+  }
+
+  .wordmark {
+    block-size: 28px;
+    margin-block-end: var(--space-xs);
+  }
+
+  .navigation {
+    display: none;
+
+    .header:has([aria-expanded='true']) & {
+      display: flex;
+      flex-flow: column nowrap;
+      opacity: 100%;
+      translate: 0;
+
+      @starting-style {
+        opacity: 0%;
+        translate: 0 calc(0px - var(--space-xs));
+      }
+    }
+
+    @media (width < 800px) {
+      position: absolute;
+      inset-block-start: 100%;
+      inset-inline: 0;
+      z-index: 1;
+      gap: var(--space-s);
+      padding: var(--space-xs) var(--space-l) var(--space-m);
+      background: var(--color-background-primary);
+      border-block-end: 1px solid var(--color-border-primary);
+      opacity: 0%;
+      translate: 0 calc(0px - var(--space-xs));
+
+      @media (prefers-reduced-motion: no-preference) {
+        transition:
+          display 200ms allow-discrete,
+          opacity 200ms ease-in-out,
+          translate 200ms ease-in-out;
+      }
+    }
+
+    @media (width >= 800px) {
+      display: block;
+    }
+  }
+
+  .links {
+    display: flex;
+    flex-flow: row nowrap;
+    gap: var(--space-2xs);
+    padding-inline-start: 0;
+    margin-block: 0;
+    list-style-type: '';
+
+    @media (width < 800px) {
+      flex-direction: column;
+    }
+  }
+
+  .item {
+    margin-block: 0;
+  }
+
+  .link {
+    display: flex;
+    flex-wrap: nowrap;
+    padding: var(--space-2xs) var(--space-s);
+    font: normal var(--font-size-s) / 1 var(--font-family-base);
+    color: var(--color-content-primary);
+    white-space: nowrap;
+    text-decoration: none;
+    border-radius: var(--border-radius);
+
+    @media (width < 800px) {
+      padding-block: var(--space-s);
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-content-primary);
+        background: var(--color-background-primary-hover);
+      }
+    }
+
+    &:focus-visible {
+      background: var(--color-overlay-brand);
+      box-shadow: 0 0 0 3px var(--color-border-brand);
+    }
+  }
+
+  .navigation-tools {
+    display: flex;
+    flex-flow: row nowrap;
+    gap: var(--space-m);
+    padding-block-start: var(--space-s);
+    border-block-start: 1px solid var(--color-border-primary);
+
+    @media (width >= 800px) {
+      display: none;
+    }
+  }
+
+  .tools {
+    display: none;
+    flex-flow: row nowrap;
+    gap: var(--space-m);
+
+    @media (width >= 800px) {
+      display: flex;
+    }
+  }
+
+  .menu-toggle {
+    display: flex;
+    flex-wrap: nowrap;
+
+    @media (width >= 800px) {
+      display: none;
+    }
+  }
+
+  .icon {
+    inline-size: var(--size-icon-m);
+    block-size: var(--size-icon-m);
+  }
+
+  .icon-dark,
+  .icon-cross,
+  [aria-expanded='true'] .icon-menu {
+    display: none;
+  }
+
+  [aria-expanded='true'] .icon-cross {
+    display: block;
+  }
+
+  :global([data-theme='dark']) {
+    .icon-dark {
+      display: block;
+    }
+
+    .icon-light {
+      display: none;
+    }
+  }
+</style>
