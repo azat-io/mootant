@@ -9,7 +9,7 @@ interface Props {
   output: string
 }
 
-let { class: className, columns = 64, output, ...props } = Astro.props
+let { class: className, columns = 63, output, ...props } = Astro.props
 ---
 
 <div
@@ -30,7 +30,7 @@ let { class: className, columns = 64, output, ...props } = Astro.props
     container-type: inline-size;
 
     & :global(pre) {
-      padding: var(--space-l);
+      padding: var(--space-l) var(--space-m);
       border-radius: calc(var(--border-radius) * 1.5);
     }
 
@@ -39,9 +39,10 @@ let { class: className, columns = 64, output, ...props } = Astro.props
       font-family: 'JetBrains Mono', monospace;
       font-size: clamp(
         0.75rem,
-        (100cqi - 2 * var(--space-l)) / (var(--columns) * 0.6),
+        (100cqi - 2 * var(--space-m)) / (var(--columns) * 0.6),
         var(--font-size-code)
       );
+      line-height: 1.5;
     }
   }
 
