@@ -45,15 +45,4 @@ let { class: className, columns = 63, output, ...props } = Astro.props
       line-height: 1.5;
     }
   }
-
-  .code,
-  .code :global(.line) {
-    @media (prefers-reduced-motion: no-preference) {
-      transition:
-        color 300ms,
-        background 300ms,
-        border-color 300ms,
-        box-shadow 300ms;
-    }
-  }
 </style>

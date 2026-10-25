@@ -9,7 +9,15 @@ import Body from '../components/Body.astro'
     type="website"
     description=""
   />
-  <Body>
+  <Body class="page">
     <slot />
   </Body>
 </Html>
+
+<style>
+  .page {
+    display: flex;
+    flex-flow: column nowrap;
+    min-block-size: 100dvb;
+  }
+</style>

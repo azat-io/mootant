@@ -9,6 +9,7 @@
   --color-background-tertiary: oklch(91.5% 0.0083 91.48deg);
   --color-background-selection: oklch(88.71% 0.2145 125.57deg / 88%);
   --color-content-brand: oklch(61.01% 0.147 125.57deg);
+  --color-content-brand-hover: oklch(56.01% 0.147 125.57deg);
   --color-content-primary: oklch(20.5% 0.0081 274.52deg);
   --color-content-secondary: oklch(48.5% 0.0081 274.52deg);
   --color-content-selection: oklch(20.53% 0.0081 274.52deg);
@@ -17,24 +18,26 @@
   --color-border-secondary: oklch(20.5% 0.0081 274.52deg);
   --color-overlay-brand: oklch(90% 0.2145 125.57deg / 30%);
   --color-overlay-primary: oklch(20.5% 0.0081 274.52deg / 25%);
-  --color-code-foreground: oklch(20.5% 0.0081 274.52deg);
-  --color-code-background: oklch(98.5% 0.0083 91.48deg);
-  --color-code-ansi-black: oklch(20.5% 0.0081 274.52deg);
-  --color-code-ansi-red: oklch(43.88% 0.16 25deg);
+
+  /* Code editor */
+  --color-code-foreground: oklch(29% 0.011 265deg);
+  --color-code-background: oklch(98.5% 0.006 95deg);
+  --color-code-ansi-black: oklch(29% 0.011 265deg);
+  --color-code-ansi-red: oklch(48% 0.14 25deg);
   --color-code-ansi-green: oklch(61.01% 0.147 125.57deg);
-  --color-code-ansi-yellow: oklch(56.32% 0.11 85deg);
-  --color-code-ansi-blue: oklch(43.64% 0.13 255deg);
-  --color-code-ansi-magenta: oklch(47.21% 0.189 335deg);
-  --color-code-ansi-cyan: oklch(58.56% 0.095 200deg);
-  --color-code-ansi-white: oklch(80% 0.0083 91.48deg);
-  --color-code-ansi-bright-black: oklch(55% 0.0081 274.52deg);
+  --color-code-ansi-yellow: oklch(49% 0.09 80deg);
+  --color-code-ansi-blue: oklch(47% 0.14 255deg);
+  --color-code-ansi-magenta: oklch(50% 0.11 325deg);
+  --color-code-ansi-cyan: oklch(49% 0.075 196deg);
+  --color-code-ansi-white: oklch(51% 0.008 95deg);
+  --color-code-ansi-bright-black: oklch(52% 0.012 265deg);
   --color-code-ansi-bright-red: var(--color-code-ansi-red);
   --color-code-ansi-bright-green: var(--color-code-ansi-green);
   --color-code-ansi-bright-yellow: var(--color-code-ansi-yellow);
   --color-code-ansi-bright-blue: var(--color-code-ansi-blue);
   --color-code-ansi-bright-magenta: var(--color-code-ansi-magenta);
   --color-code-ansi-bright-cyan: var(--color-code-ansi-cyan);
-  --color-code-ansi-bright-white: oklch(90% 0.0083 91.48deg);
+  --color-code-ansi-bright-white: oklch(55% 0.008 95deg);
   --color-code-token-keyword: var(--color-code-ansi-blue);
   --color-code-token-function: var(--color-code-ansi-green);
   --color-code-token-string: var(--color-code-ansi-yellow);
@@ -42,7 +45,7 @@
   --color-code-token-constant: var(--color-code-ansi-cyan);
   --color-code-token-parameter: var(--color-code-ansi-magenta);
   --color-code-token-comment: var(--color-code-ansi-bright-black);
-  --color-code-token-punctuation: oklch(45% 0.0081 274.52deg);
+  --color-code-token-punctuation: oklch(45% 0.01 265deg);
   --color-code-token-link: var(--color-code-ansi-bright-green);
 
   &[data-theme='dark'] {
@@ -56,6 +59,7 @@
     --color-background-tertiary: oklch(17.5% 0.0081 274.52deg);
     --color-background-selection: oklch(88.71% 0.2145 125.57deg / 88%);
     --color-content-brand: oklch(88.71% 0.2145 125.57deg);
+    --color-content-brand-hover: oklch(93.71% 0.2145 125.57deg);
     --color-content-primary: oklch(96% 0.0083 91.48deg);
     --color-content-secondary: oklch(76% 0.0083 91.48deg);
     --color-content-selection: oklch(20.53% 0.0081 274.52deg);
@@ -64,16 +68,18 @@
     --color-border-secondary: oklch(96% 0.0083 91.48deg);
     --color-overlay-brand: oklch(90% 0.2145 125.57deg / 30%);
     --color-overlay-primary: oklch(10% 0.0081 274.52deg / 60%);
+
+    /* Code editor */
     --color-code-foreground: oklch(96% 0.0083 91.48deg);
-    --color-code-background: oklch(17.5% 0.0081 274.52deg);
-    --color-code-ansi-black: oklch(35% 0.0081 274.52deg);
-    --color-code-ansi-red: oklch(62.34% 0.227 25deg);
+    --color-code-background: oklch(17.5% 0.0051 274.52deg);
+    --color-code-ansi-black: oklch(37% 0.01 265deg);
+    --color-code-ansi-red: oklch(77% 0.125 25deg);
     --color-code-ansi-green: oklch(88.71% 0.2145 125.57deg);
-    --color-code-ansi-yellow: oklch(87.71% 0.2145 80deg);
-    --color-code-ansi-blue: oklch(61.95% 0.185 255deg);
-    --color-code-ansi-magenta: oklch(67.43% 0.27 335deg);
-    --color-code-ansi-cyan: oklch(84.9% 0.139 200deg);
-    --color-code-ansi-white: oklch(86% 0.0083 91.48deg);
+    --color-code-ansi-yellow: oklch(82% 0.105 83deg);
+    --color-code-ansi-blue: oklch(79% 0.095 255deg);
+    --color-code-ansi-magenta: oklch(78% 0.105 330deg);
+    --color-code-ansi-cyan: oklch(80% 0.095 197deg);
+    --color-code-ansi-white: oklch(89% 0.008 265deg);
     --color-code-ansi-bright-black: oklch(62% 0.0083 91.48deg);
     --color-code-ansi-bright-white: oklch(98.5% 0.0083 91.48deg);
     --color-code-token-punctuation: oklch(75% 0.0083 91.48deg);

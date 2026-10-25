@@ -16,11 +16,11 @@ import Title from '../components/Title.astro'
 <style>
   .wrapper {
     display: flex;
+    flex-grow: 1;
     flex-flow: column nowrap;
     align-items: center;
     justify-content: center;
-    block-size: 100dvb;
+    padding-block-end: calc(var(--space-l) * 2);
     background: var(--color-background-secondary);
-    transform: translateY(calc(0px - var(--space-l)));
   }
 </style>

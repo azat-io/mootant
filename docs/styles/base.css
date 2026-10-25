@@ -122,7 +122,7 @@ code {
 }
 
 code {
-  border-radius: var(--border-radius);
+  border-radius: calc(var(--border-radius) / 1.5);
 
   &:not(pre code) {
     padding-inline: var(--space-2xs);

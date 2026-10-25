@@ -19,6 +19,10 @@ export let pages: Section[] = [
         url: '/guide/getting-started',
         title: 'Getting started',
       },
+      {
+        url: '/guide/configuration',
+        title: 'Configuration',
+      },
     ],
     title: 'Guide',
   },
