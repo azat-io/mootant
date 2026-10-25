@@ -23,6 +23,7 @@ describe('validateConfig', () => {
         timeout: { constant: 100, factor: 2 },
         hitLimit: { factor: 10, floor: 1 },
         paths: ['src', 'lib'],
+        incremental: true,
         concurrency: 4,
         threshold: 0,
         fast: true,
@@ -91,6 +92,10 @@ describe('validateConfig', () => {
       '"run" is invalid: "concurrency" must be a positive integer',
     ],
     [{ run: { fast: 1 } }, '"run" is invalid: "fast" must be true or false'],
+    [
+      { run: { incremental: 'yes' } },
+      '"run" is invalid: "incremental" must be true or false',
+    ],
     [
       { run: { cache: 'no' } },
       '"run" is invalid: "cache" must be true or false',

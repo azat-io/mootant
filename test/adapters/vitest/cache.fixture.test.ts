@@ -17,6 +17,7 @@ import path from 'node:path'
 import type { MutantResult } from '../../../types/run/mutant-result'
 import type { RunResult } from '../../../types/run/run-result'
 
+import { getCachePath } from '../../../core/cache/get-cache-path'
 import { vitestAdapter } from '../../../adapters/vitest/index'
 import { runMutants } from '../../../core/run-mutants'
 
@@ -359,7 +360,7 @@ describe('vitest adapter with the cache', () => {
 
   it('neither reads nor writes the cache when it is off', async () => {
     let root = await copyFixture()
-    let file = path.join(root, 'node_modules/.cache/mootant/run-v1.json')
+    let file = getCachePath(root)
     await run(root)
     let saved = await readFile(file, 'utf8')
     let { result } = await run(root, { cache: false })

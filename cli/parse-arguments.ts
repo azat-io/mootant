@@ -42,6 +42,9 @@ Options:
                        kill may be false (state left by earlier tries)
   --no-cache           run: run every mutant again instead of reusing the
                        verdicts of earlier runs
+  --incremental        run: reuse a verdict while the code of its mutant and
+                       its tests stay the same, even after changes elsewhere;
+                       faster after an edit, but a verdict may be stale
   --mutant <id>        run: run only this mutant, by its id or a unique prefix
                        of 4 characters or more, as reports print it; repeat
                        for more
@@ -59,6 +62,7 @@ let parserOptions = {
   mutant: { type: 'string', multiple: true },
   version: { type: 'boolean', short: 'v' },
   help: { type: 'boolean', short: 'h' },
+  incremental: { type: 'boolean' },
   concurrency: { type: 'string' },
   threshold: { type: 'string' },
   verbose: { type: 'boolean' },
@@ -79,6 +83,7 @@ let parserOptions = {
 let runOnlyOptions = [
   'threshold',
   'concurrency',
+  'incremental',
   'cache',
   'fast',
   'mutant',
@@ -89,6 +94,11 @@ let runOnlyOptions = [
  * Options of the `run` command. Settings left out come from the configuration.
  */
 export interface RunOptions {
+  /**
+   * True when `--incremental` is given, false with `--no-incremental`.
+   */
+  incremental?: boolean
+
   /**
    * Most test files at once, when `--concurrency` is given.
    */
@@ -358,12 +368,21 @@ function parseRunOptions(
       kind: 'error',
     }
   }
+  if (values.incremental === true && values.cache === false) {
+    return {
+      message: '--incremental reuses cached verdicts; drop --no-cache.',
+      kind: 'error',
+    }
+  }
   return {
     options: {
       ...(values.concurrency !== undefined && {
         concurrency: Number(values.concurrency),
       }),
       ...(threshold !== undefined && { threshold }),
+      ...(values.incremental !== undefined && {
+        incremental: values.incremental,
+      }),
       ...(values.fast !== undefined && { fast: values.fast }),
       ...(values.cache !== undefined && { cache: values.cache }),
       ...(values.config !== undefined && { config: values.config }),

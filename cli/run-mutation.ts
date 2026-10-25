@@ -32,6 +32,9 @@ export async function runMutation(options: RunOptions): Promise<void> {
         concurrency: options.concurrency,
       }),
       ...(options.threshold !== undefined && { threshold: options.threshold }),
+      ...(options.incremental !== undefined && {
+        incremental: options.incremental,
+      }),
       ...(options.fast !== undefined && { fast: options.fast }),
       ...(options.cache !== undefined && { cache: options.cache }),
       ...(options.config !== undefined && { config: options.config }),
@@ -49,6 +52,9 @@ export async function runMutation(options: RunOptions): Promise<void> {
     let recheck = formatCommand('run', {
       ...(options.config !== undefined && { config: options.config }),
       ...(options.preset !== undefined && { preset: options.preset }),
+      ...(options.incremental !== undefined && {
+        incremental: options.incremental,
+      }),
       ...(options.fast !== undefined && { fast: options.fast }),
       paths: options.paths,
     })

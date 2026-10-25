@@ -18,6 +18,7 @@ let runKeys = [
   'concurrency',
   'fast',
   'hitLimit',
+  'incremental',
   'paths',
   'runner',
   'threshold',
@@ -45,6 +46,70 @@ export function validateConfig(value: unknown, file: string): Config {
     throw new Error(`Invalid configuration in ${file}: ${problem}.`)
   }
   return value as Config
+}
+
+/**
+ * Finds what is wrong with the `run` settings: unknown keys, a threshold out of
+ * 0 to 100, a concurrency that is not a positive integer, a non-boolean `fast`,
+ * `cache` or `incremental`, a runner that is neither a name nor an object,
+ * paths that are not non-empty strings, and limit settings that are not
+ * positive numbers.
+ *
+ * @param value - Run settings read from the configuration file.
+ * @returns Description of the first problem, or null when there is none.
+ */
+function getRunProblem(value: unknown): string | null {
+  if (!isRecord(value)) {
+    return 'it must be an object'
+  }
+  for (let key of Object.keys(value)) {
+    if (!runKeys.includes(key)) {
+      let closest = findClosestName(key, runKeys)
+      let suggestion = closest === null ? '' : ` (did you mean "${closest}"?)`
+      return `"${key}" is not a run setting${suggestion}`
+    }
+  }
+  let { incremental, concurrency, threshold, runner, paths, cache, fast } =
+    value
+  if (
+    threshold !== undefined &&
+    (typeof threshold !== 'number' || !(threshold >= 0) || !(threshold <= 100))
+  ) {
+    return '"threshold" must be a number from 0 to 100'
+  }
+  if (
+    concurrency !== undefined &&
+    (!Number.isSafeInteger(concurrency) || (concurrency as number) < 1)
+  ) {
+    return '"concurrency" must be a positive integer'
+  }
+  if (fast !== undefined && typeof fast !== 'boolean') {
+    return '"fast" must be true or false'
+  }
+  if (cache !== undefined && typeof cache !== 'boolean') {
+    return '"cache" must be true or false'
+  }
+  if (incremental !== undefined && typeof incremental !== 'boolean') {
+    return '"incremental" must be true or false'
+  }
+  if (
+    runner !== undefined &&
+    !isRecord(runner) &&
+    (typeof runner !== 'string' || runner === '')
+  ) {
+    return '"runner" must be a built-in adapter name or an adapter object'
+  }
+  if (
+    paths !== undefined &&
+    (!Array.isArray(paths) ||
+      paths.some(item => typeof item !== 'string' || item === ''))
+  ) {
+    return '"paths" must be a list of non-empty paths'
+  }
+  return (
+    getLimitProblem(value, 'timeout', ['constant', 'factor']) ??
+    getLimitProblem(value, 'hitLimit', ['factor', 'floor'])
+  )
 }
 
 /**
@@ -108,65 +173,6 @@ function getConfigProblem(value: unknown): string | null {
     }
   }
   return null
-}
-
-/**
- * Finds what is wrong with the `run` settings: unknown keys, a threshold out of
- * 0 to 100, a concurrency that is not a positive integer, a non-boolean `fast`
- * or `cache`, a runner that is neither a name nor an object, paths that are not
- * non-empty strings, and limit settings that are not positive numbers.
- *
- * @param value - Run settings read from the configuration file.
- * @returns Description of the first problem, or null when there is none.
- */
-function getRunProblem(value: unknown): string | null {
-  if (!isRecord(value)) {
-    return 'it must be an object'
-  }
-  for (let key of Object.keys(value)) {
-    if (!runKeys.includes(key)) {
-      let closest = findClosestName(key, runKeys)
-      let suggestion = closest === null ? '' : ` (did you mean "${closest}"?)`
-      return `"${key}" is not a run setting${suggestion}`
-    }
-  }
-  let { concurrency, threshold, runner, paths, cache, fast } = value
-  if (
-    threshold !== undefined &&
-    (typeof threshold !== 'number' || !(threshold >= 0) || !(threshold <= 100))
-  ) {
-    return '"threshold" must be a number from 0 to 100'
-  }
-  if (
-    concurrency !== undefined &&
-    (!Number.isSafeInteger(concurrency) || (concurrency as number) < 1)
-  ) {
-    return '"concurrency" must be a positive integer'
-  }
-  if (fast !== undefined && typeof fast !== 'boolean') {
-    return '"fast" must be true or false'
-  }
-  if (cache !== undefined && typeof cache !== 'boolean') {
-    return '"cache" must be true or false'
-  }
-  if (
-    runner !== undefined &&
-    !isRecord(runner) &&
-    (typeof runner !== 'string' || runner === '')
-  ) {
-    return '"runner" must be a built-in adapter name or an adapter object'
-  }
-  if (
-    paths !== undefined &&
-    (!Array.isArray(paths) ||
-      paths.some(item => typeof item !== 'string' || item === ''))
-  ) {
-    return '"paths" must be a list of non-empty paths'
-  }
-  return (
-    getLimitProblem(value, 'timeout', ['constant', 'factor']) ??
-    getLimitProblem(value, 'hitLimit', ['factor', 'floor'])
-  )
 }
 
 /**

@@ -30,7 +30,9 @@ interface PrepareInput {
   setup: { mutators: ActiveMutator[]; settings: unknown; preset: string }
 
   /**
-   * Mutated files with the texts their mutants were listed from.
+   * Every file the paths of the run list mutants from, the files `--since` or
+   * `--mutant` leave out included, so the keys do not depend on the selection,
+   * with the texts and the regions of their mutants (see `getMutantRegions`).
    */
   files: readonly FileMutants[]
 
@@ -53,6 +55,11 @@ interface PrepareInput {
    * How try limits grow from the dry run.
    */
   limits: LimitSettings
+
+  /**
+   * Whether entries are also reused by their incremental key (`--incremental`).
+   */
+  incremental: boolean
 
   /**
    * Adapter of the session.
@@ -87,13 +94,15 @@ interface PrepareInput {
  * lockfile, `package.json` and the `tsconfig` and `jsconfig` files of the root,
  * every file a test file depended on and every file stored entries read beyond
  * that, each file once, then builds the environment key and the key of every
- * test file, which takes in the environment variables it read. Files modified
- * since the run started may have changed after the test runner read them, so
- * their hash may not be what verdicts came from: a test file that depends on
- * one gets no key, and no test file gets one when a file of the environment
- * changed. Dependencies the test code of the dry run changed itself
- * (`DryFile.modified`) are hashed as they are now, which is what the next run
- * starts from; `saveRunCache` checks that their contents stayed so.
+ * test file, which takes in the environment variables it read, and the key of
+ * every test file over what it reads outside the files mutants are listed from,
+ * for the incremental keys. Files modified since the run started may have
+ * changed after the test runner read them, so their hash may not be what
+ * verdicts came from: a test file that depends on one gets no key, and no test
+ * file gets one when a file of the environment changed. Dependencies the test
+ * code of the dry run changed itself (`DryFile.modified`) are hashed as they
+ * are now, which is what the next run starts from; `saveRunCache` checks that
+ * their contents stayed so.
  *
  * @param input - Session, dry run, settings and the stored entries.
  * @returns Cache of the run, or null when the adapter cannot tell what verdicts
@@ -159,12 +168,14 @@ export async function prepareRunCache(
     files,
     root,
   })
-  let fileKeys = getTestFileKeys({
-    files: dry.files.filter(file =>
-      (dependencies.get(getTestFileKey(file)) ?? []).every(
-        dependency => !changed.has(dependency),
-      ),
+  let keyed = dry.files.filter(file =>
+    (dependencies.get(getTestFileKey(file)) ?? []).every(
+      dependency => !changed.has(dependency),
     ),
+  )
+  let fileKeys = getTestFileKeys({
+    mutated: new Set(),
+    files: keyed,
     environment,
     variables,
     hashes,
@@ -181,12 +192,22 @@ export async function prepareRunCache(
         : [[file.file, createHash('sha256').update(file.source).digest('hex')]],
       ),
     ),
+    outsideKeys: getTestFileKeys({
+      mutated: new Set(input.files.map(file => file.absolute)),
+      files: keyed,
+      environment,
+      variables,
+      hashes,
+      root,
+    }),
     reads: new Map(
       dry.files.map(file => [getTestFileKey(file), file.environment ?? []]),
     ),
     dependencies: new Map(
       [...dependencies].filter(([file]) => fileKeys.has(file)),
     ),
+    regions: new Map(input.files.flatMap(file => [...(file.regions ?? [])])),
+    incremental: input.incremental,
     analysis: input.analysis,
     environment: files,
     now: input.now,

@@ -36,11 +36,20 @@ function create(
   fields: Partial<Parameters<typeof createRunCache>[0]> = {},
 ): ReturnType<typeof createRunCache> {
   return createRunCache({
+    outsideKeys: new Map([
+      ['/t/a.test.ts', 'o1'],
+      ['/t/b.test.ts', 'o2'],
+    ]),
+    regions: new Map([
+      ['m1', 'r1'],
+      ['m2', 'r2'],
+    ]),
     dependencies: new Map([['/t/a.test.ts', ['/t/a.test.ts']]]),
     fileKeys: new Map([['/t/a.test.ts', 'f1']]),
     sources: new Map([['src/a.ts', 's1']]),
     stored: storedOf(new Map()),
     analysis: state.analysis,
+    incremental: false,
     hashes: new Map(),
     reads: new Map(),
     environment: [],
@@ -103,6 +112,7 @@ describe('createRunCache', () => {
     expect([...second.entries.values()].map(entry => entry.used)).toStrictEqual(
       [20, 20],
     )
+    expect(second.regional).toStrictEqual(new Set())
   })
 
   it.each<[string, Partial<Parameters<typeof createRunCache>[0]>]>([
@@ -123,6 +133,85 @@ describe('createRunCache', () => {
       second.lookupUnit(state.mutants.get('m1')!, '/t/a.test.ts'),
     ).toBeNull()
     expect(second.entries.size).toBe(0)
+  })
+
+  it('reuses a verdict through changes outside its region only in an incremental run', async () => {
+    let state = await createState()
+    let first = create(state)
+    first.recordUnit(state.mutants.get('m1')!, '/t/a.test.ts', {
+      verdict: kill,
+      inputs: read,
+    })
+    first.recordUnit(state.mutants.get('m2')!, '/t/a.test.ts', {
+      verdict: 'survived',
+      inputs: read,
+    })
+    let changed: Partial<Parameters<typeof createRunCache>[0]> = {
+      regions: new Map([
+        ['m1', 'r1'],
+        ['m2', 'r3'],
+      ]),
+      fileKeys: new Map([['/t/a.test.ts', 'f2']]),
+      sources: new Map([['src/a.ts', 's2']]),
+      stored: storedOf(first.entries),
+    }
+    let exact = create(state, changed)
+    let incremental = create(state, { ...changed, incremental: true })
+
+    expect(
+      exact.lookupUnit(state.mutants.get('m1')!, '/t/a.test.ts'),
+    ).toBeNull()
+    expect(
+      incremental.lookupUnit(state.mutants.get('m1')!, '/t/a.test.ts'),
+    ).toStrictEqual(kill)
+    expect(
+      incremental.lookupUnit(state.mutants.get('m2')!, '/t/a.test.ts'),
+    ).toBeNull()
+    expect([...incremental.regional]).toStrictEqual(['m1'])
+  })
+
+  it('keeps the key of a verdict reused by its region, so later runs that are not incremental run it again', async () => {
+    let state = await createState()
+    let first = create(state)
+    first.recordUnit(state.mutants.get('m1')!, '/t/a.test.ts', {
+      verdict: kill,
+      inputs: read,
+    })
+    let changed = { sources: new Map([['src/a.ts', 's2']]) }
+    let second = create(state, {
+      ...changed,
+      stored: storedOf(first.entries),
+      incremental: true,
+    })
+    second.lookupUnit(state.mutants.get('m1')!, '/t/a.test.ts')
+    let third = create(state, { ...changed, stored: storedOf(second.entries) })
+
+    expect([...second.entries.values()]).toStrictEqual(
+      [...first.entries.values()].map(entry => ({ ...entry, used: 10 })),
+    )
+    expect(
+      third.lookupUnit(state.mutants.get('m1')!, '/t/a.test.ts'),
+    ).toBeNull()
+  })
+
+  it('reuses nothing by region for a mutant without one', async () => {
+    let state = await createState()
+    let first = create(state, { regions: new Map() })
+    first.recordUnit(state.mutants.get('m1')!, '/t/a.test.ts', {
+      verdict: kill,
+      inputs: read,
+    })
+    let second = create(state, {
+      sources: new Map([['src/a.ts', 's2']]),
+      stored: storedOf(first.entries),
+      regions: new Map(),
+      incremental: true,
+    })
+
+    expect([...first.entries.values()][0]!.incremental).toBeNull()
+    expect(
+      second.lookupUnit(state.mutants.get('m1')!, '/t/a.test.ts'),
+    ).toBeNull()
   })
 
   it('reuses nothing when the mutant became static', async () => {

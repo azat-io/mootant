@@ -41,6 +41,7 @@ let reused: CachedInputs = { files: [['seed.json', 'h']], environment: [] }
 function createCache(): RunCache {
   let entry: CacheEntry = {
     status: 'Survived',
+    incremental: null,
     path: 'isolated',
     message: null,
     inputs: null,
@@ -87,6 +88,7 @@ function createCache(): RunCache {
     lookupUnit: () => null,
     recordBatch: () => {},
     recordUnit: () => {},
+    regional: new Set(),
     entries,
     pending,
   }

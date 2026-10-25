@@ -61,6 +61,7 @@ describe('runMutation', () => {
     await runMutation({
       config: 'mootant.config.ts',
       mutantIds: ['k3m9x2p7q4w8'],
+      incremental: false,
       preset: 'strict',
       paths: ['src'],
       concurrency: 2,
@@ -81,6 +82,7 @@ describe('runMutation', () => {
       config: 'mootant.config.ts',
       mutantIds: ['k3m9x2p7q4w8'],
       cwd: process.cwd(),
+      incremental: false,
       preset: 'strict',
       paths: ['src'],
       concurrency: 2,
@@ -107,6 +109,7 @@ describe('runMutation', () => {
     await runMutation({
       config: 'my config.ts',
       mutantIds: ['surv'],
+      incremental: true,
       preset: 'strict',
       since: 'HEAD~1',
       paths: ['src'],
@@ -120,11 +123,11 @@ describe('runMutation', () => {
     let text = consoleInfoSpy.mock.calls[0]![0] as string
 
     expect(text.split('\n', 1)[0]).toBe(
-      "● mootant run src --config 'my config.ts' --preset strict --since 'HEAD~1' --fast --threshold 40 --mutant surv  vitest 5.0.4",
+      "● mootant run src --config 'my config.ts' --preset strict --since 'HEAD~1' --fast --incremental --threshold 40 --mutant surv  vitest 5.0.4",
     )
     expect(text).toContain('  4:10  comparison-operator  survive\n')
     expect(text.split('\n').at(-1)).toBe(
-      "re-check one: mootant run src --config 'my config.ts' --preset strict --fast --mutant survive",
+      "re-check one: mootant run src --config 'my config.ts' --preset strict --fast --incremental --mutant survive",
     )
   })
 

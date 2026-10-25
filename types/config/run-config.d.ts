@@ -26,6 +26,15 @@ export interface RunConfig {
   runner?: TestAdapter | string
 
   /**
+   * Incremental mode: reuse a cached verdict while the declaration of its
+   * mutant, what that uses in its file and what its test file reads outside the
+   * mutated files stay the same, even after changes elsewhere, which may leave
+   * it stale; false when omitted, so any change of a file its tests load runs
+   * the mutant again.
+   */
+  incremental?: boolean
+
+  /**
    * Most test files at once; the runner's own setting when omitted.
    */
   concurrency?: number

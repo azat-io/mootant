@@ -7,6 +7,7 @@ import type { StoredCache } from '../../../types/cache/stored-cache'
 import type { CacheEntry } from '../../../types/cache/cache-entry'
 
 import { readRunCache } from '../../../core/cache/read-run-cache'
+import { CACHE_VERSION } from '../../../core/cache/cache-version'
 
 /**
  * Directory with the cache files of the tests.
@@ -19,6 +20,7 @@ let directory = ''
 let kill: CacheEntry = {
   message: 'expected 1 to be 2',
   cause: 'assertion',
+  incremental: 'r1',
   status: 'Killed',
   path: 'isolated',
   inputs: null,
@@ -51,6 +53,7 @@ describe('readRunCache', () => {
   it('reads the valid entries and inputs and drops malformed ones', async () => {
     let survived: CacheEntry = {
       status: 'Survived',
+      incremental: null,
       path: 'isolated',
       message: null,
       inputs: 'i1',
@@ -70,6 +73,7 @@ describe('readRunCache', () => {
       JSON.stringify({
         entries: {
           s3: { ...kill, status: 'Timeout' },
+          s12: { ...kill, incremental: 1 },
           s10: { ...kill, inputs: 'i2' },
           s4: { ...kill, path: 'dry' },
           s11: { ...kill, inputs: 1 },
@@ -91,7 +95,7 @@ describe('readRunCache', () => {
           i1: inputs,
           i0: null,
         },
-        version: 1,
+        version: CACHE_VERSION,
       }),
     )
 
@@ -107,12 +111,19 @@ describe('readRunCache', () => {
     ['invalid JSON', '{'],
     [
       'another version',
-      JSON.stringify({ entries: { s1: kill }, inputs: {}, version: 2 }),
+      JSON.stringify({
+        version: CACHE_VERSION + 1,
+        entries: { s1: kill },
+        inputs: {},
+      }),
     ],
-    ['a file without entries', JSON.stringify({ inputs: {}, version: 1 })],
+    [
+      'a file without entries',
+      JSON.stringify({ version: CACHE_VERSION, inputs: {} }),
+    ],
     [
       'a file without inputs',
-      JSON.stringify({ entries: { s1: kill }, version: 1 }),
+      JSON.stringify({ version: CACHE_VERSION, entries: { s1: kill } }),
     ],
     ['a file that is not an object', '[]'],
   ])('reads nothing from %s', async (_name, content) => {

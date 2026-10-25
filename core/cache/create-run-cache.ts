@@ -43,6 +43,12 @@ interface RunCacheInput {
   hashes: ReadonlyMap<string, string | null>
 
   /**
+   * Keys of the same test files over what they read outside the files mutants
+   * are listed from (see `getTestFileKeys`), for the incremental keys.
+   */
+  outsideKeys: ReadonlyMap<string, string>
+
+  /**
    * Keys of the test files whose dependencies are known, by test file key
    * (`getTestFileKey`); they include the environment key.
    */
@@ -54,6 +60,11 @@ interface RunCacheInput {
   sources: ReadonlyMap<string, string>
 
   /**
+   * Digest of the region of every mutant, by id (see `getMutantRegions`).
+   */
+  regions: ReadonlyMap<string, string>
+
+  /**
    * Files every verdict depends on.
    */
   environment: readonly string[]
@@ -62,6 +73,11 @@ interface RunCacheInput {
    * Coverage and tests of the dry run.
    */
   analysis: DryAnalysis
+
+  /**
+   * Whether entries are also reused by their incremental key (`--incremental`).
+   */
+  incremental: boolean
 
   /**
    * Entries and inputs read from the cache file.
@@ -84,6 +100,16 @@ interface RunCacheInput {
  */
 interface Address {
   /**
+   * Incremental key of the evidence, or null when the mutant has no region.
+   */
+  incremental: string | null
+
+  /**
+   * Id of the mutant of the evidence.
+   */
+  mutant: string
+
+  /**
    * Slot of the evidence in the cache file.
    */
   slot: string
@@ -104,14 +130,20 @@ interface Address {
  * mutant in a test file (isolated) or a test (batch) has a slot named by the
  * mutant, the test file, the path and the test, and a key over the mutant, the
  * text of its source file, whether it is static, the key of the test file and
- * the slot: a stored entry is valid only while its key is the same. A run may
- * read more than the dry run of its test file, such as a module only the mutant
- * loads or an environment variable only it reads: evidence stores those inputs,
- * and is valid only while each of them is unchanged too. Evidence of a run
- * whose inputs are unknown is not stored. Kills by a crash depend on the load
- * of the machine and are never stored, and neither are timeouts and errors.
+ * the slot: a stored entry is valid only while its key is the same. Evidence
+ * also stores an incremental key over the texts of the region of the mutant
+ * (see `getMutantRegions`) and what its test file reads outside the mutated
+ * files, which an incremental run accepts in place of the key, keeping a
+ * verdict through changes elsewhere; such a reuse leaves the key as it was, so
+ * other runs never take the verdict for the current code. A run may read more
+ * than the dry run of its test file, such as a module only the mutant loads or
+ * an environment variable only it reads: evidence stores those inputs, and is
+ * valid only while each of them is unchanged too. Evidence of a run whose
+ * inputs are unknown is not stored. Kills by a crash depend on the load of the
+ * machine and are never stored, and neither are timeouts and errors.
  *
- * @param input - Stored entries, test file keys, source hashes and the dry run.
+ * @param input - Stored entries, test file keys, source hashes, mutant regions,
+ *   the mode and the dry run.
  * @returns Lookups and records over the stored entries, with the entries the
  *   run reused or wrote.
  */
@@ -119,6 +151,7 @@ export function createRunCache(input: RunCacheInput): RunCache {
   let { variables, fileKeys, analysis, sources, stored, hashes, root, now } =
     input
   let entries = new Map<string, CacheEntry>()
+  let regional = new Set<string>()
   let pending = new Map<string, PendingInputs>()
   let inputs = new Map<string, CachedInputs>()
   let owners = new Map<string, string>()
@@ -165,7 +198,7 @@ export function createRunCache(input: RunCacheInput): RunCache {
    * @param mutant - State of the mutant.
    * @param file - Key of the test file (`getTestFileKey`).
    * @param test - Id of the test for batch evidence, or null for isolated.
-   * @returns Slot, key and test file, or null when the test file has no key or
+   * @returns Slot, keys and test file, or null when the test file has no key or
    *   the source file no text.
    */
   function locate(
@@ -186,11 +219,39 @@ export function createRunCache(input: RunCacheInput): RunCache {
       test === null ? 'isolated' : 'batch',
       test ?? '',
     ]).slice(0, 32)
+    let region = input.regions.get(mutant.mutant.id)
     return {
+      incremental:
+        region === undefined ? null : (
+          createDigest([
+            slot,
+            region,
+            mutant.static,
+            input.outsideKeys.get(file)!,
+          ])
+        ),
       key: createDigest([slot, source, mutant.static, fileKey]),
+      mutant: mutant.mutant.id,
       slot,
       file,
     }
+  }
+
+  /**
+   * Tells whether stored evidence holds for the code of an address: its key is
+   * the same, or in an incremental run its incremental key is.
+   *
+   * @param entry - Stored evidence in the slot of the address.
+   * @param address - Slot, keys and test file of the evidence.
+   * @returns Whether the evidence may be reused.
+   */
+  function isCurrent(entry: CacheEntry, address: Address): boolean {
+    return (
+      entry.key === address.key ||
+      (input.incremental &&
+        address.incremental !== null &&
+        entry.incremental === address.incremental)
+    )
   }
 
   /**
@@ -206,7 +267,8 @@ export function createRunCache(input: RunCacheInput): RunCache {
     }
     let entry = stored.entries.get(address.slot)
     if (
-      entry?.key !== address.key ||
+      entry === undefined ||
+      !isCurrent(entry, address) ||
       (entry.test !== null && !analysis.tests.has(entry.test)) ||
       (entry.inputs !== null &&
         !isUnchanged(address.file, stored.inputs.get(entry.inputs)!))
@@ -215,6 +277,9 @@ export function createRunCache(input: RunCacheInput): RunCache {
     }
     if (entry.inputs !== null) {
       inputs.set(entry.inputs, stored.inputs.get(entry.inputs)!)
+    }
+    if (entry.key !== address.key) {
+      regional.add(address.mutant)
     }
     entries.set(address.slot, { ...entry, used: now })
     owners.set(address.slot, address.file)
@@ -272,6 +337,7 @@ export function createRunCache(input: RunCacheInput): RunCache {
       address.slot,
       evidence === 'survived' ?
         {
+          incremental: address.incremental,
           status: 'Survived',
           key: address.key,
           message: null,
@@ -282,6 +348,7 @@ export function createRunCache(input: RunCacheInput): RunCache {
           used: now,
         }
       : {
+          incremental: address.incremental,
           message: evidence.message,
           cause: evidence.cause,
           test: evidence.test,
@@ -319,6 +386,7 @@ export function createRunCache(input: RunCacheInput): RunCache {
     lookupUnit: (mutant, file) => read(locate(mutant, file, null)),
     dependencies: input.dependencies,
     environment: input.environment,
+    regional,
     entries,
     pending,
     hashes,

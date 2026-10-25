@@ -66,6 +66,14 @@ interface RunMutantsOptions {
   builtIns: BuiltInAdapters
 
   /**
+   * Incremental mode (`--incremental`): a cached verdict is reused while the
+   * region of its mutant (see `getMutantRegions`) and what its test file reads
+   * outside the mutated files stay the same, even after changes elsewhere,
+   * which may leave it stale; over `run.incremental`.
+   */
+  incremental?: boolean
+
+  /**
    * Ids of the only mutants to run (`--mutant`); every mutant when omitted.
    */
   mutantIds?: string[]
@@ -134,7 +142,9 @@ interface RunMutantsOptions {
  * without batch mode runs fast mode as the default mode, with a note. Mutants
  * the test runner ran outside its workers end with `Error` unless a test killed
  * them. Unless the cache is off, valid verdicts of earlier runs are reused
- * before anything runs, and the evidence of the run is saved after it, unless
+ * before anything runs, in incremental mode also those whose mutant kept its
+ * region, with a warning that counts the mutants whose cached evidence only
+ * their region matched, and the evidence of the run is saved after it, unless
  * it has error diagnostics. With `--since`, only the mutants on lines changed
  * since the merge base of the revision and `HEAD` run, and when there are none
  * the test runner does not start. The adapter is closed and the work directory
@@ -167,6 +177,7 @@ export async function runMutants(
   let since: SinceRevision | null =
     changes === null ? null : { ref: options.since!, base: changes.base }
   let listing = await listFileMutants({
+    regions: options.cache ?? run.cache ?? true,
     knownMutatorIds: setup.knownMutatorIds,
     cwd: fromConfig ? root : options.cwd,
     settings: setup.settings,
@@ -349,11 +360,8 @@ async function execute(context: {
   let cachePath = getCachePath(root)
   let stored =
     (options.cache ?? run.cache ?? true) ? readRunCache(cachePath) : null
-  let selected = selectRunFiles(
-    context.files,
-    await session.listTestFiles(),
-    getPackageDirectory(),
-  )
+  let testFiles = await session.listTestFiles()
+  let selected = selectRunFiles(context.files, testFiles, getPackageDirectory())
   let diagnostics = [
     ...context.diagnostics,
     ...(session.diagnostics ?? []),
@@ -429,9 +437,11 @@ async function execute(context: {
   let cache =
     stored === null ? null : (
       await prepareRunCache({
+        files: selectRunFiles(context.listed, testFiles, getPackageDirectory())
+          .files,
+        incremental: options.incremental ?? run.incremental ?? false,
         started: context.startedAt,
         adapter: context.adapter,
-        files: selected.files,
         dry: dryPhase.dry,
         analysis,
         session,
@@ -499,6 +509,20 @@ async function execute(context: {
   markOutsideMutants(state, dryPhase.dry.outside)
   countVerdicts(state)
   diagnostics.push(...state.diagnostics)
+  let regional = cache?.regional.size ?? 0
+  if (regional > 0) {
+    diagnostics.push({
+      message:
+        regional === 1 ?
+          '1 mutant has cached evidence that only its region matched, which a change elsewhere may have made stale; run with --no-incremental to check it.'
+        : `${regional} mutants have cached evidence that only their region matched, which a change elsewhere may have made stale; run with --no-incremental to check them.`,
+      code: 'incremental-reuse',
+      severity: 'warning',
+      column: null,
+      file: null,
+      line: null,
+    })
+  }
   if (cache !== null) {
     let skipped = await saveRunCache({
       failed: [

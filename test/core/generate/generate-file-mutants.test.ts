@@ -155,6 +155,36 @@ const SHAPES: Mutator = {
 }
 
 /**
+ * Generates the mutants of a snippet without timeouts.
+ *
+ * @param lines - Source lines, joined with line feeds.
+ * @param mutators - Active mutators in rank order.
+ * @param setup - Whether the run keeps coarse mutants, lists skipped candidates
+ *   and finds the regions of the mutants; none when omitted.
+ * @returns Result of the file.
+ */
+function generate(
+  lines: string[],
+  mutators: ActiveMutator[],
+  setup: { coarseMutants?: boolean; skipped?: boolean; regions?: boolean } = {},
+): Omit<FileMutants, 'absolute'> {
+  return generateFileMutants({
+    settings: Object.freeze({
+      coarseMutants: setup.coarseMutants ?? false,
+      templates: true,
+      timeouts: false,
+      loggers: [],
+    }),
+    regions: setup.regions ?? false,
+    skipped: setup.skipped ?? false,
+    source: lines.join('\n'),
+    file: 'src/example.ts',
+    knownMutatorIds,
+    mutators,
+  })
+}
+
+/**
  * Generates the `arithmetic` and `removal` mutants of a Svelte component with
  * the Svelte compiler.
  *
@@ -182,35 +212,6 @@ function generateSvelte(
     file: 'src/Card.svelte',
     knownMutatorIds,
     skipped: true,
-  })
-}
-
-/**
- * Generates the mutants of a snippet without timeouts.
- *
- * @param lines - Source lines, joined with line feeds.
- * @param mutators - Active mutators in rank order.
- * @param setup - Whether the run keeps coarse mutants and lists skipped
- *   candidates; neither when omitted.
- * @returns Result of the file.
- */
-function generate(
-  lines: string[],
-  mutators: ActiveMutator[],
-  setup: { coarseMutants?: boolean; skipped?: boolean } = {},
-): Omit<FileMutants, 'absolute'> {
-  return generateFileMutants({
-    settings: Object.freeze({
-      coarseMutants: setup.coarseMutants ?? false,
-      templates: true,
-      timeouts: false,
-      loggers: [],
-    }),
-    skipped: setup.skipped ?? false,
-    source: lines.join('\n'),
-    file: 'src/example.ts',
-    knownMutatorIds,
-    mutators,
   })
 }
 
@@ -334,6 +335,24 @@ describe('generateFileMutants', () => {
       parsed: true,
       skipped: [],
     })
+  })
+
+  it('gives every mutant the digest of its region on request', () => {
+    let lines = [
+      'function add(a: number, b: number) {',
+      '  return a + b',
+      '}',
+      'x = 1',
+    ]
+    let mutators = [
+      activate('arithmetic', 0, ARITHMETIC),
+      activate('removal', 1, REMOVAL),
+    ]
+    let { regions, mutants } = generate(lines, mutators, { regions: true })
+
+    expect([...regions!.keys()]).toStrictEqual(mutants.map(mutant => mutant.id))
+    expect(new Set(regions!.values())).toHaveProperty('size', 2)
+    expect(generate(lines, mutators)).not.toHaveProperty('regions')
   })
 
   it('answers isEnabled and isActive with the ignore directives of the file', () => {

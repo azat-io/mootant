@@ -18,6 +18,12 @@ describe('formatCommand', () => {
     ).toBe(
       'mootant run src lib --config mootant.config.ts --preset strict --since main --fast --threshold 80 --concurrency 2 --mutant 3f2a --mutant b9c0',
     )
+    expect(formatCommand('run', { incremental: true, paths: ['src'] })).toBe(
+      'mootant run src --incremental',
+    )
+    expect(formatCommand('run', { incremental: false, paths: [] })).toBe(
+      'mootant run --no-incremental',
+    )
     expect(formatCommand('run', { fast: false, paths: [] })).toBe(
       'mootant run --no-fast',
     )

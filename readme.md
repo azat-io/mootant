@@ -105,6 +105,9 @@ Options:
 - `--fast`: try many mutants in one test run; faster, but a kill may be false
   and concurrent tests run one at a time
 - `--no-cache`: run every mutant again instead of reusing earlier verdicts
+- `--incremental`: reuse a verdict while the code of its mutant and its tests
+  stay the same, even after changes elsewhere; faster after an edit, but a
+  verdict may be stale
 - `--mutant <id>`: run only this mutant, by its id or a unique prefix of 4
   characters or more; repeat for more
 - `--verbose`: show what the tests print, the covering test of each survivor and
@@ -119,6 +122,10 @@ threshold. Snapshots are never updated.
 Verdicts are cached in `node_modules/.cache/mootant` and reused while the
 mutated file and the files and environment variables its tests read stay the
 same. Use `--no-cache` after changes only child processes or the network see.
+With `--incremental`, a verdict also outlives changes elsewhere while the
+declaration of its mutant, what that uses in its file and what its tests read
+outside the mutated files stay the same; a change of a caller or of another
+mutated file may then leave it stale.
 
 Vue and Svelte components run through the project's Vite plugin of the
 framework; code their compilers read as written, such as `defineProps()` or a
@@ -183,7 +190,8 @@ export default defineConfig({
 
 - `run`: settings of `mootant run`; command line options win:
   - `paths`: default source paths, relative to the configuration directory
-  - `threshold`, `concurrency`, `fast`: as the options of the same names
+  - `threshold`, `concurrency`, `fast`, `incremental`: as the options of the
+    same names
   - `cache`: `false` as `--no-cache`
   - `runner`: auto-detected, `'vitest'`, `'node-test'`, or an imported adapter
     object. For a custom Vitest config, import `vitestAdapter` from

@@ -18,6 +18,7 @@ const DAY = 24 * 60 * 60 * 1000
 function createEntry(used: number): CacheEntry {
   return {
     status: 'Survived',
+    incremental: null,
     path: 'isolated',
     message: null,
     inputs: null,

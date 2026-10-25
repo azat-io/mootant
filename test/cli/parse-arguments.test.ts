@@ -40,6 +40,9 @@ const HELP_TEXT = [
   '                       kill may be false (state left by earlier tries)',
   '  --no-cache           run: run every mutant again instead of reusing the',
   '                       verdicts of earlier runs',
+  '  --incremental        run: reuse a verdict while the code of its mutant and',
+  '                       its tests stay the same, even after changes elsewhere;',
+  '                       faster after an edit, but a verdict may be stale',
   '  --mutant <id>        run: run only this mutant, by its id or a unique prefix',
   '                       of 4 characters or more, as reports print it; repeat',
   '                       for more',
@@ -247,6 +250,23 @@ describe('parseArguments', () => {
     })
   })
 
+  it.each([
+    [['--incremental'], true],
+    [['--no-incremental'], false],
+  ])('reads %j', (flags, incremental) => {
+    expect(parseArguments(['run', 'src', ...flags], '1.0.0')).toStrictEqual({
+      options: {
+        paths: ['src'],
+        verbose: false,
+        mutantIds: [],
+        json: false,
+        incremental,
+        all: false,
+      },
+      kind: 'run',
+    })
+  })
+
   it('reads --since for list', () => {
     expect(
       parseArguments(['list', 'src', '--since', 'origin/main'], '1.0.0'),
@@ -318,6 +338,14 @@ describe('parseArguments', () => {
     {
       message: '--cache applies to the run command only.',
       argv: ['list', 'src', '--no-cache'],
+    },
+    {
+      message: '--incremental applies to the run command only.',
+      argv: ['list', 'src', '--incremental'],
+    },
+    {
+      message: '--incremental reuses cached verdicts; drop --no-cache.',
+      argv: ['run', 'src', '--incremental', '--no-cache'],
     },
     {
       message: '--verbose applies to the JSON report of list only; add --json.',

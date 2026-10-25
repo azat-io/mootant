@@ -8,6 +8,12 @@ const PLAIN_ARGUMENT_PATTERN = /^[\w%+,\-./:=@]+$/u
  */
 interface CommandOptions {
   /**
+   * Whether verdicts are reused by region, from `--incremental` or
+   * `--no-incremental`.
+   */
+  incremental?: boolean
+
+  /**
    * Ids of the only mutants to run, from `--mutant`.
    */
   mutantIds?: string[]
@@ -83,6 +89,9 @@ export function formatCommand(
   }
   if (options.fast !== undefined) {
     parts.push(options.fast ? '--fast' : '--no-fast')
+  }
+  if (options.incremental !== undefined) {
+    parts.push(options.incremental ? '--incremental' : '--no-incremental')
   }
   if (options.threshold !== undefined) {
     parts.push('--threshold', String(options.threshold))

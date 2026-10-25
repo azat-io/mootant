@@ -45,6 +45,7 @@ describe('getTestFileKeys', () => {
       createFile('/p/test/b.test.ts', { dependencies: ['/p/src/b.ts'] }),
     ]
     let keys = getTestFileKeys({
+      mutated: new Set(),
       environment: 'e',
       variables: {},
       root: '/p',
@@ -57,6 +58,7 @@ describe('getTestFileKeys', () => {
           dependencies: ['/p/src/a.ts', '/p/test/a.test.ts', '/p/src/b.ts'],
         }),
       ],
+      mutated: new Set(),
       environment: 'e',
       variables: {},
       root: '/p',
@@ -64,6 +66,7 @@ describe('getTestFileKeys', () => {
     })
     let changed = getTestFileKeys({
       hashes: new Map([...hashes, ['/p/src/a.ts', 'z']]),
+      mutated: new Set(),
       environment: 'e',
       variables: {},
       root: '/p',
@@ -83,12 +86,43 @@ describe('getTestFileKeys', () => {
     expect(changed.get('/p/test/b.test.ts')).toBe(keys.get('/p/test/b.test.ts'))
   })
 
+  it('leaves the files mutants are listed from out of the keys', () => {
+    /**
+     * Builds the key of a test file that reads two sources, one of them
+     * mutated, after one file got a new hash.
+     *
+     * @param changed - File whose hash changes, or null.
+     * @returns Key of the test file.
+     */
+    function keyAfter(changed: string | null): undefined | string {
+      return getTestFileKeys({
+        files: [
+          createFile('/p/test/a.test.ts', {
+            dependencies: ['/p/src/a.ts', '/p/src/b.ts', '/p/test/a.test.ts'],
+          }),
+        ],
+        hashes:
+          changed === null ? hashes : new Map([...hashes, [changed, 'z']]),
+        mutated: new Set(['/p/test/a.test.ts', '/p/src/a.ts']),
+        environment: 'e',
+        variables: {},
+        root: '/p',
+      }).get('/p/test/a.test.ts')
+    }
+    let key = keyAfter(null)
+
+    expect(keyAfter('/p/src/a.ts')).toBe(key)
+    expect(keyAfter('/p/src/b.ts')).not.toBe(key)
+    expect(keyAfter('/p/test/a.test.ts')).not.toBe(key)
+  })
+
   it('separates projects and environments', () => {
     let files = [
       createFile('/p/test/a.test.ts', { dependencies: [] }),
       createFile('/p/test/a.test.ts', { dependencies: [], project: 'web' }),
     ]
     let keys = getTestFileKeys({
+      mutated: new Set(),
       environment: 'e',
       variables: {},
       root: '/p',
@@ -96,6 +130,7 @@ describe('getTestFileKeys', () => {
       files,
     })
     let other = getTestFileKeys({
+      mutated: new Set(),
       environment: 'f',
       variables: {},
       root: '/p',
@@ -134,6 +169,7 @@ describe('getTestFileKeys', () => {
       variables: Record<string, Record<string, string>>,
     ): Map<string, string> {
       return getTestFileKeys({
+        mutated: new Set(),
         environment: 'e',
         root: '/p',
         variables,
@@ -153,6 +189,7 @@ describe('getTestFileKeys', () => {
         }),
       ],
       variables: { '': { MODE: 'm1' } },
+      mutated: new Set(),
       environment: 'e',
       root: '/p',
       hashes,
@@ -181,6 +218,7 @@ describe('getTestFileKeys', () => {
           createFile('/p/test/a.test.ts'),
           createFile('/p/test/b.test.ts', { dependencies: null }),
         ],
+        mutated: new Set(),
         environment: 'e',
         variables: {},
         root: '/p',

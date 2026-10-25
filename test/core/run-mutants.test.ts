@@ -8,7 +8,15 @@ import {
   it,
   vi,
 } from 'vitest'
-import { writeFile, realpath, mkdtemp, mkdir, stat, rm } from 'node:fs/promises'
+import {
+  writeFile,
+  readFile,
+  realpath,
+  mkdtemp,
+  mkdir,
+  stat,
+  rm,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -20,6 +28,7 @@ import type { RunEvent } from '../../types/run/run-event'
 import { createSwitchedFiles } from '../../core/instrument/create-switched-files'
 import { readChangedLines } from '../../core/git/read-changed-lines'
 import { createFakeAdapter } from '../helpers/create-fake-adapter'
+import { getCachePath } from '../../core/cache/get-cache-path'
 import { loadConfig } from '../../core/config/load-config'
 import { listMutants } from '../../core/list-mutants'
 import { runMutants } from '../../core/run-mutants'
@@ -867,7 +876,7 @@ describe('runMutants', () => {
      * @returns Absolute path of the cache file.
      */
     function cacheFile(): string {
-      return path.join(root, 'node_modules/.cache/mootant/run-v1.json')
+      return getCachePath(root)
     }
 
     afterEach(async () => {
@@ -902,6 +911,82 @@ describe('runMutants', () => {
         message: 'Reused cached verdicts for 3 of 4 mutants.',
         kind: 'note',
       })
+    })
+
+    it('reuses verdicts through a change outside their region only in incremental runs', async () => {
+      let flag = path.join(root, 'src/flag.ts')
+      let math = path.join(root, 'src/math.ts')
+      let flagText = await readFile(flag, 'utf8')
+      let mathText = await readFile(math, 'utf8')
+      let [add] = ids['src/math.ts']!
+      let [ratio, two] = ids['src/flag.ts']!
+      /**
+       * Lists the mutants a run ran isolated.
+       *
+       * @param outcome - Run and its simulated adapter.
+       * @returns Ids of the mutants.
+       */
+      function ran(outcome: Awaited<ReturnType<typeof run>>): Set<string> {
+        return new Set(
+          outcome.fake.calls.isolated
+            .flatMap(call => call.units)
+            .map(unit => unit.mutant),
+        )
+      }
+      /**
+       * Builds the warning about the mutants whose cached evidence only their
+       * region matched.
+       *
+       * @param message - Sentences of the warning.
+       * @returns Diagnostic of the run with that message.
+       */
+      function warning(message: string): Diagnostic {
+        return {
+          code: 'incremental-reuse',
+          severity: 'warning',
+          column: null,
+          file: null,
+          line: null,
+          message,
+        }
+      }
+      try {
+        await run(createWorld())
+        await writeFile(flag, `${flagText}export let other = 5\n`)
+        let incremental = await run(createWorld(), { incremental: true })
+        let exact = await run(createWorld())
+        await writeFile(flag, flagText.replace('2 * 3', '2 * 3, spare = 1'))
+        let inside = await run(createWorld(), { incremental: true })
+        await writeFile(math, `${mathText}export let unused = 1\n`)
+        let single = await run(createWorld(), { incremental: true })
+
+        expect(ran(incremental)).toStrictEqual(new Set())
+        expect(incremental.result.diagnostics).toContainEqual(
+          warning(
+            '2 mutants have cached evidence that only their region matched, which a change elsewhere may have made stale; run with --no-incremental to check them.',
+          ),
+        )
+        expect(ran(exact)).toStrictEqual(new Set([ratio, two]))
+        expect(ran(inside)).toStrictEqual(new Set([ratio, two]))
+        expect(
+          inside.result.results.find(entry => entry.mutant.id === add)?.cached,
+        ).toBe(true)
+        expect(
+          [exact, inside].flatMap(outcome =>
+            outcome.result.diagnostics.filter(
+              diagnostic => diagnostic.code === 'incremental-reuse',
+            ),
+          ),
+        ).toStrictEqual([])
+        expect(single.result.diagnostics).toContainEqual(
+          warning(
+            '1 mutant has cached evidence that only its region matched, which a change elsewhere may have made stale; run with --no-incremental to check it.',
+          ),
+        )
+      } finally {
+        await writeFile(flag, flagText)
+        await writeFile(math, mathText)
+      }
     })
 
     it('names a single reused verdict', async () => {
@@ -996,7 +1081,7 @@ describe('runMutants', () => {
       expect(result.diagnostics).toContainEqual(
         expect.objectContaining({
           message: expect.stringMatching(
-            /^The cache could not be saved to node_modules\/\.cache\/mootant\/run-v1\.json \(.+\); the next run will not reuse the verdicts of this one\.$/u,
+            /^The cache could not be saved to node_modules\/\.cache\/mootant\/run-v\d+\.json \(.+\); the next run will not reuse the verdicts of this one\.$/u,
           ) as unknown,
           code: 'cache-write-failed',
           severity: 'warning',

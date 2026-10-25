@@ -19,6 +19,7 @@ import type { Mutant } from '../../types/mutant/mutant'
 import { createSyntacticTypeProvider } from '../hints/create-syntactic-type-provider'
 import { parseComponentTemplate } from '../parser/parse-component-template'
 import { parseIgnoreDirectives } from '../ignore/parse-ignore-directives'
+import { getComponentFramework } from '../parser/get-component-framework'
 import { createSyntaxHelpers } from '../syntax/create-syntax-helpers'
 import { createIgnoreRules } from '../ignore/create-ignore-rules'
 import { deduplicateCandidates } from './deduplicate-candidates'
@@ -33,12 +34,62 @@ import { findIgnoreRule } from '../ignore/find-ignore-rule'
 import { applySolitaryRule } from './apply-solitary-rule'
 import { collectCandidates } from './collect-candidates'
 import { compareCandidates } from './compare-candidates'
+import { getMutantRegions } from './get-mutant-regions'
 import { isLogMessage } from '../syntax/is-log-message'
 import { analyzeScopes } from '../hints/analyze-scopes'
 import { parseFile } from '../parser/parse-file'
 import { skipRules } from '../skips/skip-rules'
 import { indexTree } from '../tree/index-tree'
 import { pickFocus } from './pick-focus'
+
+/**
+ * One file to generate mutants for, with the mutators of the run.
+ */
+interface GenerateFileInput {
+  /**
+   * Every registered mutator id, active or not, for checking the ids that
+   * ignore directives list.
+   */
+  knownMutatorIds: ReadonlySet<string>
+
+  /**
+   * Resolved settings of the preset.
+   */
+  settings: Readonly<PresetSettings>
+
+  /**
+   * Active mutators in canonical order.
+   */
+  mutators: readonly ActiveMutator[]
+
+  /**
+   * Compilers that read the templates of Svelte and Vue components; omitted
+   * when templates are not mutated.
+   */
+  compilers?: TemplateCompilers
+
+  /**
+   * Whether the candidates that were considered and not emitted are listed;
+   * false when omitted.
+   */
+  skipped?: boolean
+
+  /**
+   * Whether every mutant gets the digest of its region, which the verdict cache
+   * keys incremental reuse by; false when omitted.
+   */
+  regions?: boolean
+
+  /**
+   * Text of the file as read from disk.
+   */
+  source: string
+
+  /**
+   * Display path of the file, also hashed into mutant ids.
+   */
+  file: string
+}
 
 /**
  * Program of a file that parsed, with what its mutators need.
@@ -92,49 +143,6 @@ interface PreparedProgram {
 }
 
 /**
- * One file to generate mutants for, with the mutators of the run.
- */
-interface GenerateFileInput {
-  /**
-   * Every registered mutator id, active or not, for checking the ids that
-   * ignore directives list.
-   */
-  knownMutatorIds: ReadonlySet<string>
-
-  /**
-   * Resolved settings of the preset.
-   */
-  settings: Readonly<PresetSettings>
-
-  /**
-   * Active mutators in canonical order.
-   */
-  mutators: readonly ActiveMutator[]
-
-  /**
-   * Compilers that read the templates of Svelte and Vue components; omitted
-   * when templates are not mutated.
-   */
-  compilers?: TemplateCompilers
-
-  /**
-   * Whether the candidates that were considered and not emitted are listed;
-   * false when omitted.
-   */
-  skipped?: boolean
-
-  /**
-   * Text of the file as read from disk.
-   */
-  source: string
-
-  /**
-   * Display path of the file, also hashed into mutant ids.
-   */
-  file: string
-}
-
-/**
  * Candidates of a file at the end of the pipeline, with what dropped the
  * others.
  */
@@ -184,11 +192,12 @@ interface Selection {
  * of every block are sorted together and every candidate gets its id before the
  * solitary rule drops coarse ones, unless the `coarseMutants` setting is on,
  * and deduplication drops duplicate ones. Kept candidates become pending
- * mutants, or ignored ones with the reason and comment of their ignore rule. On
- * request, the candidates that a mutator, the collection, the solitary rule or
- * deduplication did not keep are listed as skipped, in canonical order, except
- * no-ops; they never change the mutants or their ids. Depends only on its
- * input.
+ * mutants, or ignored ones with the reason and comment of their ignore rule,
+ * and on request each gets the digest of its region for the verdict cache (see
+ * `getMutantRegions`). On request, the candidates that a mutator, the
+ * collection, the solitary rule or deduplication did not keep are listed as
+ * skipped, in canonical order, except no-ops; they never change the mutants or
+ * their ids. Depends only on its input.
  *
  * @param input - File, text, active mutators, preset settings, known mutator
  *   ids and the template compilers.
@@ -281,6 +290,10 @@ export function generateFileMutants(
     source,
   )
   let { kept } = deduplication
+  let mutants = kept.map(candidate =>
+    createMutant(candidate, ids.get(candidate)!, file),
+  )
+  let [script] = programs
 
   return {
     skipped:
@@ -299,11 +312,23 @@ export function generateFileMutants(
           file,
         )
       : [],
-    mutants: kept.map(candidate =>
-      createMutant(candidate, ids.get(candidate)!, file),
-    ),
+    ...(input.regions && {
+      regions: getMutantRegions({
+        program:
+          getComponentFramework(file) === null ?
+            {
+              program: script!.parsed.program,
+              scopes: script!.scopes,
+              tree: script!.tree,
+            }
+          : null,
+        mutants,
+        source,
+      }),
+    }),
     parsed: true,
     diagnostics,
+    mutants,
     source,
     file,
   }

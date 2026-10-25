@@ -14,6 +14,7 @@ import type { RunCacheFile } from '../../../types/cache/run-cache-file'
 import type { CacheEntry } from '../../../types/cache/cache-entry'
 
 import { writeRunCache } from '../../../core/cache/write-run-cache'
+import { CACHE_VERSION } from '../../../core/cache/cache-version'
 
 /**
  * Directory with the cache files of the tests.
@@ -35,6 +36,7 @@ function createEntry(
 ): CacheEntry {
   return {
     status: 'Survived',
+    incremental: null,
     path: 'isolated',
     message: null,
     cause: null,
@@ -89,7 +91,7 @@ describe('writeRunCache', () => {
         s2: createEntry('b', 20),
       },
       inputs: { i2: { environment: [['MODE', null]], files: [] } },
-      version: 1,
+      version: CACHE_VERSION,
     })
     await expect(readdir(path.dirname(file))).resolves.toStrictEqual([
       'run-v1.json',

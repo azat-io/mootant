@@ -17,6 +17,13 @@ export interface CacheEntry {
   path: 'isolated' | 'batch'
 
   /**
+   * Key over the region of the mutant (see `getMutantRegions`) in place of its
+   * whole file, and over what its test file reads outside the mutated files,
+   * which incremental runs accept too; null when the mutant had no region.
+   */
+  incremental: string | null
+
+  /**
    * First line of the failure of a kill, or null.
    */
   message: string | null
@@ -44,7 +51,8 @@ export interface CacheEntry {
 
   /**
    * Hash of everything the evidence depends on; a different key makes the entry
-   * stale.
+   * stale. An incremental run that reuses the entry by its `incremental` key
+   * keeps this one, so other runs never take its verdict for the current code.
    */
   key: string
 }

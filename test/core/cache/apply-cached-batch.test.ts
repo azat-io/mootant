@@ -23,6 +23,7 @@ function createCache(
     dependencies: new Map(),
     recordBatch: () => {},
     recordUnit: () => {},
+    regional: new Set(),
     entries: new Map(),
     pending: new Map(),
     hashes: new Map(),

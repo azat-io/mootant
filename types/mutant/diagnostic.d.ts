@@ -15,6 +15,7 @@ export interface Diagnostic {
     | 'test-file-excluded'
     | 'cache-write-failed'
     | 'config-overridden'
+    | 'incremental-reuse'
     | 'unrepeatable-test'
     | 'self-runtime-file'
     | 'template-skipped'

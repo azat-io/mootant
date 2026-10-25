@@ -33,6 +33,12 @@ interface ListFileMutantsOptions {
   mutators: ActiveMutator[]
 
   /**
+   * Whether every mutant gets the digest of its region for the verdict cache;
+   * false when omitted.
+   */
+  regions?: boolean
+
+  /**
    * Whether the candidates that were considered and not emitted are listed too.
    */
   skipped: boolean
@@ -85,7 +91,7 @@ interface ListedFileMutants {
 export async function listFileMutants(
   options: ListFileMutantsOptions,
 ): Promise<ListedFileMutants> {
-  let { knownMutatorIds, mutators, settings, skipped } = options
+  let { knownMutatorIds, mutators, settings, skipped, regions } = options
   let { diagnostics, files } = await expandPaths(
     options.paths,
     options.cwd,
@@ -152,6 +158,7 @@ export async function listFileMutants(
         settings,
         mutators,
         skipped,
+        regions,
       }),
       absolute: listed.absolute,
     }

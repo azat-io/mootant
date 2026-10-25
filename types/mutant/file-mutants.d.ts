@@ -7,6 +7,13 @@ import type { Mutant } from './mutant'
  */
 export interface FileMutants {
   /**
+   * Digest of the region of every mutant, the code of the file its verdicts
+   * depend on (see `getMutantRegions`), by id; absent for a file without
+   * mutants because it could not be read or parsed.
+   */
+  regions?: ReadonlyMap<string, string>
+
+  /**
    * Problems of the file: a read or parse error, mutator errors and ignore
    * directive warnings.
    */

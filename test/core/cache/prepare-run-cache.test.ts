@@ -1,4 +1,11 @@
-import { writeFile, realpath, mkdtemp, utimes, rm } from 'node:fs/promises'
+import {
+  writeFile,
+  realpath,
+  mkdtemp,
+  utimes,
+  mkdir,
+  rm,
+} from 'node:fs/promises'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
@@ -23,14 +30,17 @@ let root = ''
  *
  * @param world - Changes to the simulated project.
  * @param stored - Entries and inputs of the cache file.
- * @param started - Start of the run; by default no file changed during it.
+ * @param run - How the run goes.
+ * @param run.started - Start of the run; by default no file changed during it.
+ * @param run.incremental - Whether the run is incremental; false by default.
  * @returns Cache of the run, the state's mutant `m1` and its test file key.
  */
 async function prepare(
   world: Partial<FakeWorld> = {},
   stored: StoredCache = { entries: new Map(), inputs: new Map() },
-  started = Number.POSITIVE_INFINITY,
+  run: { incremental?: boolean; started?: number } = {},
 ): Promise<RunCache | null> {
+  let { started = Number.POSITIVE_INFINITY, incremental = false } = run
   let file = path.join(root, 'a.test.ts')
   let { session, state, fake } = await createTestRun(
     {
@@ -53,14 +63,20 @@ async function prepare(
   })
   let cache = await prepareRunCache({
     files: [
-      { source: 'let a = 1', file: 'src/a.ts' },
-      { file: 'src/b.ts', source: null },
+      {
+        absolute: path.join(root, 'src/a.ts'),
+        regions: new Map([['m1', 'r1']]),
+        source: 'let a = 1',
+        file: 'src/a.ts',
+      },
+      { absolute: path.join(root, 'src/b.ts'), file: 'src/b.ts', source: null },
     ] as FileMutants[],
     setup: { preset: 'recommended', mutators: [], settings: {} },
     stored: Promise.resolve(stored),
     analysis: state.analysis,
     adapter: fake.adapter,
     limits: TEST_LIMITS,
+    incremental,
     session,
     started,
     now: 1,
@@ -82,21 +98,24 @@ async function prepare(
  *
  * @param first - Cache of the first run.
  * @param world - Changes to the simulated project of the second run.
+ * @param incremental - Whether the second run is incremental; false by default.
  * @returns Whether the evidence of `m1` is reused.
  */
 async function reuses(
   first: Pick<RunCache, 'entries' | 'inputs'>,
   world: Partial<FakeWorld> = {},
+  incremental = false,
 ): Promise<boolean> {
   let file = path.join(root, 'a.test.ts')
   let { state } = await createTestRun(
     { tests: [{ covers: ['m1'], id: 'a1', file }] },
     { mutants: ['m1'], isolate: true },
   )
-  let second = await prepare(world, {
-    entries: first.entries,
-    inputs: first.inputs,
-  })
+  let second = await prepare(
+    world,
+    { entries: first.entries, inputs: first.inputs },
+    { incremental },
+  )
   return second!.lookupUnit(state.mutants.get('m1')!, file) === 'survived'
 }
 
@@ -147,6 +166,27 @@ describe('prepareRunCache', () => {
     await writeFile(path.join(root, name), `changed ${name}`)
 
     await expect(reuses(first!)).resolves.toBe(false)
+  })
+
+  it('reuses evidence after a change of a mutated file the test file read only in an incremental run', async () => {
+    let file = path.join(root, 'a.test.ts')
+    let source = path.join(root, 'src/a.ts')
+    let helper = path.join(root, 'helper.ts')
+    await mkdir(path.dirname(source), { recursive: true })
+    await writeFile(source, 'let a = 1')
+    await writeFile(helper, 'one')
+    let world: Partial<FakeWorld> = {
+      files: [{ dependencies: [file, source, helper], file }],
+    }
+    let first = await prepare(world)
+    await writeFile(source, 'let a = 2')
+
+    await expect(reuses(first!, world)).resolves.toBe(false)
+    await expect(reuses(first!, world, true)).resolves.toBe(true)
+
+    await writeFile(helper, 'two')
+
+    await expect(reuses(first!, world, true)).resolves.toBe(false)
   })
 
   it('reuses evidence with extra inputs while their files are unchanged', async () => {
@@ -223,7 +263,7 @@ describe('prepareRunCache', () => {
           ],
         },
         undefined,
-        Date.now() + 1,
+        { started: Date.now() + 1 },
       )
 
       expect([...cache!.dependencies.values()]).toStrictEqual([[b, b]])
@@ -233,14 +273,16 @@ describe('prepareRunCache', () => {
       let modified = await prepare(
         { files: [{ dependencies: [a], modified: [a], file: a }] },
         undefined,
-        Date.now() + 1,
+        { started: Date.now() + 1 },
       )
 
       expect([...modified!.dependencies.values()]).toStrictEqual([[a, a]])
 
       await utimes(config, future, future)
 
-      await expect(prepare({}, undefined, Date.now() + 1)).resolves.toBeNull()
+      await expect(
+        prepare({}, undefined, { started: Date.now() + 1 }),
+      ).resolves.toBeNull()
     } finally {
       await utimes(a, now, now)
       await utimes(config, now, now)

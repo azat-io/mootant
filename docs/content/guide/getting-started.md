@@ -52,7 +52,7 @@ lines, a short id and the test file to extend.
 Write a test that fails with the change, then run that mutant again by its id:
 
 ```sh
-npx mootant run src --mutant <id>
+npx mootant run src --mutant {id}
 ```
 
 Verdicts are cached, so the next full run reuses them for mutants whose file and

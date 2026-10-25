@@ -2,7 +2,7 @@ import type { CachedInputs } from './cached-inputs'
 import type { CacheEntry } from './cache-entry'
 
 /**
- * Content of the cache file, `node_modules/.cache/mootant/run-v1.json`.
+ * Content of the cache file, `node_modules/.cache/mootant/run-v2.json`.
  */
 export interface RunCacheFile {
   /**

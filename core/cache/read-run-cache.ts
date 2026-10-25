@@ -73,6 +73,7 @@ function isEntry(value: unknown): value is CacheEntry {
     typeof value['used'] === 'number' &&
     STATUSES.has(value['status']) &&
     PATHS.has(value['path']) &&
+    isNullableString(value['incremental']) &&
     isNullableString(value['inputs']) &&
     isNullableString(value['test']) &&
     isNullableString(value['cause']) &&

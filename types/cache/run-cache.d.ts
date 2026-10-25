@@ -7,7 +7,10 @@ import type { CacheEntry } from './cache-entry'
  * Verdicts of earlier runs that the current run may reuse, and the evidence it
  * adds. An entry is valid while the mutant, its source file, the test file and
  * every file and environment variable that test file read, the inputs the run
- * of the entry read beyond them, and the environment are unchanged.
+ * of the entry read beyond them, and the environment are unchanged. An
+ * incremental run also takes an entry while the region of the mutant (see
+ * `getMutantRegions`) and what the test file reads outside the mutated files
+ * are unchanged, which a change elsewhere may have made stale.
  */
 export interface RunCache {
   /**
@@ -76,6 +79,12 @@ export interface RunCache {
    * runner and the lockfile.
    */
   environment: readonly string[]
+
+  /**
+   * Ids of the mutants an incremental run took evidence of by their region
+   * alone, after a change outside it.
+   */
+  regional: ReadonlySet<string>
 
   /**
    * Drops the entries this run wrote or reused for a test file
