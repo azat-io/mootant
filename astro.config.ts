@@ -7,6 +7,7 @@ import remarkSectionize from 'remark-sectionize'
 import browserslist from 'browserslist'
 import sitemap from '@astrojs/sitemap'
 
+import { rehypeSearchSections } from './docs/plugins/rehype-search-sections'
 import { rehypeHeadingAnchors } from './docs/plugins/rehype-heading-anchors'
 import { rehypeCopyButtons } from './docs/plugins/rehype-copy-buttons'
 import { colorTheme } from './docs/utils/shiki-theme'
@@ -24,9 +25,10 @@ export default defineConfig({
             target: '_blank',
           },
         ],
+        rehypeHeadingIds,
+        rehypeSearchSections,
         rehypeHeadingAnchors,
         rehypeCopyButtons,
-        rehypeHeadingIds,
       ],
       remarkPlugins: [remarkSectionize],
     }),

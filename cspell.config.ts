@@ -9,6 +9,7 @@ export default defineConfig({
     'instrumenter',
     'iterm',
     'lightningcss',
+    'minisearch',
     'mootant',
     'mootantrc',
     'nosystem',

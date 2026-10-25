@@ -1,0 +1,677 @@
+---
+import IconSearch from '../icons/search.svg'
+import IconCross from '../icons/cross.svg'
+---
+
+<button
+  aria-keyshortcuts="/ Control+K Meta+K"
+  aria-haspopup="dialog"
+  aria-label="Search"
+  data-search-open
+  class="button"
+  type="button"
+>
+  <IconSearch class="button-icon" />
+  <span class="label">Search</span>
+  <kbd class="key">/</kbd>
+</button>
+<dialog
+  transition:persist="search"
+  aria-label="Search"
+  id="docs-search"
+  class="dialog"
+>
+  <div class="field">
+    <IconSearch
+      aria-hidden="true"
+      class="field-icon"
+    />
+    <input
+      aria-controls="docs-search-results"
+      placeholder="Search the docs"
+      aria-autocomplete="list"
+      id="docs-search-input"
+      aria-expanded="false"
+      autocapitalize="off"
+      aria-label="Search"
+      autocomplete="off"
+      spellcheck="false"
+      enterkeyhint="go"
+      role="combobox"
+      class="input"
+      type="text"
+    />
+    <button
+      aria-label="Close search"
+      data-search-close
+      class="close"
+      type="button"
+    >
+      <IconCross class="close-icon" />
+    </button>
+  </div>
+  <output class="message"></output>
+  {/* eslint-disable-next-line astro/jsx-a11y/prefer-tag-over-role */}
+  <div
+    id="docs-search-results"
+    aria-label="Results"
+    class="results"
+    role="listbox"
+    tabindex="-1"
+  >
+  </div>
+</dialog>
+
+<script>
+  import type { SearchDocument } from '../utils/search-document'
+
+  interface SearchResult {
+    section: SearchDocument
+    terms: string[]
+  }
+
+  /**
+   * Finds the sections that match a query, best first.
+   */
+  type Find = (query: string) => SearchResult[]
+
+  /**
+   * Results the dialog shows at most.
+   */
+  const MAX_RESULTS = 10
+
+  /**
+   * Characters of a section text shown before its first match at least.
+   */
+  const SNIPPET_LEAD = 40
+
+  /**
+   * Characters of a section text shown at most.
+   */
+  const SNIPPET_LENGTH = 140
+
+  /* The index loads on the first search and stays for the next pages, since
+     the client router keeps this script running. */
+  let find: undefined | Find
+  let loading: Promise<Find> | undefined
+
+  /* The client router moves the dialog to the next page together with the
+     listeners it got on its first opening. */
+  let dialogsWithListeners = new WeakSet<HTMLDialogElement>()
+
+  let createFind = async (): Promise<Find> => {
+    let [{ default: MiniSearch }, response] = await Promise.all([
+      import('minisearch'),
+      fetch('/search-index.json'),
+    ])
+    if (!response.ok) {
+      throw new Error(`Search index request failed with ${response.status}`)
+    }
+    let sections = (await response.json()) as SearchDocument[]
+    let index = new MiniSearch<SearchDocument>({
+      searchOptions: {
+        /* A typo in a short word makes another word, such as run and fun. */
+        fuzzy: term => term.length > 3 && 0.2,
+        boost: { titles: 2, title: 4 },
+        prefix: true,
+      },
+      fields: ['title', 'titles', 'text'],
+      idField: 'url',
+    })
+    index.addAll(sections)
+    let sectionsByUrl = new Map(sections.map(section => [section.url, section]))
+    return query => {
+      /* Sections with every word come first. When there are none, any word
+         will do. */
+      let matches = index.search(query, { combineWith: 'AND' })
+      if (matches.length === 0) {
+        matches = index.search(query, { combineWith: 'OR' })
+      }
+      return matches.slice(0, MAX_RESULTS).flatMap(({ terms, id }) => {
+        let section = sectionsByUrl.get(String(id))
+        return section ? [{ section, terms }] : []
+      })
+    }
+  }
+
+  let load = async (): Promise<Find> => {
+    loading ??= createFind()
+    try {
+      find = await loading
+      return find
+    } catch (error) {
+      /* The next search tries again. */
+      loading = undefined
+      throw error
+    }
+  }
+
+  /* Matches whole words of the text that the search matched. The words come
+     from the index, which splits text at spaces and punctuation. */
+  let createPattern = (terms: string[]): undefined | RegExp => {
+    if (terms.length === 0) {
+      return undefined
+    }
+    let words = terms
+      .toSorted((first, second) => second.length - first.length)
+      .map(term => term.replaceAll(/[$()*+.?[\\\]^{|}]/gu, String.raw`\$&`))
+    return new RegExp(
+      String.raw`(?<![^\n\r\p{Z}\p{P}])(?:${words.join('|')})(?![^\n\r\p{Z}\p{P}])`,
+      'giu',
+    )
+  }
+
+  let highlight = (
+    text: string,
+    pattern: undefined | RegExp,
+  ): DocumentFragment => {
+    let fragment = document.createDocumentFragment()
+    let end = 0
+    for (let match of pattern ? text.matchAll(pattern) : []) {
+      let mark = document.createElement('mark')
+      mark.textContent = match[0]
+      fragment.append(text.slice(end, match.index), mark)
+      end = match.index + match[0].length
+    }
+    fragment.append(text.slice(end))
+    return fragment
+  }
+
+  /* Cuts the part of the text around its first match at word boundaries. */
+  let getSnippet = (text: string, pattern: undefined | RegExp): string => {
+    let position = pattern ? text.search(pattern) : -1
+    let start = text.lastIndexOf(' ', position - SNIPPET_LEAD) + 1
+    let end = start + SNIPPET_LENGTH
+    if (end < text.length) {
+      let space = text.lastIndexOf(' ', end)
+      if (space > start) {
+        end = space
+      }
+    }
+    return `${start > 0 ? '…' : ''}${text.slice(start, end)}${end < text.length ? '…' : ''}`
+  }
+
+  let createPart = (
+    name: string,
+    content: DocumentFragment | string,
+  ): HTMLElement => {
+    let part = document.createElement('span')
+    part.className = name
+    part.append(content)
+    return part
+  }
+
+  /* The link inside an option keeps the browser menu and opening in a new
+     tab. The keyboard stays in the input and moves the selection. */
+  let createOption = (
+    { section, terms }: SearchResult,
+    index: number,
+  ): HTMLElement => {
+    let pattern = createPattern(terms)
+    let link = document.createElement('a')
+    link.className = 'link'
+    link.href = section.url
+    link.tabIndex = -1
+    link.append(
+      createPart('path', section.titles.join(' › ')),
+      createPart('title', highlight(section.title, pattern)),
+      createPart('text', highlight(getSnippet(section.text, pattern), pattern)),
+    )
+    let option = document.createElement('div')
+    option.id = `docs-search-option-${index}`
+    option.setAttribute('aria-selected', 'false')
+    option.setAttribute('role', 'option')
+    option.append(link)
+    return option
+  }
+
+  let select = (dialog: HTMLDialogElement, option?: Element): void => {
+    let input = dialog.querySelector('input')!
+    for (let item of dialog.querySelectorAll('[role="option"]')) {
+      item.setAttribute('aria-selected', String(item === option))
+    }
+    if (option) {
+      input.setAttribute('aria-activedescendant', option.id)
+      option.scrollIntoView({ block: 'nearest' })
+    } else {
+      input.removeAttribute('aria-activedescendant')
+    }
+  }
+
+  let render = (
+    dialog: HTMLDialogElement,
+    results: SearchResult[],
+    message: string,
+  ): void => {
+    let options = results.map((result, index) => createOption(result, index))
+    dialog.querySelector('[role="listbox"]')!.replaceChildren(...options)
+    dialog.querySelector('output')!.textContent = message
+    dialog
+      .querySelector('input')!
+      .setAttribute('aria-expanded', String(options.length > 0))
+    select(dialog, options[0])
+  }
+
+  let update = async (dialog: HTMLDialogElement): Promise<void> => {
+    let input = dialog.querySelector('input')!
+    let query = input.value.trim()
+    if (!query) {
+      render(dialog, [], '')
+      return
+    }
+    if (!find) {
+      render(dialog, [], 'Loading…')
+    }
+    try {
+      let search = find ?? (await load())
+      /* A later input has its own update. */
+      if (input.value.trim() !== query) {
+        return
+      }
+      let results = search(query)
+      render(
+        dialog,
+        results,
+        results.length > 0 ? '' : `No results for “${query}”`,
+      )
+    } catch {
+      render(
+        dialog,
+        [],
+        'Search failed to load. Check the connection and try again.',
+      )
+    }
+  }
+
+  let moveSelection = (
+    event: KeyboardEvent,
+    dialog: HTMLDialogElement,
+  ): void => {
+    /* Safari ends a composition before the key press that confirms it and
+       gives that press the key code 229. */
+    if (event.isComposing || event.keyCode === 229) {
+      return
+    }
+    let options = [...dialog.querySelectorAll('[role="option"]')]
+    let current = dialog.querySelector('[aria-selected="true"]')
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      /* Keeps the caret where it is. */
+      event.preventDefault()
+      let step = event.key === 'ArrowDown' ? 1 : -1
+      let next = options.at((options.indexOf(current!) + step) % options.length)
+      if (next) {
+        select(dialog, next)
+      }
+    } else if (event.key === 'Enter') {
+      /* The click lets the client router open the page. */
+      current?.querySelector('a')?.click()
+    }
+  }
+
+  let addListeners = (dialog: HTMLDialogElement): void => {
+    let input = dialog.querySelector('input')!
+    /* A press that starts in the dialog and ends on the backdrop, such as a
+       text selection, clicks the dialog too, so only a press that starts on
+       the backdrop closes it. */
+    let isBackdropPress = false
+    input.addEventListener('input', () => {
+      void update(dialog)
+    })
+    input.addEventListener('keydown', event => {
+      moveSelection(event, dialog)
+    })
+    dialog.addEventListener('pointerdown', event => {
+      isBackdropPress = event.target === dialog
+    })
+    /* Mobile Safari sends a tap on the backdrop as a click only to an element
+       with a click listener of its own. */
+    dialog.addEventListener('click', event => {
+      let target = event.target as Element
+      let isPlainClick = !(
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      )
+      if (
+        (target === dialog && isBackdropPress) ||
+        target.closest('[data-search-close]') ||
+        (target.closest('a') && isPlainClick)
+      ) {
+        dialog.close()
+      }
+    })
+    /* A pointer that moves over a result selects it. Moves only, so a list
+       that scrolls under a resting pointer keeps the selection of the
+       keyboard. */
+    dialog.addEventListener('pointermove', event => {
+      let option = (event.target as Element).closest('[role="option"]')
+      if (option && option.getAttribute('aria-selected') !== 'true') {
+        select(dialog, option)
+      }
+    })
+  }
+
+  /* The dialog keeps the last query and results between openings and pages,
+     so the next result is one key press away. */
+  let open = (): void => {
+    let dialog = document.querySelector<HTMLDialogElement>('#docs-search')
+    if (!dialog) {
+      return
+    }
+    if (!dialogsWithListeners.has(dialog)) {
+      dialogsWithListeners.add(dialog)
+      addListeners(dialog)
+    }
+    if (!dialog.open) {
+      dialog.showModal()
+    }
+    dialog.querySelector('input')!.select()
+    load().catch(() => undefined)
+  }
+
+  let isEditable = (element: Element): boolean =>
+    element instanceof HTMLElement &&
+    (element.isContentEditable ||
+      ['TEXTAREA', 'SELECT', 'INPUT'].includes(element.tagName))
+
+  let isShortcut = (event: KeyboardEvent): boolean => {
+    if (event.altKey) {
+      return false
+    }
+    /* The key code keeps the shortcut on keyboard layouts without Latin K. */
+    if (event.code === 'KeyK') {
+      return (event.metaKey || event.ctrlKey) && !event.shiftKey
+    }
+    return (
+      event.key === '/' &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !isEditable(event.target as Element)
+    )
+  }
+
+  document.addEventListener('keydown', event => {
+    if (!event.defaultPrevented && isShortcut(event)) {
+      event.preventDefault()
+      open()
+    }
+  })
+
+  document.addEventListener('click', event => {
+    if ((event.target as Element).closest('[data-search-open]')) {
+      open()
+    }
+  })
+
+  /* The client router moves the dialog to the next page, and a modal dialog
+     comes out of such a move as a plain one, so it closes first. */
+  document.addEventListener('astro:before-preparation', () => {
+    document.querySelector<HTMLDialogElement>('#docs-search')?.close()
+  })
+</script>
+
+<style>
+  .button {
+    display: inline-flex;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    gap: var(--space-xs);
+    align-items: center;
+    justify-content: center;
+    inline-size: 48px;
+    block-size: 48px;
+    padding: 0;
+    color: var(--color-content-primary);
+    outline: 2px none transparent;
+    outline-offset: 2px;
+    background: var(--color-background-secondary);
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: 0 0 0 1px var(--color-border-primary);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: all 200ms ease-in-out;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-content-primary);
+        background: var(--color-background-secondary-hover);
+      }
+    }
+
+    &:focus-visible {
+      color: var(--color-content-primary);
+      outline-style: solid;
+      background: var(--color-overlay-brand);
+      box-shadow: 0 0 0 3px var(--color-border-brand);
+    }
+
+    /* Narrower headers have room only for a button like the others. */
+
+    @media (width >= 1100px) {
+      justify-content: flex-start;
+      inline-size: 240px;
+      padding-inline: var(--space-s) var(--space-xs);
+      color: var(--color-content-secondary);
+    }
+  }
+
+  .button-icon {
+    flex-shrink: 0;
+    inline-size: var(--size-icon-m);
+    block-size: var(--size-icon-m);
+
+    @media (width >= 1100px) {
+      inline-size: var(--size-icon-xs);
+      block-size: var(--size-icon-xs);
+    }
+  }
+
+  .label,
+  .key {
+    display: none;
+
+    @media (width >= 1100px) {
+      display: block;
+    }
+  }
+
+  .label {
+    flex-grow: 1;
+    font: var(--font-s);
+    text-align: start;
+  }
+
+  .key {
+    min-inline-size: 24px;
+    padding-inline: var(--space-2xs);
+    font-size: var(--font-size-2xs);
+    line-height: 1.6;
+    text-align: center;
+    background: none;
+    border-block-end-width: 1px;
+    border-radius: calc(var(--border-radius) / 2);
+  }
+
+  .dialog {
+    --offset: var(--space-s);
+    inline-size: min(100% - var(--offset) * 2, 640px);
+    max-inline-size: none;
+    max-block-size: calc(100dvb - var(--offset) * 2);
+    padding: 0;
+    margin-block: var(--offset) auto;
+    overflow: hidden;
+    color: var(--color-content-primary);
+    background: var(--color-background-primary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+    box-shadow: 0 var(--space-s) var(--space-xl) oklch(0% 0 0deg / 25%);
+
+    @media (width >= 800px) {
+      --offset: var(--space-2xl);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition:
+        opacity 150ms ease-out,
+        translate 150ms ease-out;
+    }
+
+    &[open] {
+      display: flex;
+      flex-flow: column nowrap;
+
+      @starting-style {
+        opacity: 0%;
+        translate: 0 calc(0px - var(--space-xs));
+      }
+    }
+
+    &:has(.input:focus-visible) {
+      border-color: var(--color-border-brand);
+    }
+
+    &::backdrop {
+      background: var(--color-overlay-primary);
+    }
+  }
+
+  .field {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    gap: var(--space-xs);
+    align-items: center;
+    padding: var(--space-2xs) var(--space-2xs) var(--space-2xs) var(--space-s);
+  }
+
+  .field-icon {
+    flex-shrink: 0;
+    inline-size: var(--size-icon-s);
+    block-size: var(--size-icon-s);
+    color: var(--color-content-secondary);
+  }
+
+  .input {
+    flex-grow: 1;
+    min-inline-size: 0;
+    block-size: 44px;
+    padding: 0;
+    font: var(--font-m);
+    color: inherit;
+    outline: none;
+    background: none;
+    border: none;
+
+    &::placeholder {
+      color: var(--color-content-secondary);
+    }
+  }
+
+  .close {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    inline-size: 40px;
+    block-size: 40px;
+    padding: 0;
+    color: var(--color-content-secondary);
+    outline: none;
+    background: none;
+    border: none;
+    border-radius: calc(var(--border-radius) - 4px);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: all 200ms ease-in-out;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-content-primary);
+        background: var(--color-background-primary-hover);
+      }
+    }
+
+    &:focus-visible {
+      color: var(--color-content-primary);
+      background: var(--color-overlay-brand);
+      box-shadow: 0 0 0 3px var(--color-border-brand);
+    }
+  }
+
+  .close-icon {
+    inline-size: var(--size-icon-s);
+    block-size: var(--size-icon-s);
+  }
+
+  .message {
+    display: block;
+    flex-shrink: 0;
+    font: var(--font-xs);
+    color: var(--color-content-secondary);
+
+    &:not(:empty) {
+      padding: var(--space-s) var(--space-m);
+      border-block-start: 1px solid var(--color-border-primary);
+    }
+  }
+
+  /* Safari before 26 has no `overflow-block`, and phones need the scroll. */
+  .results {
+    min-block-size: 0;
+    padding: var(--space-2xs);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    border-block-start: 1px solid var(--color-border-primary);
+
+    &:not(:has([role='option'])) {
+      display: none;
+    }
+  }
+
+  /* The script builds the options, so they have no scope of their own. */
+
+  .results :global(.link) {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-4xs);
+    padding: var(--space-xs) var(--space-s);
+    color: inherit;
+    text-decoration: none;
+    border-radius: calc(var(--border-radius) - 4px);
+  }
+
+  .results :global([aria-selected='true'] > .link) {
+    background: var(--color-background-primary-hover);
+  }
+
+  .results :global(.path) {
+    font: var(--font-xs);
+    font-size: var(--font-size-2xs);
+    color: var(--color-content-secondary);
+  }
+
+  .results :global(.title) {
+    font: var(--font-s);
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--color-content-primary);
+  }
+
+  .results :global(.text) {
+    font: var(--font-xs);
+    line-height: 1.6;
+    color: var(--color-content-secondary);
+  }
+
+  .results :global(mark) {
+    color: inherit;
+    background: var(--color-overlay-brand);
+    border-radius: 2px;
+  }
+</style>

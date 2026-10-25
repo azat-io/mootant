@@ -16,6 +16,7 @@
   --color-border-primary: oklch(87.93% 0.0113 89.73deg);
   --color-border-secondary: oklch(20.5% 0.0081 274.52deg);
   --color-overlay-brand: oklch(90% 0.2145 125.57deg / 30%);
+  --color-overlay-primary: oklch(20.5% 0.0081 274.52deg / 25%);
   --color-code-foreground: oklch(20.5% 0.0081 274.52deg);
   --color-code-background: oklch(98.5% 0.0083 91.48deg);
   --color-code-ansi-black: oklch(20.5% 0.0081 274.52deg);
@@ -62,6 +63,7 @@
     --color-border-primary: oklch(29.01% 0.0092 276.8deg);
     --color-border-secondary: oklch(96% 0.0083 91.48deg);
     --color-overlay-brand: oklch(90% 0.2145 125.57deg / 30%);
+    --color-overlay-primary: oklch(10% 0.0081 274.52deg / 60%);
     --color-code-foreground: oklch(96% 0.0083 91.48deg);
     --color-code-background: oklch(17.5% 0.0081 274.52deg);
     --color-code-ansi-black: oklch(35% 0.0081 274.52deg);

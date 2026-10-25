@@ -8,6 +8,7 @@ import IconMenu from '../icons/menu.svg'
 import Wordmark from './Wordmark.astro'
 import IconSun from '../icons/sun.svg'
 import Button from './Button.astro'
+import Search from './Search.astro'
 
 let links = [
   { href: '/guide/getting-started', title: 'Guide' },
@@ -77,6 +78,7 @@ let hasNavigation = Astro.slots.has('navigation')
       </nav>
     </div>
     <div class="menu">
+      <Search />
       <div class="tools">
         <Button
           aria-label="Toggle theme"
@@ -207,10 +209,16 @@ let hasNavigation = Astro.slots.has('navigation')
     margin-block-end: var(--space-xs);
   }
 
+  .menu > :global(.version-badge) {
+    @media (width < 380px), (800px <= width < 880px) {
+      display: none;
+    }
+  }
+
   .navigation {
     display: none;
 
-    .header:has([aria-expanded='true']) & {
+    .header:has(#menu-button[aria-expanded='true']) & {
       display: flex;
       flex-flow: column nowrap;
       opacity: 100%;
