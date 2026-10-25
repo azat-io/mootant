@@ -44,8 +44,10 @@ import { runDry } from './run-dry'
  * @param options - Options of the adapter.
  * @returns Session whose methods run the tests.
  * @throws {Error} When Vitest is missing or not version 5, when mootant would
- *   load another copy of Vitest, or when a project uses an unsupported
- *   setting.
+ *   load another copy of Vitest, when a project uses an unsupported setting, or
+ *   when no test file matches the include patterns, which Vitest itself would
+ *   pass, since mootant runs it with `passWithNoTests` for the units it
+ *   filters.
  */
 export async function startVitestSession(
   context: AdapterContext,
@@ -117,6 +119,15 @@ export async function startVitestSession(
   if (state.error !== null) {
     await vitest.close()
     throw new Error(state.error)
+  }
+  if ((await vitest.globTestSpecifications()).length === 0) {
+    await vitest.close()
+    let patterns = new Set(
+      vitest.projects.flatMap(project => project.config.include),
+    )
+    throw new Error(
+      `No test files match the include patterns of Vitest (${[...patterns].map(pattern => `"${pattern}"`).join(', ')}); set vitestAdapter({ config }) or fix the patterns.`,
+    )
   }
   let { sequence } = vitest.config
   sequence.sequencer = createInterleavedSequencer(sequence.sequencer)

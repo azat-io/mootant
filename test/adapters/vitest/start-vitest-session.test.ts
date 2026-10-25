@@ -66,11 +66,13 @@ describe('startVitestSession', () => {
   let directory: string
   let node: string
   let vitest: {
+    projects: {
+      config: { globalSetup: string[]; setupFiles: string[]; include: string[] }
+    }[]
     config: {
       sequence: { sequencer: TestSequencerConstructor }
       maxWorkers: number
     }
-    projects: { config: { globalSetup: string[]; setupFiles: string[] } }[]
     state?: { idMap: Map<string, { file: { filepath: string } }> }
     globTestSpecifications(): Promise<{ moduleId: string }[]>
     close(): Promise<void>
@@ -91,8 +93,20 @@ describe('startVitestSession', () => {
   beforeEach(() => {
     vitest = {
       projects: [
-        { config: { globalSetup: ['/global.ts'], setupFiles: ['/setup.ts'] } },
-        { config: { setupFiles: ['/setup.ts'], globalSetup: [] } },
+        {
+          config: {
+            globalSetup: ['/global.ts'],
+            include: ['**/*.test.ts'],
+            setupFiles: ['/setup.ts'],
+          },
+        },
+        {
+          config: {
+            include: ['**/*.test.ts', 'e2e/**/*.ts'],
+            setupFiles: ['/setup.ts'],
+            globalSetup: [],
+          },
+        },
       ],
       globTestSpecifications: () =>
         Promise.resolve([{ moduleId: '/test/a.test.ts' }]),
@@ -279,6 +293,15 @@ describe('startVitestSession', () => {
       'different copies',
     )
     expect(createVitest).not.toHaveBeenCalled()
+  })
+
+  it('rejects a project without test files and closes Vitest', async () => {
+    vitest.globTestSpecifications = () => Promise.resolve([])
+
+    await expect(startVitestSession(context, {})).rejects.toThrow(
+      'No test files match the include patterns of Vitest ("**/*.test.ts", "e2e/**/*.ts"); set vitestAdapter({ config }) or fix the patterns.',
+    )
+    expect(vitest.close).toHaveBeenCalledExactlyOnceWith()
   })
 
   it('closes Vitest when a project is not supported', async () => {
