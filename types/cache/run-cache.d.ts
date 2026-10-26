@@ -14,13 +14,14 @@ import type { CacheEntry } from './cache-entry'
  */
 export interface RunCache {
   /**
-   * Finds valid evidence of a mutant in a test on the batch path, a kill or a
-   * reached pass, or null; only used in fast mode.
+   * Finds valid evidence of a mutant in a test on the batch path, or null; only
+   * used in fast mode: a pass, or a kill with whether it came from the first
+   * test its run tried (`CacheEntry.first`).
    */
   lookupBatch(
     mutant: MutantState,
     test: string,
-  ): MutantVerdict | 'survived' | null
+  ): { verdict: MutantVerdict; first: boolean } | 'survived' | null
 
   /**
    * Finds valid evidence of a mutant in a test file (`getTestFileKey`) on the
@@ -33,7 +34,9 @@ export interface RunCache {
 
   /**
    * Records the evidence of a batch try of a mutant in a test, in fast mode: an
-   * accepted kill or a reached pass, with what its unit read.
+   * accepted kill or a pass, whether it reached the mutant or not, with what
+   * its unit read. A kill by the first covering test of the mutant
+   * (`getBatchOrder`) is marked as one (`CacheEntry.first`).
    */
   recordBatch(mutant: MutantState, test: string, evidence: CacheEvidence): void
 
@@ -105,7 +108,7 @@ export interface CacheEvidence<
   inputs: RunInputs | undefined | null
 
   /**
-   * A kill or a reached pass.
+   * A kill or a pass.
    */
   verdict: Verdict
 }

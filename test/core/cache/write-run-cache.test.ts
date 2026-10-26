@@ -39,6 +39,7 @@ function createEntry(
     incremental: null,
     path: 'isolated',
     message: null,
+    first: false,
     cause: null,
     test: null,
     inputs,

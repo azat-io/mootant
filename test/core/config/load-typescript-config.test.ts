@@ -104,7 +104,7 @@ describe('loadTypescriptConfig', () => {
     await expect(
       load(path.join(directory, 'mootant.config.ts')),
     ).rejects.toThrow(
-      'Cannot load mootant.config.ts: TypeScript configuration files need Node.js 22.18 or later, or the jiti package.',
+      'TypeScript configuration files need Node.js 22.18 or later, or the jiti package.',
     )
   })
 })

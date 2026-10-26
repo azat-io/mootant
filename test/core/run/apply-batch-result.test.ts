@@ -4,6 +4,7 @@ import type { BatchResult } from '../../../types/adapter/batch-result'
 import type { FakeWorld } from '../../helpers/create-fake-adapter'
 import type { TryFacts } from '../../../types/adapter/try-facts'
 import type { PlannedTry } from '../../../types/run/run-state'
+import type { RunCache } from '../../../types/cache/run-cache'
 
 import { applyBatchResult } from '../../../core/run/apply-batch-result'
 import { createTestRun } from '../../helpers/create-test-run'
@@ -456,6 +457,66 @@ describe('applyBatchResult', () => {
       path: 'batch',
       verdict: null,
       tries: 0,
+    })
+  })
+
+  it('records kills and passes to the cache, whether a pass reached the mutant or not', async () => {
+    let { session, state } = await createTestRun(
+      {
+        tests: [
+          {
+            kills: { killed: 'expected 1 to be 2' },
+            covers: ['killed', 'survived'],
+            file: '/t/a.test.ts',
+            id: 't1',
+          },
+          { covers: ['unreached'], file: '/t/a.test.ts', id: 't2' },
+        ],
+      },
+      { mutants: ['killed', 'survived', 'unreached'] },
+    )
+    let recorded: string[] = []
+    let cache: RunCache = {
+      recordBatch: (mutant, test, { verdict }) => {
+        recorded.push(
+          `${mutant.mutant.id} ${test} ${verdict === 'survived' ? verdict : verdict.status}`,
+        )
+      },
+      lookupBatch: () => null,
+      dependencies: new Map(),
+      lookupUnit: () => null,
+      recordUnit: () => {},
+      regional: new Set(),
+      entries: new Map(),
+      pending: new Map(),
+      hashes: new Map(),
+      inputs: new Map(),
+      forget: () => {},
+      environment: [],
+    }
+    state.cache = cache
+    let plan = planBatch(
+      state,
+      ['killed', 'survived', 'unreached'].map(mutant => ({
+        test: 't1',
+        mutant,
+      })),
+      1,
+    )
+    applyBatchResult(state, {
+      result: await session.runBatch(plan),
+      confirming: false,
+      plan,
+    })
+
+    expect(recorded).toStrictEqual([
+      'killed t1 Killed',
+      'survived t1 survived',
+      'unreached t1 survived',
+    ])
+    expect(state.mutants.get('unreached')).toMatchObject({
+      survived: false,
+      verdict: null,
     })
   })
 })

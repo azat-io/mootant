@@ -299,12 +299,13 @@ export function createRunCache(input: RunCacheInput): RunCache {
    * Stores evidence of this run.
    *
    * @param address - Slot, key and test file of the evidence, or null.
-   * @param route - Path of the evidence.
-   * @param recorded - A kill or a reached pass, with what its run read.
+   * @param origin - Path of the evidence and whether a kill on it came from the
+   *   first covering test of the mutant.
+   * @param recorded - A kill or a pass, with what its run read.
    */
   function write(
     address: Address | null,
-    route: CacheEntry['path'],
+    origin: Pick<CacheEntry, 'first' | 'path'>,
     recorded: CacheEvidence,
   ): void {
     let { verdict: evidence, inputs: seen } = recorded
@@ -339,11 +340,12 @@ export function createRunCache(input: RunCacheInput): RunCache {
         {
           incremental: address.incremental,
           status: 'Survived',
+          path: origin.path,
           key: address.key,
           message: null,
           inputs: null,
+          first: false,
           cause: null,
-          path: route,
           test: null,
           used: now,
         }
@@ -351,17 +353,27 @@ export function createRunCache(input: RunCacheInput): RunCache {
           incremental: address.incremental,
           message: evidence.message,
           cause: evidence.cause,
+          first: origin.first,
           test: evidence.test,
+          path: origin.path,
           key: address.key,
           status: 'Killed',
           inputs: null,
-          path: route,
           used: now,
         },
     )
   }
 
   return {
+    lookupBatch: (mutant, test) => {
+      let file = getTestFileKey(analysis.tests.get(test)!)
+      let address = locate(mutant, file, test)
+      let found = read(address)
+      if (found === null || found === 'survived') {
+        return found
+      }
+      return { first: stored.entries.get(address!.slot)!.first, verdict: found }
+    },
     forget: file => {
       let slots = [...owners]
         .filter(([, owner]) => owner === file)
@@ -374,14 +386,15 @@ export function createRunCache(input: RunCacheInput): RunCache {
     },
     recordBatch: (mutant, test, evidence) => {
       let file = getTestFileKey(analysis.tests.get(test)!)
-      write(locate(mutant, file, test), 'batch', evidence)
-    },
-    lookupBatch: (mutant, test) => {
-      let file = getTestFileKey(analysis.tests.get(test)!)
-      return read(locate(mutant, file, test))
+      let first = mutant.coveredBy[0] === test
+      write(locate(mutant, file, test), { path: 'batch', first }, evidence)
     },
     recordUnit: (mutant, file, evidence) => {
-      write(locate(mutant, file, null), 'isolated', evidence)
+      write(
+        locate(mutant, file, null),
+        { path: 'isolated', first: false },
+        evidence,
+      )
     },
     lookupUnit: (mutant, file) => read(locate(mutant, file, null)),
     dependencies: input.dependencies,

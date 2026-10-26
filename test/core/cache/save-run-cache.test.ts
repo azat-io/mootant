@@ -45,6 +45,7 @@ function createCache(): RunCache {
     path: 'isolated',
     message: null,
     inputs: null,
+    first: false,
     cause: null,
     test: null,
     key: 'k',

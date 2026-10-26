@@ -45,13 +45,30 @@ let searchPlaces = [
 ]
 
 /**
+ * Loaders of configuration files by extension: scripts are imported, other
+ * files, `package.json` included, are read as JSON.
+ */
+let loaders: Record<string, (file: string, text: string) => unknown> = {
+  '.cts': loadTypescriptConfig,
+  '.mts': loadTypescriptConfig,
+  '.ts': loadTypescriptConfig,
+  '.cjs': importConfig,
+  '.mjs': importConfig,
+  '.js': importConfig,
+  '.json': parseJson,
+  noExt: parseJson,
+}
+
+/**
  * Finds and loads the configuration of a run: the file given with `--config`,
  * or the first configuration found from the working directory up to the home
  * directory. JavaScript files are imported and their default export is the
  * configuration; TypeScript files too, through `loadTypescriptConfig`. An empty
  * file, with nothing but whitespace, given with `--config` is an empty
  * configuration; the search skips empty files. A script with any other content,
- * even only a comment, must have a default export.
+ * even only a comment, must have a default export. The error of a file that
+ * cannot be loaded names it relative to the working directory: lilconfig leaves
+ * the file out, so the loaders remember the one that fails.
  *
  * @param configPath - Path given with `--config`, relative to the working
  *   directory, or undefined to search.
@@ -65,15 +82,21 @@ export async function loadConfig(
   configPath: undefined | string,
   cwd: string,
 ): Promise<LoadedConfig | null> {
+  let failed: undefined | string
   let explorer = lilconfig('mootant', {
-    loaders: {
-      '.cts': loadTypescriptConfig,
-      '.mts': loadTypescriptConfig,
-      '.ts': loadTypescriptConfig,
-      '.cjs': importConfig,
-      '.mjs': importConfig,
-      '.js': importConfig,
-    },
+    loaders: Object.fromEntries(
+      Object.entries(loaders).map(([extension, loader]) => [
+        extension,
+        async (file: string, text: string): Promise<unknown> => {
+          try {
+            return await loader(file, text)
+          } catch (error) {
+            failed = file
+            throw error
+          }
+        },
+      ]),
+    ),
     packageProp: 'mootant',
     searchPlaces,
   })
@@ -85,6 +108,11 @@ export async function loadConfig(
       : await explorer.load(path.resolve(cwd, configPath))
   } catch (error) {
     let { message, code } = error as NodeJS.ErrnoException
+    if (failed !== undefined) {
+      throw new Error(`Cannot load ${path.relative(cwd, failed)}: ${message}`, {
+        cause: error,
+      })
+    }
     if (code === 'ENOENT' && configPath !== undefined) {
       throw new Error(`Cannot find the configuration file ${configPath}.`, {
         cause: error,
@@ -105,4 +133,15 @@ export async function loadConfig(
     directory: path.dirname(file),
     file,
   }
+}
+
+/**
+ * Reads a configuration file as JSON.
+ *
+ * @param _file - Absolute path of the file, which the text does not need.
+ * @param text - Text of the file.
+ * @returns The parsed value.
+ */
+function parseJson(_file: string, text: string): unknown {
+  return JSON.parse(text)
 }

@@ -189,13 +189,49 @@ describe('loadConfig', () => {
     )
   })
 
-  it('reports a found file that cannot be loaded', async () => {
-    await write('mootant.config.js', 'export default {')
+  it('reports a --config file of an unknown type', async () => {
+    await write('mutation.yaml', 'extends: [strict]\n')
 
-    await expect(loadConfig(undefined, directory)).rejects.toThrow(
-      /^Cannot load the configuration: /u,
+    await expect(loadConfig('mutation.yaml', directory)).rejects.toThrow(
+      /^Cannot load mutation\.yaml: /u,
     )
   })
+
+  it('reports a found configuration that cannot be read', async () => {
+    await mkdir(path.join(directory, '.mootantrc'))
+
+    await expect(loadConfig(undefined, directory)).rejects.toThrow(
+      /^Cannot load the configuration: EISDIR: /u,
+    )
+  })
+
+  it('reports a --config script that throws ENOENT as a file that cannot be loaded', async () => {
+    await write(
+      'mutation.mjs',
+      "import { readFileSync } from 'node:fs'\nexport default readFileSync(new URL('missing.json', import.meta.url))\n",
+    )
+
+    await expect(loadConfig('mutation.mjs', directory)).rejects.toThrow(
+      /^Cannot load mutation\.mjs: ENOENT: /u,
+    )
+  })
+
+  it.each([
+    ['mootant.config.js', 'export default {'],
+    ['.mootantrc.json', '{ "extends": ["strict"], }'],
+    ['.mootantrc', '{ "extends": ["strict"], }'],
+    ['package.json', '{ "name": "app", }'],
+  ])(
+    'names a found %s that cannot be loaded relative to the working directory',
+    async (name, text) => {
+      await write(name, text)
+      await mkdir(path.join(directory, 'src'))
+
+      await expect(
+        loadConfig(undefined, path.join(directory, 'src')),
+      ).rejects.toThrow(`Cannot load ${path.join('..', name)}: `)
+    },
+  )
 
   it('names the file of an invalid configuration relative to the working directory', async () => {
     await write('.mootantrc.json', '{ "extend": [] }')

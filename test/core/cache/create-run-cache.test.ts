@@ -369,21 +369,32 @@ describe('createRunCache', () => {
     ).toBeNull()
   })
 
-  it('keeps batch kills apart from isolated evidence', async () => {
+  it('keeps batch kills apart from isolated evidence, marking those by the first test', async () => {
     let state = await createState()
     let first = create(state)
     let mutant = state.mutants.get('m1')!
+    let later = state.mutants.get('m2')!
+    later.coveredBy = ['b1', 'a1']
     first.recordBatch(mutant, 'a1', { verdict: kill, inputs: read })
+    first.recordBatch(later, 'a1', { verdict: kill, inputs: read })
     let second = create(state, { stored: storedOf(first.entries) })
 
     expect([...first.entries.values()]).toMatchObject([
-      { status: 'Killed', path: 'batch', test: 'a1' },
+      { status: 'Killed', path: 'batch', first: true, test: 'a1' },
+      { status: 'Killed', path: 'batch', first: false, test: 'a1' },
     ])
-    expect(second.lookupBatch(mutant, 'a1')).toStrictEqual(kill)
+    expect(second.lookupBatch(mutant, 'a1')).toStrictEqual({
+      verdict: kill,
+      first: true,
+    })
+    expect(second.lookupBatch(later, 'a1')).toStrictEqual({
+      verdict: kill,
+      first: false,
+    })
     expect(second.lookupUnit(mutant, '/t/a.test.ts')).toBeNull()
   })
 
-  it('keeps reached batch passes apart from isolated evidence', async () => {
+  it('keeps batch passes apart from isolated evidence', async () => {
     let state = await createState()
     let first = create(state)
     let mutant = state.mutants.get('m1')!
@@ -391,7 +402,7 @@ describe('createRunCache', () => {
     let second = create(state, { stored: storedOf(first.entries) })
 
     expect([...first.entries.values()]).toMatchObject([
-      { status: 'Survived', path: 'batch', test: null },
+      { status: 'Survived', path: 'batch', first: false, test: null },
     ])
     expect(second.lookupBatch(mutant, 'a1')).toBe('survived')
     expect(second.lookupUnit(mutant, '/t/a.test.ts')).toBeNull()

@@ -14,10 +14,13 @@ import { decideEvidence } from '../run/decide-evidence'
  * valid cached kill in one of them decides the mutant on the isolated path when
  * every file before it has a valid cached reached pass, and valid cached
  * reached passes in all of them decide it as `Survived`. Otherwise a valid
- * cached batch kill by a covering test decides it on the batch path, but only
- * when every covering test the batch phases try before it (`getBatchOrder`) has
- * a valid cached reached pass, so a test whose entry is gone, such as one that
- * now runs out of time, runs first as in a fresh run. Decided mutants are
+ * cached batch kill by a covering test decides it on the batch path when every
+ * covering test the batch phases try before it (`getBatchOrder`) has a valid
+ * cached pass, so a test whose entry is gone, such as one that now runs out of
+ * time, runs first as in a fresh run. A kill by the test its run tried first
+ * (`CacheEntry.first`) decides it even then: phase 1 tries that test alone, so
+ * the kill follows no pass, and the cheapest covering test, which comes first,
+ * may change between runs with the measured durations. Decided mutants are
  * `cached` and take no batch try; the others run as usual.
  *
  * @param state - State of the run with its cache, updated in place.
@@ -45,10 +48,13 @@ export function applyCachedBatch(state: RunState): void {
     }
     let decided = decideEvidence({ evidence, ranked })
     if (decided === null) {
+      let passed = true
       for (let test of getBatchOrder(state, mutant)) {
         let found = cache.lookupBatch(mutant, test)
-        if (found !== 'survived') {
-          mutant.verdict = found
+        if (found === null) {
+          passed = false
+        } else if (found !== 'survived' && (passed || found.first)) {
+          mutant.verdict = found.verdict
           break
         }
       }

@@ -1099,5 +1099,45 @@ describe('runMutants', () => {
         result.results.find(entry => entry.status === 'Killed'),
       ).toMatchObject({ path: 'batch', cached: true })
     })
+
+    it('reuses a batch kill in fast mode after another covering test became the cheapest', async () => {
+      let [add] = ids['src/math.ts']!
+      let [ratio, two] = ids['src/flag.ts']!
+
+      /**
+       * Builds the project with a second test file that reaches the killed
+       * mutant without killing it.
+       *
+       * @param killer - Dry duration of the test that kills the mutant.
+       * @param other - Dry duration of the other test.
+       * @returns The project.
+       */
+      function createTimedWorld(killer: number, other: number): FakeWorld {
+        return createWorld({
+          tests: [
+            {
+              file: path.join(root, 'test/math.test.ts'),
+              kills: { [add!]: 'expected 3 to be -1' },
+              covers: [add!, ratio!, two!],
+              duration: killer,
+              id: 'math',
+            },
+            {
+              file: path.join(root, 'test/other.test.ts'),
+              duration: other,
+              covers: [add!],
+              id: 'other',
+            },
+          ],
+        })
+      }
+      await run(createTimedWorld(1, 2), { fast: true })
+      let { result, fake } = await run(createTimedWorld(2, 1), { fast: true })
+
+      expect(fake.calls.batch).toStrictEqual([])
+      expect(
+        result.results.find(entry => entry.mutant.id === add),
+      ).toMatchObject({ killedBy: 'math', path: 'batch', cached: true })
+    })
   })
 })

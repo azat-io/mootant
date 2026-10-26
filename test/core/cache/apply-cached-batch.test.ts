@@ -49,6 +49,20 @@ function createKill(test: string): MutantVerdict {
   }
 }
 
+/**
+ * Builds cached batch evidence of a kill by a test.
+ *
+ * @param test - Id of the test.
+ * @param first - Whether the test was the first its run tried.
+ * @returns The kill as `RunCache.lookupBatch` finds it.
+ */
+function createBatchKill(
+  test: string,
+  first = false,
+): ReturnType<RunCache['lookupBatch']> {
+  return { verdict: createKill(test), first }
+}
+
 describe('applyCachedBatch', () => {
   it('prefers isolated evidence decided like fresh units, then batch kills', async () => {
     let { state } = await createTestRun(
@@ -79,9 +93,9 @@ describe('applyCachedBatch', () => {
         'm4 /t/a.test.ts': 'survived',
       },
       {
-        'm1 a1': createKill('a1'),
-        'm3 b1': createKill('b1'),
-        'm4 b1': createKill('b1'),
+        'm1 a1': createBatchKill('a1'),
+        'm3 b1': createBatchKill('b1'),
+        'm4 b1': createBatchKill('b1'),
         'm3 a1': 'survived',
       },
     )
@@ -142,8 +156,8 @@ describe('applyCachedBatch', () => {
     state.cache = createCache(
       {},
       {
-        'm1 b1': createKill('b1'),
-        'm2 a2': createKill('a2'),
+        'm1 b1': createBatchKill('b1'),
+        'm2 a2': createBatchKill('a2'),
         'm1 a1': 'survived',
         'm1 a2': 'survived',
         'm1 c1': 'survived',
@@ -164,6 +178,46 @@ describe('applyCachedBatch', () => {
     expect(state.mutants.get('m2')).toMatchObject({
       verdict: null,
       cached: false,
+    })
+    expect(state.mutants.get('m3')).toMatchObject({
+      verdict: null,
+      cached: false,
+    })
+  })
+
+  it('reuses a kill by the test its run tried first whatever test comes first now', async () => {
+    let { state } = await createTestRun(
+      {
+        tests: [
+          { covers: ['m1', 'm2', 'm3'], file: '/t/a.test.ts', id: 'a1' },
+          { covers: ['m1', 'm2', 'm3'], file: '/t/b.test.ts', id: 'b1' },
+          { covers: ['m1', 'm2', 'm3'], file: '/t/c.test.ts', id: 'c1' },
+        ],
+      },
+      { mutants: ['m1', 'm2', 'm3'] },
+    )
+    for (let mutant of state.mutants.values()) {
+      mutant.coveredBy = ['c1', 'a1', 'b1']
+    }
+    state.cache = createCache(
+      {},
+      {
+        'm1 b1': createBatchKill('b1', true),
+        'm2 b1': createBatchKill('b1', true),
+        'm2 a1': createBatchKill('a1'),
+        'm3 b1': createBatchKill('b1'),
+      },
+    )
+
+    applyCachedBatch(state)
+
+    expect(state.mutants.get('m1')).toMatchObject({
+      verdict: createKill('b1'),
+      cached: true,
+    })
+    expect(state.mutants.get('m2')).toMatchObject({
+      verdict: createKill('b1'),
+      cached: true,
     })
     expect(state.mutants.get('m3')).toMatchObject({
       verdict: null,

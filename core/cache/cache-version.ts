@@ -3,4 +3,4 @@
  * the file name, so a file of another version is never read. Bump it when
  * either changes.
  */
-export const CACHE_VERSION = 2
+export const CACHE_VERSION = 3

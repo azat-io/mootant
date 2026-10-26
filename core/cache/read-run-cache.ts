@@ -71,6 +71,7 @@ function isEntry(value: unknown): value is CacheEntry {
     isRecord(value) &&
     typeof value['key'] === 'string' &&
     typeof value['used'] === 'number' &&
+    typeof value['first'] === 'boolean' &&
     STATUSES.has(value['status']) &&
     PATHS.has(value['path']) &&
     isNullableString(value['incremental']) &&

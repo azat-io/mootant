@@ -1,7 +1,5 @@
 import type { createJiti } from 'jiti'
 
-import path from 'node:path'
-
 import { importConfig } from './import-config'
 
 /**
@@ -23,7 +21,7 @@ export async function loadTypescriptConfig(file: string): Promise<unknown> {
     jiti = await import('jiti')
   } catch {
     throw new Error(
-      `Cannot load ${path.basename(file)}: TypeScript configuration files need Node.js 22.18 or later, or the jiti package.`,
+      'TypeScript configuration files need Node.js 22.18 or later, or the jiti package.',
     )
   }
   let module = await jiti

@@ -6,8 +6,9 @@ import type { TryCause } from '../run/try-cause'
  */
 export interface CacheEntry {
   /**
-   * `Killed` with the test of the kill, or `Survived` for an isolated unit or a
-   * batch try that reached the mutant and passed.
+   * `Killed` with the test of the kill, or `Survived` for an isolated unit that
+   * reached the mutant and passed, or for a batch try that passed, whether it
+   * reached the mutant or not.
    */
   status: 'Survived' | 'Killed'
 
@@ -43,6 +44,14 @@ export interface CacheEntry {
    * Id of the test that failed, or null (load-time kills, `Survived`).
    */
   test: string | null
+
+  /**
+   * Whether a batch kill came from the first covering test of the mutant in the
+   * order of its run (`getBatchOrder`), which phase 1 tries alone: such a kill
+   * follows no pass of another test, so a later run reuses it whatever test
+   * comes first then. False for any other evidence.
+   */
+  first: boolean
 
   /**
    * Milliseconds since the epoch when a run last wrote or reused the entry.
