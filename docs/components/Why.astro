@@ -12,37 +12,37 @@ import Lead from './Lead.astro'
 let cards = [
   {
     description:
-      'Mootant skips changes no test could catch or should care about, so every mutant in the report is worth a test.',
-    title: 'No noise',
+      'Mootant skips equivalent, duplicate, and timeout-only mutations, so you spend less time investigating false alarms.',
+    title: 'Less noise',
     icon: IconFilter,
   },
   {
     description:
-      'It also changes numbers, return values and awaits: places other tools leave unchecked.',
+      'Mootant mutates numbers, return values, and awaits-not just operators-to expose tests that miss changes in behavior.',
     title: 'Finds hidden gaps',
     icon: IconHook,
   },
   {
     description:
-      "Kills and survivors are cached with the files they depended on, so the next run reuses whatever your change didn't touch.",
-    title: 'Fast by design',
+      "Mootant caches results and tracks their dependencies. Mutants unaffected by your changes don't need to run again.",
+    title: 'Fast reruns',
     icon: IconBolt,
   },
   {
     description:
-      'Check only the lines a pull request changed, and fail the build when the score drops.',
+      'Test only the lines changed in a pull request, and fail CI when the mutation score falls below your threshold.',
     icon: IconGitPullRequest,
     title: 'Ready for CI',
   },
   {
     description:
-      'A mutant survives only when your tests ran the changed code and still passed. Code no test reaches is reported as untested.',
-    title: 'Results you can trust',
+      'Every survivor shows the code change and a suggested test file to improve. Uncovered mutants are reported separately.',
+    title: 'Actionable reports',
     icon: IconShield,
   },
   {
     description:
-      'Picks up Vitest or node:test with your existing config. TypeScript, JavaScript, Vue and Svelte work out of the box.',
+      'Use your existing Vitest or node:test setup. JavaScript, TypeScript, Vue, and Svelte work out of the box.',
     title: 'Fits your stack',
     icon: IconPuzzle,
   },
@@ -64,10 +64,10 @@ let cards = [
         Why Mootant
       </Typography>
       <Lead
-        muted="Mutation testing has a reputation: slow, noisy, and a report nobody acts on."
+        muted="Mutation testing is often slow, noisy, and hard to act on."
         quote
       >
-        Mootant was built to change all three.
+        Mootant was built to fix all three.
       </Lead>
     </div>
     <ul class="cards">
@@ -130,6 +130,10 @@ let cards = [
 
     @media (width >= 768px) {
       grid-template-columns: repeat(2, [card] 1fr);
+    }
+
+    @media (width >= 1024px) {
+      grid-template-columns: repeat(3, [card] 1fr);
     }
   }
 
