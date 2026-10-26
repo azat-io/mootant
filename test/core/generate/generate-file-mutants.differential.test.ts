@@ -1606,6 +1606,35 @@ const IDIOMS: Idiom[] = [
     inputs: [[1], [2]],
     file: 'example.js',
   },
+  {
+    lines: [
+      'function f(count: number) {',
+      "  let rules = new Intl.PluralRules('en-US', { type: 'cardinal' })",
+      "  return rules.select(count) === 'one' ? 'item' : 'items'",
+      '}',
+    ],
+    name: 'plural rules with an option at its default',
+    inputs: combine([0, 1, 1.5, 2]),
+    file: 'example.ts',
+  },
+  {
+    lines: [
+      'function f(value: number) {',
+      "  return new Intl.NumberFormat('en', {",
+      "    style: 'decimal',",
+      '    get minimumIntegerDigits() {',
+      "      return this.style === 'decimal' ? 2 : 1",
+      '    },',
+      '  }).format(value)',
+      '}',
+    ],
+    gaps: {
+      equivalent: ["comparison-operator this.style === 'decimal' -> true"],
+    },
+    name: 'number format options with a getter that reads an option at its default',
+    inputs: combine([1, 12]),
+    file: 'example.ts',
+  },
 ]
 
 /**

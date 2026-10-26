@@ -75,6 +75,10 @@ export let skipRules = {
     category: 'subsumed',
     heuristic: false,
   },
+  'default-option': {
+    category: 'equivalent',
+    heuristic: false,
+  },
   'comparator-sign-flip': {
     category: 'owned',
     heuristic: true,
