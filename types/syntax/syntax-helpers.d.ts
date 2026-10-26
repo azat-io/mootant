@@ -136,7 +136,9 @@ export interface SyntaxHelpers {
 
   /**
    * Whether the node is the whole right-hand side of an `=` assignment to a
-   * name that a loop around it reads to decide whether to go on.
+   * name that a loop around it reads to decide whether to go on, or the
+   * initializer that always gives a variable its value when the variable is
+   * such a right-hand side (see `isLoopAdvanceValue`).
    */
   isLoopAdvanceValue(node: Node): boolean
 

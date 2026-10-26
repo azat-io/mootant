@@ -296,6 +296,12 @@ describe('arithmeticOperator', () => {
         "'Bad input:' + ' expected a number' -> 'Bad input:' (noise error-message)",
       ],
     ],
+    [
+      'function f(code: string, space: string) { let position = 0; while (position < code.length) { let end = position + space.length; position = end } }',
+      [
+        'position + space.length -> position - space.length (timeout loop-advance)',
+      ],
+    ],
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('arithmetic-operator', source)).toStrictEqual(expected)
   })

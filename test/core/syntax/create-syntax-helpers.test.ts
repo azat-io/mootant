@@ -302,6 +302,20 @@ describe('createSyntaxHelpers', () => {
     expect(shared.getTruthOnlyName(node)).toBeNull()
   })
 
+  it('binds the shared scopes of the program to isLoopAdvanceValue', () => {
+    let file = createTestFile(
+      'let next = 2; function run() { let i = 0; while (i < 10) i = next }',
+    )
+    let value = file.find('Literal', '2')
+    let own = createSyntaxHelpers(file.tree, file.scopes)
+    let shared = createSyntaxHelpers(file.tree, file.scopes, {
+      sharedScopes: new Set([file.parsed.program]),
+    })
+
+    expect(own.isLoopAdvanceValue(value)).toBe(true)
+    expect(shared.isLoopAdvanceValue(value)).toBe(false)
+  })
+
   it('binds the shared scopes of the program to getNamedGroupsFact and isJoinedArray', () => {
     let file = createTestFile(
       [
