@@ -10,6 +10,7 @@ import sitemap from '@astrojs/sitemap'
 import { rehypeSearchSections } from './docs/plugins/rehype-search-sections'
 import { rehypeHeadingAnchors } from './docs/plugins/rehype-heading-anchors'
 import { rehypeCopyButtons } from './docs/plugins/rehype-copy-buttons'
+import { reportDemo } from './docs/plugins/report-demo'
 import { colorTheme } from './docs/utils/shiki-theme'
 
 let site = 'https://mootant.org'
@@ -68,8 +69,8 @@ export default defineConfig({
     port: 3000,
     host: true,
   },
+  integrations: [sitemap(), reportDemo()],
   publicDir: './docs/public',
-  integrations: [sitemap()],
   compressHTML: true,
   srcDir: './docs',
   root: './docs',

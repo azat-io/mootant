@@ -16,7 +16,7 @@ describe('renderOverview', () => {
     )
     expect(squashHtml(html)).toContain(
       squashHtml(
-        '<span class="score-note">2 of 4 scored mutants detected · covered 66.67%</span>',
+        '<span class="score-note">2 of 4 detected · covered 66.67%</span>',
       ),
     )
     expect(squashHtml(html)).not.toContain(squashHtml('threshold'))

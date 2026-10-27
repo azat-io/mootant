@@ -32,6 +32,7 @@ mise.*.local.toml
 # Test
 
 coverage/
+docs/demo/.mootant/
 
 # Misc
 

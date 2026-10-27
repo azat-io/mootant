@@ -1,0 +1,16 @@
+{
+  "name": "shop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest"
+  },
+  "mootant": {
+    "run": {
+      "paths": [
+        "src"
+      ],
+      "cache": false
+    }
+  }
+}

@@ -12,6 +12,6 @@ let config = await eslintConfig({
 })
 
 export default [
-  globalIgnores(['test/fixtures/'], 'mootant/fixtures'),
+  globalIgnores(['test/fixtures/', 'docs/demo/'], 'mootant/fixtures'),
   ...config,
 ] satisfies Linter.Config[]

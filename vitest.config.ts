@@ -15,7 +15,7 @@ export default defineConfig(
         include: ['adapters/**', 'cli/**', 'core/**'],
         provider: 'v8',
       },
-      exclude: [...configDefaults.exclude, 'test/fixtures/**'],
+      exclude: [...configDefaults.exclude, 'test/fixtures/**', 'docs/demo/**'],
       css: { include: [/\.css\?raw$/u] },
     },
   }),

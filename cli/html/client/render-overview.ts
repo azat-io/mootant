@@ -165,8 +165,7 @@ export function renderOverview(index: ReportIndex): string {
           >${summary.score === null ? '–' : `${formatScore(summary.score).replace('%', '')}<span class="score-unit">%</span>`}</span
         >
         <span class="score-note"
-          >${detected} of ${pluralize(scored, 'scored mutant')}
-          detected${covered}</span
+          >${detected} of ${scored} detected${covered}</span
         >
         ${threshold}${failed} ${renderSpotlight(index)}
       </div>
