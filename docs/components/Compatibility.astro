@@ -1,0 +1,199 @@
+---
+import IconNodejs from '../icons/nodejs.svg'
+import IconVitest from '../icons/vitest.svg'
+import Typography from './Typography.astro'
+import Container from './Container.astro'
+import Button from './Button.astro'
+import Badge from './Badge.astro'
+
+let runners = [
+  {
+    text: 'v5 and newer',
+    icon: IconVitest,
+    title: 'Vitest',
+  },
+  {
+    text: 'Node.js 22.12 and newer',
+    title: 'Node Test Runner',
+    icon: IconNodejs,
+  },
+]
+
+/**
+ * Extensions of the files Mootant mutates: JavaScript, then TypeScript in the
+ * same order, then Vue and Svelte components.
+ */
+let extensions = [
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.jsx',
+  '.ts',
+  '.mts',
+  '.cts',
+  '.tsx',
+  '.vue',
+  '.svelte',
+]
+---
+
+<section class="compatibility">
+  <Container class="content">
+    <div class="stack">
+      <Typography
+        color="primary"
+        class="title"
+        align="start"
+        size="2xl"
+        tag="h2"
+        mbe="l"
+        bold
+      >
+        Works with your stack
+      </Typography>
+      <div class="groups">
+        <div>
+          <h3 class="label">File extensions</h3>
+          <ul class="list extensions">
+            {
+              extensions.map(extension => (
+                <li class="item">
+                  <Badge>{extension}</Badge>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+        <div>
+          <h3 class="label">Test runners</h3>
+          <ul class="list cards">
+            {
+              runners.map(({ title, icon, text }) => (
+                <li class="item">
+                  <Badge
+                    {title}
+                    {icon}
+                    {text}
+                  />
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="demo">
+      <Typography
+        color="primary"
+        class="title"
+        align="start"
+        size="2xl"
+        tag="h2"
+        mbe="l"
+        bold
+      >
+        See what survives
+      </Typography>
+      <Typography
+        align="start"
+        size="m"
+      >
+        The report of a small sample shop: scores, every mutant in its code and
+        what each test reaches.
+      </Typography>
+      <Typography
+        align="start"
+        size="m"
+        mbe="l"
+      >
+        Add <code>--html</code> to a run to write the same report for your project.
+      </Typography>
+      <Button
+        href="/report/demo"
+        color="secondary"
+        target="_blank"
+        tag="a"
+        full
+      >
+        View Demo
+      </Button>
+    </div>
+  </Container>
+</section>
+
+<style>
+  .compatibility {
+    padding-block: var(--space-2xl);
+  }
+
+  .content {
+    display: grid;
+    gap: var(--space-xl) var(--space-l);
+
+    @media (width >= 1152px) {
+      grid-template-columns: repeat(3, [column] 1fr);
+    }
+  }
+
+  .stack {
+    display: flex;
+    flex-flow: column nowrap;
+
+    @media (width >= 1152px) {
+      grid-column: span 2;
+    }
+  }
+
+  .title {
+    line-height: 1.2;
+  }
+
+  .groups {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-l);
+  }
+
+  .label {
+    margin-block: 0 var(--space-m);
+    font:
+      600 0.75rem / 1.5 'JetBrains Mono',
+      monospace;
+    color: var(--color-content-secondary);
+  }
+
+  .list {
+    padding-inline-start: 0;
+    margin-block: 0;
+    list-style-type: '';
+  }
+
+  .extensions {
+    display: flex;
+    flex-flow: row wrap;
+    gap: var(--space-xs);
+  }
+
+  .cards {
+    display: grid;
+    gap: var(--space-m);
+    inline-size: fit-content;
+    max-inline-size: 100%;
+
+    @media (width >= 768px) {
+      grid-auto-columns: 1fr;
+      grid-auto-flow: column;
+    }
+  }
+
+  .item {
+    display: grid;
+    margin-block: 0;
+  }
+
+  .demo {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: start;
+  }
+</style>
