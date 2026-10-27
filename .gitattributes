@@ -1,2 +1,2 @@
-bin/mootant.js linguist-vendored
-test/fixtures/** text eol=lf linguist-vendored
+docs/** linguist-documentation=false
+test/fixtures/** text eol=lf
