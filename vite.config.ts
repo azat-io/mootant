@@ -1,7 +1,8 @@
 import type { StringLiteral } from 'oxc-parser'
+import type { Plugin } from 'vite'
 
 import { parseSync, Visitor } from 'oxc-parser'
-import { defineConfig } from 'vite'
+import { defineConfig, build } from 'vite'
 import dts from 'vite-plugin-dts'
 import path from 'node:path'
 
@@ -66,6 +67,47 @@ function external(id: string): boolean {
 }
 
 /**
+ * Query that turns an import of a browser module into its bundled code.
+ */
+const INLINE_SCRIPT_QUERY = '?inline-script'
+
+/**
+ * Bundles a browser module and its imports into one script and exports the code
+ * as a string, for an import that ends with `?inline-script`. The HTML report
+ * embeds its client this way, so the package needs no separate asset.
+ *
+ * @returns Vite plugin.
+ */
+function inlineScript(): Plugin {
+  return {
+    async load(id) {
+      if (!id.endsWith(INLINE_SCRIPT_QUERY)) {
+        return null
+      }
+      let entry = id.slice(0, -INLINE_SCRIPT_QUERY.length)
+      let result = await build({
+        build: {
+          lib: { name: 'mootantReport', formats: ['iife'], entry },
+          write: false,
+          minify: true,
+        },
+        logLevel: 'silent',
+        configFile: false,
+      })
+      if (!Array.isArray(result) && !('output' in result)) {
+        throw new Error(`Cannot bundle ${entry}.`)
+      }
+      let [chunk] = (Array.isArray(result) ? result[0]! : result).output
+      for (let module of chunk.moduleIds) {
+        this.addWatchFile(module)
+      }
+      return `export default ${JSON.stringify(chunk.code)}`
+    },
+    name: 'mootant:inline-script',
+  }
+}
+
+/**
  * Vite configuration.
  */
 export default defineConfig({
@@ -100,6 +142,7 @@ export default defineConfig({
     minify: true,
   },
   plugins: [
+    inlineScript(),
     dts({
       include: ['adapters', 'cli', 'core', 'types'],
       copyDtsFiles: true,

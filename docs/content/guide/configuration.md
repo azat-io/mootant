@@ -283,6 +283,14 @@ change of a caller or of another mutated file may leave a verdict stale. It
 needs the cache. `false` by default. `--incremental` and `--no-incremental` set
 it for one run.
 
+### html
+
+Whether to write the [HTML report](/guide/report) after the run: `true` writes
+it to `.mootant/report.html` in the root of the project, a path writes it there,
+relative to the root. No report by default. `--html` asks for it for one run,
+and `--no-html` skips it. A run of single mutants with `--mutant` writes a
+report only with `--html`, so a re-check keeps the report of the whole run.
+
 ### runner
 
 The test runner: `'vitest'`, `'node-test'` or an adapter object. By default,

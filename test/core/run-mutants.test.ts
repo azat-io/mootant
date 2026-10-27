@@ -506,6 +506,45 @@ describe('runMutants', () => {
     ])
   })
 
+  it('lists the skipped candidates of a run that writes an HTML report', async () => {
+    let [add] = ids['src/math.ts']!
+    let tests = [
+      {
+        file: path.join(root, 'test/math.test.ts'),
+        covers: [add!],
+        id: 'math',
+      },
+    ]
+    useRunConfig({ html: 'out/report.html' })
+    let configured = await run({ tests })
+    let picked = await run({ tests }, { mutantIds: [add!] })
+    let asked = await run({ tests }, { mutantIds: [add!], html: true })
+    useRunConfig({})
+    let defaulted = await run({ tests }, { html: true })
+    useRunConfig({ html: true })
+    let refused = await run({ tests }, { html: false })
+
+    /**
+     * Lists what the skipped candidates of `src/math.ts` would write.
+     *
+     * @param result - Result of a run.
+     * @returns Replacements of the skipped candidates.
+     */
+    function math(result: Awaited<ReturnType<typeof runMutants>>): string[] {
+      return result.files
+        .find(file => file.file === 'src/math.ts')!
+        .skipped.map(entry => entry.replacement)
+    }
+
+    expect(configured.result.html).toBe(path.join(root, 'out/report.html'))
+    expect(picked.result.html).toBeNull()
+    expect(asked.result.html).toBe(path.join(root, 'out/report.html'))
+    expect(defaulted.result.html).toBe(path.join(root, '.mootant/report.html'))
+    expect(refused.result.html).toBeNull()
+    expect(math(configured.result)).toStrictEqual(['0'])
+    expect(math(refused.result)).toStrictEqual([])
+  })
+
   it('fails without paths and on unknown mutant ids', async () => {
     vi.mocked(loadConfig).mockResolvedValue(null)
 

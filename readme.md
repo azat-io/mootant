@@ -90,11 +90,13 @@ configuration, or [`node:test`](#nodetest), selecting tests related to the
 mutated files. Progress is shown as the run goes; the report lists surviving and
 uncovered mutants and mutants with errors in a section each, by file, every one
 as its source lines before and after the change, with a short id and the test
-file to extend. `--json` lists the same mutants with full ids, source lines,
-their likeliest test files, one covering test and the command to re-check each;
-`--json --all` lists every mutant, a killed one with the test file that killed
-it. What the tests print is hidden, unless tests fail without mutants: then the
-output of their test files is shown. Tests must pass without mutants first.
+file to extend. In a terminal, the report also names the five files with the
+lowest scores below 100%; piped output and `--json` leave them out. `--json`
+lists the same mutants with full ids, source lines, their likeliest test files,
+one covering test and the command to re-check each; `--json --all` lists every
+mutant, a killed one with the test file that killed it. What the tests print is
+hidden, unless tests fail without mutants: then the output of their test files
+is shown. Tests must pass without mutants first.
 
 Options:
 
@@ -114,6 +116,9 @@ Options:
   the runs of the test runner; with `--json`, print the full report with every
   covering test, offsets and timings
 - `--all`: with `--json`, list every mutant, not only the ones to act on
+- `--html`: also write an HTML report with the score of every file and each
+  mutant in its code to `.mootant/report.html` (`run.html` in the configuration
+  sets another path or writes it on every run)
 
 The score is killed and timed-out mutants over all scored mutants; `Ignored` and
 `Error` are excluded. The exit code is 1 on errors or a score below the
@@ -193,6 +198,7 @@ export default defineConfig({
   - `threshold`, `concurrency`, `fast`, `incremental`: as the options of the
     same names
   - `cache`: `false` as `--no-cache`
+  - `html`: `true` writes the HTML report on every run, a path writes it there
   - `runner`: auto-detected, `'vitest'`, `'node-test'`, or an imported adapter
     object. For a custom Vitest config, import `vitestAdapter` from
     `mootant/vitest` and use

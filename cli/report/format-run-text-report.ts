@@ -3,12 +3,15 @@ import type {
   RunReportMutant,
   RunReport,
 } from '../../types/report/run-report'
+import type { FileScore } from '../../types/report/file-score'
 import type { TextStyle } from '../../types/cli/text-style'
 import type { RunStatus } from '../../types/run/run-status'
 import type { DiffEntry } from '../diff/format-diff-groups'
 import type { RunKind } from '../../types/run/run-kind'
 
+import { getDisplayWidth } from '../terminal/get-display-width'
 import { formatDiffGroups } from '../diff/format-diff-groups'
+import { cutToWidth } from '../terminal/cut-to-width'
 import { getSymbols } from '../terminal/get-symbols'
 import { sortByLocation } from './sort-by-location'
 import { formatDuration } from './format-duration'
@@ -21,6 +24,13 @@ import { pluralize } from './pluralize'
  * How a run report is printed as text.
  */
 export interface RunTextOptions {
+  /**
+   * Files below a score of 100, the lowest first (`getFileScores`), to list
+   * after the counts; left out of output that is not a terminal, such as the
+   * one an agent reads.
+   */
+  files?: readonly FileScore[]
+
   /**
    * Whether to add the covering test of survivors and the runs of the test
    * runner; the JSON format prints the full report with it.
@@ -75,6 +85,11 @@ const RUN_KINDS: RunKind[] = [
 ]
 
 /**
+ * Most files the list of the lowest scores names.
+ */
+const MAX_FILE_SCORES = 5
+
+/**
  * Share of the total time the isolated phase must exceed before the report
  * names the most expensive modules.
  */
@@ -94,8 +109,9 @@ const STATIC_COST_TIME = 30_000
 /**
  * Formats a run report as text: a header with the command and the test runner;
  * the dry run, the mutants with how many were ignored or reused from the cache,
- * and time; the counts by status and the score; a section for each status to
- * act on (`survived`, `no coverage`, `errors`) with its count and its mutants
+ * and time; the counts by status and the score; in a terminal, the files with
+ * the lowest scores below 100, five at most; a section for each status to act
+ * on (`survived`, `no coverage`, `errors`) with its count and its mutants
  * grouped by file, each as a diff of its source lines under a heading with the
  * location, mutator and short id, the reason of an error or the likeliest test
  * file to extend of another mutant under the diff; and a hint to re-check the
@@ -126,6 +142,9 @@ export function formatRunTextReport(
     formatFields(getRunFields(report, options.verbose), style),
     formatCounts(summary, style),
   ]
+  if (options.files && options.files.length > 0) {
+    sections.push(formatFileScores(options.files, style))
+  }
   let listed = sortByLocation(
     report.mutants.filter(mutant =>
       SECTIONS.some(section => section.status === mutant.status),
@@ -226,6 +245,46 @@ function getRunFields(
     fields.push(['runs', runs.length === 0 ? 'none' : runs.join(', ')])
   }
   return fields
+}
+
+/**
+ * Formats the files with the lowest scores: the path, cut at its start when the
+ * terminal is narrow, the score and the survivors and mutants without coverage
+ * of each, then how many more files are below 100.
+ *
+ * @param files - Files below 100, the lowest first.
+ * @param style - Colors, width and symbols of the output.
+ * @returns Lines joined with line breaks.
+ */
+function formatFileScores(
+  files: readonly FileScore[],
+  style: TextStyle,
+): string {
+  let { colors } = style
+  let { ellipsis } = getSymbols(style.unicode)
+  let shown = files.slice(0, MAX_FILE_SCORES)
+  let width = Math.min(
+    Math.max(...shown.map(file => getDisplayWidth(file.file))),
+    Math.max(16, style.width - 38),
+  )
+  let lines = shown.map(file => {
+    let path = cutToWidth(file.file, { side: 'start', ellipsis, width })
+    let counts = [
+      file.survived > 0 ? colors.greenBright(`${file.survived} survived`) : '',
+      file.noCoverage > 0 ?
+        colors.yellow(`${file.noCoverage} no coverage`)
+      : '',
+    ]
+      .filter(Boolean)
+      .join(', ')
+    let score = `${file.score}%`.padStart(7)
+    return `  ${path}${' '.repeat(width - getDisplayWidth(path))}  ${score}  ${counts}`.trimEnd()
+  })
+  let rest = files.length - shown.length
+  if (rest > 0) {
+    lines.push(colors.gray(`  and ${pluralize(rest, 'more file')} below 100%`))
+  }
+  return `${colors.bold('files')} ${files.length} below 100%\n${lines.join('\n')}`
 }
 
 /**

@@ -73,6 +73,12 @@ export interface RunResult {
   files: FileMutants[]
 
   /**
+   * Absolute path of the HTML report to write (`--html`, `run.html`), or null.
+   * With a report, `files` list their skipped candidates.
+   */
+  html: string | null
+
+  /**
    * Ids of every listed mutant of the paths, the ones `--since` and `--mutant`
    * left out included, so short ids stay unique among them.
    */

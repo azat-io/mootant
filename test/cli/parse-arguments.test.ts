@@ -46,6 +46,8 @@ const HELP_TEXT = [
   '  --mutant <id>        run: run only this mutant, by its id or a unique prefix',
   '                       of 4 characters or more, as reports print it; repeat',
   '                       for more',
+  '  --html               run: also write an HTML report to .mootant/report.html,',
+  '                       or to the path of run.html in the configuration',
   '  --verbose            With --json, print the full report (offsets, original',
   '                       and replacement texts, every covering test, timings);',
   '                       run: show what the tests print, the covering test of',
@@ -251,6 +253,23 @@ describe('parseArguments', () => {
   })
 
   it.each([
+    [['--html'], true],
+    [['--no-html'], false],
+  ])('reads %j', (flags, html) => {
+    expect(parseArguments(['run', 'src', ...flags], '1.0.0')).toStrictEqual({
+      options: {
+        paths: ['src'],
+        verbose: false,
+        mutantIds: [],
+        json: false,
+        all: false,
+        html,
+      },
+      kind: 'run',
+    })
+  })
+
+  it.each([
     [['--incremental'], true],
     [['--no-incremental'], false],
   ])('reads %j', (flags, incremental) => {
@@ -342,6 +361,10 @@ describe('parseArguments', () => {
     {
       message: '--incremental applies to the run command only.',
       argv: ['list', 'src', '--incremental'],
+    },
+    {
+      message: '--html applies to the run command only.',
+      argv: ['list', 'src', '--html'],
     },
     {
       message: '--incremental reuses cached verdicts; drop --no-cache.',

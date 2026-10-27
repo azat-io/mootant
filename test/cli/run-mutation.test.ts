@@ -1,21 +1,25 @@
 import type { MockInstance, Mock } from 'vitest'
 
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
+import path from 'node:path'
 
 import type { RunProgress } from '../../cli/create-run-progress'
 import type { RunReport } from '../../types/report/run-report'
 
 import { formatRunTextReport } from '../../cli/report/format-run-text-report'
 import { buildRunReport } from '../../cli/report/build-run-report'
+import { writeHtmlReport } from '../../cli/html/write-html-report'
 import { createRunProgress } from '../../cli/create-run-progress'
 import { slimRunReport } from '../../cli/report/slim-run-report'
 import { getBuiltInAdapters } from '../../cli/built-in-adapters'
+import { getFileScores } from '../../cli/report/get-file-scores'
 import { createTextStyle } from '../helpers/create-text-style'
 import { createRunResult } from '../helpers/create-run-result'
 import { runMutation } from '../../cli/run-mutation'
 import { runMutants } from '../../core/run-mutants'
 
 vi.mock(import('../../core/run-mutants'))
+vi.mock(import('../../cli/html/write-html-report'))
 vi.mock(import('../../cli/create-run-progress'))
 
 /**
@@ -348,5 +352,87 @@ describe('runMutation', () => {
       ['Output of the tests:\n(node) Warning: x\nlog\n'],
       ['Error: Tests fail without mutants; fix them first.'],
     ])
+  })
+
+  it('writes the HTML report and prints its path', async () => {
+    let result = createPassingResult()
+    result.html = '/repo/.mootant/report.html'
+    vi.mocked(runMutants).mockResolvedValue(result)
+    vi.mocked(writeHtmlReport).mockResolvedValue()
+
+    await runMutation({
+      paths: ['src'],
+      verbose: false,
+      mutantIds: [],
+      json: true,
+      all: false,
+      html: true,
+    })
+
+    expect(vi.mocked(runMutants).mock.calls[0]![0]).toMatchObject({
+      html: true,
+    })
+    expect(writeHtmlReport).toHaveBeenCalledExactlyOnceWith(
+      '/repo/.mootant/report.html',
+      expect.stringMatching(/^<!doctype html>/u),
+    )
+    let [, html] = vi.mocked(writeHtmlReport).mock.calls[0]!
+
+    expect(html).toContain('"project":"repo"')
+    expect(html).toContain('"command":"mootant run src --html"')
+    expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
+      `html report: ${path.relative(process.cwd(), '/repo/.mootant/report.html')}`,
+    )
+    expect(process.exitCode).toBeUndefined()
+  })
+
+  it('fails when the HTML report cannot be written', async () => {
+    let result = createPassingResult()
+    result.html = '/repo/.mootant/report.html'
+    vi.mocked(runMutants).mockResolvedValue(result)
+    vi.mocked(writeHtmlReport).mockRejectedValue(new Error('EACCES'))
+
+    await runMutation({
+      paths: ['src'],
+      verbose: false,
+      mutantIds: [],
+      json: false,
+      all: false,
+    })
+
+    expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
+      'Error: The HTML report could not be written to /repo/.mootant/report.html: EACCES',
+    )
+    expect(process.exitCode).toBe(1)
+  })
+
+  it('lists the files with the lowest scores in a terminal', async () => {
+    let tty = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY')
+    Object.defineProperty(process.stdout, 'isTTY', {
+      configurable: true,
+      value: true,
+    })
+    try {
+      vi.mocked(runMutants).mockResolvedValue(createPassingResult())
+
+      await runMutation({
+        paths: ['src'],
+        verbose: false,
+        mutantIds: [],
+        json: false,
+        all: false,
+      })
+
+      expect(getFileScores(createPassingResult())).toHaveLength(1)
+      expect(consoleInfoSpy.mock.calls[0]![0]).toContain(
+        'files 1 below 100%\n  src/cart.ts   ',
+      )
+    } finally {
+      if (tty) {
+        Object.defineProperty(process.stdout, 'isTTY', tty)
+      } else {
+        delete (process.stdout as { isTTY?: boolean }).isTTY
+      }
+    }
   })
 })

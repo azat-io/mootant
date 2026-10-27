@@ -26,6 +26,13 @@ export interface RunConfig {
   runner?: TestAdapter | string
 
   /**
+   * HTML report: true writes it to `.mootant/report.html`, a path writes it
+   * there, relative to the directory of the configuration file; none when
+   * omitted or false, unless `--html` asks for it.
+   */
+  html?: boolean | string
+
+  /**
    * Incremental mode: reuse a cached verdict while the declaration of its
    * mutant, what that uses in its file and what its test file reads outside the
    * mutated files stay the same, even after changes elsewhere, which may leave

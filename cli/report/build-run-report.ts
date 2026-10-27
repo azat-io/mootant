@@ -32,6 +32,11 @@ const MAX_TEST_FILES = 3
  */
 interface RunReportOptions {
   /**
+   * Whether to add the skipped candidates the run listed.
+   */
+  skipped?: boolean
+
+  /**
    * Command line before `--mutant` that runs mutants of the same paths again,
    * such as `mootant run src --preset strict`.
    */
@@ -52,10 +57,12 @@ interface RunReportOptions {
  * their counts of covering tests) and the first covering test, the command that
  * runs it again, counts, scores and durations. Only the mutants to act on
  * (`Survived`, `NoCoverage`, `Error`) are listed unless every mutant is asked
- * for; the summary counts them all. Paths are relative to the project root.
+ * for; the summary counts them all. The skipped candidates the run listed are
+ * added when asked for. Paths are relative to the project root.
  *
  * @param result - Outcome of the run.
- * @param options - Command line of a re-check and whether to list every mutant.
+ * @param options - Command line of a re-check, whether to list every mutant and
+ *   whether to add the skipped candidates.
  * @returns Report with verdicts and the summary.
  */
 export function buildRunReport(
@@ -63,12 +70,12 @@ export function buildRunReport(
   options: RunReportOptions,
 ): RunReport {
   let list = buildListReport({
+    skipped: options.skipped ?? false,
     diagnostics: result.diagnostics,
     mutators: result.mutators,
     preset: result.preset,
     since: result.since,
     files: result.files,
-    skipped: false,
   })
   let verdicts = new Map(
     result.results.map(verdict => [verdict.mutant.id, verdict]),
@@ -191,6 +198,7 @@ export function buildRunReport(
     since: result.since,
     mode: result.mode,
     files: list.files,
+    ...(list.skipped && { skipped: list.skipped }),
     schemaVersion: 3,
     command: 'run',
     mutants,

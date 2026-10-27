@@ -48,6 +48,8 @@ Options:
   --mutant <id>        run: run only this mutant, by its id or a unique prefix
                        of 4 characters or more, as reports print it; repeat
                        for more
+  --html               run: also write an HTML report to .mootant/report.html,
+                       or to the path of run.html in the configuration
   --verbose            With --json, print the full report (offsets, original
                        and replacement texts, every covering test, timings);
                        run: show what the tests print, the covering test of
@@ -71,6 +73,7 @@ let parserOptions = {
   config: { type: 'string' },
   preset: { type: 'string' },
   cache: { type: 'boolean' },
+  html: { type: 'boolean' },
   since: { type: 'string' },
   fast: { type: 'boolean' },
   json: { type: 'boolean' },
@@ -87,6 +90,7 @@ let runOnlyOptions = [
   'cache',
   'fast',
   'mutant',
+  'html',
   'all',
 ] as const
 
@@ -150,6 +154,11 @@ export interface RunOptions {
    * True when `--fast` is given.
    */
   fast?: boolean
+
+  /**
+   * True when `--html` is given, false with `--no-html`.
+   */
+  html?: boolean
 
   /**
    * Whether to print the report as JSON.
@@ -384,6 +393,7 @@ function parseRunOptions(
         incremental: values.incremental,
       }),
       ...(values.fast !== undefined && { fast: values.fast }),
+      ...(values.html !== undefined && { html: values.html }),
       ...(values.cache !== undefined && { cache: values.cache }),
       ...(values.config !== undefined && { config: values.config }),
       ...(values.preset !== undefined && { preset: values.preset }),

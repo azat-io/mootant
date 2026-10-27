@@ -44,6 +44,7 @@ import { readRunCache } from './cache/read-run-cache'
 import { getCachePath } from './cache/get-cache-path'
 import { countVerdicts } from './run/count-verdicts'
 import { decideResults } from './run/decide-results'
+import { getHtmlPath } from './run/get-html-path'
 import { runDryPhase } from './run/run-dry-phase'
 import { prepareRun } from './config/prepare-run'
 import { readDryRun } from './run/read-dry-run'
@@ -125,6 +126,12 @@ interface RunMutantsOptions {
   fast?: boolean
 
   /**
+   * HTML report: true with `--html`, false with `--no-html`; over `run.html`. A
+   * run with a report also lists the skipped candidates of its files.
+   */
+  html?: boolean
+
+  /**
    * Working directory of the run.
    */
   cwd: string
@@ -147,8 +154,9 @@ interface RunMutantsOptions {
  * their region matched, and the evidence of the run is saved after it, unless
  * it has error diagnostics. With `--since`, only the mutants on lines changed
  * since the merge base of the revision and `HEAD` run, and when there are none
- * the test runner does not start. The adapter is closed and the work directory
- * removed whatever happens.
+ * the test runner does not start. A run that writes an HTML report also lists
+ * the candidates its mutators skipped. The adapter is closed and the work
+ * directory removed whatever happens.
  *
  * @param options - Paths, configuration, adapters and run settings.
  * @returns Verdicts, diagnostics and timings, before they are formatted.
@@ -165,6 +173,10 @@ export async function runMutants(
   let { root, run } = setup
   let requestedFast = options.fast ?? run.fast ?? false
   let threshold = options.threshold ?? run.threshold ?? null
+  let html = getHtmlPath(options.html, run.html, {
+    picked: (options.mutantIds?.length ?? 0) > 0,
+    root,
+  })
   let fromConfig = options.paths.length === 0
   let paths = fromConfig ? (run.paths ?? []) : options.paths
   if (paths.length === 0) {
@@ -182,7 +194,7 @@ export async function runMutants(
     cwd: fromConfig ? root : options.cwd,
     settings: setup.settings,
     mutators: setup.mutators,
-    skipped: false,
+    skipped: html !== null,
     paths,
     root,
   })
@@ -251,6 +263,7 @@ export async function runMutants(
       runs: {},
       files,
       since,
+      html,
       root,
     }
   }
@@ -299,6 +312,7 @@ export async function runMutants(
         files,
         since,
         setup,
+        html,
         live,
         fast,
         run,
@@ -329,6 +343,7 @@ export async function runMutants(
  * @param context.listedIds - Ids of every listed mutant of the paths.
  * @param context.threshold - Lowest total score that passes, or null.
  * @param context.since - Revision of `--since` with its merge base, or null.
+ * @param context.html - Absolute path of the HTML report, or null.
  * @param context.fast - Whether the run is in fast mode, which needs an adapter
  *   with batch mode.
  * @param context.setup - Prepared configuration.
@@ -349,6 +364,7 @@ async function execute(context: {
   listed: FileMutants[]
   adapter: TestAdapter
   files: FileMutants[]
+  html: string | null
   listedIds: string[]
   startedAt: number
   started: number
@@ -564,6 +580,7 @@ async function execute(context: {
     files: selected.files,
     since: context.since,
     preset: setup.preset,
+    html: context.html,
     runs: state.runs,
     diagnostics,
     root,

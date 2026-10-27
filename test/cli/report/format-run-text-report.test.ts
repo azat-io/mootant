@@ -1,7 +1,8 @@
-// spell-checker:ignore erro othe
+// spell-checker:ignore erro othe ctory
 import { describe, expect, it } from 'vitest'
 
 import type { RunReport } from '../../../types/report/run-report'
+import type { FileScore } from '../../../types/report/file-score'
 
 import { formatRunTextReport } from '../../../cli/report/format-run-text-report'
 import { getShortIdLength } from '../../../cli/report/get-short-id-length'
@@ -21,10 +22,14 @@ import { showEscapes } from '../../helpers/show-escapes'
  */
 function format(
   report: RunReport,
-  options: Parameters<typeof createTextStyle>[0] & { verbose?: boolean } = {},
+  options: {
+    files?: FileScore[]
+    verbose?: boolean
+  } & Parameters<typeof createTextStyle>[0] = {},
 ): string {
-  let { verbose = false, ...style } = options
+  let { verbose = false, files, ...style } = options
   return formatRunTextReport(report, {
+    ...(files && { files }),
     idLength: getShortIdLength(report.mutants.map(mutant => mutant.id)),
     style: createTextStyle(style),
     command: 'mootant run src',
@@ -669,5 +674,38 @@ describe('formatRunTextReport', () => {
             <32>+<39> return new RegExp('x[<32>^<39>]')
             <90>test: test/cart.test.ts<39>"
       `)
+  })
+
+  it('lists the files with the lowest scores after the counts', () => {
+    let report = buildRunReport(createRunResult(), {
+      recheck: 'mootant run src',
+      all: false,
+    })
+    let files = Array.from({ length: 7 }, (_, position) => ({
+      file: `src/very/long/directory/file-${position}.ts`,
+      noCoverage: position === 1 ? 2 : 0,
+      survived: position === 1 ? 0 : 3,
+      score: 50 + position,
+    }))
+    let text = format(report, { files })
+
+    expect(text).toContain(
+      [
+        'files 7 below 100%',
+        '  src/very/long/directory/file-0.ts      50%  3 survived',
+        '  src/very/long/directory/file-1.ts      51%  2 no coverage',
+        '  src/very/long/directory/file-2.ts      52%  3 survived',
+        '  src/very/long/directory/file-3.ts      53%  3 survived',
+        '  src/very/long/directory/file-4.ts      54%  3 survived',
+        '  and 2 more files below 100%',
+      ].join('\n'),
+    )
+    expect(text.indexOf('files 7 below 100%')).toBeLessThan(
+      text.indexOf('survived 1'),
+    )
+    expect(format(report, { files: files.slice(0, 1), width: 40 })).toContain(
+      'files 1 below 100%\n  …ctory/file-0.ts      50%  3 survived\n',
+    )
+    expect(format(report, { files: [] })).not.toContain('below 100%')
   })
 })

@@ -1,4 +1,5 @@
 import type { ListReportMutator } from './list-report-mutator'
+import type { ListReportSkipped } from './list-report-skipped'
 import type { ListReportMutant } from './list-report-mutant'
 import type { IsolatedReason } from '../run/isolated-reason'
 import type { SinceRevision } from '../git/since-revision'
@@ -239,6 +240,12 @@ export interface RunReport {
    * Mutators the preset turned on.
    */
   mutators: ListReportMutator[]
+
+  /**
+   * Candidates that were considered and not emitted, in canonical order per
+   * file; present only when the report asks for them, as the HTML report does.
+   */
+  skipped?: ListReportSkipped[]
 
   /**
    * Version of the test runner, or null when the adapter does not tell.

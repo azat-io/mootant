@@ -16,6 +16,7 @@ export default defineConfig(
         provider: 'v8',
       },
       exclude: [...configDefaults.exclude, 'test/fixtures/**'],
+      css: { include: [/\.css\?raw$/u] },
     },
   }),
 )

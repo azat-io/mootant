@@ -303,4 +303,52 @@ describe('buildRunReport', () => {
       score: null,
     })
   })
+
+  it('adds the skipped candidates the run listed when asked for', () => {
+    let result = createRunResult()
+    let [file] = result.files
+    let start = file!.source!.indexOf('size < limit')
+    file!.skipped = [
+      {
+        reason:
+          'a lower bound of an operand makes the inputs where it differs impossible',
+        end: start + 'size < limit'.length,
+        mutator: 'comparison-operator',
+        replacement: 'size <= limit',
+        category: 'equivalent',
+        file: 'src/cart.ts',
+        rule: 'lower-bound',
+        kind: 'expression',
+        heuristic: true,
+        by: null,
+        start,
+      },
+    ]
+
+    expect(build(result).skipped).toBeUndefined()
+    expect(
+      buildRunReport(result, {
+        recheck: 'mootant run src',
+        skipped: true,
+        all: true,
+      }).skipped,
+    ).toStrictEqual([
+      {
+        reason:
+          'a lower bound of an operand makes the inputs where it differs impossible',
+        mutator: 'comparison-operator',
+        replacement: 'size <= limit',
+        original: 'size < limit',
+        category: 'equivalent',
+        file: 'src/cart.ts',
+        rule: 'lower-bound',
+        heuristic: true,
+        end: start + 12,
+        column: 10,
+        by: null,
+        line: 4,
+        start,
+      },
+    ])
+  })
 })

@@ -167,6 +167,7 @@ export function createRunResult(): RunResult {
     cache: false,
     mode: 'fast',
     since: null,
+    html: null,
     root: ROOT,
   }
 }

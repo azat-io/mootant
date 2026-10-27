@@ -26,10 +26,12 @@ describe('validateConfig', () => {
         incremental: true,
         concurrency: 4,
         threshold: 0,
+        html: true,
         fast: true,
       },
     },
-    { run: { runner: 'vitest', threshold: 100 } },
+    { run: { html: 'reports/mutants.html', runner: 'vitest', threshold: 100 } },
+    { run: { html: false } },
   ])('accepts %o', config => {
     expect(validateConfig(config, 'mootant.config.js')).toBe(config)
   })
@@ -62,6 +64,14 @@ describe('validateConfig', () => {
       '"settings" are invalid: "loggers" item 1 is not a name, such as "logger" or "*Logger"',
     ],
     [{ run: [] }, '"run" is invalid: it must be an object'],
+    [
+      { run: { html: '' } },
+      '"run" is invalid: "html" must be true, false or a path',
+    ],
+    [
+      { run: { html: 1 } },
+      '"run" is invalid: "html" must be true, false or a path',
+    ],
     [
       { run: { thresholds: 1 } },
       '"run" is invalid: "thresholds" is not a run setting (did you mean "threshold"?)',
