@@ -102,20 +102,19 @@ let { keywords = [], headings = [], description, editLink, title } = Astro.props
     grid-template-columns: [content] minmax(0, 1fr);
 
     @media (width >= 800px) {
-      grid-template-columns: [sidebar] 220px [content] minmax(0, 1fr);
+      grid-template-columns: [sidebar] 200px [content] minmax(0, 1fr);
     }
 
     @media (width >= 1200px) {
       grid-template-columns:
-        [sidebar] 220px [content] minmax(0, 1fr)
-        [table-of-contents] 220px;
+        [sidebar] 200px [content] minmax(0, 1fr)
+        [table-of-contents] 160px;
     }
   }
 
   .main {
     inline-size: 100%;
-    max-inline-size: 50rem;
-    padding-block: var(--space-l) var(--space-xl);
+    padding-block: var(--space-l);
     margin-inline: auto;
     container-type: inline-size;
 

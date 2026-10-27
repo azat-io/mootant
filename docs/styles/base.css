@@ -126,6 +126,7 @@ code {
 
   &:not(pre code) {
     padding-inline: var(--space-2xs);
+    overflow-wrap: anywhere;
   }
 
   @media print {
@@ -136,6 +137,14 @@ code {
 pre,
 code:not(pre code) {
   border: 1px solid var(--color-border-primary);
+}
+
+:is(th, td) code:not(pre code) {
+  overflow-wrap: normal;
+
+  @container (inline-size < 600px) {
+    overflow-wrap: anywhere;
+  }
 }
 
 pre {
@@ -177,6 +186,11 @@ th,
 td {
   padding: var(--space-xs) var(--space-s);
   border-block-end: 1px solid var(--color-border-primary);
+
+  @container (inline-size < 600px) {
+    padding-inline: var(--space-xs);
+    overflow-wrap: anywhere;
+  }
 }
 
 th {
@@ -191,7 +205,7 @@ thead tr {
 }
 
 tr:nth-child(even) {
-  background: var(--color-background-primary-hover);
+  background: oklch(from var(--color-background-secondary) calc(l - 0.02) c h);
 }
 
 tr:nth-child(odd) {
@@ -310,7 +324,6 @@ kbd {
     block-size: var(--size-icon-s);
   }
 
-  /* The copy icon comes first and the check icon second. */
   & svg:last-child,
   &[data-copied] svg:first-child {
     display: none;

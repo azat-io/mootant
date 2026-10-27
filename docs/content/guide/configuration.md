@@ -86,9 +86,9 @@ export default defineConfig({
 ```
 
 - `recommended`, the default: every built-in mutator, without noisy variants and
-  without mutants that only a timeout can catch
+  without mutants that may cause timeouts
 - `strict`: `recommended` with the noisier options of the mutators, the mutants
-  that only a timeout can catch and the coarse mutants that `recommended` drops
+  that may cause timeouts and the coarse mutants that `recommended` drops
 
 `--preset` replaces `extends` for one run, while the `mutators` and `settings`
 of the configuration still apply:
@@ -100,7 +100,8 @@ npx mootant run src --preset strict
 ## Mutators
 
 `mutators` turns mutators on and off and sets their options, over the presets.
-The id of a mutator is the name that reports show next to each mutant:
+[Mutators](/mutators) lists every mutator with the changes it makes. The id of a
+mutator is the name that reports show next to each mutant:
 
 ```ts
 export default defineConfig({
@@ -125,26 +126,26 @@ The options are `false` by default, and `strict` turns all of them on.
 `nullishSwap` is `'distinguishing'` by default, and `strict` sets it to
 `'always'`.
 
-- `assignment-operator`
+- [`assignment-operator`](/mutators/assignment-operator)
   - `nullishSwap`: with `'always'`, `??=` and `||=` are also swapped for a
     number with the default `0`, such as `count ??= 0`, and for a left side of
     unknown type
-- `logical-operator`
+- [`logical-operator`](/mutators/logical-operator)
   - `nullishSwap`: the same for `??` and `||`
   - `nullishNormalization`: drops a `null`, `undefined` or `void 0` default of
     `??`, so `value ?? null` becomes `value`
-- `method-call`
+- [`method-call`](/mutators/method-call)
   - `anyReceiver`: mutates methods also on receivers of another known type, such
     as `filter()` on an instance of your own class
-- `number-literal`
+- [`number-literal`](/mutators/number-literal)
   - `caseTests`: mutates numbers in `case` labels
-- `optional-chaining`
+- [`optional-chaining`](/mutators/optional-chaining)
   - `nonNullable`: replaces `?.` also where type hints say that the value cannot
     be nullish, since annotations can be wrong at runtime
-- `regex-flag`
+- [`regex-flag`](/mutators/regex-flag)
   - `additions`: adds `i` to a pattern with cased letters and `g` to the pattern
     of a `.replace()` call
-- `regex-pattern`
+- [`regex-pattern`](/mutators/regex-pattern)
   - `classMembers`: removes an element of a character class and narrows a range
     by one character at each end
   - `largeAlternations`: removes an alternative also from a list of more than
@@ -153,9 +154,9 @@ The options are `false` by default, and `strict` turns all of them on.
     and `\D`, and turns `\.` into `.`
   - `quantifiers`: narrows a quantifier, such as `x+` to `x` or `x*` to `x?`,
     and moves its bounds by one
-- `statement-removal`
+- [`statement-removal`](/mutators/statement-removal)
   - `jumps`: removes `continue`, `yield` and the `break` of a loop or a label
-- `string-literal`
+- [`string-literal`](/mutators/string-literal)
   - `caseTests`: mutates strings in `case` labels
 
 ## Settings
@@ -200,8 +201,8 @@ Whether expressions in Svelte and Vue templates are mutated, when Svelte 5 or
 
 ### timeouts
 
-Whether to add the mutants that only a timeout can catch, such as a loop
-condition forced to `true`. `false` by default, `strict` turns it on.
+Whether to add the mutants that may cause timeouts, such as a loop condition
+forced to `true`. `false` by default, `strict` turns it on.
 
 ### coarseMutants
 

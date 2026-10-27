@@ -102,13 +102,12 @@ let items = headings.filter(({ depth }) => depth === 2 || depth === 3)
     inset-block-start: 0;
     max-block-size: 100dvb;
     padding-block: var(--space-l);
-    padding-inline: var(--space-s) var(--space-2xs);
     overflow-block: auto;
     scrollbar-width: thin;
   }
 
   .title {
-    padding: var(--space-2xs) var(--space-s);
+    padding: var(--space-2xs) 0;
   }
 
   .list {
@@ -127,9 +126,10 @@ let items = headings.filter(({ depth }) => depth === 2 || depth === 3)
 
   .link {
     display: block;
-    padding: var(--space-2xs) var(--space-s);
+    padding: var(--space-2xs) 0;
     font: var(--font-xs);
     color: var(--color-content-secondary);
+    overflow-wrap: anywhere;
     text-decoration: none;
 
     @media (prefers-reduced-motion: no-preference) {

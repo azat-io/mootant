@@ -5,7 +5,9 @@ import IconArrowLeft from '../../icons/arrow-left.svg'
 import { getPageUrl, pages } from '../../utils/pages'
 
 let url = getPageUrl(Astro.url.pathname)
-let links = pages.flatMap(section => section.links)
+let links = pages.flatMap(({ links: sectionLinks, url: sectionUrl, title }) =>
+  sectionUrl ? [{ url: sectionUrl, title }, ...sectionLinks] : sectionLinks,
+)
 let index = links.findIndex(link => link.url === url)
 /* On the first page and on pages missing from the list, `index - 1` is
    negative and finds no page. */

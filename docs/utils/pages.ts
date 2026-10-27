@@ -1,6 +1,9 @@
+import { getCollection } from 'astro:content'
+
 interface Section {
   links: Page[]
   title: string
+  url?: string
 }
 
 interface Page {
@@ -8,8 +11,11 @@ interface Page {
   url: string
 }
 
+let mutators = await getCollection('mutators')
+
 /**
- * Sections of the docs sidebar in reading order. Previous and next page links
+ * Sections of the docs sidebar in reading order. A section with a URL has a
+ * page of its own, which comes before its links. Previous and next page links
  * follow the same order.
  */
 export let pages: Section[] = [
@@ -29,6 +35,13 @@ export let pages: Section[] = [
       },
     ],
     title: 'Guide',
+  },
+  {
+    links: mutators
+      .map(({ data: { title }, id }) => ({ url: `/mutators/${id}`, title }))
+      .toSorted(({ title: a }, { title: b }) => a.localeCompare(b)),
+    title: 'Mutators',
+    url: '/mutators',
   },
 ]
 

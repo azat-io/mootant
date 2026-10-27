@@ -1,0 +1,34 @@
+---
+import type { CollectionEntry } from 'astro:content'
+
+import { getCollection, render } from 'astro:content'
+
+import ContentLayout from '../../../layouts/Content.astro'
+
+type Props = CollectionEntry<'mutators'>
+
+let mutator = Astro.props
+
+let { headings, Content } = await render(mutator)
+
+export async function getStaticPaths() {
+  let mutators = await getCollection('mutators')
+  return mutators.map(currentMutator => ({
+    params: {
+      slug: currentMutator.id,
+    },
+    props: currentMutator,
+  }))
+}
+---
+
+<ContentLayout
+  editLink={`https://github.com/azat-io/mootant/edit/main/docs/content/mutators/${mutator.id}.md`}
+  description={mutator.data.description}
+  keywords={mutator.data.keywords}
+  title={mutator.data.title}
+  {headings}
+>
+  <h1>{mutator.data.title}</h1>
+  <Content />
+</ContentLayout>

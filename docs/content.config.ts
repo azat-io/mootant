@@ -15,6 +15,24 @@ let guide = defineCollection({
   }),
 })
 
+let mutators = defineCollection({
+  schema: z.object({
+    example: z.object({
+      before: z.string(),
+      after: z.string(),
+    }),
+    keywords: z.array(z.string()).optional(),
+    shortDescription: z.string(),
+    description: z.string(),
+    title: z.string(),
+  }),
+  loader: glob({
+    base: path.join(import.meta.dirname, 'content', 'mutators'),
+    pattern: '**/*.md',
+  }),
+})
+
 export let collections = {
+  mutators,
   guide,
 }

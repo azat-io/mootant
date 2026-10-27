@@ -41,9 +41,6 @@ let { isMobileOnly = false } = Astro.props
     flex-flow: column nowrap;
     gap: var(--space-m);
 
-    /* The scrolling box clips everything outside it, so the start padding
-       keeps room for the focus ring of the links. */
-
     @media (width >= 800px) {
       position: sticky;
       inset-block-start: 0;

@@ -1,10 +1,12 @@
 ---
+import { getPageUrl } from '../../utils/pages'
 import SidebarLink from './SidebarLink.astro'
 import Typography from '../Typography.astro'
 
 interface Props {
   links: Link[]
   title: string
+  url?: string
 }
 
 interface Link {
@@ -12,7 +14,9 @@ interface Link {
   url: string
 }
 
-let { links, title } = Astro.props
+let { links, title, url } = Astro.props
+
+let isActive = getPageUrl(Astro.url.pathname) === url
 ---
 
 <div>
@@ -23,7 +27,17 @@ let { links, title } = Astro.props
     tag="h2"
     bold
   >
-    {title}
+    {
+      url ?
+        <a
+          aria-current={isActive ? 'page' : undefined}
+          class="label link"
+          href={url}
+        >
+          {title}
+        </a>
+      : <span class="label">{title}</span>
+    }
   </Typography>
   <ul class="links">
     {
@@ -37,8 +51,30 @@ let { links, title } = Astro.props
 </div>
 
 <style>
-  .title {
+  .label {
+    display: block;
     padding: var(--space-2xs) var(--space-s);
+  }
+
+  .link {
+    color: inherit;
+    text-decoration: none;
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition:
+        color 200ms,
+        background 200ms;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        background: var(--color-background-primary-hover);
+      }
+    }
+
+    &[aria-current='page'] {
+      color: var(--color-content-brand);
+    }
   }
 
   .links {
