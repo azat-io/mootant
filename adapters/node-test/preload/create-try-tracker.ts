@@ -179,14 +179,8 @@ export function createTryTracker(options: TrackerOptions): TryTracker {
     let { occurrence, context, name } = entry
     let failed = !unfinished && !context.passed
     let error: unknown = failed ? context.error : null
-    let timedOut =
-      typeof error === 'object' &&
-      error !== null &&
-      Reflect.get(error, 'failureType') === 'testTimeoutFailure'
-    let cause: unknown =
-      typeof error === 'object' && error !== null ?
-        (Reflect.get(error, 'cause') ?? error)
-      : error
+    let timedOut = readErrorField(error, 'failureType') === 'testTimeoutFailure'
+    let cause: unknown = readErrorField(error, 'cause') ?? error
     if (
       expected.has(JSON.stringify([name, occurrence])) ||
       todoErrors.has(context.error)
@@ -310,10 +304,7 @@ export function createTryTracker(options: TrackerOptions): TryTracker {
         return
       }
       todoErrors.add(error)
-      let cause: unknown =
-        typeof error === 'object' && error !== null ?
-          Reflect.get(error, 'cause')
-        : undefined
+      let cause = readErrorField(error, 'cause')
       for (let [index, other] of errors.entries()) {
         if (cause !== undefined && other === cause) {
           write({ kind: 'todo-error', error: index })
@@ -344,4 +335,18 @@ export function createTryTracker(options: TrackerOptions): TryTracker {
       }
     },
   }
+}
+
+/**
+ * Reads a field of what node:test reported as the error of a test, which may be
+ * any thrown value.
+ *
+ * @param error - The error, or null for a test that did not fail.
+ * @param key - Name of the field, such as `cause`.
+ * @returns Value of the field, or undefined when the error is no object.
+ */
+function readErrorField(error: unknown, key: string): unknown {
+  return typeof error === 'object' && error !== null ?
+      Reflect.get(error, key)
+    : undefined
 }

@@ -1,4 +1,4 @@
-import type { VariableDeclarator, Node } from 'oxc-parser'
+import type { VariableDeclarator, CallExpression, Node } from 'oxc-parser'
 
 import type {
   ReturnValueKind,
@@ -184,65 +184,6 @@ function getReplacements(
 }
 
 /**
- * Tells whether a returned expression of a function with a promise kind, whose
- * `Promise` is the global one, is a `Promise.resolve` call, wrappers of the
- * callee and of `Promise` included, with one argument that is the given
- * default, or with none for `undefined`: `undefined` is also the undeclared
- * name or `void` of a literal, `null` the `null` literal, `[]` an empty array
- * literal, and any other default a literal of that value.
- *
- * @param value - Returned expression, through wrappers.
- * @param resolved - Value of the default that the promise resolves with.
- * @param context - Mutator context of the file.
- * @returns Whether the expression is already the default.
- */
-function resolvesWith(
-  value: Node,
-  resolved: unknown,
-  context: MutatorContext,
-): boolean {
-  if (value.type !== 'CallExpression' || value.arguments.length > 1) {
-    return false
-  }
-  let { syntax } = context
-  let callee = syntax.unwrapExpression(value.callee)
-  if (
-    callee.type !== 'MemberExpression' ||
-    callee.computed ||
-    callee.property.name !== 'resolve'
-  ) {
-    return false
-  }
-  let object = syntax.unwrapExpression(callee.object)
-  if (object.type !== 'Identifier' || object.name !== 'Promise') {
-    return false
-  }
-  let [argument] = value.arguments
-  if (!argument) {
-    return resolved === undefined
-  }
-  if (argument.type === 'SpreadElement') {
-    return false
-  }
-  let inner = syntax.unwrapExpression(argument)
-  if (resolved === undefined) {
-    return (
-      (inner.type === 'UnaryExpression' &&
-        inner.operator === 'void' &&
-        syntax.unwrapExpression(inner.argument).type === 'Literal') ||
-      isGlobalIdentifier(inner, 'undefined', context)
-    )
-  }
-  if (resolved === null) {
-    return inner.type === 'Literal' && inner.raw === 'null'
-  }
-  if (Array.isArray(resolved)) {
-    return inner.type === 'ArrayExpression' && inner.elements.length === 0
-  }
-  return Object.is(getLiteralValue(inner), resolved)
-}
-
-/**
  * Decides whether a boolean constant of a returned value is skipped (catalog
  * 4.14): the owner of the result emits the constant (O19), or a mutant that
  * will run moves the result, or a value assigned to its local, toward it (R6).
@@ -325,6 +266,67 @@ function getDefaults(
 }
 
 /**
+ * Tells whether the argument of a `Promise.resolve` call is the given default:
+ * `undefined` is the undeclared name or `void` of a literal, `null` the `null`
+ * literal, `[]` an empty array literal, and any other default a literal of that
+ * value.
+ *
+ * @param inner - Argument of the call, through wrappers.
+ * @param resolved - Value of the default.
+ * @param context - Mutator context of the file.
+ * @returns Whether the argument is the default.
+ */
+function isResolvedValue(
+  inner: Node,
+  resolved: unknown,
+  context: MutatorContext,
+): boolean {
+  if (resolved === undefined) {
+    return (
+      (inner.type === 'UnaryExpression' &&
+        inner.operator === 'void' &&
+        context.syntax.unwrapExpression(inner.argument).type === 'Literal') ||
+      isGlobalIdentifier(inner, 'undefined', context)
+    )
+  }
+  if (resolved === null) {
+    return inner.type === 'Literal' && inner.raw === 'null'
+  }
+  if (Array.isArray(resolved)) {
+    return inner.type === 'ArrayExpression' && inner.elements.length === 0
+  }
+  return Object.is(getLiteralValue(inner), resolved)
+}
+
+/**
+ * Tells whether an expression is a call of `Promise.resolve`, wrappers of the
+ * callee and of `Promise` included, with at most one argument.
+ *
+ * @param value - Returned expression, through wrappers.
+ * @param context - Mutator context of the file.
+ * @returns Whether the expression is such a call.
+ */
+function isPromiseResolveCall(
+  value: Node,
+  context: MutatorContext,
+): value is CallExpression {
+  if (value.type !== 'CallExpression' || value.arguments.length > 1) {
+    return false
+  }
+  let { syntax } = context
+  let callee = syntax.unwrapExpression(value.callee)
+  if (
+    callee.type !== 'MemberExpression' ||
+    callee.computed ||
+    callee.property.name !== 'resolve'
+  ) {
+    return false
+  }
+  let object = syntax.unwrapExpression(callee.object)
+  return object.type === 'Identifier' && object.name === 'Promise'
+}
+
+/**
  * Lists the extra solitary ranges of a returned value (catalog 2.6): the
  * initializer of a returned local, or of the root of a returned member chain,
  * and its writes in the same function. Writes outside the runtime tree, such as
@@ -376,6 +378,41 @@ function getLocalBinding(value: Node, context: MutatorContext): Binding | null {
     ) ?
       binding
     : null
+}
+
+/**
+ * Tells whether a returned expression of a function with a promise kind, whose
+ * `Promise` is the global one, is a `Promise.resolve` call, wrappers of the
+ * callee and of `Promise` included, with one argument that is the given
+ * default, or with none for `undefined`: `undefined` is also the undeclared
+ * name or `void` of a literal, `null` the `null` literal, `[]` an empty array
+ * literal, and any other default a literal of that value.
+ *
+ * @param value - Returned expression, through wrappers.
+ * @param resolved - Value of the default that the promise resolves with.
+ * @param context - Mutator context of the file.
+ * @returns Whether the expression is already the default.
+ */
+function resolvesWith(
+  value: Node,
+  resolved: unknown,
+  context: MutatorContext,
+): boolean {
+  if (!isPromiseResolveCall(value, context)) {
+    return false
+  }
+  let [argument] = value.arguments
+  if (!argument) {
+    return resolved === undefined
+  }
+  return (
+    argument.type !== 'SpreadElement' &&
+    isResolvedValue(
+      context.syntax.unwrapExpression(argument),
+      resolved,
+      context,
+    )
+  )
 }
 
 /**

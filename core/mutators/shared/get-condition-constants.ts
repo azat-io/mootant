@@ -103,21 +103,6 @@ export function getConditionConstants(
     context.syntax.isConditionTest(node) || context.syntax.isLoopTest(node)
   let isTop = isNegation(node) && !isNegation(parent)
   let plan: ConditionConstants = { skipped: [], values: [] }
-
-  /**
-   * Skips both constants of the node.
-   *
-   * @param note - Rule and reason of the skip.
-   * @returns The plan.
-   */
-  function skipBoth(note: SkipNote): ConditionConstants {
-    plan.skipped.push(
-      { text: 'true', skip: note, node },
-      { text: 'false', skip: note, node },
-    )
-    return plan
-  }
-
   if (!isTest && isTop && isAndOr(parent)) {
     let owned = getOwnedConstants(node, context)
     for (let value of [true, false]) {
@@ -138,11 +123,16 @@ export function getConditionConstants(
   let comparison =
     isComparison(inner) ? getComparisonPlan(inner, context) : null
   if (isAndOr(inner)) {
-    return skipBoth({
+    let note: SkipNote = {
       reason: 'logical-operator owns the constants of a && or || group',
       by: { mutator: 'logical-operator', node: inner },
       rule: 'O1',
-    })
+    }
+    plan.skipped.push(
+      { text: 'true', skip: note, node },
+      { text: 'false', skip: note, node },
+    )
+    return plan
   }
   if (inner.type === 'Literal' || getLiteralValue(inner) !== null) {
     for (let value of [true, false]) {

@@ -78,7 +78,7 @@ const BADGES: [status: RunStatus, statuses: RunStatus[]][] = [
  * @returns HTML of the lines.
  */
 export function renderCode(options: CodeOptions): string {
-  let { selected, skipped, painted, tokens, file } = options
+  let { selected, skipped, file } = options
   let { lineStarts, source } = file
   let starts = new Map<number, IndexedMutant[]>()
   for (let mutant of options.visible) {
@@ -90,51 +90,19 @@ export function renderCode(options: CodeOptions): string {
       skippedStarts.set(entry.line, (skippedStarts.get(entry.line) ?? 0) + 1)
     }
   }
-  let selectedEnd =
-    selected === null ? -1 : Math.max(selected.end, selected.start + 1)
   let lines: string[] = []
   for (let [index, lineStart] of lineStarts.entries()) {
     let line = index + 1
-    let end = getLineEnd(source, lineStarts, line)
-    let text = ''
-    let runStart = lineStart
-    for (let offset = lineStart + 1; offset <= end; offset++) {
-      if (
-        offset === end ||
-        tokens[offset] !== tokens[runStart] ||
-        painted[offset] !== painted[runStart] ||
-        skipped?.[offset] !== skipped?.[runStart] ||
-        isIn(offset, selected, selectedEnd) !==
-          isIn(runStart, selected, selectedEnd)
-      ) {
-        text += renderRun(options, runStart, offset)
-        runStart = offset
-      }
-    }
-    let badges = ''
-    let lineMutants = starts.get(line) ?? []
-    for (let [status, statuses] of BADGES) {
-      let count = lineMutants.filter(mutant =>
-        statuses.includes(mutant.status),
-      ).length
-      if (count > 0) {
-        let { label, key } = describeStatus(status)
-        badges += [
-          `<button class="tally status-${key}" type="button"`,
-          ` data-line="${line}" data-status="${status}"`,
-          ` aria-label="${count} ${label} on line ${line}">${count}</button>`,
-        ].join('')
-      }
-    }
-    let skippedCount = skippedStarts.get(line)
-    if (skippedCount) {
-      badges += [
-        `<button class="tally status-skipped" type="button"`,
-        ` data-line-skip="${line}"`,
-        ` aria-label="${skippedCount} skipped on line ${line}, show the next">`,
-        `${skippedCount}</button>`,
-      ].join('')
-    }
+    let text = renderLineText(
+      options,
+      lineStart,
+      getLineEnd(source, lineStarts, line),
+    )
+    let badges = renderBadges(
+      line,
+      starts.get(line) ?? [],
+      skippedStarts.get(line),
+    )
     let active =
       selected !== null && line >= selected.line && line <= selected.endLine
     lines.push(
@@ -160,8 +128,6 @@ export function renderCode(options: CodeOptions): string {
  */
 function renderRun(options: CodeOptions, start: number, end: number): string {
   let { selected, mutants, skipped, painted, tokens, file } = options
-  let selectedEnd =
-    selected === null ? -1 : Math.max(selected.end, selected.start + 1)
   let classes = [TOKEN_CLASSES[tokens[start]!]!]
   let attributes = ''
   let mutant = mutants[painted[start]!]
@@ -173,7 +139,7 @@ function renderRun(options: CodeOptions, start: number, end: number): string {
     classes.push('range', 'range-skipped')
     attributes = ` data-skip="${skip}"`
   }
-  if (isIn(start, selected, selectedEnd)) {
+  if (isSelected(start, selected)) {
     classes.push(
       'is-selected',
       `selected-${describeStatus(selected!.status).key}`,
@@ -187,17 +153,89 @@ function renderRun(options: CodeOptions, start: number, end: number): string {
 }
 
 /**
- * Checks whether a code unit is in the marked range of the selected mutant.
+ * Renders the badges of a line: one with the number of shown mutants of each
+ * status that start on the line, then one with the number of skipped
+ * candidates.
+ *
+ * @param line - 1-based line.
+ * @param mutants - Shown mutants that start on the line.
+ * @param skippedCount - Skipped candidates that start on the line, when they
+ *   are shown.
+ * @returns HTML of the badges.
+ */
+function renderBadges(
+  line: number,
+  mutants: readonly IndexedMutant[],
+  skippedCount: undefined | number,
+): string {
+  let badges = ''
+  for (let [status, statuses] of BADGES) {
+    let count = mutants.filter(mutant =>
+      statuses.includes(mutant.status),
+    ).length
+    if (count > 0) {
+      let { label, key } = describeStatus(status)
+      badges += [
+        `<button class="tally status-${key}" type="button"`,
+        ` data-line="${line}" data-status="${status}"`,
+        ` aria-label="${count} ${label} on line ${line}">${count}</button>`,
+      ].join('')
+    }
+  }
+  if (skippedCount) {
+    badges += [
+      `<button class="tally status-skipped" type="button"`,
+      ` data-line-skip="${line}"`,
+      ` aria-label="${skippedCount} skipped on line ${line}, show the next">`,
+      `${skippedCount}</button>`,
+    ].join('')
+  }
+  return badges
+}
+
+/**
+ * Renders the text of a line as runs of code units that look the same.
+ *
+ * @param options - File, highlighting and selection.
+ * @param start - Offset of the first code unit of the line.
+ * @param end - Offset just past the last code unit of the text of the line.
+ * @returns HTML of the text.
+ */
+function renderLineText(
+  options: CodeOptions,
+  start: number,
+  end: number,
+): string {
+  let { selected, skipped, painted, tokens } = options
+  let text = ''
+  let runStart = start
+  for (let offset = start + 1; offset <= end; offset++) {
+    if (
+      offset === end ||
+      tokens[offset] !== tokens[runStart] ||
+      painted[offset] !== painted[runStart] ||
+      skipped?.[offset] !== skipped?.[runStart] ||
+      isSelected(offset, selected) !== isSelected(runStart, selected)
+    ) {
+      text += renderRun(options, runStart, offset)
+      runStart = offset
+    }
+  }
+  return text
+}
+
+/**
+ * Checks whether a code unit is in the marked range of the selected mutant,
+ * where an empty range marks the code unit at its start.
  *
  * @param offset - Offset of the code unit.
  * @param selected - Selected mutant, or null.
- * @param selectedEnd - End of its marked range.
  * @returns True inside the range.
  */
-function isIn(
-  offset: number,
-  selected: IndexedMutant | null,
-  selectedEnd: number,
-): boolean {
-  return selected !== null && offset >= selected.start && offset < selectedEnd
+function isSelected(offset: number, selected: IndexedMutant | null): boolean {
+  return (
+    selected !== null &&
+    offset >= selected.start &&
+    offset < Math.max(selected.end, selected.start + 1)
+  )
 }

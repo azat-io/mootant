@@ -162,6 +162,37 @@ export function getLogicalDrops(
     return null
   }
 
+  /**
+   * Finds why the right operand, kept as a candidate, is not dropped (R2): a
+   * running mutant moves the right operand only toward the value the drop
+   * forces, or, in value mode with a right operand that is never a boolean,
+   * moves the left operand toward the other value.
+   *
+   * @returns Rule and reason of the skip, or null when the drop is emitted.
+   */
+  function getDropRightSkip(): SkipNote | null {
+    if (
+      hasPolarMutant(
+        { value: identity, decision: right, candidate },
+        context,
+      ) ||
+      (!booleanMode &&
+        !mayBeBoolean(hints.getType(right)) &&
+        hasPolarMutant(
+          { value: !identity, decision: left, candidate },
+          context,
+          true,
+        ))
+    ) {
+      return {
+        reason:
+          'a running mutant inside the expression moves it only toward the value this drop forces',
+        rule: 'R2',
+      }
+    }
+    return null
+  }
+
   let dropLeft = false
   if (!isSameOperator(left, operator)) {
     let note = getDropLeftSkip()
@@ -208,28 +239,10 @@ export function getLogicalDrops(
       node,
     })
   } else if (rightKept) {
-    dropRight =
-      !hasPolarMutant(
-        { value: identity, decision: right, candidate },
-        context,
-      ) &&
-      (booleanMode ||
-        mayBeBoolean(hints.getType(right)) ||
-        !hasPolarMutant(
-          { value: !identity, decision: left, candidate },
-          context,
-          true,
-        ))
-    if (!dropRight) {
-      skipped.push({
-        skip: {
-          reason:
-            'a running mutant inside the expression moves it only toward the value this drop forces',
-          rule: 'R2',
-        },
-        text: sourceCode.getText(left),
-        node,
-      })
+    let note = getDropRightSkip()
+    dropRight = note === null
+    if (note) {
+      skipped.push({ text: sourceCode.getText(left), skip: note, node })
     }
   }
   return { dropRight, dropLeft, skipped, swap }

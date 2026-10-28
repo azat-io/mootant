@@ -3,12 +3,15 @@ import type {
   BindingIdentifier,
   UpdateExpression,
   NumericLiteral,
+  WhileStatement,
+  IfStatement,
   Node,
 } from 'oxc-parser'
 
 import type { AnalyzedProgram } from '../../types/syntax/analyzed-program'
 import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
 import type { ValueBound } from '../../types/syntax/value-bound'
+import type { TreeIndex } from '../../types/syntax/tree-index'
 import type { Binding } from '../../types/syntax/binding'
 
 import { unwrapExpression } from '../tree/unwrap-expression'
@@ -82,22 +85,8 @@ export function getGuardBound(
   if (!tree.slots.has(decrement)) {
     return null
   }
-  let statement = getContextSlot(tree, decrement).parent
-  if (statement?.type !== 'ExpressionStatement') {
-    return null
-  }
-  let slot = getRawSlot(tree, statement)
-  if (slot.parent?.type === 'BlockStatement') {
-    if (slot.index !== 0) {
-      return null
-    }
-    slot = getRawSlot(tree, slot.parent)
-  }
-  let { parent, key } = slot
-  if (
-    (key !== 'consequent' || parent?.type !== 'IfStatement') &&
-    (key !== 'body' || parent?.type !== 'WhileStatement')
-  ) {
+  let statement = findGuardStatement(tree, decrement)
+  if (!statement) {
     return null
   }
   let binding = scopes.bindings.get(
@@ -110,32 +99,15 @@ export function getGuardBound(
   if (!binding) {
     return null
   }
-  let guard = unwrapExpression(getLastOperand(parent.test))
+  let guard = unwrapExpression(getLastOperand(statement.test))
   let comparison = readComparison(scopes, guard, binding)
-  let lower: number | null = null
-  switch (comparison?.operator) {
-    case '!==':
-    case '!=':
-      lower =
-        current.integer && comparison.literal === current.lower ?
-          comparison.literal + 1
-        : null
-      break
-    case '>=':
-      lower = comparison.literal
-      break
-    case '>':
-      lower =
-        current.integer && Number.isSafeInteger(comparison.literal) ?
-          comparison.literal + 1
-        : comparison.literal
-      break
-    default:
-      break
+  if (!comparison) {
+    return null
   }
+  let lower = getGuardLower(comparison, current)
   return lower === null ? null : (
       {
-        because: `right after \`${comparison!.text}\``,
+        because: `right after \`${comparison.text}\``,
         guards: new Set([guard]),
         integer: current.integer,
         nullable: false,
@@ -185,6 +157,73 @@ function readComparison(
         literal,
       }
     : null
+}
+
+/**
+ * Finds the `if` or `while` statement whose test runs right before a decrement:
+ * the decrement is the whole expression statement that is the consequent of the
+ * `if` or the body of the `while`, or the first statement of a block that is.
+ *
+ * @param tree - Runtime tree of the program.
+ * @param decrement - Write of a name in the runtime tree.
+ * @returns The statement, or null when the decrement is in no such position.
+ */
+function findGuardStatement(
+  tree: TreeIndex,
+  decrement: Node,
+): WhileStatement | IfStatement | null {
+  let statement = getContextSlot(tree, decrement).parent
+  if (statement?.type !== 'ExpressionStatement') {
+    return null
+  }
+  let slot = getRawSlot(tree, statement)
+  if (slot.parent?.type === 'BlockStatement') {
+    if (slot.index !== 0) {
+      return null
+    }
+    slot = getRawSlot(tree, slot.parent)
+  }
+  let { parent, key } = slot
+  if (
+    (key !== 'consequent' || parent?.type !== 'IfStatement') &&
+    (key !== 'body' || parent?.type !== 'WhileStatement')
+  ) {
+    return null
+  }
+  return parent
+}
+
+/**
+ * Reads the lower bound of a name from the comparison of its guard: `x >= c`
+ * gives `c`, `x > c` gives `c + 1` when the name and the literal are integers
+ * and `c` otherwise, and `x !== L` or `x != L` gives `L + 1` when the name is
+ * an integer and `L` is its bound before the guard.
+ *
+ * @param comparison - Comparison of the name with a number literal, with the
+ *   name on the left.
+ * @param current - Bound the name has before the guard.
+ * @returns The smallest number the name can be right after the guard, or null
+ *   when the comparison gives none.
+ */
+function getGuardLower(
+  comparison: NameComparison,
+  current: ValueBound,
+): number | null {
+  switch (comparison.operator) {
+    case '!==':
+    case '!=':
+      return current.integer && comparison.literal === current.lower ?
+          comparison.literal + 1
+        : null
+    case '>=':
+      return comparison.literal
+    case '>':
+      return current.integer && Number.isSafeInteger(comparison.literal) ?
+          comparison.literal + 1
+        : comparison.literal
+    default:
+      return null
+  }
 }
 
 /**

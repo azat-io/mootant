@@ -84,6 +84,21 @@ interface DryPhase {
 }
 
 /**
+ * What failed in a dry run.
+ */
+interface DryFailures {
+  /**
+   * Test files that failed to load.
+   */
+  unloaded: DryFile[]
+
+  /**
+   * Tests whose first try failed.
+   */
+  failing: DryTest[]
+}
+
+/**
  * Most failures a fatal error lists.
  */
 const LISTED_FAILURES = 10
@@ -127,145 +142,34 @@ export async function runDryPhase(
   session: AdapterSession,
   input: DryPhaseInput,
 ): Promise<DryPhase> {
-  let { switched, root } = input
   let errors = new Map<string, string>()
   let diagnostics: Diagnostic[] = []
-  let dry: DryRunResult = {
-    mismatched: [],
-    outside: [],
-    served: [],
-    files: [],
-    tests: [],
-    hung: [],
+  if (input.switched.length === 0) {
+    return {
+      unrepeatableFiles: new Set(),
+      dry: createEmptyDry(),
+      diagnostics,
+      runs: 0,
+      errors,
+    }
   }
-  if (switched.length === 0) {
-    return { unrepeatableFiles: new Set(), diagnostics, runs: 0, errors, dry }
-  }
-  let related = switched.map(entry => entry.file)
+  let related = input.switched.map(entry => entry.file)
   input.report({ files: related.length, kind: 'dry-start' })
   let checked = await runCheckedDry(session, related, input)
-  ;({ dry } = checked)
-  let { unrepeatableFiles, runs } = checked
-  let mismatched = new Set(dry.mismatched)
-  let served = new Set(dry.served)
-  let unserved = new Map(
-    (dry.unserved ?? []).map(entry => [entry.file, entry.reason]),
-  )
-  let { unloaded, failing } = findFailures(dry)
-  if (failing.length > 0 || unloaded.length > 0) {
-    let failingIds = new Set(failing.map(test => test.id))
-    let unloadedFiles = new Set(unloaded.map(file => file.file))
-    input.report({
-      message:
-        'Some tests failed; running them again without mutants to check.',
-      kind: 'dry-again',
+  let instrumented = [checked.dry]
+  let failures = findFailures(checked.dry)
+  if (failures.failing.length > 0 || failures.unloaded.length > 0) {
+    let recovered = await recoverFromFailures(session, input, {
+      diagnostics,
+      failures,
+      related,
+      errors,
     })
-    let plain = await runDry(
-      session,
-      {
-        files: listTestFiles([...failing, ...unloaded]),
-        instrumented: false,
-        repeat: false,
-        related,
-      },
-      root,
-    )
-    runs += 1
-    let real = findFailures(plain)
-    let realTests = real.failing.filter(test => failingIds.has(test.id))
-    let realFiles = real.unloaded.filter(file => unloadedFiles.has(file.file))
-    if (realTests.length > 0 || realFiles.length > 0) {
-      reportFailedFiles(input, [...realTests, ...realFiles])
-      throw new Error(
-        formatFailures(
-          'Tests fail without mutants; fix them first',
-          { files: realFiles, tests: realTests },
-          root,
-        ),
-      )
-    }
-    let broken = new Set<string>()
-    for (let id of [
-      ...failing.flatMap(test => test.tries[0]!.covers ?? []),
-      ...unloaded.flatMap(file => file.covers),
-    ]) {
-      broken.add(input.mutantFiles.get(id)!)
-    }
-    if (broken.size === 0) {
-      broken = new Set(related)
-    }
-    for (let file of broken) {
-      let display = input.displays.get(file)!
-      let message = `Tests fail with the switched ${display} and pass without it; its mutants are not run.`
-      errors.set(display, message)
-      diagnostics.push(
-        createDiagnostic('instrumentation-break', display, message),
-      )
-    }
-    let kept = switched.filter(entry => !broken.has(entry.file))
-    switched.splice(0, switched.length, ...kept)
-    dry = {
-      mismatched: [],
-      outside: [],
-      served: [],
-      files: [],
-      tests: [],
-      hung: [],
-    }
-    unrepeatableFiles = new Set()
-    if (kept.length > 0) {
-      input.report({
-        message: `Running the dry run again without ${pluralize(broken.size, 'file')} that broke tests.`,
-        kind: 'dry-again',
-      })
-      let again = await runCheckedDry(
-        session,
-        kept.map(entry => entry.file),
-        input,
-      )
-      runs += again.runs
-      ;({ unrepeatableFiles, dry } = again)
-      for (let file of dry.mismatched) {
-        mismatched.add(file)
-      }
-      for (let file of dry.served) {
-        served.add(file)
-      }
-      if (dry.unserved !== undefined) {
-        for (let entry of dry.unserved) {
-          unserved.set(entry.file, entry.reason)
-        }
-      }
-      let left = findFailures(dry)
-      if (left.failing.length > 0 || left.unloaded.length > 0) {
-        reportFailedFiles(input, [...left.failing, ...left.unloaded])
-        throw new Error(
-          formatFailures(
-            "Tests still fail with mootant's switched files after the files that broke them were dropped",
-            { files: left.unloaded, tests: left.failing },
-            root,
-          ),
-        )
-      }
-    }
+    instrumented.push(recovered.dry)
+    checked = { ...recovered, runs: checked.runs + recovered.runs }
   }
-  for (let { file } of switched) {
-    let display = input.displays.get(file)!
-    if (mismatched.has(file)) {
-      let message = `The test runner loaded ${display} with a text that differs from the listed one; its mutants are not run.`
-      errors.set(display, message)
-      diagnostics.push(createDiagnostic('instrument-error', display, message))
-    } else if (!served.has(file)) {
-      diagnostics.push(
-        createDiagnostic(
-          'never-served',
-          display,
-          `No test loaded ${display} through the test runner's transform: ${unserved.get(file) ?? 'no test imports it, or tests import a built copy, an external or a pre-bundled dependency'}.`,
-        ),
-      )
-    }
-  }
-  return { unrepeatableFiles, diagnostics, errors, runs, dry }
+  diagnoseServedFiles(input, { instrumented, diagnostics, errors })
+  return { ...checked, diagnostics, errors }
 }
 
 /**
@@ -287,11 +191,7 @@ async function runCheckedDry(
   session: AdapterSession,
   related: string[],
   input: DryPhaseInput,
-): Promise<{
-  unrepeatableFiles: Set<string>
-  dry: DryRunResult
-  runs: number
-}> {
+): Promise<Pick<DryPhase, 'unrepeatableFiles' | 'runs' | 'dry'>> {
   let dry = await runDry(
     session,
     { repeat: input.repeat, instrumented: true, files: null, related },
@@ -347,6 +247,176 @@ async function runCheckedDry(
       [...rerun].filter(key => !stillFailing.has(key)),
     ),
     runs: 2,
+  }
+}
+
+/**
+ * Recovers from failures of the instrumented dry run. The failures run again
+ * without the switched files first (`checkRealFailures`), and those that remain
+ * stop the run; the switched files the others reached get an
+ * `instrumentation-break` error and are removed from `input.switched` in place,
+ * before the dry run is repeated once for the switched files left.
+ *
+ * @param session - Live test runner.
+ * @param input - Switched files, mutant files, display paths and progress.
+ * @param context - Failures of the dry run and what the dry phase collects.
+ * @param context.errors - Messages of the files whose mutants get no verdict,
+ *   by display path, added to.
+ * @param context.diagnostics - Diagnostics of the dry phase, added to.
+ * @param context.failures - Failing tests and unloaded files of the dry run.
+ * @param context.related - Absolute paths of the switched files it ran with.
+ * @returns The repeated dry run, or an empty one when no switched file is left,
+ *   the keys of its unrepeatable test files, and the number of runs, the one
+ *   without the switched files included.
+ * @throws Error - When tests fail without the switched files, when tests still
+ *   fail after dropping the files that broke them, or when a test or test file
+ *   hangs.
+ */
+async function recoverFromFailures(
+  session: AdapterSession,
+  input: DryPhaseInput,
+  context: {
+    errors: Map<string, string>
+    diagnostics: Diagnostic[]
+    failures: DryFailures
+    related: string[]
+  },
+): Promise<Pick<DryPhase, 'unrepeatableFiles' | 'runs' | 'dry'>> {
+  await checkRealFailures(session, input, context)
+  let broken = findBrokenFiles(input, context.failures, context.related)
+  for (let file of broken) {
+    let display = input.displays.get(file)!
+    let message = `Tests fail with the switched ${display} and pass without it; its mutants are not run.`
+    context.errors.set(display, message)
+    context.diagnostics.push(
+      createDiagnostic('instrumentation-break', display, message),
+    )
+  }
+  let kept = input.switched.filter(entry => !broken.has(entry.file))
+  input.switched.splice(0, input.switched.length, ...kept)
+  if (kept.length === 0) {
+    return { unrepeatableFiles: new Set(), dry: createEmptyDry(), runs: 1 }
+  }
+  input.report({
+    message: `Running the dry run again without ${pluralize(broken.size, 'file')} that broke tests.`,
+    kind: 'dry-again',
+  })
+  let again = await runCheckedDry(
+    session,
+    kept.map(entry => entry.file),
+    input,
+  )
+  let left = findFailures(again.dry)
+  if (left.failing.length > 0 || left.unloaded.length > 0) {
+    reportFailedFiles(input, [...left.failing, ...left.unloaded])
+    throw new Error(
+      formatFailures(
+        "Tests still fail with mootant's switched files after the files that broke them were dropped",
+        { files: left.unloaded, tests: left.failing },
+        input.root,
+      ),
+    )
+  }
+  return { ...again, runs: again.runs + 1 }
+}
+
+/**
+ * Adds an `instrument-error` for each switched file whose loaded text differed
+ * in an instrumented dry run, and a `never-served` warning for each one that no
+ * instrumented dry run served, with how the tests loaded it past the adapter
+ * when the adapter told; a reason from a later run wins.
+ *
+ * @param input - Switched files left and their display paths.
+ * @param outcome - The instrumented dry runs and what the dry phase collects.
+ * @param outcome.instrumented - Dry runs with the switched files, in the order
+ *   they ran.
+ * @param outcome.errors - Messages of the files whose mutants get no verdict,
+ *   by display path, added to.
+ * @param outcome.diagnostics - Diagnostics of the dry phase, added to.
+ */
+function diagnoseServedFiles(
+  input: DryPhaseInput,
+  outcome: {
+    instrumented: DryRunResult[]
+    errors: Map<string, string>
+    diagnostics: Diagnostic[]
+  },
+): void {
+  let mismatched = new Set(outcome.instrumented.flatMap(dry => dry.mismatched))
+  let served = new Set(outcome.instrumented.flatMap(dry => dry.served))
+  let unserved = new Map(
+    outcome.instrumented
+      .flatMap(dry => dry.unserved ?? [])
+      .map(entry => [entry.file, entry.reason]),
+  )
+  for (let { file } of input.switched) {
+    let display = input.displays.get(file)!
+    if (mismatched.has(file)) {
+      let message = `The test runner loaded ${display} with a text that differs from the listed one; its mutants are not run.`
+      outcome.errors.set(display, message)
+      outcome.diagnostics.push(
+        createDiagnostic('instrument-error', display, message),
+      )
+    } else if (!served.has(file)) {
+      outcome.diagnostics.push(
+        createDiagnostic(
+          'never-served',
+          display,
+          `No test loaded ${display} through the test runner's transform: ${unserved.get(file) ?? 'no test imports it, or tests import a built copy, an external or a pre-bundled dependency'}.`,
+        ),
+      )
+    }
+  }
+}
+
+/**
+ * Runs the test files of the failing tests and failed files of an instrumented
+ * dry run again without the switched files, each test once. Failures that
+ * remain are real, not caused by the instrumentation, and stop the run.
+ *
+ * @param session - Live test runner.
+ * @param input - Progress and the directory display paths are relative to.
+ * @param check - Failures of the dry run and the switched files it ran with.
+ * @param check.failures - Failing tests and unloaded files of the dry run.
+ * @param check.related - Absolute paths of the switched files.
+ * @throws Error - When tests fail without the switched files, or when a test or
+ *   test file hangs.
+ */
+async function checkRealFailures(
+  session: AdapterSession,
+  input: DryPhaseInput,
+  check: { failures: DryFailures; related: string[] },
+): Promise<void> {
+  let { failures, related } = check
+  let { unloaded, failing } = failures
+  let failingIds = new Set(failing.map(test => test.id))
+  let unloadedFiles = new Set(unloaded.map(file => file.file))
+  input.report({
+    message: 'Some tests failed; running them again without mutants to check.',
+    kind: 'dry-again',
+  })
+  let plain = await runDry(
+    session,
+    {
+      files: listTestFiles([...failing, ...unloaded]),
+      instrumented: false,
+      repeat: false,
+      related,
+    },
+    input.root,
+  )
+  let real = findFailures(plain)
+  let realTests = real.failing.filter(test => failingIds.has(test.id))
+  let realFiles = real.unloaded.filter(file => unloadedFiles.has(file.file))
+  if (realTests.length > 0 || realFiles.length > 0) {
+    reportFailedFiles(input, [...realTests, ...realFiles])
+    throw new Error(
+      formatFailures(
+        'Tests fail without mutants; fix them first',
+        { files: realFiles, tests: realTests },
+        input.root,
+      ),
+    )
   }
 }
 
@@ -423,6 +493,30 @@ async function runDry(
 }
 
 /**
+ * Finds the switched files the instrumentation broke: the source files of the
+ * mutants whose sites the failing tests and failed files reached. When they
+ * reached none, every switched file counts as broken.
+ *
+ * @param input - Source files of the pending mutants.
+ * @param failures - Failing tests and unloaded files of the dry run.
+ * @param related - Absolute paths of the switched files it ran with.
+ * @returns Absolute paths of the broken files.
+ */
+function findBrokenFiles(
+  input: DryPhaseInput,
+  failures: DryFailures,
+  related: readonly string[],
+): Set<string> {
+  let broken = new Set(
+    [
+      ...failures.failing.flatMap(test => test.tries[0]!.covers ?? []),
+      ...failures.unloaded.flatMap(file => file.covers),
+    ].map(id => input.mutantFiles.get(id)!),
+  )
+  return broken.size === 0 ? new Set(related) : broken
+}
+
+/**
  * Builds a diagnostic about a mutated file.
  *
  * @param code - Kind of the problem; `never-served` is a warning, the others
@@ -490,13 +584,27 @@ function reportFailedFiles(
  * @param dry - Result of a dry run.
  * @returns Failing tests and unloaded files.
  */
-function findFailures(dry: DryRunResult): {
-  unloaded: DryFile[]
-  failing: DryTest[]
-} {
+function findFailures(dry: DryRunResult): DryFailures {
   return {
     failing: dry.tests.filter(test => test.tries[0]!.failed),
     unloaded: dry.files.filter(file => file.loadFailed),
+  }
+}
+
+/**
+ * Builds the result of a dry run that ran no test, the one the batch and
+ * isolated phases plan from when no switched file is left.
+ *
+ * @returns Dry run without tests, test files, served files or hung workers.
+ */
+function createEmptyDry(): DryRunResult {
+  return {
+    mismatched: [],
+    outside: [],
+    served: [],
+    files: [],
+    tests: [],
+    hung: [],
   }
 }
 

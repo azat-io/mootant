@@ -6,9 +6,9 @@ import type { SwitchedFile } from '../types/adapter/switched-file'
 import type { SinceRevision } from '../types/git/since-revision'
 import type { TestAdapter } from '../types/adapter/test-adapter'
 import type { FileMutants } from '../types/mutant/file-mutants'
+import type { RunSettings } from '../types/config/run-settings'
 import type { Diagnostic } from '../types/mutant/diagnostic'
 import type { DryAnalysis } from '../types/run/dry-analysis'
-import type { RunConfig } from '../types/config/run-config'
 import type { RunResult } from '../types/run/run-result'
 import type { DryFile } from '../types/adapter/dry-file'
 import type { RunState } from '../types/run/run-state'
@@ -18,6 +18,7 @@ import { createSwitchedFiles } from './instrument/create-switched-files'
 import { getComponentFramework } from './parser/get-component-framework'
 import { selectChangedMutants } from './files/select-changed-mutants'
 import { loadSvelteCompiler } from './parser/load-svelte-compiler'
+import { resolveRunSettings } from './config/resolve-run-settings'
 import { getPackageDirectory } from './run/get-package-directory'
 import { createWorkDirectory } from './run/create-work-directory'
 import { previewIsolatedUnit } from './run/preview-isolated-unit'
@@ -171,8 +172,8 @@ export async function runMutants(
   let startedAt = Date.now()
   let setup = await prepareRun(options)
   let { root, run } = setup
-  let requestedFast = options.fast ?? run.fast ?? false
-  let threshold = options.threshold ?? run.threshold ?? null
+  let { fast: requestedFast, ...runSettings } = resolveRunSettings(options, run)
+  let { threshold } = runSettings
   let html = getHtmlPath(options.html, run.html, {
     picked: (options.mutantIds?.length ?? 0) > 0,
     root,
@@ -189,9 +190,9 @@ export async function runMutants(
   let since: SinceRevision | null =
     changes === null ? null : { ref: options.since!, base: changes.base }
   let listing = await listFileMutants({
-    regions: options.cache ?? run.cache ?? true,
     knownMutatorIds: setup.knownMutatorIds,
     cwd: fromConfig ? root : options.cwd,
+    regions: runSettings.cache,
     settings: setup.settings,
     mutators: setup.mutators,
     skipped: html !== null,
@@ -292,7 +293,7 @@ export async function runMutants(
           text,
         })
       },
-      concurrency: options.concurrency ?? run.concurrency ?? null,
+      concurrency: runSettings.concurrency,
       workDirectory: work.path,
       files: switched,
       root,
@@ -301,9 +302,9 @@ export async function runMutants(
       return await execute({
         diagnostics: listing.diagnostics,
         listed: listing.files,
+        runSettings,
         startedAt,
         listedIds,
-        threshold,
         switched,
         session,
         adapter,
@@ -315,7 +316,6 @@ export async function runMutants(
         html,
         live,
         fast,
-        run,
       })
     } finally {
       await session.close()
@@ -341,24 +341,24 @@ export async function runMutants(
  *   hosts every pending mutant of the files of the run, selected or not, so the
  *   plan of a mutant does not depend on the selection.
  * @param context.listedIds - Ids of every listed mutant of the paths.
- * @param context.threshold - Lowest total score that passes, or null.
  * @param context.since - Revision of `--since` with its merge base, or null.
  * @param context.html - Absolute path of the HTML report, or null.
  * @param context.fast - Whether the run is in fast mode, which needs an adapter
  *   with batch mode.
  * @param context.setup - Prepared configuration.
- * @param context.run - Run settings of the configuration.
+ * @param context.runSettings - Concurrency, threshold, try limits, incremental
+ *   mode and whether the cache is on, resolved by `resolveRunSettings`.
  * @param context.live - Holder of the state of the run once it exists, so the
  *   units that end count in the live verdict counts.
  * @returns Result of the run.
  */
 async function execute(context: {
   setup: Awaited<ReturnType<typeof prepareRun>>
+  runSettings: Omit<RunSettings, 'fast'>
   live: { state: RunState | null }
   since: SinceRevision | null
   options: RunMutantsOptions
   diagnostics: Diagnostic[]
-  threshold: number | null
   switched: SwitchedFile[]
   session: AdapterSession
   listed: FileMutants[]
@@ -368,14 +368,13 @@ async function execute(context: {
   listedIds: string[]
   startedAt: number
   started: number
-  run: RunConfig
   fast: boolean
 }): Promise<RunResult> {
-  let { session, options, setup, fast, run } = context
+  let { runSettings, session, options, setup, fast } = context
+  let { limits } = runSettings
   let { root } = setup
   let cachePath = getCachePath(root)
-  let stored =
-    (options.cache ?? run.cache ?? true) ? readRunCache(cachePath) : null
+  let stored = runSettings.cache ? readRunCache(cachePath) : null
   let testFiles = await session.listTestFiles()
   let selected = selectRunFiles(context.files, testFiles, getPackageDirectory())
   let diagnostics = [
@@ -439,23 +438,13 @@ async function execute(context: {
       }),
     )
   }
-  let limits = {
-    hitLimit: {
-      floor: run.hitLimit?.floor ?? 100_000,
-      factor: run.hitLimit?.factor ?? 100,
-    },
-    timeout: {
-      constant: run.timeout?.constant ?? 250,
-      factor: run.timeout?.factor ?? 3,
-    },
-  }
   let now = Date.now()
   let cache =
     stored === null ? null : (
       await prepareRunCache({
         files: selectRunFiles(context.listed, testFiles, getPackageDirectory())
           .files,
-        incremental: options.incremental ?? run.incremental ?? false,
+        incremental: runSettings.incremental,
         started: context.startedAt,
         adapter: context.adapter,
         dry: dryPhase.dry,
@@ -471,8 +460,7 @@ async function execute(context: {
   let state = createRunState({
     workers:
       session.workers ??
-      options.concurrency ??
-      run.concurrency ??
+      runSettings.concurrency ??
       Math.max(1, availableParallelism() - 1),
     imports: await readTestImports(
       [...analysis.testFiles.values()].map(entry => entry.file),
@@ -498,22 +486,7 @@ async function execute(context: {
   if (fast && analysis.unrepeatable.size > 0) {
     options.onProgress?.({ message: describeUnrepeatable(state), kind: 'note' })
   }
-  if (fast) {
-    applyCachedBatch(state)
-  }
-  applyCachedUnits(state)
-  let cached = [...state.mutants.values()].filter(
-    mutant => mutant.cached,
-  ).length
-  if (cached > 0) {
-    options.onProgress?.({
-      message:
-        cached === 1 ?
-          `Reused a cached verdict for 1 of ${state.mutants.size} mutants.`
-        : `Reused cached verdicts for ${cached} of ${state.mutants.size} mutants.`,
-      kind: 'note',
-    })
-  }
+  reuseCachedVerdicts(state, fast)
 
   let batchStarted = performance.now()
   if (fast) {
@@ -571,7 +544,7 @@ async function execute(context: {
     runnerVersion: session.version ?? null,
     staticCost: computeStaticCost(state),
     mode: fast ? 'fast' : 'isolated',
-    threshold: context.threshold,
+    threshold: runSettings.threshold,
     listedIds: context.listedIds,
     runner: context.adapter.name,
     tests: dryPhase.dry.tests,
@@ -707,4 +680,33 @@ function describeUnrepeatable(state: RunState): string {
   return mutants === 1 ?
       `${counted} not repeatable; the 1 mutant ${reach} runs isolated.`
     : `${counted} not repeatable; the ${mutants} mutants ${reach} run isolated.`
+}
+
+/**
+ * Reuses the verdicts of earlier runs before anything runs: in fast mode,
+ * cached batch evidence first (`applyCachedBatch`), then cached isolated
+ * evidence (`applyCachedUnits`), then a note that counts the mutants the cache
+ * decided.
+ *
+ * @param state - State of the run with its cache, updated in place.
+ * @param fast - Whether the run is in fast mode, which also reuses cached batch
+ *   evidence.
+ */
+function reuseCachedVerdicts(state: RunState, fast: boolean): void {
+  if (fast) {
+    applyCachedBatch(state)
+  }
+  applyCachedUnits(state)
+  let cached = [...state.mutants.values()].filter(
+    mutant => mutant.cached,
+  ).length
+  if (cached > 0) {
+    state.report({
+      message:
+        cached === 1 ?
+          `Reused a cached verdict for 1 of ${state.mutants.size} mutants.`
+        : `Reused cached verdicts for ${cached} of ${state.mutants.size} mutants.`,
+      kind: 'note',
+    })
+  }
 }

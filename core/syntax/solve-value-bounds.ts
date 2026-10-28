@@ -171,22 +171,7 @@ export function solveValueBounds(
     ]
     changed = false
     for (let [current, next] of rounds) {
-      for (let [binding, bound] of next) {
-        let before = current.get(binding) as ValueBound | null
-        let count = decreases.get(binding) ?? 0
-        if (!isSameBound(before, bound)) {
-          changed = true
-          if (isDecrease(before, bound)) {
-            count += 1
-            decreases.set(binding, count)
-          }
-        }
-        /*
-         * The bound of this round replaces an equal one too, so the reason at
-         * the end is the one the last round found against the final bounds.
-         */
-        current.set(binding, count > MAX_DECREASES ? null : bound)
-      }
+      changed = applyRound(current, next, decreases) || changed
     }
   }
 
@@ -295,6 +280,42 @@ function boundWrite(
     default:
       return null
   }
+}
+
+/**
+ * Replaces the bounds of one kind of name with those a round found, counting
+ * how often each went down from a number: a name whose bound goes down more
+ * than `MAX_DECREASES` times gets none.
+ *
+ * @param current - Bounds of the round before, replaced in place.
+ * @param next - Bounds this round found for the same names.
+ * @param decreases - Times the bound of each name went down so far, updated in
+ *   place.
+ * @returns Whether any bound changed.
+ */
+function applyRound(
+  current: NameBounds,
+  next: NameBounds,
+  decreases: Map<Binding, number>,
+): boolean {
+  let changed = false
+  for (let [binding, bound] of next) {
+    let before = current.get(binding) as ValueBound | null
+    let count = decreases.get(binding) ?? 0
+    if (!isSameBound(before, bound)) {
+      changed = true
+      if (isDecrease(before, bound)) {
+        count += 1
+        decreases.set(binding, count)
+      }
+    }
+    /*
+     * The bound of this round replaces an equal one too, so the reason at the
+     * end is the one the last round found against the final bounds.
+     */
+    current.set(binding, count > MAX_DECREASES ? null : bound)
+  }
+  return changed
 }
 
 /**

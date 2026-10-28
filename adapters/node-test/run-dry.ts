@@ -3,6 +3,7 @@ import path from 'node:path'
 import type { DryRunRequest } from '../../types/adapter/dry-run-request'
 import type { DryRunResult } from '../../types/adapter/dry-run-result'
 import type { NodeTestHandle } from './types/node-test-handle'
+import type { NodeTestRecord } from './types/node-test-record'
 
 import { collectNodeDependencies } from './collect-node-dependencies'
 import { compareCodeUnits } from '../../core/compare-code-units'
@@ -60,20 +61,7 @@ export async function runDry(
     )
   }
   let { context, state } = handle
-  let plan: string
-  if (request.instrumented) {
-    let problem = handle.checkTypeScript(context.files.map(entry => entry.file))
-    if (problem !== null) {
-      throw new Error(problem)
-    }
-    plan = writeSwitchPlan(
-      path.join(context.workDirectory, 'switched'),
-      context.files,
-    )
-    state.plan = plan
-  } else {
-    plan = writeSwitchPlan(path.join(context.workDirectory, 'plain'), [])
-  }
+  let plan = writeDryPlan(handle, request.instrumented)
   let related = new Set(request.related)
   /**
    * Tells whether modules include a related file.
@@ -119,9 +107,11 @@ export async function runDry(
     tests: [],
     hung: [],
   }
-  let served = new Set<string>()
-  let mismatched = new Set<string>()
-  let required = new Set<string>()
+  let found = {
+    mismatched: new Set<string>(),
+    required: new Set<string>(),
+    served: new Set<string>(),
+  }
   let switched = new Set(context.files.map(entry => entry.file))
   let cache = { tsconfigs: new Map(), packages: new Map() }
   for (let [index, outcome] of outcomes.entries()) {
@@ -137,22 +127,7 @@ export async function runDry(
     if (request.files === null && !report.hung && !relates(modules)) {
       continue
     }
-    let async = outcome.records.some(
-      record => record.kind === 'start' && record.hooks === 'async',
-    )
-    for (let record of outcome.records) {
-      if (record.kind === 'served') {
-        served.add(record.file)
-      } else if (record.kind === 'mismatched') {
-        mismatched.add(record.file)
-      } else if (async && record.kind === 'end') {
-        for (let module of record.required) {
-          if (switched.has(module)) {
-            required.add(module)
-          }
-        }
-      }
-    }
+    collectSwitchRecords(outcome.records, switched, found)
     report.entry.dependencies = collectNodeDependencies({
       records: outcome.records,
       preload: handle.preload,
@@ -166,6 +141,7 @@ export async function runDry(
       result.hung.push({ ...report.hung, file })
     }
   }
+  let { mismatched, required, served } = found
   result.files.sort((left, right) => compareCodeUnits(left.file, right.file))
   result.tests = result.tests.toSorted((left, right) =>
     compareCodeUnits(left.file, right.file),
@@ -177,4 +153,75 @@ export async function runDry(
     .toSorted(compareCodeUnits)
     .map(file => ({ reason: REQUIRED_ESM, file }))
   return result
+}
+
+/**
+ * Collects the switched files the records of a test process name: those it
+ * served, those whose loaded text differed from the original and, when its
+ * module hooks run in a thread of their own, those in its `require` cache at
+ * the exit.
+ *
+ * @param records - Records of the process.
+ * @param switched - Absolute paths of the switched files.
+ * @param found - Receives the paths, each kind in its own set.
+ * @param found.mismatched - Switched files whose loaded text differed from the
+ *   original.
+ * @param found.required - Switched files in the `require` cache of a process
+ *   whose module hooks run in a thread of their own.
+ * @param found.served - Switched files whose switched text ran.
+ */
+function collectSwitchRecords(
+  records: readonly NodeTestRecord[],
+  switched: ReadonlySet<string>,
+  found: {
+    mismatched: Set<string>
+    required: Set<string>
+    served: Set<string>
+  },
+): void {
+  let async = records.some(
+    record => record.kind === 'start' && record.hooks === 'async',
+  )
+  for (let record of records) {
+    if (record.kind === 'served') {
+      found.served.add(record.file)
+    } else if (record.kind === 'mismatched') {
+      found.mismatched.add(record.file)
+    } else if (async && record.kind === 'end') {
+      for (let module of record.required) {
+        if (switched.has(module)) {
+          found.required.add(module)
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Writes the switch plan of a dry run: with instrumentation, checks the
+ * switched files (`NodeTestHandle.checkTypeScript`) and writes them from the
+ * context into the session's switch plan (`NodeTestState.plan`); without it, a
+ * plan that switches nothing, which the session does not keep.
+ *
+ * @param handle - Live session.
+ * @param instrumented - Whether the run serves switched texts.
+ * @returns Absolute path of the plan's `plan.json`.
+ * @throws {Error} When mootant cannot switch a switched TypeScript file
+ *   (`checkTypeScript`).
+ */
+function writeDryPlan(handle: NodeTestHandle, instrumented: boolean): string {
+  let { context, state } = handle
+  if (!instrumented) {
+    return writeSwitchPlan(path.join(context.workDirectory, 'plain'), [])
+  }
+  let problem = handle.checkTypeScript(context.files.map(entry => entry.file))
+  if (problem !== null) {
+    throw new Error(problem)
+  }
+  let plan = writeSwitchPlan(
+    path.join(context.workDirectory, 'switched'),
+    context.files,
+  )
+  state.plan = plan
+  return plan
 }

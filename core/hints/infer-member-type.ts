@@ -141,56 +141,6 @@ function getFieldUse(tree: TreeIndex, member: Node): FieldUse {
 }
 
 /**
- * Infers the type of a field of `this`: its annotation, or the union of its
- * initializer, every plain assignment to it in the class and `undefined` when
- * the class deletes it; a constructor parameter property has its parameter's
- * type.
- *
- * @param owner - Class that `this` refers to.
- * @param name - Field name, `#name` for a private field.
- * @param inference - Recursion context of the provider.
- * @returns Kinds of the field, or unknown when no field is declared or a write
- *   cannot be analyzed.
- */
-function inferFieldType(
-  owner: ThisClass,
-  name: string,
-  inference: TypeInference,
-): InferredType {
-  for (let element of owner.body.body) {
-    if (
-      element.type === 'MethodDefinition' &&
-      element.kind === 'constructor' &&
-      !owner.isStatic
-    ) {
-      for (let parameter of element.value.params) {
-        if (parameter.type === 'TSParameterProperty') {
-          let identifier =
-            parameter.parameter.type === 'AssignmentPattern' ?
-              parameter.parameter.left
-            : parameter.parameter
-          if (getKeyName(identifier) === name) {
-            return inferBindingType(
-              inference.scopes.bindings.get(identifier)!,
-              inference,
-            )
-          }
-        }
-      }
-    }
-    if (
-      isField(element) &&
-      element.static === owner.isStatic &&
-      !element.computed &&
-      getKeyName(element.key) === name
-    ) {
-      return inferDeclaredFieldType(element, owner, inference)
-    }
-  }
-  return createInferredType(null)
-}
-
-/**
  * Infers a declared field from its annotation, or from its initializer and the
  * assignments of the class.
  *
@@ -277,6 +227,71 @@ function getFieldUses(
     uses = found
   }
   return uses.get(name)!
+}
+
+/**
+ * Infers the type of a field of `this`: its annotation, or the union of its
+ * initializer, every plain assignment to it in the class and `undefined` when
+ * the class deletes it; a constructor parameter property has its parameter's
+ * type.
+ *
+ * @param owner - Class that `this` refers to.
+ * @param name - Field name, `#name` for a private field.
+ * @param inference - Recursion context of the provider.
+ * @returns Kinds of the field, or unknown when no field is declared or a write
+ *   cannot be analyzed.
+ */
+function inferFieldType(
+  owner: ThisClass,
+  name: string,
+  inference: TypeInference,
+): InferredType {
+  for (let element of owner.body.body) {
+    let property = owner.isStatic ? null : findParameterProperty(element, name)
+    if (property) {
+      return inferBindingType(
+        inference.scopes.bindings.get(property)!,
+        inference,
+      )
+    }
+    if (
+      isField(element) &&
+      element.static === owner.isStatic &&
+      !element.computed &&
+      getKeyName(element.key) === name
+    ) {
+      return inferDeclaredFieldType(element, owner, inference)
+    }
+  }
+  return createInferredType(null)
+}
+
+/**
+ * Finds the parameter property of a name that a class member declares: a
+ * constructor parameter with an accessibility or `readonly` modifier, also with
+ * a default value.
+ *
+ * @param element - Member of a class body.
+ * @param name - Field name.
+ * @returns The identifier of the parameter, or null when the member is not the
+ *   constructor or declares no parameter property of the name.
+ */
+function findParameterProperty(element: Node, name: string): Node | null {
+  if (element.type !== 'MethodDefinition' || element.kind !== 'constructor') {
+    return null
+  }
+  for (let parameter of element.value.params) {
+    if (parameter.type === 'TSParameterProperty') {
+      let identifier =
+        parameter.parameter.type === 'AssignmentPattern' ?
+          parameter.parameter.left
+        : parameter.parameter
+      if (getKeyName(identifier) === name) {
+        return identifier
+      }
+    }
+  }
+  return null
 }
 
 /**

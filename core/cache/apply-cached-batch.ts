@@ -1,4 +1,5 @@
-import type { MutantState } from '../../types/run/mutant-state'
+import type { MutantVerdict, MutantState } from '../../types/run/mutant-state'
+import type { RunCache } from '../../types/cache/run-cache'
 import type { RunState } from '../../types/run/run-state'
 
 import { rankMutantFiles } from '../run/rank-mutant-files'
@@ -35,29 +36,10 @@ export function applyCachedBatch(state: RunState): void {
       continue
     }
     let ranked = rankMutantFiles(state, mutant)
-    let evidence: MutantState['evidence'] = new Map()
-    for (let file of ranked) {
-      let found = cache.lookupUnit(mutant, file)
-      if (found === null) {
-        break
-      }
-      evidence.set(file, found === 'survived' ? 'none' : found)
-      if (found !== 'survived') {
-        break
-      }
-    }
+    let evidence = readCachedUnits(cache, mutant, ranked)
     let decided = decideEvidence({ evidence, ranked })
     if (decided === null) {
-      let passed = true
-      for (let test of getBatchOrder(state, mutant)) {
-        let found = cache.lookupBatch(mutant, test)
-        if (found === null) {
-          passed = false
-        } else if (found !== 'survived' && (passed || found.first)) {
-          mutant.verdict = found.verdict
-          break
-        }
-      }
+      mutant.verdict = findCachedBatchKill(state, cache, mutant)
     } else {
       mutant.path = 'isolated'
       mutant.verdict = decided.verdict
@@ -95,4 +77,63 @@ function getBatchOrder(state: RunState, mutant: MutantState): string[] {
         analysis.order.get(left)! - analysis.order.get(right)!,
     ),
   ]
+}
+
+/**
+ * Reads the valid cached isolated evidence of a mutant in the order of its test
+ * files, up to the first file without a valid entry or with a kill, since the
+ * files after it cannot change the verdict (`decideEvidence`). A cached reached
+ * pass is a file done without a kill.
+ *
+ * @param cache - Cache of the run; each lookup marks its entry as used.
+ * @param mutant - Mutant on the batch path.
+ * @param ranked - Keys of its test files, the likeliest to kill it first.
+ * @returns Isolated evidence by key of the test file.
+ */
+function readCachedUnits(
+  cache: RunCache,
+  mutant: MutantState,
+  ranked: readonly string[],
+): MutantState['evidence'] {
+  let evidence: MutantState['evidence'] = new Map()
+  for (let file of ranked) {
+    let found = cache.lookupUnit(mutant, file)
+    if (found === null) {
+      break
+    }
+    evidence.set(file, found === 'survived' ? 'none' : found)
+    if (found !== 'survived') {
+      break
+    }
+  }
+  return evidence
+}
+
+/**
+ * Finds the valid cached batch kill that decides a mutant: one by a covering
+ * test after valid cached passes of every covering test the batch phases try
+ * before it (`getBatchOrder`), or one by the test its run tried first
+ * (`CacheEntry.first`). Lookups stop at that kill.
+ *
+ * @param state - State of the run.
+ * @param cache - Cache of the run; each lookup marks its entry as used.
+ * @param mutant - Mutant on the batch path that its isolated evidence leaves
+ *   undecided.
+ * @returns The kill, or null when no cached batch evidence decides the mutant.
+ */
+function findCachedBatchKill(
+  state: RunState,
+  cache: RunCache,
+  mutant: MutantState,
+): MutantVerdict | null {
+  let passed = true
+  for (let test of getBatchOrder(state, mutant)) {
+    let found = cache.lookupBatch(mutant, test)
+    if (found === null) {
+      passed = false
+    } else if (found !== 'survived' && (passed || found.first)) {
+      return found.verdict
+    }
+  }
+  return null
 }

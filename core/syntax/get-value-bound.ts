@@ -1,4 +1,13 @@
-import type { BindingIdentifier, Node } from 'oxc-parser'
+import type {
+  ConditionalExpression,
+  PrivateInExpression,
+  BindingIdentifier,
+  LogicalExpression,
+  MemberExpression,
+  BinaryExpression,
+  CallExpression,
+  Node,
+} from 'oxc-parser'
 
 import type { BoundEvaluation } from '../../types/syntax/bound-evaluation'
 import type { ValueBounds } from '../../types/syntax/value-bounds'
@@ -149,83 +158,14 @@ function evaluate(bounds: ValueBounds, node: Node, depth: number): Outcome {
   let current = unwrapExpression(node)
   let next = depth + 1
   switch (current.type) {
-    case 'ConditionalExpression': {
-      let consequent = evaluate(bounds, current.consequent, next)
-      if (!consequent) {
-        return consequent
-      }
-      let alternate = evaluate(bounds, current.alternate, next)
-      return (
-        alternate &&
-        join(consequent, alternate, {
-          nullable: consequent.nullable || alternate.nullable,
-          lower: Math.min(consequent.lower, alternate.lower),
-          integer: consequent.integer && alternate.integer,
-          literal: consequent.literal && alternate.literal,
-        })
-      )
-    }
-    case 'LogicalExpression': {
-      if (current.operator !== '??') {
-        return null
-      }
-      let left = evaluate(bounds, current.left, next)
-      if (!left?.nullable) {
-        return left && raise(left)
-      }
-      /*
-       * A value that may be nullish is never made of number literals alone.
-       */
-      let right = evaluate(bounds, current.right, next)
-      return (
-        right &&
-        join(left, right, {
-          lower: Math.min(left.lower, right.lower),
-          integer: left.integer && right.integer,
-          nullable: right.nullable,
-          literal: false,
-        })
-      )
-    }
-    case 'BinaryExpression': {
-      if (current.operator !== '+') {
-        return null
-      }
-      let left = keepNonNullish(evaluate(bounds, current.left, next))
-      if (!left) {
-        return left
-      }
-      let right = keepNonNullish(evaluate(bounds, current.right, next))
-      return (
-        right &&
-        join(left, right, {
-          integer: left.integer && right.integer,
-          literal: left.literal && right.literal,
-          lower: left.lower + right.lower,
-          nullable: false,
-        })
-      )
-    }
-    case 'MemberExpression': {
-      if (current.computed || current.property.type !== 'Identifier') {
-        return null
-      }
-      let because: string | null = null
-      let collection =
-        current.property.name === 'size' ?
-          getCollectionClass(bounds, current.object)
-        : null
-      if (current.property.name === 'length') {
-        because = 'a length is never negative'
-      } else if (collection) {
-        let object = unwrapExpression(current.object)
-        because =
-          object.type === 'Identifier' ?
-            `\`${object.name}\` is a ${collection}, whose size is never negative`
-          : `the size of a ${collection} is never negative`
-      }
-      return because === null ? null : createFact(because, 0, current.optional)
-    }
+    case 'ConditionalExpression':
+      return evaluateConditional(bounds, current, next)
+    case 'LogicalExpression':
+      return evaluateCoalescing(bounds, current, next)
+    case 'BinaryExpression':
+      return evaluateSum(bounds, current, next)
+    case 'MemberExpression':
+      return evaluateMember(bounds, current)
     case 'ChainExpression': {
       let inner = evaluate(bounds, current.expression, next)
       return inner && { ...raise(inner), nullable: true }
@@ -245,30 +185,8 @@ function evaluate(bounds: ValueBounds, node: Node, depth: number): Outcome {
           }
         )
     }
-    case 'CallExpression': {
-      let callee = unwrapExpression(current.callee)
-      if (
-        callee.type !== 'MemberExpression' ||
-        callee.computed ||
-        callee.property.type !== 'Identifier'
-      ) {
-        return null
-      }
-      let { name } = callee.property
-      if (positionMethods.has(name)) {
-        return createFact(
-          `\`${name}\` returns -1 or an index`,
-          -1,
-          current.optional || callee.optional,
-        )
-      }
-      let map =
-        name === 'get' && current.arguments.length === 1 ?
-          getBinding(bounds, callee.object)
-        : null
-      let values = map ? bounds.maps.get(map) : null
-      return values ? readBound(values, true) : null
-    }
+    case 'CallExpression':
+      return evaluateCall(bounds, current)
     case 'Identifier': {
       let binding = bounds.scopes.bindings.get(current)
       return binding ? evaluateName(bounds, binding, next) : null
@@ -328,6 +246,178 @@ function evaluateName(
     return undefined
   }
   return fixed && raise(fixed)
+}
+
+/**
+ * Bounds a member that is never negative: a non-computed `length` of any
+ * receiver, or a `size` of a proven Map or Set (see `getCollectionClass`).
+ *
+ * @param bounds - Bounds of the names of the program whose values change.
+ * @param member - Member expression to bound.
+ * @returns The bound, or null for any other member.
+ */
+function evaluateMember(
+  bounds: ValueBounds,
+  member: MemberExpression,
+): BoundEvaluation | null {
+  if (member.computed || member.property.type !== 'Identifier') {
+    return null
+  }
+  let because: string | null = null
+  let collection =
+    member.property.name === 'size' ?
+      getCollectionClass(bounds, member.object)
+    : null
+  if (member.property.name === 'length') {
+    because = 'a length is never negative'
+  } else if (collection) {
+    let object = unwrapExpression(member.object)
+    because =
+      object.type === 'Identifier' ?
+        `\`${object.name}\` is a ${collection}, whose size is never negative`
+      : `the size of a ${collection} is never negative`
+  }
+  return because === null ? null : createFact(because, 0, member.optional)
+}
+
+/**
+ * Bounds a call of a member by its name: `indexOf`, `lastIndexOf`, `findIndex`,
+ * `findLastIndex` and `search` have -1, and the `get` method of a count map has
+ * the bound of its values, which may be `undefined`.
+ *
+ * @param bounds - Bounds of the names of the program whose values change.
+ * @param call - Call expression to bound.
+ * @returns The bound, or null for any other call.
+ */
+function evaluateCall(
+  bounds: ValueBounds,
+  call: CallExpression,
+): BoundEvaluation | null {
+  let callee = unwrapExpression(call.callee)
+  if (
+    callee.type !== 'MemberExpression' ||
+    callee.computed ||
+    callee.property.type !== 'Identifier'
+  ) {
+    return null
+  }
+  let { name } = callee.property
+  if (positionMethods.has(name)) {
+    return createFact(
+      `\`${name}\` returns -1 or an index`,
+      -1,
+      call.optional || callee.optional,
+    )
+  }
+  let map =
+    name === 'get' && call.arguments.length === 1 ?
+      getBinding(bounds, callee.object)
+    : null
+  let values = map ? bounds.maps.get(map) : null
+  return values ? readBound(values, true) : null
+}
+
+/**
+ * Bounds a nullish coalescing: the bound of its left side, with that of its
+ * right side when the left side may be nullish. The right side is read only
+ * then.
+ *
+ * @param bounds - Bounds of the names of the program whose values change.
+ * @param node - Logical expression to bound.
+ * @param depth - Level of the operands below the start of the evaluation.
+ * @returns The bound, null when the operator is not `??` or a side read has
+ *   none, or undefined when a part is too deep.
+ */
+function evaluateCoalescing(
+  bounds: ValueBounds,
+  node: LogicalExpression,
+  depth: number,
+): Outcome {
+  if (node.operator !== '??') {
+    return null
+  }
+  let left = evaluate(bounds, node.left, depth)
+  if (!left?.nullable) {
+    return left && raise(left)
+  }
+  /*
+   * A value that may be nullish is never made of number literals alone.
+   */
+  let right = evaluate(bounds, node.right, depth)
+  return (
+    right &&
+    join(left, right, {
+      lower: Math.min(left.lower, right.lower),
+      integer: left.integer && right.integer,
+      nullable: right.nullable,
+      literal: false,
+    })
+  )
+}
+
+/**
+ * Bounds a conditional expression: the smaller bound of its branches. The
+ * alternate is read only when the consequent has a bound.
+ *
+ * @param bounds - Bounds of the names of the program whose values change.
+ * @param node - Conditional expression to bound.
+ * @param depth - Level of the branches below the start of the evaluation.
+ * @returns The bound, null when a branch has none, or undefined when a part is
+ *   too deep.
+ */
+function evaluateConditional(
+  bounds: ValueBounds,
+  node: ConditionalExpression,
+  depth: number,
+): Outcome {
+  let consequent = evaluate(bounds, node.consequent, depth)
+  if (!consequent) {
+    return consequent
+  }
+  let alternate = evaluate(bounds, node.alternate, depth)
+  return (
+    alternate &&
+    join(consequent, alternate, {
+      nullable: consequent.nullable || alternate.nullable,
+      lower: Math.min(consequent.lower, alternate.lower),
+      integer: consequent.integer && alternate.integer,
+      literal: consequent.literal && alternate.literal,
+    })
+  )
+}
+
+/**
+ * Bounds a sum: the sum of the bounds of its operands when neither may be
+ * nullish. The right operand is read only when the left one has such a bound.
+ *
+ * @param bounds - Bounds of the names of the program whose values change.
+ * @param node - Binary expression to bound.
+ * @param depth - Level of the operands below the start of the evaluation.
+ * @returns The bound, null when the operator is not `+` or an operand has none
+ *   or may be nullish, or undefined when a part is too deep.
+ */
+function evaluateSum(
+  bounds: ValueBounds,
+  node: PrivateInExpression | BinaryExpression,
+  depth: number,
+): Outcome {
+  if (node.operator !== '+') {
+    return null
+  }
+  let left = keepNonNullish(evaluate(bounds, node.left, depth))
+  if (!left) {
+    return left
+  }
+  let right = keepNonNullish(evaluate(bounds, node.right, depth))
+  return (
+    right &&
+    join(left, right, {
+      integer: left.integer && right.integer,
+      literal: left.literal && right.literal,
+      lower: left.lower + right.lower,
+      nullable: false,
+    })
+  )
 }
 
 /**

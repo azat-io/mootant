@@ -1,11 +1,44 @@
+import type { BatchPlan, BatchTest } from '../../types/adapter/batch-plan'
 import type { PlannedTry, RunState } from '../../types/run/run-state'
 import type { BatchResult } from '../../types/adapter/batch-result'
-import type { BatchPlan } from '../../types/adapter/batch-plan'
+import type { MutantState } from '../../types/run/mutant-state'
+import type { RunInputs } from '../../types/adapter/run-inputs'
+import type { TryVerdict } from '../../types/run/try-verdict'
 import type { TryFacts } from '../../types/adapter/try-facts'
 
 import { getDisplayPath } from './get-display-path'
 import { routeIsolated } from './route-isolated'
 import { classifyTry } from './classify-try'
+
+/**
+ * What recording the tries of one planned test of a batch run needs.
+ */
+interface BatchTestContext {
+  /**
+   * What the unit read, if the adapter reported it.
+   */
+  inputs: RunInputs | undefined
+
+  /**
+   * Whether the run confirms timeouts with doubled bounds.
+   */
+  confirming: boolean
+
+  /**
+   * The planned test with its limits and mutants.
+   */
+  test: BatchTest
+
+  /**
+   * Whether the adapter stopped the worker of the unit.
+   */
+  hung: boolean
+
+  /**
+   * Absolute path of the test file of the unit.
+   */
+  file: string
+}
 
 /**
  * Records what a batch run reported, in fast mode. Each mutant try is
@@ -57,133 +90,142 @@ export function applyBatchResult(
       )
     }
   }
-  let seen = new Set<string>()
+  let untried: PlannedTry[] = []
   for (let [index, unit] of plan.units.entries()) {
     let unitTries = result.tries.filter(facts => facts.unit === index)
+    let inputs = result.inputs?.find(entry => entry.unit === index)
     for (let test of unit.tests) {
       let tries = unitTries.filter(facts => facts.test === test.id)
-      if (
-        tries.length === 1 &&
-        tries[0]!.mutant === null &&
-        tries[0]!.skipped
-      ) {
-        for (let id of test.mutants) {
-          seen.add(`${index}\n${test.id}\n${id}`)
-        }
+      recordTestTries(state, tries, {
+        hung: hung.has(index),
+        file: unit.file,
+        confirming,
+        inputs,
+        test,
+      })
+      untried.push(...listUntried(test, tries))
+    }
+  }
+  isolateSpoiled(state, run)
+  return untried.filter(({ mutant: id }) => {
+    let mutant = state.mutants.get(id)!
+    return (
+      mutant.verdict === null &&
+      mutant.path === 'batch' &&
+      mutant.confirm.length === 0
+    )
+  })
+}
+
+/**
+ * Applies a mutant try to its mutant, still undecided on the batch path. A pass
+ * goes to the cache whether it reached the mutant or not, and a reached pass
+ * marks the mutant survived; a doubtful try sends it to the isolated path; a
+ * timeout of the timer takes the cause `hang` when the worker of the unit hung,
+ * and a hit-limit timeout, or any timeout in a run that confirms timeouts, is
+ * final, any other waits for a confirmation; a kill is final and goes to the
+ * cache.
+ *
+ * @param state - State of the run, updated in place.
+ * @param mutant - Mutant of the try, undecided on the batch path.
+ * @param attempt - Outcome, cause and message of the try, with its test, unit
+ *   and run.
+ */
+function recordBatchTry(
+  state: RunState,
+  mutant: MutantState,
+  attempt: { message: string | null } & BatchTestContext & TryVerdict,
+): void {
+  let { confirming, outcome, cause, test, hung } = attempt
+  let evidence = {
+    message: attempt.message,
+    file: attempt.file,
+    test: test.id,
+  }
+  switch (outcome) {
+    case 'unreached':
+    case 'survived': {
+      if (outcome === 'survived') {
+        mutant.survived = true
       }
-      for (let [position, facts] of tries.entries()) {
-        if (facts.mutant === null) {
-          continue
+      state.cache?.recordBatch(mutant, test.id, {
+        inputs: attempt.inputs,
+        verdict: 'survived',
+      })
+
+      break
+    }
+    case 'doubtful': {
+      routeIsolated(state, mutant.mutant.id, 'doubtful')
+
+      break
+    }
+    case 'timeout': {
+      let timeoutCause = cause === 'time-limit' && hung ? 'hang' : cause!
+      if (timeoutCause === 'hit-limit' || confirming) {
+        mutant.verdict = {
+          cause: timeoutCause,
+          status: 'Timeout',
+          ...evidence,
         }
-        seen.add(`${index}\n${test.id}\n${facts.mutant}`)
-        let mutant = state.mutants.get(facts.mutant)
-        if (mutant === undefined) {
-          continue
-        }
-        mutant.tries += 1
-        mutant.duration += facts.duration
-        if (mutant.verdict !== null || mutant.path !== 'batch') {
-          continue
-        }
-        let { outcome, cause } = classifyTry(facts, test, 'batch')
-        let needsAfter = outcome === 'killed' || cause === 'hit-limit'
-        if (
-          (needsAfter || outcome === 'timeout') &&
-          (!isGoodControl(tries[position - 1]) ||
-            (needsAfter && !isGoodControl(tries[position + 1])))
-        ) {
-          outcome = 'doubtful'
-        }
-        let evidence = {
-          message: facts.message,
-          file: unit.file,
+      } else {
+        mutant.confirm.push({
+          cause: timeoutCause as 'time-limit' | 'hang',
           test: test.id,
-        }
-        switch (outcome) {
-          case 'unreached':
-          case 'survived': {
-            if (outcome === 'survived') {
-              mutant.survived = true
-            }
-            state.cache?.recordBatch(mutant, test.id, {
-              inputs: result.inputs?.find(inputs => inputs.unit === index),
-              verdict: 'survived',
-            })
-
-            break
-          }
-          case 'doubtful': {
-            routeIsolated(state, facts.mutant, 'doubtful')
-
-            break
-          }
-          case 'timeout': {
-            let timeoutCause =
-              cause === 'time-limit' && hung.has(index) ? 'hang' : cause!
-            if (timeoutCause === 'hit-limit' || confirming) {
-              mutant.verdict = {
-                cause: timeoutCause,
-                status: 'Timeout',
-                ...evidence,
-              }
-            } else {
-              mutant.confirm.push({
-                cause: timeoutCause as 'time-limit' | 'hang',
-                test: test.id,
-              })
-            }
-
-            break
-          }
-          case 'killed': {
-            mutant.verdict = { status: 'Killed', cause, ...evidence }
-            state.cache?.recordBatch(mutant, test.id, {
-              inputs: result.inputs?.find(inputs => inputs.unit === index),
-              verdict: mutant.verdict,
-            })
-
-            break
-          }
-          // No default
-        }
+        })
       }
+
+      break
     }
-  }
-  for (let { unit } of result.hookErrors) {
-    let { tests } = plan.units[unit]!
-    for (let test of tests) {
-      for (let id of test.mutants) {
-        let mutant = state.mutants.get(id)!
-        if (mutant.verdict === null && mutant.path === 'batch') {
-          routeIsolated(state, id, 'doubtful')
-        }
-      }
+    case 'killed': {
+      mutant.verdict = { status: 'Killed', cause, ...evidence }
+      state.cache?.recordBatch(mutant, test.id, {
+        verdict: mutant.verdict,
+        inputs: attempt.inputs,
+      })
+
+      break
     }
+    // No default
   }
-  for (let late of result.late) {
-    let mutant =
-      late.mutant === null ? undefined : state.mutants.get(late.mutant)
-    if (mutant?.verdict === null && mutant.path === 'batch') {
-      routeIsolated(state, late.mutant!, 'doubtful')
+}
+
+/**
+ * Records the tries of one planned test in the order they ran. Every mutant try
+ * counts on its mutant and tries of unknown mutants are ignored; a try decides
+ * only while its mutant is undecided on the batch path.
+ *
+ * @param state - State of the run, updated in place.
+ * @param tries - Facts of the tries of the test, control tries included.
+ * @param context - The planned test, what its unit read and how the run went.
+ */
+function recordTestTries(
+  state: RunState,
+  tries: readonly TryFacts[],
+  context: BatchTestContext,
+): void {
+  for (let [position, facts] of tries.entries()) {
+    if (facts.mutant === null) {
+      continue
     }
-  }
-  let missing: PlannedTry[] = []
-  for (let [index, unit] of plan.units.entries()) {
-    for (let test of unit.tests) {
-      for (let id of test.mutants) {
-        let mutant = state.mutants.get(id)!
-        if (
-          !seen.has(`${index}\n${test.id}\n${id}`) &&
-          mutant.verdict === null &&
-          mutant.path === 'batch' &&
-          mutant.confirm.length === 0
-        ) {
-          missing.push({ test: test.id, mutant: id })
-        }
-      }
+    let mutant = state.mutants.get(facts.mutant)
+    if (mutant === undefined) {
+      continue
     }
+    mutant.tries += 1
+    mutant.duration += facts.duration
+    if (mutant.verdict !== null || mutant.path !== 'batch') {
+      continue
+    }
+    recordBatchTry(state, mutant, {
+      ...classifyBatchTry(facts, context.test, {
+        before: tries[position - 1],
+        after: tries[position + 1],
+      }),
+      message: facts.message,
+      ...context,
+    })
   }
-  return missing
 }
 
 /**
@@ -215,6 +257,88 @@ function reportHang(
     column: null,
     line: null,
   })
+}
+
+/**
+ * Sends the mutants of spoiled tries that are still undecided on the batch path
+ * to the isolated path: first every mutant planned in a unit whose suite hook
+ * failed, then the mutant of each late error.
+ *
+ * @param state - State of the run, updated in place.
+ * @param run - The run to record.
+ * @param run.result - What the adapter reported.
+ * @param run.plan - Plan the run executed.
+ */
+function isolateSpoiled(
+  state: RunState,
+  run: { result: BatchResult; plan: BatchPlan },
+): void {
+  let { result, plan } = run
+  let spoiled = [
+    ...result.hookErrors.flatMap(({ unit }) =>
+      plan.units[unit]!.tests.flatMap(test => test.mutants),
+    ),
+    ...result.late.map(late => late.mutant),
+  ]
+  for (let id of spoiled) {
+    let mutant = id === null ? undefined : state.mutants.get(id)
+    if (mutant?.verdict === null && mutant.path === 'batch') {
+      routeIsolated(state, mutant.mutant.id, 'doubtful')
+    }
+  }
+}
+
+/**
+ * Classifies a mutant try of a batch run by the control tries next to it. A
+ * kill or a hit-limit timeout counts only when the control tries right before
+ * and right after it passed; a timeout of the timer only needs a passing
+ * control before it, since the worker gives up the unit. Otherwise the try is
+ * doubtful.
+ *
+ * @param facts - Facts of the mutant try.
+ * @param test - The planned test with its limits.
+ * @param controls - Tries right before and right after it.
+ * @param controls.before - Try right before it, if there is one.
+ * @param controls.after - Try right after it, if there is one.
+ * @returns Outcome and cause of the try.
+ */
+function classifyBatchTry(
+  facts: TryFacts,
+  test: BatchTest,
+  controls: { before: undefined | TryFacts; after: undefined | TryFacts },
+): TryVerdict {
+  let { outcome, cause } = classifyTry(facts, test, 'batch')
+  let needsAfter = outcome === 'killed' || cause === 'hit-limit'
+  if (
+    (needsAfter || outcome === 'timeout') &&
+    (!isGoodControl(controls.before) ||
+      (needsAfter && !isGoodControl(controls.after)))
+  ) {
+    outcome = 'doubtful'
+  }
+  return { outcome, cause }
+}
+
+/**
+ * Lists the planned tries of a test that have no facts. A leading control try
+ * that skipped itself ends the repeats of the test, so its mutants count as
+ * tried without evidence rather than missing.
+ *
+ * @param test - The planned test with its mutants.
+ * @param tries - Facts of the tries of the test, control tries included.
+ * @returns Planned tries of the test without facts, in plan order.
+ */
+function listUntried(
+  test: BatchTest,
+  tries: readonly TryFacts[],
+): PlannedTry[] {
+  if (tries.length === 1 && tries[0]!.mutant === null && tries[0]!.skipped) {
+    return []
+  }
+  let tried = new Set(tries.map(facts => facts.mutant))
+  return test.mutants
+    .filter(id => !tried.has(id))
+    .map(id => ({ test: test.id, mutant: id }))
 }
 
 /**

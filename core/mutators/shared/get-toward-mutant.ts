@@ -1,4 +1,4 @@
-import type { Node } from 'oxc-parser'
+import type { ConditionalExpression, LogicalExpression, Node } from 'oxc-parser'
 
 import type { MutantSite, RunContext } from './create-run-context'
 import type { DirectionQuery } from './has-polar-mutant'
@@ -83,18 +83,7 @@ function walkToward(
   let { node: inner, negations } = getInnermost(node)
   let wanted = wantedAbove !== (negations % 2 === 1)
   if (inner.type === 'ConditionalExpression') {
-    let consequent = getLiteralTruth(inner.consequent, context)
-    let alternate = getLiteralTruth(inner.alternate, context)
-    return (
-      (consequent === wanted || alternate === !wanted ?
-        walkToward(inner.test, true, search)
-      : null) ??
-      (alternate === wanted || consequent === !wanted ?
-        walkToward(inner.test, false, search)
-      : null) ??
-      walkToward(inner.consequent, wanted, search) ??
-      walkToward(inner.alternate, wanted, search)
-    )
+    return walkConditional(inner, wanted, search)
   }
   if (isComparison(inner)) {
     let owner = { mutator: 'comparison-operator', node: inner }
@@ -115,27 +104,75 @@ function walkToward(
     )
   }
   if (isAndOr(inner)) {
-    let identity = inner.operator === '&&'
-    let owner = { mutator: 'logical-operator', node: inner }
-    if (context.runs(owner, candidate)) {
-      if (identity === wanted && isBooleanMode(inner, context)) {
-        let drops = getLogicalDrops(inner, context, 'distinguishing')
-        if (drops.dropLeft || drops.dropRight) {
-          return owner
-        }
-      }
-      if (identity !== wanted && getGroupConstant(inner, context).emitted) {
-        return owner
-      }
-    }
-    return (
-      walkToward(inner.left, wanted, search) ??
-      walkToward(inner.right, wanted, search)
-    )
+    return walkAndOr(inner, wanted, search)
   }
   if (getLiteralFlip(inner, context) !== wanted) {
     return null
   }
   let literal = { mutator: getLiteralMutator(inner)!, node: inner }
   return context.runs(literal, candidate) ? literal : null
+}
+
+/**
+ * Looks for a mutant that moves a `&&` or `||` toward a truth value:
+ * logical-operator's drop of a boolean-mode group toward its identity, or its
+ * group constant toward its absorbing value, then a mutant of either operand.
+ *
+ * @param node - `&&` or `||` of the decision.
+ * @param wanted - Truth value sought at the expression.
+ * @param search - Asking candidate and context.
+ * @returns The mutant, or null when none will run.
+ */
+function walkAndOr(
+  node: LogicalExpression,
+  wanted: boolean,
+  search: TowardSearch,
+): MutantSite | null {
+  let { context, query } = search
+  let identity = node.operator === '&&'
+  let owner = { mutator: 'logical-operator', node }
+  if (context.runs(owner, query.candidate)) {
+    if (identity === wanted && isBooleanMode(node, context)) {
+      let drops = getLogicalDrops(node, context, 'distinguishing')
+      if (drops.dropLeft || drops.dropRight) {
+        return owner
+      }
+    }
+    if (identity !== wanted && getGroupConstant(node, context).emitted) {
+      return owner
+    }
+  }
+  return (
+    walkToward(node.left, wanted, search) ??
+    walkToward(node.right, wanted, search)
+  )
+}
+
+/**
+ * Looks for a mutant that moves a conditional toward a truth value: through its
+ * test, toward the branch that is a literal of that value or away from the one
+ * that is a literal of the other value, then through its branches.
+ *
+ * @param node - Conditional of the decision.
+ * @param wanted - Truth value sought at the conditional.
+ * @param search - Asking candidate and context.
+ * @returns The mutant, or null when none will run.
+ */
+function walkConditional(
+  node: ConditionalExpression,
+  wanted: boolean,
+  search: TowardSearch,
+): MutantSite | null {
+  let consequent = getLiteralTruth(node.consequent, search.context)
+  let alternate = getLiteralTruth(node.alternate, search.context)
+  return (
+    (consequent === wanted || alternate === !wanted ?
+      walkToward(node.test, true, search)
+    : null) ??
+    (alternate === wanted || consequent === !wanted ?
+      walkToward(node.test, false, search)
+    : null) ??
+    walkToward(node.consequent, wanted, search) ??
+    walkToward(node.alternate, wanted, search)
+  )
 }

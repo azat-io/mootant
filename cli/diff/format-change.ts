@@ -1,3 +1,5 @@
+import type { ChangedPart } from './narrow-change'
+
 import {
   getGraphemeWidth,
   getDisplayWidth,
@@ -176,56 +178,10 @@ function windowChange(
   if (fits(prefix, suffix)) {
     return [original.join(''), replacement.join('')]
   }
-  let total = Math.min(room, MAX_SIDE_WIDTH * 2)
-  let half = Math.max(MIN_SIDE_WIDTH, Math.floor(total / 2))
-  let leadWidth = Math.min(MAX_LEAD_WIDTH, Math.floor(half / 2))
   let removal =
     part.originalEnd === part.start || part.replacementEnd === part.start
   if (fits(0, 0)) {
-    let before = 0
-    let after = 0
-    let grew = true
-    while (grew) {
-      grew = false
-      let longer = before + getTokenLength(shared.before.toReversed(), before)
-      if (
-        longer <= Math.min(prefix, MAX_CONTEXT_LENGTH) &&
-        fits(longer, after)
-      ) {
-        before = longer
-        grew = true
-      }
-      longer = after + getTokenLength(shared.after, after)
-      if (
-        longer <= Math.min(suffix, MAX_CONTEXT_LENGTH) &&
-        fits(before, longer)
-      ) {
-        after = longer
-        grew = true
-      }
-    }
-    let fillBefore = before < MIN_TOKEN_CONTEXT
-    let fillAfter = after < MIN_TOKEN_CONTEXT
-    grew = true
-    while (grew) {
-      grew = false
-      if (
-        fillBefore &&
-        before < Math.min(prefix, MAX_CONTEXT_LENGTH) &&
-        fits(before + 1, after)
-      ) {
-        before++
-        grew = true
-      }
-      if (
-        fillAfter &&
-        after < Math.min(suffix, MAX_CONTEXT_LENGTH) &&
-        fits(before, after + 1)
-      ) {
-        after++
-        grew = true
-      }
-    }
+    let { before, after } = growContext(shared, fits)
     let context = [
       ...shared.before.slice(prefix - before),
       ...shared.after.slice(0, after),
@@ -240,9 +196,44 @@ function windowChange(
       ]
     }
   }
+  return cutChange({ replacement, original, removal, part }, limits)
+}
+
+/**
+ * Shows the two sides of a change cut at their end, for a changed text too wide
+ * to show whole or a removal that would show too few word characters around it:
+ * both sides start at most a few characters before the changed text, a removal
+ * keeping a word, and each keeps at least `MIN_SIDE_WIDTH` columns.
+ *
+ * @param change - Both sides and where they differ.
+ * @param change.replacement - Graphemes of the replacement.
+ * @param change.original - Graphemes of the original.
+ * @param change.part - Changed part of the two sides.
+ * @param change.removal - Whether one side has no changed text.
+ * @param limits - Room of both sides together and the mark of a cut.
+ * @param limits.ellipsis - Mark of a cut.
+ * @param limits.room - Most columns of both sides together.
+ * @returns Original and replacement as printed.
+ */
+function cutChange(
+  change: {
+    replacement: string[]
+    original: string[]
+    part: ChangedPart
+    removal: boolean
+  },
+  limits: { ellipsis: string; room: number },
+): [string, string] {
+  let { replacement, original, removal, part } = change
+  let { ellipsis, room } = limits
+  let prefix = part.start
+  let sharedBefore = original.slice(0, prefix)
+  let total = Math.min(room, MAX_SIDE_WIDTH * 2)
+  let half = Math.max(MIN_SIDE_WIDTH, Math.floor(total / 2))
+  let leadWidth = Math.min(MAX_LEAD_WIDTH, Math.floor(half / 2))
   let keep = prefix
-  if (getDisplayWidth(shared.before.join('')) > leadWidth) {
-    keep = keepLead(shared.before.toReversed(), {
+  if (getDisplayWidth(sharedBefore.join('')) > leadWidth) {
+    keep = keepLead(sharedBefore.toReversed(), {
       width: removal ? leadWidth : Math.floor(leadWidth / 2),
       removal,
     })
@@ -274,6 +265,69 @@ function windowChange(
     ellipsis,
   })
   return short === 1 ? [longCut, shortCut] : [shortCut, longCut]
+}
+
+/**
+ * Counts the shared graphemes kept around a changed text that fits: whole
+ * tokens on each side in turn while both sides fit, up to `MAX_CONTEXT_LENGTH`
+ * graphemes on each side, then single graphemes on a side that kept fewer than
+ * `MIN_TOKEN_CONTEXT`.
+ *
+ * @param shared - Shared graphemes around the change.
+ * @param shared.before - Shared graphemes before the change.
+ * @param shared.after - Shared graphemes after the change.
+ * @param fits - Tells whether both sides fit with the given shared graphemes
+ *   kept before and after the change.
+ * @returns Shared graphemes kept before and after the change.
+ */
+function growContext(
+  shared: { before: string[]; after: string[] },
+  fits: (before: number, after: number) => boolean,
+): { before: number; after: number } {
+  let prefix = shared.before.length
+  let suffix = shared.after.length
+  let before = 0
+  let after = 0
+  let grew = true
+  while (grew) {
+    grew = false
+    let longer = before + getTokenLength(shared.before.toReversed(), before)
+    if (longer <= Math.min(prefix, MAX_CONTEXT_LENGTH) && fits(longer, after)) {
+      before = longer
+      grew = true
+    }
+    longer = after + getTokenLength(shared.after, after)
+    if (
+      longer <= Math.min(suffix, MAX_CONTEXT_LENGTH) &&
+      fits(before, longer)
+    ) {
+      after = longer
+      grew = true
+    }
+  }
+  let fillBefore = before < MIN_TOKEN_CONTEXT
+  let fillAfter = after < MIN_TOKEN_CONTEXT
+  grew = true
+  while (grew) {
+    grew = false
+    if (
+      fillBefore &&
+      before < Math.min(prefix, MAX_CONTEXT_LENGTH) &&
+      fits(before + 1, after)
+    ) {
+      before++
+      grew = true
+    }
+    if (
+      fillAfter &&
+      after < Math.min(suffix, MAX_CONTEXT_LENGTH) &&
+      fits(before, after + 1)
+    ) {
+      after++
+      grew = true
+    }
+  }
+  return { before, after }
 }
 
 /**

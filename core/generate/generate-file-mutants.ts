@@ -14,6 +14,7 @@ import type { ParsedFile } from '../../types/source/parsed-file'
 import type { IgnoreRule } from '../../types/mutant/ignore-rule'
 import type { Diagnostic } from '../../types/mutant/diagnostic'
 import type { TreeIndex } from '../../types/syntax/tree-index'
+import type { TextEdit } from '../../types/source/text-edit'
 import type { Mutant } from '../../types/mutant/mutant'
 
 import { createSyntacticTypeProvider } from '../hints/create-syntactic-type-provider'
@@ -176,6 +177,28 @@ interface Selection {
 }
 
 /**
+ * Programs of a file that parsed, with the parse errors of the others and the
+ * template warning.
+ */
+interface FilePrograms {
+  /**
+   * Warning of a template that does not parse.
+   */
+  templateDiagnostics: Diagnostic[]
+
+  /**
+   * Parse errors of the file or of its script blocks.
+   */
+  parseDiagnostics: Diagnostic[]
+
+  /**
+   * Programs that parsed: the file or its script blocks in source order, then
+   * the template.
+   */
+  programs: PreparedProgram[]
+}
+
+/**
  * Generates the mutants of one file. A JavaScript or TypeScript file is one
  * program; each script block of a Vue, Svelte or Astro component is its own
  * program with its own tree, scopes, hints and ignore directives, except that a
@@ -209,31 +232,8 @@ export function generateFileMutants(
   input: GenerateFileInput,
 ): Omit<FileMutants, 'absolute'> {
   let { source, file } = input
-  let templateDiagnostics: Diagnostic[] = []
-  let parseDiagnostics: Diagnostic[] = []
-  let programs: PreparedProgram[] = []
-  let blocks = getSourceBlocks(file, source)
-  for (let block of blocks) {
-    let outcome = parseFile(file, block.text, block)
-    if (outcome.kind === 'failed') {
-      parseDiagnostics.push(...outcome.diagnostics)
-    } else {
-      programs.push(prepareProgram(outcome.parsed, input))
-    }
-  }
-  if (input.compilers && input.settings.templates) {
-    let template = parseComponentTemplate(input.compilers, {
-      lang: getTemplateLanguage(blocks),
-      source,
-      file,
-    })
-    if (template.kind === 'parsed') {
-      programs.push(prepareProgram(template.parsed, input, template))
-    }
-    if (template.kind !== 'empty' && template.diagnostic) {
-      templateDiagnostics.push(template.diagnostic)
-    }
-  }
+  let { templateDiagnostics, parseDiagnostics, programs } =
+    prepareFilePrograms(input)
   if (programs.length === 0 && parseDiagnostics.length > 0) {
     return {
       diagnostics: [...parseDiagnostics, ...templateDiagnostics],
@@ -245,40 +245,14 @@ export function generateFileMutants(
     }
   }
 
-  let fileRules = programs.flatMap(program =>
-    program.rules.filter(rule => rule.kind === 'file'),
-  )
-  let diagnostics = [...parseDiagnostics, ...templateDiagnostics]
-  let collected: MutantCandidate[] = []
-  let collectedSkipped: SkippedCandidate[] = []
-  for (let program of programs) {
-    let rules = [
-      ...program.rules,
-      ...fileRules.filter(rule => !program.rules.includes(rule)),
-    ].toSorted((left, right) => left.order - right.order)
-    let collection = collectProgramCandidates(input, program, rules)
-    diagnostics.push(...collection.diagnostics, ...program.diagnostics)
-    collectedSkipped.push(...collection.skipped)
-    for (let candidate of collection.candidates) {
-      if (
-        isLogMessage(
-          program.loggingCalls,
-          candidate,
-          candidate.kind === 'block',
-        )
-      ) {
-        collectedSkipped.push(createLogMessageSkip(candidate))
-      } else {
-        collected.push(candidate)
-      }
-    }
-  }
-
-  let candidates = collected
-    .filter(
-      candidate =>
-        candidate.text !== source.slice(candidate.start, candidate.end),
-    )
+  let collection = collectFileCandidates(input, programs)
+  let diagnostics = [
+    ...parseDiagnostics,
+    ...templateDiagnostics,
+    ...collection.diagnostics,
+  ]
+  let candidates = collection.candidates
+    .filter(candidate => changesText(candidate, source))
     .toSorted(compareCandidates)
   let ids = assignMutantIds(candidates, file, source)
   let solitary =
@@ -298,9 +272,8 @@ export function generateFileMutants(
       input.skipped ?
         listSkipped(
           {
-            collected: collectedSkipped.filter(
-              candidate =>
-                candidate.text !== source.slice(candidate.start, candidate.end),
+            collected: collection.skipped.filter(candidate =>
+              changesText(candidate, source),
             ),
             solitary: solitary?.dropped ?? new Map(),
             duplicates: deduplication.duplicates,
@@ -471,6 +444,92 @@ function collectProgramCandidates(
 }
 
 /**
+ * Runs the mutators over every program with its own ignore rules plus the file
+ * rules of the others. A candidate that can only change the text of a logging
+ * call becomes a skipped candidate (see `isLogMessage`).
+ *
+ * @param input - File, active mutators and preset settings of the run.
+ * @param programs - Programs of the file that parsed.
+ * @returns Candidates in program and emission order, skipped candidates, and
+ *   the mutator errors and directive warnings of each program in program
+ *   order.
+ */
+function collectFileCandidates(
+  input: GenerateFileInput,
+  programs: readonly PreparedProgram[],
+): ReturnType<typeof collectCandidates> {
+  let fileRules = programs.flatMap(program =>
+    program.rules.filter(rule => rule.kind === 'file'),
+  )
+  let diagnostics: Diagnostic[] = []
+  let candidates: MutantCandidate[] = []
+  let skipped: SkippedCandidate[] = []
+  for (let program of programs) {
+    let rules = [
+      ...program.rules,
+      ...fileRules.filter(rule => !program.rules.includes(rule)),
+    ].toSorted((left, right) => left.order - right.order)
+    let collection = collectProgramCandidates(input, program, rules)
+    diagnostics.push(...collection.diagnostics, ...program.diagnostics)
+    skipped.push(...collection.skipped)
+    for (let candidate of collection.candidates) {
+      if (
+        isLogMessage(
+          program.loggingCalls,
+          candidate,
+          candidate.kind === 'block',
+        )
+      ) {
+        skipped.push(createLogMessageSkip(candidate))
+      } else {
+        candidates.push(candidate)
+      }
+    }
+  }
+  return { diagnostics, candidates, skipped }
+}
+
+/**
+ * Parses the whole text of a JavaScript or TypeScript file, or each script
+ * block of a component, and, with the compiler of its framework and the
+ * `templates` setting on, the template of a Svelte or Vue component.
+ *
+ * @param input - File, text, preset settings, known mutator ids and the
+ *   template compilers.
+ * @returns Programs that parsed, with the parse errors of the others and the
+ *   warning of a template that does not parse.
+ */
+function prepareFilePrograms(input: GenerateFileInput): FilePrograms {
+  let { source, file } = input
+  let templateDiagnostics: Diagnostic[] = []
+  let parseDiagnostics: Diagnostic[] = []
+  let programs: PreparedProgram[] = []
+  let blocks = getSourceBlocks(file, source)
+  for (let block of blocks) {
+    let outcome = parseFile(file, block.text, block)
+    if (outcome.kind === 'failed') {
+      parseDiagnostics.push(...outcome.diagnostics)
+    } else {
+      programs.push(prepareProgram(outcome.parsed, input))
+    }
+  }
+  if (input.compilers && input.settings.templates) {
+    let template = parseComponentTemplate(input.compilers, {
+      lang: getTemplateLanguage(blocks),
+      source,
+      file,
+    })
+    if (template.kind === 'parsed') {
+      programs.push(prepareProgram(template.parsed, input, template))
+    }
+    if (template.kind !== 'empty' && template.diagnostic) {
+      templateDiagnostics.push(template.diagnostic)
+    }
+  }
+  return { templateDiagnostics, parseDiagnostics, programs }
+}
+
+/**
  * Builds what the mutators of one program need besides the ignore rules of the
  * other programs: its tree, with the logger names of the settings, logging
  * calls, scopes and own ignore rules.
@@ -564,4 +623,16 @@ function createLogMessageSkip(candidate: MutantCandidate): SkippedCandidate {
     ...pickFocus(candidate),
     by: null,
   }
+}
+
+/**
+ * Tells whether a candidate changes the text it replaces; one that does not is
+ * a no-op.
+ *
+ * @param edit - Range of the candidate and the text written in its place.
+ * @param source - Text of the file.
+ * @returns Whether the text of the candidate differs from the text it replaces.
+ */
+function changesText(edit: TextEdit, source: string): boolean {
+  return edit.text !== source.slice(edit.start, edit.end)
 }

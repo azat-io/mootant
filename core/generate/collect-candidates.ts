@@ -192,7 +192,8 @@ interface VisitorEntry {
  *   replacements.
  */
 export function collectCandidates(input: CollectInput): CandidateCollection {
-  let { services, mutators, parsed, rules, tree } = input
+  let { services, parsed, rules, tree } = input
+  let lang: 'js' | 'ts' = parsed.language === 'typescript' ? 'ts' : 'js'
   let diagnostics: Diagnostic[] = []
   let candidates: MutantCandidate[] = []
   let skipped: SkippedCandidate[] = []
@@ -247,16 +248,168 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
     if (type === null) {
       return false
     }
-    let written = parseExpression(
-      text,
-      parsed.language === 'typescript' ? 'ts' : 'js',
-    )
+    let written = parseExpression(text, lang)
     return written !== null && readLiteralType(written) === type
   }
-  let table = new Map<string, VisitorEntry[]>()
+  /**
+   * Turns one replacement of a visit into a candidate, or into a skipped
+   * replacement when it is not accepted; in a template, a replacement of a host
+   * or of anything but an expression is dropped without a trace.
+   *
+   * @param registered - Mutator whose visitor returned the replacement.
+   * @param node - Visited node, which a mutator error is reported at.
+   * @param replacement - Replacement the visitor returned.
+   */
+  function addReplacement(
+    registered: ActiveMutator,
+    node: Node,
+    replacement: Replacement,
+  ): void {
+    if (
+      hosts !== null &&
+      (hosts.has(replacement.node) ||
+        getReplacementKind(replacement.node) !== 'expression')
+    ) {
+      return
+    }
+    if (replacement.skip) {
+      skip(
+        registered,
+        replacement,
+        isTimerDelay(replacement) ? TIMER_DELAY_SKIP : replacement.skip,
+      )
+      return
+    }
+    let violation = validateReplacement(
+      tree,
+      replacement.node,
+      replacement.focus,
+    )
+    if (violation !== null) {
+      diagnostics.push(
+        createMutatorError(
+          parsed,
+          node,
+          `Mutator "${registered.id}" ${violation}`,
+        ),
+      )
+      skip(registered, replacement, {
+        reason: `the mutator ${violation.slice(0, -1)}`,
+        rule: 'invalid-target',
+      })
+      return
+    }
+    let { start, end } = replacement.node
+    let pin = pins.find(
+      entry =>
+        start <= entry.start &&
+        entry.end <= end &&
+        entry.region.start <= start &&
+        end <= entry.region.end,
+    )
+    if (pin) {
+      skip(registered, replacement, {
+        rule: 'compiler-macro',
+        reason: pin.reason,
+      })
+      return
+    }
+    let delimiter = input.expressions?.findLast(
+      expression => expression.start <= start,
+    )?.delimiter
+    let fit =
+      delimiter === undefined ?
+        { text: replacement.text, kind: 'fit' as const }
+      : fitTemplateText(replacement.text, delimiter, lang)
+    if (fit.kind === 'unfit') {
+      skip(registered, replacement, {
+        rule: 'template-text',
+        reason: fit.reason,
+      })
+      return
+    }
+    if (isTimerDelay(replacement)) {
+      skip(registered, replacement, TIMER_DELAY_SKIP)
+      return
+    }
+    if (
+      !services.settings.timeouts &&
+      services.syntax.isLoopAdvanceValue(replacement.node)
+    ) {
+      skip(registered, replacement, {
+        reason:
+          'it changes the value that advances a loop, so only a timeout could kill it',
+        rule: 'loop-advance',
+      })
+      return
+    }
+    candidates.push({
+      ignoreRule: findIgnoreRule(rules, {
+        line: getSourcePosition(parsed.lineStarts, start).line,
+        mutator: registered.id,
+        start,
+      }),
+      scope:
+        hosts === null ? getScopePath(tree, replacement.node) : TEMPLATE_SCOPE,
+      solitary: getSolitaryRanges(replacement.solitary),
+      kind: getReplacementKind(replacement.node)!,
+      emission: candidates.length,
+      text: fit.text,
+      registered,
+      start,
+      end,
+      ...pickFocus(replacement),
+    })
+  }
   let pins = findCompilerPins(tree, parsed.file)
   let hosts = input.hosts ?? null
+  let table = createVisitorTable(input, diagnostics)
 
+  for (let node of tree.order) {
+    let entries = table.get(node.type)
+    if (!entries) {
+      continue
+    }
+    let { parent } = getSlot(tree, node)
+    for (let { registered, visit } of entries) {
+      let replacements: readonly Replacement[]
+      try {
+        replacements = visit(node, parent)
+      } catch (error) {
+        diagnostics.push(
+          createMutatorError(
+            parsed,
+            node,
+            `Mutator "${registered.id}" failed on ${node.type}: ${(error as Error).message}`,
+          ),
+        )
+        continue
+      }
+      for (let replacement of replacements) {
+        addReplacement(registered, node, replacement)
+      }
+    }
+  }
+
+  return { diagnostics, candidates, skipped }
+}
+
+/**
+ * Creates the visitors of every mutator, in rank order, and files them by node
+ * type. A mutator whose `create` throws gets a mutator error without a position
+ * and registers no visitor.
+ *
+ * @param input - Active mutators, parsed file and shared context services.
+ * @param diagnostics - Mutator errors of the file; a throwing `create` adds
+ *   one.
+ * @returns Visitors by node type, in mutator order.
+ */
+function createVisitorTable(
+  input: Pick<CollectInput, 'mutators' | 'services' | 'parsed'>,
+  diagnostics: Diagnostic[],
+): Map<string, VisitorEntry[]> {
+  let { services, mutators, parsed } = input
+  let table = new Map<string, VisitorEntry[]>()
   for (let registered of mutators) {
     let visitors: Record<string, VisitorEntry['visit']>
     try {
@@ -285,134 +438,7 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
       entries.push({ registered, visit })
     }
   }
-
-  for (let node of tree.order) {
-    let entries = table.get(node.type)
-    if (!entries) {
-      continue
-    }
-    let { parent } = getSlot(tree, node)
-    for (let { registered, visit } of entries) {
-      let replacements: readonly Replacement[]
-      try {
-        replacements = visit(node, parent)
-      } catch (error) {
-        diagnostics.push(
-          createMutatorError(
-            parsed,
-            node,
-            `Mutator "${registered.id}" failed on ${node.type}: ${(error as Error).message}`,
-          ),
-        )
-        continue
-      }
-      for (let replacement of replacements) {
-        if (
-          hosts !== null &&
-          (hosts.has(replacement.node) ||
-            getReplacementKind(replacement.node) !== 'expression')
-        ) {
-          continue
-        }
-        if (replacement.skip) {
-          skip(
-            registered,
-            replacement,
-            isTimerDelay(replacement) ? TIMER_DELAY_SKIP : replacement.skip,
-          )
-          continue
-        }
-        let violation = validateReplacement(
-          tree,
-          replacement.node,
-          replacement.focus,
-        )
-        if (violation !== null) {
-          diagnostics.push(
-            createMutatorError(
-              parsed,
-              node,
-              `Mutator "${registered.id}" ${violation}`,
-            ),
-          )
-          skip(registered, replacement, {
-            reason: `the mutator ${violation.slice(0, -1)}`,
-            rule: 'invalid-target',
-          })
-          continue
-        }
-        let { start, end } = replacement.node
-        let pin = pins.find(
-          entry =>
-            start <= entry.start &&
-            entry.end <= end &&
-            entry.region.start <= start &&
-            end <= entry.region.end,
-        )
-        if (pin) {
-          skip(registered, replacement, {
-            rule: 'compiler-macro',
-            reason: pin.reason,
-          })
-          continue
-        }
-        let delimiter = input.expressions?.findLast(
-          expression => expression.start <= start,
-        )?.delimiter
-        let fit =
-          delimiter === undefined ?
-            { text: replacement.text, kind: 'fit' as const }
-          : fitTemplateText(
-              replacement.text,
-              delimiter,
-              parsed.language === 'typescript' ? 'ts' : 'js',
-            )
-        if (fit.kind === 'unfit') {
-          skip(registered, replacement, {
-            rule: 'template-text',
-            reason: fit.reason,
-          })
-          continue
-        }
-        if (isTimerDelay(replacement)) {
-          skip(registered, replacement, TIMER_DELAY_SKIP)
-          continue
-        }
-        if (
-          !services.settings.timeouts &&
-          services.syntax.isLoopAdvanceValue(replacement.node)
-        ) {
-          skip(registered, replacement, {
-            reason:
-              'it changes the value that advances a loop, so only a timeout could kill it',
-            rule: 'loop-advance',
-          })
-          continue
-        }
-        candidates.push({
-          ignoreRule: findIgnoreRule(rules, {
-            line: getSourcePosition(parsed.lineStarts, start).line,
-            mutator: registered.id,
-            start,
-          }),
-          scope:
-            hosts === null ?
-              getScopePath(tree, replacement.node)
-            : TEMPLATE_SCOPE,
-          solitary: getSolitaryRanges(replacement.solitary),
-          kind: getReplacementKind(replacement.node)!,
-          emission: candidates.length,
-          text: fit.text,
-          registered,
-          start,
-          end,
-          ...pickFocus(replacement),
-        })
-      }
-    }
-  }
-
-  return { diagnostics, candidates, skipped }
+  return table
 }
 
 /**

@@ -1,4 +1,9 @@
-import type { VariableDeclaration, AwaitExpression, Node } from 'oxc-parser'
+import type {
+  VariableDeclaration,
+  VariableDeclarator,
+  AwaitExpression,
+  Node,
+} from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { SkipNote } from '../../types/mutant/skip-note'
@@ -129,40 +134,24 @@ function getAwaitSkip(
 }
 
 /**
- * Tells whether the caller awaits the same promise without the `await` (EQ):
- * the `await` is the returned value, a concise arrow body or the operand of a
- * `yield` (not `yield*`), which an async generator awaits itself, or the whole
- * initializer of the last declarator of a `const` (or never-written `let`)
- * local of an async function that the next statement returns as the local's
- * only reference; unless the `return` lies where a promise that is not awaited
- * settles later than the code around it. A later declarator of the same
- * declaration would run before the promise settles. A reference outside the
- * runtime tree, such as an argument of a logging call, is not returned.
+ * Tells whether a declarator whose whole initializer is an `await` declares a
+ * local that the next statement returns (EQ): the last declarator of a `const`
+ * (or never-written `let`) local of an async function, when the local's only
+ * reference, inside the runtime tree, is the argument of the next statement, a
+ * `return` that does not lie where a promise that is not awaited settles later
+ * than the code around it.
  *
- * @param node - Await expression.
+ * @param declarator - Declarator whose initializer is the `await`.
  * @param context - Mutator context of the file.
- * @returns Whether removing the `await` changes nothing for the caller.
+ * @returns Whether the caller awaits the promise the local would hold.
  */
-function isAwaitedByCaller(
-  node: AwaitExpression,
+function isReturnedLocal(
+  declarator: VariableDeclarator,
   context: MutatorContext,
 ): boolean {
   let { sourceCode, syntax } = context
-  let { parent } = syntax.getContextSlot(node)
-  switch (parent?.type) {
-    case 'ArrowFunctionExpression':
-      return true
-    case 'VariableDeclarator':
-      break
-    case 'YieldExpression':
-      return !parent.delegate
-    case 'ReturnStatement':
-      return !isAwaitObserved(parent, context)
-    default:
-      return false
-  }
-  let binding = sourceCode.getBinding(parent.id)
-  let enclosing = syntax.getEnclosingFunction(parent)
+  let binding = sourceCode.getBinding(declarator.id)
+  let enclosing = syntax.getEnclosingFunction(declarator)
   if (
     !binding ||
     (binding.kind !== 'const' && binding.kind !== 'let') ||
@@ -171,8 +160,8 @@ function isAwaitedByCaller(
   ) {
     return false
   }
-  let declaration = sourceCode.getParent(parent) as VariableDeclaration
-  if (declaration.declarations.at(-1) !== parent) {
+  let declaration = sourceCode.getParent(declarator) as VariableDeclaration
+  if (declaration.declarations.at(-1) !== declarator) {
     return false
   }
   let list = syntax.getStatementList(declaration) ?? []
@@ -255,6 +244,40 @@ function isAwaitObserved(statement: Node, context: MutatorContext): boolean {
     current = sourceCode.getParent(current)!
   }
   return false
+}
+
+/**
+ * Tells whether the caller awaits the same promise without the `await` (EQ):
+ * the `await` is the returned value, a concise arrow body or the operand of a
+ * `yield` (not `yield*`), which an async generator awaits itself, or the whole
+ * initializer of the last declarator of a `const` (or never-written `let`)
+ * local of an async function that the next statement returns as the local's
+ * only reference; unless the `return` lies where a promise that is not awaited
+ * settles later than the code around it. A later declarator of the same
+ * declaration would run before the promise settles. A reference outside the
+ * runtime tree, such as an argument of a logging call, is not returned.
+ *
+ * @param node - Await expression.
+ * @param context - Mutator context of the file.
+ * @returns Whether removing the `await` changes nothing for the caller.
+ */
+function isAwaitedByCaller(
+  node: AwaitExpression,
+  context: MutatorContext,
+): boolean {
+  let { parent } = context.syntax.getContextSlot(node)
+  switch (parent?.type) {
+    case 'ArrowFunctionExpression':
+      return true
+    case 'VariableDeclarator':
+      return isReturnedLocal(parent, context)
+    case 'YieldExpression':
+      return !parent.delegate
+    case 'ReturnStatement':
+      return !isAwaitObserved(parent, context)
+    default:
+      return false
+  }
 }
 
 /**

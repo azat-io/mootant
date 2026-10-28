@@ -110,6 +110,29 @@ interface Segment {
 }
 
 /**
+ * What the Vue event handlers of a template keep.
+ */
+interface EventMarks {
+  /**
+   * Segments of the event handlers that are member paths, all of whose nodes
+   * are hosts.
+   */
+  frozen: Set<Segment>
+
+  /**
+   * Arrow functions with an expression body that are event handlers, whose
+   * result is discarded.
+   */
+  handlers: Set<Node>
+
+  /**
+   * The function of every event handler that is one, with the parentheses and
+   * type wrappers around it.
+   */
+  hosts: Set<Node>
+}
+
+/**
  * How Vue compiles an event handler.
  */
 type EventForm =
@@ -129,6 +152,21 @@ type EventForm =
   | {
       kind: 'statements' | 'path'
     }
+
+/**
+ * Synthetic module that holds the template code.
+ */
+interface TemplateModule {
+  /**
+   * Template code in module order.
+   */
+  segments: Segment[]
+
+  /**
+   * Text of the synthetic module.
+   */
+  module: string
+}
 
 /**
  * Parses the expressions of a component template with oxc. Each expression is
@@ -158,28 +196,7 @@ export function parseTemplateExpressions(
   expressions: readonly TemplateExpression[],
 ): TemplateParseOutcome {
   let { source, lang, file } = template
-  let segments: Segment[] = []
-  let module = ''
-  for (let expression of expressions) {
-    let text = source.slice(expression.start, expression.end)
-    let { prefix, suffix } =
-      wrappers[
-        expression.wrap === 'event' && FUNCTION_START_PATTERN.test(text) ?
-          'function'
-        : expression.wrap
-      ]
-    let outerStart = module.length
-    let start = outerStart + prefix.length
-    module += prefix + text + suffix
-    segments.push({
-      end: start + expression.end - expression.start,
-      shift: expression.start - start,
-      outerEnd: module.length,
-      wrap: expression.wrap,
-      outerStart,
-      start,
-    })
-  }
+  let { segments, module } = writeTemplateModule(source, expressions)
 
   let result = parseSync(file, module, {
     sourceType: 'module',
@@ -211,25 +228,8 @@ export function parseTemplateExpressions(
     }
   }
 
-  let hosts = new Set<Node>()
-  let handlers = new Set<Node>()
+  let { handlers, frozen, hosts } = markEventHandlers(segments, body)
   let tops = new Set<Segment>()
-  let frozen = new Set<Segment>()
-  for (let [index, segment] of segments.entries()) {
-    if (segment.wrap === 'event') {
-      let form = readEventForm(body[index]!)
-      if (form.kind === 'path') {
-        frozen.add(segment)
-      } else if (form.kind === 'function') {
-        for (let node of form.kept) {
-          hosts.add(node)
-        }
-        if (form.handler) {
-          handlers.add(form.handler)
-        }
-      }
-    }
-  }
   walkTree(result.program, node => {
     let segment = findSegment(segments, node.start)
     if (
@@ -333,6 +333,82 @@ function readEventForm(statement: Node): EventForm {
     }
   }
   return { kind: 'statements' }
+}
+
+/**
+ * Writes the template code into one synthetic module, each piece wrapped by its
+ * kind (see `wrappers`); a Vue event handler that starts with `function` is
+ * held in parentheses.
+ *
+ * @param source - Text of the file.
+ * @param expressions - Template code in source order, without overlaps.
+ * @returns Text of the module and the segment of every piece.
+ */
+function writeTemplateModule(
+  source: string,
+  expressions: readonly TemplateExpression[],
+): TemplateModule {
+  let segments: Segment[] = []
+  let module = ''
+  for (let expression of expressions) {
+    let text = source.slice(expression.start, expression.end)
+    let { prefix, suffix } =
+      wrappers[
+        expression.wrap === 'event' && FUNCTION_START_PATTERN.test(text) ?
+          'function'
+        : expression.wrap
+      ]
+    let outerStart = module.length
+    let start = outerStart + prefix.length
+    module += prefix + text + suffix
+    segments.push({
+      end: start + expression.end - expression.start,
+      shift: expression.start - start,
+      outerEnd: module.length,
+      wrap: expression.wrap,
+      outerStart,
+      start,
+    })
+  }
+  return { segments, module }
+}
+
+/**
+ * Marks what the Vue event handlers of the module keep, by the form Vue
+ * compiles each by (see `readEventForm`): the segment of a member path is
+ * frozen, so all its nodes become hosts; a function and the wrappers around it
+ * are hosts, and an arrow function with an expression body among them is a
+ * handler.
+ *
+ * @param segments - Segments in module order.
+ * @param body - Statements of the module, one per segment.
+ * @returns The frozen segments, and the host and handler nodes of the event
+ *   handlers.
+ */
+function markEventHandlers(
+  segments: readonly Segment[],
+  body: readonly Node[],
+): EventMarks {
+  let hosts = new Set<Node>()
+  let handlers = new Set<Node>()
+  let frozen = new Set<Segment>()
+  for (let [index, segment] of segments.entries()) {
+    if (segment.wrap !== 'event') {
+      continue
+    }
+    let form = readEventForm(body[index]!)
+    if (form.kind === 'path') {
+      frozen.add(segment)
+    } else if (form.kind === 'function') {
+      for (let node of form.kept) {
+        hosts.add(node)
+      }
+      if (form.handler) {
+        handlers.add(form.handler)
+      }
+    }
+  }
+  return { handlers, frozen, hosts }
 }
 
 /**

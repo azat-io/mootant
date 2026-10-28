@@ -118,8 +118,7 @@ export function tokenizeSource(source: string): Uint8Array {
       end = findLineEnd(source, index + 2)
       kinds.fill(2, index, end)
     } else if (char === '/' && next === '*') {
-      let found = source.indexOf('*/', index + 2)
-      end = found === -1 ? source.length : found + 2
+      end = findCommentEnd(source, index)
       kinds.fill(2, index, end)
     } else if (char === '/' && !afterValue) {
       end = findRegexEnd(source, index)
@@ -128,26 +127,11 @@ export function tokenizeSource(source: string): Uint8Array {
         kinds.fill(3, index, end)
       }
     } else if (QUOTES.has(char)) {
-      while (end < source.length) {
-        let current = source[end]
-        if (
-          current === char ||
-          (char !== '`' && (current === '\n' || current === '\r'))
-        ) {
-          break
-        }
-        end += current === '\\' ? 2 : 1
-      }
-      end = Math.min(source[end] === char ? end + 1 : end, source.length)
+      end = findStringEnd(source, index)
       kinds.fill(3, index, end)
       afterValue = true
     } else if (/[\w$]/u.test(char)) {
-      while (end < source.length && /[\w$.]/u.test(source[end]!)) {
-        if (source[end] === '.' && !/\d/u.test(char)) {
-          break
-        }
-        end += 1
-      }
+      end = findWordEnd(source, index)
       let word = source.slice(index, end)
       if (/\d/u.test(char)) {
         kinds.fill(4, index, end)
@@ -193,6 +177,52 @@ function findRegexEnd(source: string, start: number): number {
 }
 
 /**
+ * Finds the end of a string or a template literal: its closing quote, past
+ * escaped characters. A string left open ends at the line break, a template
+ * literal at the end of the text.
+ *
+ * @param source - Text of a file.
+ * @param start - Offset of the opening quote.
+ * @returns Offset just past the closing quote, or of the line break or the
+ *   length of the text when the quote is not closed.
+ */
+function findStringEnd(source: string, start: number): number {
+  let quote = source[start]!
+  let end = start + 1
+  while (end < source.length) {
+    let current = source[end]
+    if (
+      current === quote ||
+      (quote !== '`' && (current === '\n' || current === '\r'))
+    ) {
+      break
+    }
+    end += current === '\\' ? 2 : 1
+  }
+  return Math.min(source[end] === quote ? end + 1 : end, source.length)
+}
+
+/**
+ * Finds the end of a word or a number: a number takes its dots, such as `1.5`,
+ * and a word ends before one, such as `task` of `task.return`.
+ *
+ * @param source - Text of a file.
+ * @param start - Offset of its first character.
+ * @returns Offset just past the word or number.
+ */
+function findWordEnd(source: string, start: number): number {
+  let number = /\d/u.test(source[start]!)
+  let end = start + 1
+  while (end < source.length && /[\w$.]/u.test(source[end]!)) {
+    if (!number && source[end] === '.') {
+      break
+    }
+    end += 1
+  }
+  return end
+}
+
+/**
  * Finds the end of a line: the next line terminator or the end of the text.
  *
  * @param source - Text of a file.
@@ -205,4 +235,17 @@ function findLineEnd(source: string, start: number): number {
     end += 1
   }
   return end
+}
+
+/**
+ * Finds the end of a block comment.
+ *
+ * @param source - Text of a file.
+ * @param start - Offset of the slash that opens it.
+ * @returns Offset just past the star and slash that close it, or the length of
+ *   the text when it is not closed.
+ */
+function findCommentEnd(source: string, start: number): number {
+  let found = source.indexOf('*/', start + 2)
+  return found === -1 ? source.length : found + 2
 }

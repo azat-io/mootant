@@ -104,7 +104,7 @@ interface PlannedEntry {
 type ComparisonRegion = 'lt' | 'eq' | 'gt'
 
 /**
- * Plans of relational comparisons, and of numeric equalities.
+ * Plans of relational comparisons.
  */
 let orderedPlans = new Map<string, PlannedEntry[]>([
   [
@@ -158,6 +158,16 @@ let notEqualPlan: PlannedEntry[] = [
   { region: 'lt', to: '>' },
   { region: 'eq', to: true },
 ]
+
+/**
+ * Plans of numeric equalities, by operator.
+ */
+let numericPlans = new Map<string, PlannedEntry[]>([
+  ['!==', notEqualPlan],
+  ['!=', notEqualPlan],
+  ['===', equalPlan],
+  ['==', equalPlan],
+])
 
 /**
  * Plan of a comparison that is not ordered.
@@ -284,20 +294,9 @@ export function getComparisonPlan(
   node: PrivateInExpression | BinaryExpression,
   context: MutatorContext,
 ): ComparisonPlan {
-  let { sourceCode, settings, hints } = context
-  let { operator, right, left } = node
-  let planned: PlannedEntry[] = orderedPlans.get(operator) ?? constantPlan
-  if (
-    (operator === '===' || operator === '==') &&
-    isNumericPair(hints.getType(left), hints.getType(right))
-  ) {
-    planned = equalPlan
-  } else if (
-    (operator === '!==' || operator === '!=') &&
-    isNumericPair(hints.getType(left), hints.getType(right))
-  ) {
-    planned = notEqualPlan
-  }
+  let { sourceCode, settings } = context
+  let { operator } = node
+  let planned = getPlannedEntries(node, context)
   let shift = orderedPlans.has(operator) ? getShift(node, context) : null
   let boundedOperand = getBoundedOperand(node, context)
   let impossible = getImpossibleRegions(boundedOperand, 0)
@@ -307,36 +306,7 @@ export function getComparisonPlan(
     ...valueSkips,
     ...getOwnedConstants(node, context),
   ])
-  let operatorSkips = new Map<string | null, SkipNote>([
-    [
-      getCounterEntry(node, running),
-      {
-        reason:
-          'the loop moves the counter in one direction only, so this form ends the loop at the same point',
-        rule: 'one-way-counter',
-      },
-    ],
-  ])
-  if (running) {
-    operatorSkips.set(running.value ? '!=' : '==', {
-      reason:
-        'a counter that steps over the bound would keep the loop running, so only a timeout could kill it',
-      rule: 'loop-running',
-    })
-  }
-  if (
-    orderedPlans.has(operator) &&
-    getTypeView(hints.getType(left)).type === 'object' &&
-    getTypeView(hints.getType(right)).type === 'object'
-  ) {
-    let reference: SkipNote = {
-      reason:
-        'both operands are objects, so it compares references instead of order',
-      rule: 'reference-equality',
-    }
-    operatorSkips.set('!=', operatorSkips.get('!=') ?? reference)
-    operatorSkips.set('==', operatorSkips.get('==') ?? reference)
-  }
+  let operatorSkips = getOperatorSkips(node, context, running)
   let minMax = isMinMaxIdiom(node, context)
   let boundedSkips: BoundedSkips = {
     guard: boundedOperand?.bound.guards?.has(node) ?? false,
@@ -364,42 +334,38 @@ export function getComparisonPlan(
       typeof to === 'boolean' ?
         (shift?.text ?? String(to))
       : sourceCode.replaceOperator(node, to)
-    if (region && impossible.has(region)) {
-      let note: SkipNote = {
-        reason: `a lower bound of an operand makes the inputs where it differs impossible (${boundedOperand!.bound.because})`,
-        rule: 'lower-bound',
-      }
-      skip(text, note)
-      if (typeof to === 'boolean') {
-        skippedConstants.set(to, note)
-      }
-      continue
-    }
-    if (typeof to === 'boolean') {
-      if (shift === null) {
-        let note = constantSkips.get(to)
-        if (note) {
-          skip(text, note)
-          skippedConstants.set(to, note)
-        } else {
-          entries.push({ kind: 'constant', value: to, region, text })
+    let lowerBoundSkip: SkipNote | null =
+      region && impossible.has(region) ?
+        {
+          reason: `a lower bound of an operand makes the inputs where it differs impossible (${boundedOperand!.bound.because})`,
+          rule: 'lower-bound',
         }
-        continue
-      }
-      let note = getBoundedSkip(
-        boundedSkips,
-        getImpossibleRegions(boundedOperand, shift.step),
-        operator,
-      )
+      : null
+    if (typeof to === 'boolean') {
+      let note =
+        lowerBoundSkip ??
+        (shift ?
+          getBoundedSkip(
+            boundedSkips,
+            getImpossibleRegions(boundedOperand, shift.step),
+            operator,
+          )
+        : constantSkips.get(to))
       if (note) {
         skip(text, note)
         skippedConstants.set(to, note)
       } else {
-        entries.push({ kind: 'shift', value: to, region, text })
+        entries.push({
+          kind: shift ? 'shift' : 'constant',
+          value: to,
+          region,
+          text,
+        })
       }
       continue
     }
     let operatorNote =
+      lowerBoundSkip ??
       operatorSkips.get(to) ??
       (minMax && region === 'eq' ?
         {
@@ -440,6 +406,56 @@ export function getComparisonPlan(
     }
   }
   return { skippedConstants, entries, skipped }
+}
+
+/**
+ * Finds the swaps of a comparison that are skipped by their operator, with the
+ * rule of each: the relational swap that a one-way counter makes equivalent in
+ * a loop condition, the `!=` or `==` swap that keeps a loop running, and the
+ * `!=` and `==` swaps of a relational comparison of two operands hinted to be
+ * objects, which compare references. A loop rule wins over the reference rule.
+ *
+ * @param node - Comparison.
+ * @param context - Mutator context of the file.
+ * @param running - Running value of the comparison, or null.
+ * @returns The skip of each skipped operator.
+ */
+function getOperatorSkips(
+  node: PrivateInExpression | BinaryExpression,
+  context: MutatorContext,
+  running: RunningValue | null,
+): Map<string | null, SkipNote> {
+  let operatorSkips = new Map<string | null, SkipNote>([
+    [
+      getCounterEntry(node, running),
+      {
+        reason:
+          'the loop moves the counter in one direction only, so this form ends the loop at the same point',
+        rule: 'one-way-counter',
+      },
+    ],
+  ])
+  if (running) {
+    operatorSkips.set(running.value ? '!=' : '==', {
+      reason:
+        'a counter that steps over the bound would keep the loop running, so only a timeout could kill it',
+      rule: 'loop-running',
+    })
+  }
+  if (
+    orderedPlans.has(node.operator) &&
+    getTypeView(context.hints.getType(node.left)).type === 'object' &&
+    getTypeView(context.hints.getType(node.right)).type === 'object'
+  ) {
+    let reference: SkipNote = {
+      reason:
+        'both operands are objects, so it compares references instead of order',
+      rule: 'reference-equality',
+    }
+    operatorSkips.set('!=', operatorSkips.get('!=') ?? reference)
+    operatorSkips.set('==', operatorSkips.get('==') ?? reference)
+  }
+  return operatorSkips
 }
 
 /**
@@ -812,6 +828,33 @@ function isPlainOperand(node: Node): boolean {
     default:
       return false
   }
+}
+
+/**
+ * Picks the plan of a comparison: the plan of a numeric `===`, `==`, `!==` or
+ * `!=` when the type hints make one operand numeric and neither operand known
+ * to be something else, otherwise the plan of its relational operator or, for
+ * any other comparison, its two constants.
+ *
+ * @param node - Comparison.
+ * @param context - Mutator context of the file.
+ * @returns The planned entries, in emission order.
+ */
+function getPlannedEntries(
+  node: PrivateInExpression | BinaryExpression,
+  context: MutatorContext,
+): PlannedEntry[] {
+  let numeric = numericPlans.get(node.operator)
+  if (
+    numeric &&
+    isNumericPair(
+      context.hints.getType(node.left),
+      context.hints.getType(node.right),
+    )
+  ) {
+    return numeric
+  }
+  return orderedPlans.get(node.operator) ?? constantPlan
 }
 
 /**

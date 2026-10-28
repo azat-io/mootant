@@ -201,89 +201,6 @@ export function trackFileReads(receiver: FileAccessReceiver | null): void {
 }
 
 /**
- * Finds the paths a call of a function of `node:fs` reads and changes.
- *
- * @param base - Name of the function without `Sync`, such as `readFile`.
- * @param parameters - Arguments of the call.
- * @param slot - Tracking state of the process, with the functions as Node made
- *   them.
- * @returns Paths read and changed, absolute.
- */
-function getAccess(
-  base: string,
-  parameters: unknown[],
-  slot: FileSlot,
-): FileAccess {
-  let access: FileAccess = { written: [], read: [] }
-  if (base === 'glob') {
-    let patterns = [parameters[0]].flat()
-    let options = parameters[1] as { cwd?: unknown } | undefined
-    let cwd = typeof options === 'object' ? toPath(options.cwd) : null
-    for (let pattern of patterns) {
-      if (typeof pattern === 'string') {
-        access.read.push(
-          ...walkDirectories(
-            getGlobBase(pattern, cwd ?? process.cwd()),
-            slot,
-            false,
-          ),
-        )
-      }
-    }
-    return access
-  }
-  let first = toPath(parameters[0])
-  if (READERS.has(base)) {
-    if (first !== null) {
-      if (base === 'open' && !isReadOpen(parameters[1])) {
-        access.written.push(first)
-      } else if (
-        (base === 'readdir' || base === 'opendir') &&
-        Boolean(
-          (parameters[1] as { recursive?: unknown } | undefined | null)
-            ?.recursive,
-        )
-      ) {
-        access.read.push(...walkDirectories(first, slot, base === 'readdir'))
-      } else {
-        access.read.push(first)
-      }
-    }
-    return access
-  }
-  if (first !== null && SOURCES.has(base)) {
-    if (base === 'symlink') {
-      let link = toPath(parameters[1])
-      access.read.push(
-        link === null || typeof parameters[0] !== 'string' ?
-          first
-        : path.resolve(path.dirname(link), parameters[0]),
-      )
-    } else if (base === 'cp') {
-      walk(first, slot, access.read)
-    } else {
-      access.read.push(first)
-    }
-  }
-  let indexes = WRITERS[base]!
-  for (let index of indexes) {
-    let file = toPath(parameters[index])
-    if (file === null) {
-      continue
-    }
-    if (base === 'mkdir') {
-      while (!slot.original.existsSync(file)) {
-        access.written.push(file)
-        file = path.dirname(file)
-      }
-    } else {
-      access.written.push(file)
-    }
-  }
-  return access
-}
-
-/**
  * Wraps a function of `node:fs` so it reports its path argument to the current
  * receiver before it runs.
  *
@@ -425,6 +342,145 @@ function walk(file: string, slot: FileSlot, read: string[]): void {
 }
 
 /**
+ * Finds the paths a call of a function of `node:fs` reads and changes when the
+ * function reads a path given first: `open` changes the path unless its flags
+ * leave the file as it is, a recursive `readdir` or `opendir` reads the path
+ * and every directory in it, and any other call reads the path.
+ *
+ * @param base - Name of the function without `Sync`, such as `readFile`.
+ * @param parameters - Arguments of the call.
+ * @param slot - Tracking state of the process, with the functions as Node made
+ *   them.
+ * @returns Paths read and changed, absolute; none when the first argument is no
+ *   path, such as a descriptor.
+ */
+function getReaderAccess(
+  base: string,
+  parameters: unknown[],
+  slot: FileSlot,
+): FileAccess {
+  let access: FileAccess = { written: [], read: [] }
+  let first = toPath(parameters[0])
+  if (first === null) {
+    return access
+  }
+  if (base === 'open' && !isReadOpen(parameters[1])) {
+    access.written.push(first)
+  } else if (
+    (base === 'readdir' || base === 'opendir') &&
+    Boolean(
+      (parameters[1] as { recursive?: unknown } | undefined | null)?.recursive,
+    )
+  ) {
+    access.read.push(...walkDirectories(first, slot, base === 'readdir'))
+  } else {
+    access.read.push(first)
+  }
+  return access
+}
+
+/**
+ * Lists the paths a call of a function of `node:fs` that changes paths reads
+ * besides them: the source of a copy, a move or a hard link, with every file
+ * and directory in a directory `cp` copies, and the target of a symbolic link,
+ * relative to the link's directory.
+ *
+ * @param base - Name of the function without `Sync`, such as `copyFile`.
+ * @param parameters - Arguments of the call.
+ * @param slot - Tracking state of the process, with the functions as Node made
+ *   them.
+ * @returns Absolute paths read, none for a function that reads no source.
+ */
+function listSourceReads(
+  base: string,
+  parameters: unknown[],
+  slot: FileSlot,
+): string[] {
+  let first = toPath(parameters[0])
+  if (first === null || !SOURCES.has(base)) {
+    return []
+  }
+  if (base === 'symlink') {
+    let link = toPath(parameters[1])
+    return [
+      link === null || typeof parameters[0] !== 'string' ?
+        first
+      : path.resolve(path.dirname(link), parameters[0]),
+    ]
+  }
+  if (base === 'cp') {
+    let read: string[] = []
+    walk(first, slot, read)
+    return read
+  }
+  return [first]
+}
+
+/**
+ * Lists the directories a call of `glob` reads: those each pattern given as a
+ * string walks, relative to the `cwd` option, or to the working directory of
+ * the process without one.
+ *
+ * @param parameters - Arguments of the call.
+ * @param slot - Tracking state of the process, with the functions as Node made
+ *   them.
+ * @returns Absolute paths of the directories, pattern by pattern.
+ */
+function listGlobReads(parameters: unknown[], slot: FileSlot): string[] {
+  let read: string[] = []
+  let patterns = [parameters[0]].flat()
+  let options = parameters[1] as { cwd?: unknown } | undefined
+  let cwd = typeof options === 'object' ? toPath(options.cwd) : null
+  for (let pattern of patterns) {
+    if (typeof pattern === 'string') {
+      read.push(
+        ...walkDirectories(
+          getGlobBase(pattern, cwd ?? process.cwd()),
+          slot,
+          false,
+        ),
+      )
+    }
+  }
+  return read
+}
+
+/**
+ * Lists the paths a call of a function of `node:fs` changes: those at the
+ * arguments the function changes, where `mkdir` changes only the directories it
+ * creates, the given one first, then each parent that does not exist yet.
+ *
+ * @param base - Name of the function without `Sync`, such as `writeFile`.
+ * @param parameters - Arguments of the call.
+ * @param slot - Tracking state of the process, with the functions as Node made
+ *   them.
+ * @returns Absolute paths changed.
+ */
+function listWrites(
+  base: string,
+  parameters: unknown[],
+  slot: FileSlot,
+): string[] {
+  let written: string[] = []
+  let indexes = WRITERS[base]!
+  for (let index of indexes) {
+    let file = toPath(parameters[index])
+    if (file === null) {
+      continue
+    }
+    if (base === 'mkdir') {
+      while (!slot.original.existsSync(file)) {
+        written.push(file)
+        file = path.dirname(file)
+      }
+    } else {
+      written.push(file)
+    }
+  }
+  return written
+}
+
+/**
  * Makes the asynchronous iterator `fs.promises.glob` returns run each step as
  * the work of a wrapped `glob`, whose own calls of `node:fs` report nothing.
  *
@@ -468,6 +524,32 @@ function getGlobBase(pattern: string, cwd: string): string {
     }
   }
   return base
+}
+
+/**
+ * Finds the paths a call of a function of `node:fs` reads and changes.
+ *
+ * @param base - Name of the function without `Sync`, such as `readFile`.
+ * @param parameters - Arguments of the call.
+ * @param slot - Tracking state of the process, with the functions as Node made
+ *   them.
+ * @returns Paths read and changed, absolute.
+ */
+function getAccess(
+  base: string,
+  parameters: unknown[],
+  slot: FileSlot,
+): FileAccess {
+  if (base === 'glob') {
+    return { read: listGlobReads(parameters, slot), written: [] }
+  }
+  if (READERS.has(base)) {
+    return getReaderAccess(base, parameters, slot)
+  }
+  return {
+    read: listSourceReads(base, parameters, slot),
+    written: listWrites(base, parameters, slot),
+  }
 }
 
 /**

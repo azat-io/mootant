@@ -1,4 +1,4 @@
-import type { Vitest } from 'vitest/node'
+import type { TestProject, Vitest } from 'vitest/node'
 
 import { inspect } from 'node:util'
 import path from 'node:path'
@@ -29,21 +29,11 @@ const INSPECT_OPTIONS = {
 
 /**
  * Lists what every verdict of a Vitest session depends on beyond the modules of
- * each test file: the configuration files of Vitest and of every project with
- * the files they import, the `.env` files Vite loads for each project, global
- * setup files with every project file the main process evaluated for them, and
- * test environments given as paths, which load outside the modules of a test
- * file; the resolved settings of every project that change verdicts, without
- * concurrency, with the values of Vite's `define`, which Vitest moves to
- * `defines` and `_scriptDefines` of the project, and those global setup files
- * `provide`, which configuration and global setup may take from files and
- * environment variables of the main process (but the options mootant provides
- * its workers), with `TZ`, `NODE_ENV`, `LANG` and the `LC_*` variables, which
- * change verdicts whether test code reads them or not; and the hashes of the
- * environment variables the workers of each project saw, with `*` for all of
- * them but those that change from shell to shell. With Vite's module runner
- * off, Node imports global setup files itself and only the files themselves are
- * known.
+ * each test file: the configuration files of Vitest with the files they import
+ * and the files of every project (`addProjectFiles`); the resolved settings of
+ * every project that change verdicts (`describeProjectSettings`); and the
+ * hashes of the environment variables the workers of each project saw, with `*`
+ * for all of them but those that change from shell to shell.
  *
  * @param vitest - Vitest instance of the session.
  * @param variables - Hashes of the environment variables of each project's
@@ -58,77 +48,115 @@ export function getCacheInputs(
   let environment: Record<string, Record<string, string>> = {}
   let settings: unknown[] = []
   for (let project of vitest.projects) {
-    let { config } = project
     let hashes = indexEnvironmentHashes(
       Object.entries(variables[project.name] ?? {}),
       VITEST_VARIABLES,
     )
     environment[project.name] = hashes
-    for (let file of project.vite.config.configFileDependencies) {
-      files.add(file)
-    }
-    let { envDir, mode } = project.vite.config
-    if (envDir !== false) {
-      for (let name of [
-        '.env',
-        '.env.local',
-        `.env.${mode}`,
-        `.env.${mode}.local`,
-      ]) {
-        files.add(path.join(envDir, name))
-      }
-    }
-    for (let file of config.globalSetup) {
-      files.add(file)
-    }
-    let runner = Reflect.get(project, 'runner') as {
-      evaluatedModules?: { idToModuleMap: Map<string, unknown> }
-    }
-    if (runner.evaluatedModules !== undefined) {
-      let ids = [...runner.evaluatedModules.idToModuleMap.keys()]
-      for (let id of ids) {
-        let file = getModuleFile(id)
-        if (file !== null) {
-          files.add(file)
-        }
-      }
-    }
-    if (PATH_PATTERN.test(config.environment)) {
-      files.add(path.resolve(config.root, config.environment))
-    }
-    settings.push({
-      values: inspect(
-        [
-          project.vite.config.define ?? null,
-          config.defines,
-          Reflect.get(config, '_scriptDefines') ?? null,
-          Object.entries(project.getProvidedContext()).filter(
-            ([key]) => key !== 'mootant',
-          ),
-        ],
-        INSPECT_OPTIONS,
-      ),
-      sequence: {
-        seed: config.sequence.shuffle ? config.sequence.seed : null,
-        concurrent: config.sequence.concurrent,
-        shuffle: config.sequence.shuffle,
-        hooks: config.sequence.hooks,
-      },
-      variables: Object.entries(hashes).filter(([name]) =>
-        VERDICT_VARIABLE_PATTERN.test(name),
-      ),
-      environmentOptions: config.environmentOptions,
-      update: config.snapshotOptions.updateSnapshot,
-      maxConcurrency: config.maxConcurrency,
-      environment: config.environment,
-      testTimeout: config.testTimeout,
-      hookTimeout: config.hookTimeout,
-      isolate: config.isolate,
-      retry: config.retry,
-      name: project.name,
-      pool: config.pool,
-      env: config.env,
-    })
+    addProjectFiles(project, files)
+    settings.push(describeProjectSettings(project, hashes))
   }
   return { files: [...files], environment, settings }
+}
+
+/**
+ * Describes the resolved settings of a project that change verdicts, without
+ * concurrency: with the values of Vite's `define`, which Vitest moves to
+ * `defines` and `_scriptDefines` of the project, and those global setup files
+ * `provide`, which configuration and global setup may take from files and
+ * environment variables of the main process (but the options mootant provides
+ * its workers), and with `TZ`, `NODE_ENV`, `LANG` and the `LC_*` variables,
+ * which change verdicts whether test code reads them or not.
+ *
+ * @param project - Vitest project.
+ * @param hashes - Hashes of the environment variables the project's workers
+ *   saw, by name (`indexEnvironmentHashes`).
+ * @returns Settings for the cache key.
+ */
+function describeProjectSettings(
+  project: TestProject,
+  hashes: Readonly<Record<string, string>>,
+): Record<string, unknown> {
+  let { config } = project
+  return {
+    values: inspect(
+      [
+        project.vite.config.define ?? null,
+        config.defines,
+        Reflect.get(config, '_scriptDefines') ?? null,
+        Object.entries(project.getProvidedContext()).filter(
+          ([key]) => key !== 'mootant',
+        ),
+      ],
+      INSPECT_OPTIONS,
+    ),
+    sequence: {
+      seed: config.sequence.shuffle ? config.sequence.seed : null,
+      concurrent: config.sequence.concurrent,
+      shuffle: config.sequence.shuffle,
+      hooks: config.sequence.hooks,
+    },
+    variables: Object.entries(hashes).filter(([name]) =>
+      VERDICT_VARIABLE_PATTERN.test(name),
+    ),
+    environmentOptions: config.environmentOptions,
+    update: config.snapshotOptions.updateSnapshot,
+    maxConcurrency: config.maxConcurrency,
+    environment: config.environment,
+    testTimeout: config.testTimeout,
+    hookTimeout: config.hookTimeout,
+    isolate: config.isolate,
+    retry: config.retry,
+    name: project.name,
+    pool: config.pool,
+    env: config.env,
+  }
+}
+
+/**
+ * Adds the files the verdicts of a project depend on beyond the modules of each
+ * test file: the configuration files of the project with the files they import,
+ * the `.env` files Vite loads for it, global setup files with every project
+ * file the main process evaluated for them (`getModuleFile`), and a test
+ * environment given as a path, which loads outside the modules of a test file.
+ * With Vite's module runner off, Node imports global setup files itself and
+ * only the files themselves are known.
+ *
+ * @param project - Vitest project.
+ * @param files - Receives the files, in this order.
+ */
+function addProjectFiles(project: TestProject, files: Set<string>): void {
+  let { config } = project
+  for (let file of project.vite.config.configFileDependencies) {
+    files.add(file)
+  }
+  let { envDir, mode } = project.vite.config
+  if (envDir !== false) {
+    for (let name of [
+      '.env',
+      '.env.local',
+      `.env.${mode}`,
+      `.env.${mode}.local`,
+    ]) {
+      files.add(path.join(envDir, name))
+    }
+  }
+  for (let file of config.globalSetup) {
+    files.add(file)
+  }
+  let runner = Reflect.get(project, 'runner') as {
+    evaluatedModules?: { idToModuleMap: Map<string, unknown> }
+  }
+  if (runner.evaluatedModules !== undefined) {
+    let ids = [...runner.evaluatedModules.idToModuleMap.keys()]
+    for (let id of ids) {
+      let file = getModuleFile(id)
+      if (file !== null) {
+        files.add(file)
+      }
+    }
+  }
+  if (PATH_PATTERN.test(config.environment)) {
+    files.add(path.resolve(config.root, config.environment))
+  }
 }

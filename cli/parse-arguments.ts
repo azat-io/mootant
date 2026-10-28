@@ -283,48 +283,13 @@ export function parseArguments(
       return parseRunOptions(values, paths)
     }
 
-    if (command !== 'list') {
-      return {
-        message: `Unknown command '${command}'. Run 'mootant --help' for usage.`,
-        kind: 'error',
-      }
-    }
-
-    let runOnly = runOnlyOptions.find(name => values[name] !== undefined)
-    if (runOnly !== undefined) {
-      return {
-        message: `--${runOnly} applies to the run command only.`,
-        kind: 'error',
-      }
-    }
-
-    if (values.verbose === true && values.json !== true) {
-      return {
-        message:
-          '--verbose applies to the JSON report of list only; add --json.',
-        kind: 'error',
-      }
-    }
-
-    if (paths.length === 0) {
-      return {
-        message:
-          "The list command expects at least one path, for example 'mootant list src'.",
-        kind: 'error',
-      }
+    if (command === 'list') {
+      return parseListOptions(values, paths)
     }
 
     return {
-      options: {
-        ...(values.config !== undefined && { config: values.config }),
-        ...(values.preset !== undefined && { preset: values.preset }),
-        ...(values.since !== undefined && { since: values.since }),
-        verbose: values.verbose ?? false,
-        skipped: values.skipped ?? false,
-        json: values.json ?? false,
-        paths,
-      },
-      kind: 'list',
+      message: `Unknown command '${command}'. Run 'mootant --help' for usage.`,
+      kind: 'error',
     }
   } catch (error) {
     return { message: (error as Error).message, kind: 'error' }
@@ -405,5 +370,54 @@ function parseRunOptions(
       paths,
     },
     kind: 'run',
+  }
+}
+
+/**
+ * Checks and converts the options of the `list` command.
+ *
+ * @param values - Parsed option values.
+ * @param paths - Paths after the command.
+ * @returns List options, or an error for an option that only `run` reads, for
+ *   `--verbose` without `--json`, or for a missing path.
+ */
+function parseListOptions(
+  values: ParsedValues,
+  paths: string[],
+): ParseArgumentsResult {
+  let runOnly = runOnlyOptions.find(name => values[name] !== undefined)
+  if (runOnly !== undefined) {
+    return {
+      message: `--${runOnly} applies to the run command only.`,
+      kind: 'error',
+    }
+  }
+
+  if (values.verbose === true && values.json !== true) {
+    return {
+      message: '--verbose applies to the JSON report of list only; add --json.',
+      kind: 'error',
+    }
+  }
+
+  if (paths.length === 0) {
+    return {
+      message:
+        "The list command expects at least one path, for example 'mootant list src'.",
+      kind: 'error',
+    }
+  }
+
+  return {
+    options: {
+      ...(values.config !== undefined && { config: values.config }),
+      ...(values.preset !== undefined && { preset: values.preset }),
+      ...(values.since !== undefined && { since: values.since }),
+      verbose: values.verbose ?? false,
+      skipped: values.skipped ?? false,
+      json: values.json ?? false,
+      paths,
+    },
+    kind: 'list',
   }
 }
