@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import path from 'node:path'
 
-import type { BuiltInAdapters } from '../../../types/adapter/built-in-adapters'
-import type { TestAdapter } from '../../../types/adapter/test-adapter'
 import type { MutantResult } from '../../../types/run/mutant-result'
 import type { Diagnostic } from '../../../types/mutant/diagnostic'
 
 import { runReferenceMutants } from '../../helpers/run-reference-mutants'
 import { compareCodeUnits } from '../../../core/compare-code-units'
+import { classifyVerdict } from '../../helpers/classify-verdict'
+import { createBuiltIns } from '../../helpers/create-built-ins'
+import { shortenDryRuns } from '../../helpers/shorten-dry-runs'
+import { describeMutant } from '../../helpers/describe-mutant'
 import { vitestAdapter } from '../../../adapters/vitest/index'
 import { listMutants } from '../../../core/list-mutants'
 import { runMutants } from '../../../core/run-mutants'
@@ -35,7 +37,7 @@ let sources = [
 ]
 
 /**
- * Verdict of one mutant in each mode, reduced by `classify`.
+ * Verdict of one mutant in each mode, reduced by `classifyVerdict`.
  */
 interface Row {
   /**
@@ -90,7 +92,7 @@ async function runAllPaths(
   rows: Row[]
 }> {
   let { hangs = () => false, separate = false, config } = options
-  let builtIns = createBuiltIns(vitestAdapter())
+  let builtIns = createBuiltIns('vitest', vitestAdapter())
   let isolated = await runMutants({
     cwd: directory,
     paths: ['src'],
@@ -119,41 +121,13 @@ async function runAllPaths(
       reference: describeReference(
         hangs(result) ? null : reference.killed.get(result.mutant.id)!,
       ),
-      fast: classify(fastById.get(result.mutant.id)!),
+      fast: classifyVerdict(fastById.get(result.mutant.id)!),
+      isolated: classifyVerdict(result),
       mutant: describeMutant(result),
-      isolated: classify(result),
     })),
     original: reference.original,
     isolated,
     fast,
-  }
-}
-
-/**
- * Creates a Vitest adapter whose dry runs use shorter watchdog budgets, so a
- * hang shows within seconds.
- *
- * @param timeouts - Budgets of the dry runs.
- * @param timeouts.file - Milliseconds for loading a test file and the work
- *   outside tries, before suite hook timeouts.
- * @param timeouts.test - Milliseconds for an attempt of a test, before its own
- *   timeout and the timeouts of its hooks.
- * @returns Adapter with the shortened dry runs.
- */
-function createShortenedAdapter(timeouts: {
-  file: number
-  test: number
-}): TestAdapter {
-  let adapter = vitestAdapter()
-  return {
-    ...adapter,
-    start: async context => {
-      let session = await adapter.start(context)
-      return {
-        ...session,
-        dryRun: request => session.dryRun({ ...request, timeouts }),
-      }
-    },
   }
 }
 
@@ -175,52 +149,6 @@ function expectAgreement(rows: Row[]): void {
   expect(new Set(rows.map(row => row.reference))).toStrictEqual(
     new Set(['survived', 'killed']),
   )
-}
-
-/**
- * Reduces a verdict to whether the mutant was detected; a mutant no test
- * reached survives a plain run too.
- *
- * @param result - Verdict of a mutant.
- * @returns `killed`, `survived`, or the status itself when it is neither.
- */
-function classify(result: MutantResult): string {
-  if (result.status === 'Killed') {
-    return 'killed'
-  }
-  if (result.status === 'Survived' || result.status === 'NoCoverage') {
-    return 'survived'
-  }
-  return result.status
-}
-
-/**
- * Names a mutant for a readable comparison.
- *
- * @param result - Verdict of a mutant.
- * @returns File, mutator and replacement of the mutant.
- */
-function describeMutant(result: MutantResult): string {
-  return [
-    result.mutant.file,
-    result.mutant.mutator,
-    result.mutant.replacement.replaceAll(/\s+/gu, ' '),
-  ].join(' | ')
-}
-
-/**
- * Creates built-in adapters with the given Vitest adapter.
- *
- * @param adapter - Adapter `vitest` loads.
- * @returns Built-in adapters of a run.
- */
-function createBuiltIns(adapter: TestAdapter): BuiltInAdapters {
-  return {
-    vitest: {
-      load: () => Promise.resolve(adapter),
-      detect: () => Promise.resolve(true),
-    },
-  }
 }
 
 /**
@@ -408,7 +336,7 @@ describe('verdict equivalence', () => {
     // never ends when the mutant leaves one open.
     let started = performance.now()
     let result = await runMutants({
-      builtIns: createBuiltIns(vitestAdapter()),
+      builtIns: createBuiltIns('vitest', vitestAdapter()),
       cwd: path.join(root, 'stuck'),
       paths: ['src'],
       concurrency: 1,
@@ -438,7 +366,7 @@ describe('verdict equivalence', () => {
   it('stops on an environment teardown that fails without mutants', async () => {
     await expect(
       runMutants({
-        builtIns: createBuiltIns(vitestAdapter()),
+        builtIns: createBuiltIns('vitest', vitestAdapter()),
         cwd: path.join(root, 'leaky'),
         paths: ['src'],
         concurrency: 1,
@@ -488,7 +416,7 @@ describe('verdict equivalence', () => {
 
   it('stops a test that loops only when repeated in fast mode, which a plain run passes', async () => {
     let hang = path.join(root, 'hang')
-    let shortened = createShortenedAdapter({ file: 5000, test: 300 })
+    let shortened = shortenDryRuns(vitestAdapter(), { file: 5000, test: 300 })
     let reference = await runReferenceMutants(hang, [], {
       sources: ['src/flag.ts'],
     })
@@ -496,7 +424,7 @@ describe('verdict equivalence', () => {
     expect(reference.original).toBe(true)
     await expect(
       runMutants({
-        builtIns: createBuiltIns(shortened),
+        builtIns: createBuiltIns('vitest', shortened),
         paths: ['src'],
         concurrency: 1,
         cache: false,
@@ -508,14 +436,14 @@ describe('verdict equivalence', () => {
     )
 
     let isolated = await runMutants({
-      builtIns: createBuiltIns(shortened),
+      builtIns: createBuiltIns('vitest', shortened),
       paths: ['src'],
       concurrency: 1,
       cache: false,
       cwd: hang,
     })
 
-    expect(isolated.results.map(classify)).toStrictEqual(['killed'])
+    expect(isolated.results.map(classifyVerdict)).toStrictEqual(['killed'])
   }, 30_000)
 
   it('never runs a test file twice at once', async () => {
@@ -546,7 +474,8 @@ describe('verdict equivalence', () => {
   it('lets slow hooks use their own hook timeout in the dry run', async () => {
     let result = await runMutants({
       builtIns: createBuiltIns(
-        createShortenedAdapter({ file: 100, test: 100 }),
+        'vitest',
+        shortenDryRuns(vitestAdapter(), { file: 100, test: 100 }),
       ),
       cwd: path.join(root, 'slow'),
       paths: ['src'],
@@ -554,7 +483,7 @@ describe('verdict equivalence', () => {
       cache: false,
     })
 
-    expect(result.results.map(classify)).toStrictEqual(['killed'])
+    expect(result.results.map(classifyVerdict)).toStrictEqual(['killed'])
   }, 30_000)
 
   it('agrees with mutants applied by hand in Vue components and templates', async () => {
@@ -756,7 +685,7 @@ describe('verdict equivalence', () => {
     // kills, so a unit that went on after the kill would time out.
     let rounds = path.join(root, 'rounds')
     let result = await runMutants({
-      builtIns: createBuiltIns(vitestAdapter()),
+      builtIns: createBuiltIns('vitest', vitestAdapter()),
       paths: ['src'],
       concurrency: 2,
       cache: false,
@@ -801,7 +730,7 @@ describe('verdict equivalence', () => {
 
   it('gives Error to mutants that only a global setup runs', async () => {
     let result = await runMutants({
-      builtIns: createBuiltIns(vitestAdapter()),
+      builtIns: createBuiltIns('vitest', vitestAdapter()),
       cwd: path.join(root, 'global'),
       paths: ['src'],
       concurrency: 2,

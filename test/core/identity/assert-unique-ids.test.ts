@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import type { FileMutants } from '../../../types/mutant/file-mutants'
-import type { Mutant } from '../../../types/mutant/mutant'
 
 import { assertUniqueIds } from '../../../core/identity/assert-unique-ids'
+import { createMutant } from '../../helpers/create-mutant'
 
 /**
  * Builds the result of a parsed file.
@@ -19,37 +19,15 @@ function createResult(
   mutants: [string, number][],
 ): FileMutants {
   return {
-    mutants: mutants.map(([id, start]) => createMutant(file, id, start)),
+    mutants: mutants.map(([id, start]) =>
+      createMutant({ replacement: '-', end: start + 1, start, file, id }),
+    ),
     absolute: `/repo/${file}`,
     diagnostics: [],
     parsed: true,
     skipped: [],
     source,
     file,
-  }
-}
-
-/**
- * Builds a pending mutant of a file.
- *
- * @param file - Display path of the file.
- * @param id - Id the mutant is listed with.
- * @param start - Offset where the mutant starts.
- * @returns Mutant that replaces one character.
- */
-function createMutant(file: string, id: string, start: number): Mutant {
-  return {
-    mutator: 'arithmetic-operator',
-    kind: 'expression',
-    status: 'Pending',
-    replacement: '-',
-    ignoredBy: null,
-    end: start + 1,
-    reason: null,
-    scope: null,
-    start,
-    file,
-    id,
   }
 }
 

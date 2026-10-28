@@ -1,79 +1,14 @@
 // spell-checker:ignore tymh jkpx gfkw acyn vzjm patt
 import { describe, expect, it } from 'vitest'
 
-import type { ListReportSummary } from '../../../types/report/list-report-summary'
 import type { ListReportSkipped } from '../../../types/report/list-report-skipped'
-import type { ListReportMutant } from '../../../types/report/list-report-mutant'
 import type { ListReport } from '../../../types/report/list-report'
 
+import { createListReportMutant } from '../../helpers/create-list-report-mutant'
 import { formatTextReport } from '../../../cli/report/format-text-report'
+import { createListReport } from '../../helpers/create-list-report'
 import { createTextStyle } from '../../helpers/create-text-style'
 import { showEscapes } from '../../helpers/show-escapes'
-
-/**
- * Creates a pending mutant at the start of `example.ts`.
- *
- * @param overrides - Fields that differ from the default mutant.
- * @returns Mutant as the report holds it.
- */
-function createMutant(overrides: Partial<ListReportMutant>): ListReportMutant {
-  return {
-    before: ["let unit = 'cm'"],
-    mutator: 'string-literal',
-    after: ["let unit = ''"],
-    id: '000000000001',
-    kind: 'expression',
-    file: 'example.ts',
-    status: 'Pending',
-    replacement: "''",
-    original: "'cm'",
-    ignoredBy: null,
-    endColumn: 16,
-    reason: null,
-    cutStart: 0,
-    scope: null,
-    column: 12,
-    endLine: 1,
-    cutEnd: 0,
-    start: 11,
-    line: 1,
-    end: 15,
-    ...overrides,
-  }
-}
-
-/**
- * Creates a report of the given mutants. Only the fields the text format reads
- * are filled.
- *
- * @param mutants - Mutants to list, already in canonical order.
- * @param summary - Counts that differ from one pending mutant in one file.
- * @returns Report with empty diagnostics, files and mutators.
- */
-function createReport(
-  mutants: ListReportMutant[],
-  summary: Partial<ListReportSummary> = {},
-): ListReport {
-  return {
-    summary: {
-      totalWarnings: 0,
-      totalMutants: 1,
-      totalPending: 1,
-      totalIgnored: 0,
-      totalErrors: 0,
-      totalFiles: 1,
-      ...summary,
-    },
-    preset: 'recommended',
-    schemaVersion: 3,
-    command: 'list',
-    diagnostics: [],
-    mutators: [],
-    since: null,
-    files: [],
-    mutants,
-  }
-}
 
 /**
  * Creates a skipped candidate at the start of `example.ts`.
@@ -130,7 +65,7 @@ describe('formatTextReport', () => {
       line: 18,
     }
     let mutants = [
-      createMutant({
+      createListReportMutant({
         ...pending,
         original: "emit('add', label?.trim())",
         mutator: 'statement-removal',
@@ -140,7 +75,7 @@ describe('formatTextReport', () => {
         column: 5,
         line: 6,
       }),
-      createMutant({
+      createListReportMutant({
         ...ignored,
         reason: 'event name',
         // spell-checker: disable-next-line
@@ -149,7 +84,7 @@ describe('formatTextReport', () => {
         column: 10,
         line: 6,
       }),
-      createMutant({
+      createListReportMutant({
         ...pending,
         mutator: 'optional-chaining',
         replacement: 'label.trim()',
@@ -159,7 +94,7 @@ describe('formatTextReport', () => {
         column: 17,
         line: 6,
       }),
-      createMutant({
+      createListReportMutant({
         ...pending,
         original: 'this.items.push(price)',
         mutator: 'statement-removal',
@@ -169,7 +104,7 @@ describe('formatTextReport', () => {
         column: 5,
         line: 7,
       }),
-      createMutant({
+      createListReportMutant({
         ...pending,
         mutator: 'statement-removal',
         original: 'notify()',
@@ -179,7 +114,7 @@ describe('formatTextReport', () => {
         column: 5,
         line: 8,
       }),
-      createMutant({
+      createListReportMutant({
         ...pending,
         mutator: 'arithmetic-operator',
         replacement: 'acc - item',
@@ -189,7 +124,7 @@ describe('formatTextReport', () => {
         column: 48,
         line: 12,
       }),
-      createMutant({
+      createListReportMutant({
         ...pending,
         mutator: 'comparison-operator',
         replacement: 'sum >= 100',
@@ -198,7 +133,7 @@ describe('formatTextReport', () => {
         column: 12,
         line: 13,
       }),
-      createMutant({
+      createListReportMutant({
         ...pending,
         mutator: 'comparison-operator',
         original: 'sum > 100',
@@ -208,7 +143,7 @@ describe('formatTextReport', () => {
         column: 12,
         line: 13,
       }),
-      createMutant({
+      createListReportMutant({
         ...pending,
         mutator: 'arithmetic-operator',
         replacement: 'sum / rate',
@@ -218,7 +153,7 @@ describe('formatTextReport', () => {
         column: 24,
         line: 13,
       }),
-      createMutant({
+      createListReportMutant({
         ...legacy,
         mutator: 'comparison-operator',
         replacement: 'count <= 2',
@@ -227,7 +162,7 @@ describe('formatTextReport', () => {
         id: 'v7skpar6108w',
         column: 48,
       }),
-      createMutant({
+      createListReportMutant({
         ...legacy,
         mutator: 'comparison-operator',
         original: 'count < 2',
@@ -236,20 +171,20 @@ describe('formatTextReport', () => {
         id: 'pq44a3xxdefh',
         column: 48,
       }),
-      createMutant({
+      createListReportMutant({
         ...legacy,
         // spell-checker: disable-next-line
         id: '0swkcdtty456',
         original: "'item'",
         column: 60,
       }),
-      createMutant({
+      createListReportMutant({
         ...legacy,
         original: "'items'",
         id: 'tj6he114jb6k',
         column: 69,
       }),
-      createMutant({
+      createListReportMutant({
         ...pending,
         // spell-checker: disable-next-line
         id: 'j5y7xqje89xp',
@@ -259,14 +194,14 @@ describe('formatTextReport', () => {
       }),
     ]
 
-    let report = createReport(mutants, {
+    let report = createListReport(mutants, {
       totalWarnings: 2,
       totalMutants: 14,
       totalPending: 9,
       totalIgnored: 5,
     })
     report.mutants.push(
-      createMutant({ id: 'zz0000000001', file: 'src/a.ts', line: 2 }),
+      createListReportMutant({ id: 'zz0000000001', file: 'src/a.ts', line: 2 }),
     )
 
     expect(format(report)).toMatchInlineSnapshot(`
@@ -297,8 +232,8 @@ describe('formatTextReport', () => {
   })
 
   it('colors the header, labels, locations and ignored reasons', () => {
-    let report = createReport([
-      createMutant({ status: 'Ignored', reason: 'units' }),
+    let report = createListReport([
+      createListReportMutant({ status: 'Ignored', reason: 'units' }),
     ])
 
     expect(showEscapes(format(report, { colors: true })))
@@ -313,7 +248,9 @@ describe('formatTextReport', () => {
   })
 
   it('marks an ignored mutant without a reason', () => {
-    let report = createReport([createMutant({ status: 'Ignored' })])
+    let report = createListReport([
+      createListReportMutant({ status: 'Ignored' }),
+    ])
 
     expect(format(report).split('\n', 6)[5]).toBe(
       "  1:12  string-literal  'cm' → ''  0000  ignored",
@@ -321,8 +258,8 @@ describe('formatTextReport', () => {
   })
 
   it('falls back to ASCII and cuts long changes to a narrow terminal', () => {
-    let report = createReport([
-      createMutant({
+    let report = createListReport([
+      createListReportMutant({
         original: `'${'long text '.repeat(6)}'`,
         replacement: "''",
       }),
@@ -343,7 +280,7 @@ describe('formatTextReport', () => {
   it('prints only the header and the counts without mutants', () => {
     expect(
       format(
-        createReport([], {
+        createListReport([], {
           totalPending: 0,
           totalMutants: 0,
           totalErrors: 1,
@@ -359,7 +296,7 @@ describe('formatTextReport', () => {
   })
 
   it('prints the skipped section after the mutants with counts by category', () => {
-    let report = createReport([createMutant({})], {
+    let report = createListReport([createListReportMutant()], {
       skippedByCategory: {
         equivalent: 1,
         duplicate: 0,
@@ -408,7 +345,7 @@ describe('formatTextReport', () => {
   })
 
   it('counts no skipped candidates when nothing is skipped', () => {
-    let report = createReport([], {
+    let report = createListReport([], {
       skippedByCategory: {
         equivalent: 0,
         duplicate: 0,
@@ -437,9 +374,9 @@ describe('formatTextReport', () => {
       end: 6,
     }
     let text = format({
-      ...createReport(
+      ...createListReport(
         [
-          createMutant({
+          createListReportMutant({
             mutator: 'regex-pattern',
             replacement: '/a$/',
             original: '/^a$/',
@@ -485,8 +422,8 @@ describe('formatTextReport', () => {
 
   it('sorts the mutants of a file by the position they show', () => {
     let text = format(
-      createReport([
-        createMutant({
+      createListReport([
+        createListReportMutant({
           focus: {
             replacement: 'i',
             original: '',
@@ -499,7 +436,7 @@ describe('formatTextReport', () => {
           id: 'flag',
           column: 14,
         }),
-        createMutant({
+        createListReportMutant({
           focus: {
             replacement: '',
             original: '^',

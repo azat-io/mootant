@@ -1,3 +1,5 @@
+import { getKillSet } from './get-kill-set'
+
 /**
  * Mutants that a property test rejects, and faults that no mutant probes.
  */
@@ -60,7 +62,7 @@ export function findWeakMutants(
   mutants: Probe[],
   alternatives: Probe[] = [],
 ): WeakMutants {
-  let killed = mutants.map(mutant => getKillSet(original, mutant))
+  let killed = mutants.map(mutant => getKillSet(original, mutant.outputs))
   let result: WeakMutants = {
     equivalent: [],
     duplicates: [],
@@ -94,7 +96,7 @@ export function findWeakMutants(
     }
   }
   for (let alternative of alternatives) {
-    let kills = getKillSet(original, alternative)
+    let kills = getKillSet(original, alternative.outputs)
     let covered = killed.some(
       mutantKills => mutantKills.size > 0 && isInside(mutantKills, kills),
     )
@@ -103,23 +105,6 @@ export function findWeakMutants(
     }
   }
   return result
-}
-
-/**
- * Lists the inputs where a program differs from the original.
- *
- * @param original - Outputs of the original program.
- * @param probe - Program to compare.
- * @returns Indexes of the differing inputs.
- */
-function getKillSet(original: string[], probe: Probe): Set<number> {
-  let kills = new Set<number>()
-  for (let [input, output] of probe.outputs.entries()) {
-    if (output !== original[input]) {
-      kills.add(input)
-    }
-  }
-  return kills
 }
 
 /**

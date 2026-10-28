@@ -1,10 +1,8 @@
-import { realpath, readFile, readdir, stat } from 'node:fs/promises'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { FakeEntry } from '../helpers/create-fake-file-system'
 import type { Plugin } from '../../types/config/plugin'
 
-import { createFakeFileSystem } from '../helpers/create-fake-file-system'
+import { installFakeFileSystem } from '../helpers/install-fake-file-system'
 import { createMutantId } from '../../core/identity/create-mutant-id'
 import { readChangedLines } from '../../core/git/read-changed-lines'
 import { loadConfig } from '../../core/config/load-config'
@@ -62,31 +60,13 @@ vi.mock(import('../../core/plugins/core-plugin'), () => {
   return { corePlugin }
 })
 
-/**
- * Serves `readFile`, `realpath`, `stat` and `readdir` from an in-memory tree
- * for the running test.
- *
- * @param entries - Absolute paths mapped to file text or special entries.
- */
-function installFileSystem(entries: Record<string, FakeEntry | string>): void {
-  let fileSystem = createFakeFileSystem(entries)
-  vi.mocked(readFile).mockImplementation(((path: string, options: 'utf8') =>
-    fileSystem.readFile(path, options)) as typeof readFile)
-  vi.mocked(realpath).mockImplementation(path => fileSystem.realpath(path))
-  vi.mocked(stat).mockImplementation(path => fileSystem.stat(path))
-  vi.mocked(readdir).mockImplementation(((
-    path: string,
-    options?: { withFileTypes?: boolean },
-  ) => fileSystem.readdir(path, options)) as typeof readdir)
-}
-
 describe('listMutants', () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })
 
   it('lists the mutants of every file in path order', async () => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/src/b.js': 'y = 3',
       '/repo/src/a.ts': 'x = 1',
     })
@@ -131,7 +111,7 @@ describe('listMutants', () => {
   })
 
   it('lists only the mutants and skipped candidates on lines changed since a revision', async () => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/src/a.ts': 'x = 1\ny = 5\nz = 3',
       '/repo/src/b.js': 'y = 3',
     })
@@ -159,7 +139,7 @@ describe('listMutants', () => {
   })
 
   it('writes paths and ids relative to the directory of the configuration', async () => {
-    installFileSystem({ '/repo/src/a.ts': 'x = 1' })
+    installFakeFileSystem({ '/repo/src/a.ts': 'x = 1' })
     vi.mocked(loadConfig).mockResolvedValue({
       config: { extends: ['recommended'] },
       file: '/repo/mootant.config.js',
@@ -180,7 +160,7 @@ describe('listMutants', () => {
   ])(
     'collects skipped candidates only on request ($skipped)',
     async ({ skipped, count }) => {
-      installFileSystem({ '/repo/a.ts': 'x = 1' })
+      installFakeFileSystem({ '/repo/a.ts': 'x = 1' })
 
       let result = await listMutants({
         preset: 'recommended',
@@ -196,7 +176,7 @@ describe('listMutants', () => {
   )
 
   it('rejects an unknown preset', async () => {
-    installFileSystem({ '/repo/a.ts': 'x = 1' })
+    installFakeFileSystem({ '/repo/a.ts': 'x = 1' })
 
     await expect(
       // spell-checker: disable-next-line
@@ -208,7 +188,7 @@ describe('listMutants', () => {
   })
 
   it('rejects missing paths', async () => {
-    installFileSystem({ '/repo/a.ts': 'x = 1' })
+    installFakeFileSystem({ '/repo/a.ts': 'x = 1' })
 
     await expect(
       listMutants({ preset: 'recommended', paths: ['b.ts'], cwd: '/repo' }),
@@ -216,7 +196,7 @@ describe('listMutants', () => {
   })
 
   it('reports a file that cannot be read and lists the others', async () => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/locked.ts': { kind: 'unreadable-file' },
       '/repo/open.ts': 'x = 1',
     })
@@ -250,7 +230,7 @@ describe('listMutants', () => {
   })
 
   it('reports a file that does not parse and lists the others', async () => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/broken.ts': 'let x = ;',
       '/repo/ok.ts': 'x = 1',
     })
@@ -271,7 +251,7 @@ describe('listMutants', () => {
   })
 
   it('rejects two mutants that share an id', async () => {
-    installFileSystem({ '/repo/a.ts': 'x = 1', '/repo/b.ts': 'y = 3' })
+    installFakeFileSystem({ '/repo/a.ts': 'x = 1', '/repo/b.ts': 'y = 3' })
     // spell-checker: disable-next-line
     vi.mocked(createMutantId).mockReturnValue('w7019f5axk5g')
 

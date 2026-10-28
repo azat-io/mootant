@@ -6,6 +6,18 @@ import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
+/**
+ * Lists the mutants of comparison-operator for a snippet.
+ *
+ * @param source - Text of the snippet.
+ * @param setup - Preset, mutator settings, preset settings and file name of the
+ *   run.
+ * @returns Mutants as `original -> replacement`.
+ */
+function mutate(source: string, setup: MutatorSetup = {}): string[] {
+  return runMutator('comparison-operator', source, setup).map(formatMutant)
+}
+
 describe('comparisonOperator', () => {
   it.each<{ expected: string[]; source: string }>([
     {
@@ -50,9 +62,7 @@ describe('comparisonOperator', () => {
       expected: ['#size in box -> true', '#size in box -> false'],
     },
   ])('emits the plan of $source', ({ expected, source }) => {
-    expect(
-      runMutator('comparison-operator', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string }>([
@@ -134,9 +144,7 @@ describe('comparisonOperator', () => {
   ])(
     'skips regions a lower bound rules out in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('comparison-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -176,9 +184,7 @@ describe('comparisonOperator', () => {
       expected: ['a > b -> a != b', 'a > b -> false'],
     },
   ])('skips the equivalent entries of $source', ({ expected, source }) => {
-    expect(
-      runMutator('comparison-operator', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string }>([
@@ -193,11 +199,7 @@ describe('comparisonOperator', () => {
   ])(
     'keeps the min/max entries of operands of unknown types in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('comparison-operator', source, { file: 'example.js' }).map(
-          formatMutant,
-        ),
-      ).toStrictEqual(expected)
+      expect(mutate(source, { file: 'example.js' })).toStrictEqual(expected)
     },
   )
 
@@ -244,9 +246,7 @@ describe('comparisonOperator', () => {
   ])(
     'keeps the constants of a filter predicate in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('comparison-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -274,9 +274,7 @@ describe('comparisonOperator', () => {
   ])(
     'leaves the mutants that empty a sort comparator to method-call in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('comparison-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -365,9 +363,7 @@ describe('comparisonOperator', () => {
       expected: ['i === n -> i <= n'],
     },
   ])('skips the timeout entries of $source', ({ expected, source }) => {
-    expect(
-      runMutator('comparison-operator', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string }>([
@@ -398,19 +394,15 @@ describe('comparisonOperator', () => {
   ])(
     'emits the timeout entries of $source with timeouts',
     ({ expected, source }) => {
-      expect(
-        runMutator('comparison-operator', source, {
-          settings: { timeouts: true },
-        }).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source, { settings: { timeouts: true } })).toStrictEqual(
+        expected,
+      )
     },
   )
 
   it('emits the timeout entries in the strict preset', () => {
     expect(
-      runMutator('comparison-operator', 'while (count < n) count++', {
-        preset: 'strict',
-      }).map(formatMutant),
+      mutate('while (count < n) count++', { preset: 'strict' }),
     ).toStrictEqual([
       'count < n -> count <= n',
       'count < n -> count != n',
@@ -490,9 +482,7 @@ describe('comparisonOperator', () => {
   ])(
     'leaves the constants of logical operands to logical-operator in $source',
     ({ expected, source, file }) => {
-      expect(
-        runMutator('comparison-operator', source, { file }).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source, { file })).toStrictEqual(expected)
     },
   )
 
@@ -516,9 +506,7 @@ describe('comparisonOperator', () => {
   ])(
     'skips only the drop of the left operand in the value group $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('comparison-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -562,9 +550,7 @@ describe('comparisonOperator', () => {
   ])(
     'guards the operands of $source inside the text',
     ({ expected, source }) => {
-      expect(
-        runMutator('comparison-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -577,9 +563,7 @@ describe('comparisonOperator', () => {
     ].join('\n')
     let setup = { settings: { timeouts: true } }
 
-    expect(
-      runMutator('comparison-operator', source, setup).map(formatMutant),
-    ).toStrictEqual([
+    expect(mutate(source, setup)).toStrictEqual([
       'index >= limit -> index > limit',
       'index >= limit -> index == limit',
     ])
@@ -602,9 +586,7 @@ describe('comparisonOperator', () => {
     let source = ['function f(a: number) {', '  x = a >= 10', '}'].join('\n')
 
     expect(runMutator('number-literal', source)).toStrictEqual([])
-    expect(
-      runMutator('comparison-operator', source).map(formatMutant),
-    ).toContain('a >= 10 -> a >= 9')
+    expect(mutate(source)).toContain('a >= 10 -> a >= 9')
   })
 
   it.each<{
@@ -700,9 +682,7 @@ describe('comparisonOperator', () => {
       expect(
         runMutator('missing-await', source, setup).map(formatMutant),
       ).toStrictEqual(expected)
-      expect(
-        runMutator('comparison-operator', source).map(formatMutant),
-      ).toStrictEqual([
+      expect(mutate(source)).toStrictEqual([
         '(await count()) === 0 -> (await count()) <= 0',
         '(await count()) === 0 -> (await count()) >= 0',
         '(await count()) === 0 -> false',
@@ -756,9 +736,7 @@ describe('comparisonOperator', () => {
       source: 'x = 1 < 2',
     },
   ])('moves the literal of $source one step', ({ expected, source }) => {
-    expect(
-      runMutator('comparison-operator', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it('reports the mutants with their positions and kind', () => {
@@ -818,9 +796,7 @@ describe('comparisonOperator', () => {
   ])(
     'owns the decision that other mutators leave in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('comparison-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -845,9 +821,7 @@ describe('comparisonOperator', () => {
   ])(
     'reads object-like function types as functions in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('comparison-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -895,9 +869,7 @@ describe('comparisonOperator', () => {
   ])(
     'keeps the type checks in the timer delay of $source',
     ({ expected, skipped, source }) => {
-      expect(
-        runMutator('comparison-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
       expect(listSkipped('comparison-operator', source)).toStrictEqual(skipped)
     },
   )

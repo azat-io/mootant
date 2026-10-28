@@ -1,60 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ListReport } from '../../../types/report/list-report'
-
+import { createListReportMutant } from '../../helpers/create-list-report-mutant'
 import { slimListReport } from '../../../cli/report/slim-list-report'
 import { slimListMutant } from '../../../cli/report/slim-list-mutant'
+import { createListReport } from '../../helpers/create-list-report'
 
 /**
  * Report of a list run with one pending mutant and no skipped candidates.
  */
-let report: ListReport = {
-  mutants: [
-    {
-      before: ["let unit = 'cm'"],
-      mutator: 'string-literal',
-      after: ["let unit = ''"],
-      id: '000000000001',
-      kind: 'expression',
-      file: 'example.ts',
-      status: 'Pending',
-      replacement: "''",
-      original: "'cm'",
-      ignoredBy: null,
-      endColumn: 16,
-      scope: 'unit',
-      reason: null,
-      cutStart: 0,
-      column: 12,
-      endLine: 1,
-      cutEnd: 0,
-      start: 11,
-      line: 1,
-      end: 15,
-    },
-  ],
-  summary: {
-    totalWarnings: 0,
-    totalMutants: 1,
-    totalPending: 1,
-    totalIgnored: 0,
-    totalErrors: 0,
-    totalFiles: 1,
-  },
-  mutators: [
-    {
-      description: 'Empties a string literal.',
-      id: 'string-literal',
-      mutants: 1,
-    },
-  ],
-  files: [{ file: 'example.ts', parsed: true, mutants: 1 }],
-  preset: 'recommended',
-  schemaVersion: 3,
-  command: 'list',
-  diagnostics: [],
-  since: null,
-}
+let report = createListReport([createListReportMutant({ scope: 'unit' })])
 
 describe('slimListReport', () => {
   it('keeps the counts, diagnostics and slim mutants, without mutators, files and null fields', () => {

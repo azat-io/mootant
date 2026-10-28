@@ -29,6 +29,7 @@ import { createSwitchedFiles } from '../../core/instrument/create-switched-files
 import { readChangedLines } from '../../core/git/read-changed-lines'
 import { createFakeAdapter } from '../helpers/create-fake-adapter'
 import { getCachePath } from '../../core/cache/get-cache-path'
+import { createBuiltIns } from '../helpers/create-built-ins'
 import { loadConfig } from '../../core/config/load-config'
 import { listMutants } from '../../core/list-mutants'
 import { runMutants } from '../../core/run-mutants'
@@ -80,12 +81,7 @@ async function run(
     vi.mocked(loadConfig).mockResolvedValue(null)
   }
   let result = await runMutants({
-    builtIns: {
-      fake: {
-        load: () => Promise.resolve(fake.adapter),
-        detect: () => Promise.resolve(true),
-      },
-    },
+    builtIns: createBuiltIns('fake', fake.adapter),
     paths: ['src'],
     cwd: root,
     ...options,

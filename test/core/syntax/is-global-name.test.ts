@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { AnalyzedProgram } from '../../../types/syntax/analyzed-program'
-
+import { createTestProgram } from '../../helpers/create-test-program'
 import { isGlobalName } from '../../../core/syntax/is-global-name'
 import { createTestFile } from '../../helpers/create-test-file'
 
@@ -31,11 +30,7 @@ interface NameSetup {
  */
 function check(source: string, setup: NameSetup = {}): boolean {
   let file = createTestFile(source, setup.file)
-  let program: AnalyzedProgram = {
-    shared: new Set(setup.component ? [file.parsed.program] : []),
-    scopes: file.scopes,
-    tree: file.tree,
-  }
+  let program = createTestProgram(file, setup.component)
   return isGlobalName(program, 'undefined')
 }
 
@@ -115,11 +110,7 @@ describe('isGlobalName', () => {
 
   it('reads the names of a program once for every question', () => {
     let file = createTestFile('let parts = []; function f(Map) {}')
-    let program: AnalyzedProgram = {
-      scopes: file.scopes,
-      shared: new Set(),
-      tree: file.tree,
-    }
+    let program = createTestProgram(file)
     let reads = vi.spyOn(file.scopes.bindings, 'values')
 
     expect(isGlobalName(program, 'undefined')).toBe(true)

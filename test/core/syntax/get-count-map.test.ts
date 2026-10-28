@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import type { AnalyzedProgram } from '../../../types/syntax/analyzed-program'
 import type { Binding } from '../../../types/syntax/binding'
 
+import { createTestProgram } from '../../helpers/create-test-program'
 import { getCountMap } from '../../../core/syntax/get-count-map'
 import { createTestFile } from '../../helpers/create-test-file'
+import { findBinding } from '../../helpers/find-binding'
 
 /**
  * Reads the map `m` of a snippet as a count map.
@@ -20,14 +21,8 @@ function read(
   component = false,
 ): { entries: string[]; values: string[] } | null {
   let file = createTestFile(source)
-  let program: AnalyzedProgram = {
-    shared: new Set(component ? [file.parsed.program] : []),
-    scopes: file.scopes,
-    tree: file.tree,
-  }
-  let binding = [...file.scopes.bindings.values()].find(
-    candidate => getName(candidate) === 'm',
-  )!
+  let program = createTestProgram(file, component)
+  let binding = findBinding(file.scopes, 'm')
   let countMap = getCountMap(program, binding)
   return (
     countMap && {

@@ -9,6 +9,7 @@ import type { Binding } from '../../../types/syntax/binding'
 import { solveValueBounds } from '../../../core/syntax/solve-value-bounds'
 import { getValueBound } from '../../../core/syntax/get-value-bound'
 import { createTestFile } from '../../helpers/create-test-file'
+import { findBinding } from '../../helpers/find-binding'
 
 vi.mock(
   import('../../../core/syntax/get-value-bound'),
@@ -83,19 +84,13 @@ function buildDense(count: number, width: number): string[] {
  */
 function solve(lines: string[], component = false): SolvedSnippet {
   let file = createTestFile(lines.join('\n'))
-  let bindings = [...new Set(file.scopes.bindings.values())]
   return {
-    named: name =>
-      bindings.find(
-        binding =>
-          binding.identifier.type === 'Identifier' &&
-          binding.identifier.name === name,
-      )!,
     bounds: solveValueBounds(
       file.tree,
       file.scopes,
       new Set(component ? [file.parsed.program] : []),
     ),
+    named: name => findBinding(file.scopes, name),
     text: node => file.sourceCode.getText(node),
   }
 }

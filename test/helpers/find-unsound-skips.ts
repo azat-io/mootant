@@ -2,6 +2,8 @@ import type { SkipJustifier } from '../../types/mutant/skip-justifier'
 import type { SkipCategory } from '../../types/mutant/skip-category'
 import type { Probe } from './find-weak-mutants'
 
+import { getKillSet } from './get-kill-set'
+
 /**
  * Skipped candidates whose outputs contradict the category of their skip.
  */
@@ -135,21 +137,4 @@ export function findUnsoundSkips(
     }
   }
   return result
-}
-
-/**
- * Lists the inputs where a program differs from the original.
- *
- * @param original - Outputs of the original program.
- * @param outputs - Outputs of the program to compare.
- * @returns Indexes of the differing inputs.
- */
-function getKillSet(original: string[], outputs: string[]): Set<number> {
-  let kills = new Set<number>()
-  for (let [input, output] of outputs.entries()) {
-    if (output !== original[input]) {
-      kills.add(input)
-    }
-  }
-  return kills
 }

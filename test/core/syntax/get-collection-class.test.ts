@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { AnalyzedProgram } from '../../../types/syntax/analyzed-program'
-
 import { getCollectionClass } from '../../../core/syntax/get-collection-class'
+import { createTestProgram } from '../../helpers/create-test-program'
 import { createTestFile } from '../../helpers/create-test-file'
 import { findProbe } from '../../helpers/find-probe'
 
@@ -28,14 +27,7 @@ function check(
   if (probe.type !== 'MemberExpression') {
     throw new Error('The argument of f is not a member.')
   }
-  return getCollectionClass(
-    {
-      shared: new Set(component ? [file.parsed.program] : []),
-      scopes: file.scopes,
-      tree: file.tree,
-    },
-    probe.object,
-  )
+  return getCollectionClass(createTestProgram(file, component), probe.object)
 }
 
 describe('getCollectionClass', () => {
@@ -169,11 +161,7 @@ describe('getCollectionClass', () => {
     let file = createTestFile(
       ['const seen = new Set(items)', ...reads].join('\n'),
     )
-    let program: AnalyzedProgram = {
-      scopes: file.scopes,
-      shared: new Set(),
-      tree: file.tree,
-    }
+    let program = createTestProgram(file)
     let members = reads.map(
       (_, index) => file.find('MemberExpression', 'seen.size', index).object,
     )

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { RunCache } from '../../../types/cache/run-cache'
 
 import { applyCachedUnits } from '../../../core/cache/apply-cached-units'
+import { createFakeCache } from '../../helpers/create-fake-cache'
 import { createTestRun } from '../../helpers/create-test-run'
 
 /**
@@ -14,21 +15,10 @@ import { createTestRun } from '../../helpers/create-test-run'
 function createCache(
   answers: Record<string, ReturnType<RunCache['lookupUnit']>>,
 ): RunCache {
-  return {
+  return createFakeCache({
     lookupUnit: (mutant, file) =>
       answers[`${mutant.mutant.id} ${file}`] ?? null,
-    lookupBatch: () => null,
-    dependencies: new Map(),
-    recordBatch: () => {},
-    recordUnit: () => {},
-    regional: new Set(),
-    entries: new Map(),
-    pending: new Map(),
-    hashes: new Map(),
-    inputs: new Map(),
-    forget: () => {},
-    environment: [],
-  }
+  })
 }
 
 /**

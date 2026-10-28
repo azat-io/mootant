@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { AnalyzedProgram } from '../../../types/syntax/analyzed-program'
-
+import { createTestProgram } from '../../helpers/create-test-program'
 import { getMatchRegex } from '../../../core/syntax/get-match-regex'
 import { createTestFile } from '../../helpers/create-test-file'
 import { findProbe } from '../../helpers/find-probe'
@@ -20,11 +19,7 @@ function read(
   component = false,
 ): { literal: string; method: string } | null {
   let file = createTestFile(source)
-  let program: AnalyzedProgram = {
-    shared: new Set(component ? [file.parsed.program] : []),
-    scopes: file.scopes,
-    tree: file.tree,
-  }
+  let program = createTestProgram(file, component)
   let match = getMatchRegex(program, findProbe(file))
   return (
     match && {
@@ -123,11 +118,7 @@ describe('getMatchRegex', () => {
       (_, index) => `f(re.exec(s${index}))`,
     )
     let file = createTestFile(['const re = /a/u', ...runs].join('\n'))
-    let program: AnalyzedProgram = {
-      scopes: file.scopes,
-      shared: new Set(),
-      tree: file.tree,
-    }
+    let program = createTestProgram(file)
     let calls = runs.map((_, index) =>
       file.find('CallExpression', `re.exec(s${index})`),
     )

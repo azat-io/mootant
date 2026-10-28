@@ -4,6 +4,7 @@ import type { MutantVerdict } from '../../../types/run/mutant-state'
 import type { RunCache } from '../../../types/cache/run-cache'
 
 import { applyCachedBatch } from '../../../core/cache/apply-cached-batch'
+import { createFakeCache } from '../../helpers/create-fake-cache'
 import { createTestRun } from '../../helpers/create-test-run'
 
 /**
@@ -17,20 +18,10 @@ function createCache(
   units: Record<string, ReturnType<RunCache['lookupUnit']>>,
   batch: Record<string, ReturnType<RunCache['lookupBatch']>> = {},
 ): RunCache {
-  return {
+  return createFakeCache({
     lookupBatch: (mutant, test) => batch[`${mutant.mutant.id} ${test}`] ?? null,
     lookupUnit: (mutant, file) => units[`${mutant.mutant.id} ${file}`] ?? null,
-    dependencies: new Map(),
-    recordBatch: () => {},
-    recordUnit: () => {},
-    regional: new Set(),
-    entries: new Map(),
-    pending: new Map(),
-    hashes: new Map(),
-    inputs: new Map(),
-    forget: () => {},
-    environment: [],
-  }
+  })
 }
 
 /**

@@ -58,6 +58,17 @@ function createPlan(
   return { chains: costs.map((_cost, index) => index), workers, costs }
 }
 
+/**
+ * Builds a list of one number repeated.
+ *
+ * @param count - Length of the list.
+ * @param value - Number at every position.
+ * @returns List of `count` times `value`.
+ */
+function repeat(count: number, value: number): number[] {
+  return Array.from({ length: count }, () => value)
+}
+
 describe('createTimeEstimator', () => {
   it('stays within about twice the time left on recorded rounds', () => {
     // The node:test round ends with one test file alone for 150 s, whose last
@@ -118,13 +129,7 @@ describe('createTimeEstimator', () => {
   })
 
   it('counts down between ends and hides once every unit ended or the end passed', () => {
-    let estimator = createTimeEstimator(
-      createPlan(
-        Array.from({ length: 10 }, () => 1000),
-        1,
-      ),
-      0,
-    )
+    let estimator = createTimeEstimator(createPlan(repeat(10, 1000), 1), 0)
     for (let unit of [0, 1, 2]) {
       estimator.end({ duration: null, unit }, (unit + 1) * 1000)
     }
@@ -152,13 +157,7 @@ describe('createTimeEstimator', () => {
   })
 
   it('takes the wall time beyond the durations as a cost per unit', () => {
-    let estimator = createTimeEstimator(
-      createPlan(
-        Array.from({ length: 9 }, () => 100),
-        1,
-      ),
-      0,
-    )
+    let estimator = createTimeEstimator(createPlan(repeat(9, 100), 1), 0)
     for (let unit of [0, 1, 2, 3, 4]) {
       estimator.end({ duration: 100, unit }, (unit + 1) * 500)
     }
@@ -186,8 +185,8 @@ describe('createTimeEstimator', () => {
   it('runs one serial chain on one worker, whatever the workers', () => {
     let estimator = createTimeEstimator(
       {
-        costs: Array.from({ length: 10 }, () => 1000),
-        chains: Array.from({ length: 10 }, () => 0),
+        costs: repeat(10, 1000),
+        chains: repeat(10, 0),
         workers: 8,
       },
       0,
@@ -202,8 +201,8 @@ describe('createTimeEstimator', () => {
   it('runs two serial chains on two workers out of many', () => {
     let estimator = createTimeEstimator(
       {
-        costs: Array.from({ length: 10 }, () => 1000),
         chains: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+        costs: repeat(10, 1000),
         workers: 8,
       },
       0,
@@ -251,15 +250,11 @@ describe('createTimeEstimator', () => {
   it('counts no more than one unit run for a chain that waited for a worker', () => {
     let estimator = createTimeEstimator(
       {
-        costs: [
-          ...Array.from({ length: 8 }, () => 30_000),
-          500,
-          ...Array.from({ length: 10 }, () => 1000),
-        ],
         chains: [
           ...Array.from({ length: 9 }, (_chain, index) => index),
-          ...Array.from({ length: 10 }, () => 9),
+          ...repeat(10, 9),
         ],
+        costs: [...repeat(8, 30_000), 500, ...repeat(10, 1000)],
         workers: 8,
       },
       0,
@@ -273,13 +268,7 @@ describe('createTimeEstimator', () => {
   })
 
   it('shrinks every time when the run went faster than expected', () => {
-    let estimator = createTimeEstimator(
-      createPlan(
-        Array.from({ length: 6 }, () => 1000),
-        1,
-      ),
-      0,
-    )
+    let estimator = createTimeEstimator(createPlan(repeat(6, 1000), 1), 0)
     for (let unit of [0, 1, 2]) {
       estimator.end({ duration: null, unit }, (unit + 1) * 500)
     }
@@ -301,13 +290,7 @@ describe('createTimeEstimator', () => {
   })
 
   it('takes reported durations as proportional to costs that never differ', () => {
-    let estimator = createTimeEstimator(
-      createPlan(
-        Array.from({ length: 6 }, () => 1000),
-        1,
-      ),
-      0,
-    )
+    let estimator = createTimeEstimator(createPlan(repeat(6, 1000), 1), 0)
     for (let unit of [0, 1, 2]) {
       estimator.end({ duration: 1500, unit }, (unit + 1) * 1500)
     }
@@ -316,13 +299,7 @@ describe('createTimeEstimator', () => {
   })
 
   it('takes reported durations as overhead when the units cost nothing', () => {
-    let estimator = createTimeEstimator(
-      createPlan(
-        Array.from({ length: 6 }, () => 0),
-        1,
-      ),
-      0,
-    )
+    let estimator = createTimeEstimator(createPlan(repeat(6, 0), 1), 0)
     for (let unit of [0, 1, 2]) {
       estimator.end({ duration: 1000, unit }, (unit + 1) * 1000)
     }
@@ -375,13 +352,7 @@ describe('createTimeEstimator', () => {
   })
 
   it('starts at the first estimate and moves towards new ones over wall time', () => {
-    let estimator = createTimeEstimator(
-      createPlan(
-        Array.from({ length: 6 }, () => 1000),
-        1,
-      ),
-      0,
-    )
+    let estimator = createTimeEstimator(createPlan(repeat(6, 1000), 1), 0)
     for (let unit of [0, 1, 2]) {
       estimator.end({ duration: null, unit }, (unit + 1) * 1000)
     }
@@ -401,13 +372,7 @@ describe('createTimeEstimator', () => {
   })
 
   it('estimates again at most four times a second', () => {
-    let estimator = createTimeEstimator(
-      createPlan(
-        Array.from({ length: 6 }, () => 1000),
-        1,
-      ),
-      0,
-    )
+    let estimator = createTimeEstimator(createPlan(repeat(6, 1000), 1), 0)
     for (let unit of [0, 1, 2]) {
       estimator.end({ duration: null, unit }, (unit + 1) * 1000)
     }
@@ -443,13 +408,7 @@ describe('createTimeEstimator', () => {
   })
 
   it('needs no workers to tell the time left', () => {
-    let estimator = createTimeEstimator(
-      createPlan(
-        Array.from({ length: 4 }, () => 1000),
-        0,
-      ),
-      0,
-    )
+    let estimator = createTimeEstimator(createPlan(repeat(4, 1000), 0), 0)
     for (let unit of [0, 1, 2]) {
       estimator.end({ duration: null, unit }, (unit + 1) * 1000)
     }

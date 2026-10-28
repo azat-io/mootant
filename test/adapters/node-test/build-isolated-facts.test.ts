@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import type { TestProcessOutcome } from '../../../adapters/node-test/types/test-process-outcome'
 import type { NodeTestRecord } from '../../../adapters/node-test/types/node-test-record'
 
 import { buildIsolatedFacts } from '../../../adapters/node-test/build-isolated-facts'
+import { createTestProcessOutcome } from '../../helpers/create-test-process-outcome'
 import { createNodeTestEnd } from '../../helpers/create-node-test-end'
 import { createNodeTestTry } from '../../helpers/create-node-test-try'
 
@@ -23,38 +23,17 @@ const START: NodeTestRecord = {
   pid: 1,
 }
 
-/**
- * Creates the outcome of a process.
- *
- * @param records - Its records.
- * @param fields - Fields that differ from a clean exit.
- * @returns What the process left behind.
- */
-function createOutcome(
-  records: NodeTestRecord[],
-  fields: Partial<TestProcessOutcome> = {},
-): TestProcessOutcome {
-  return {
-    spawned: 100,
-    signal: null,
-    hung: false,
-    code: 0,
-    records,
-    ...fields,
-  }
-}
-
 describe('buildIsolatedFacts', () => {
   it('builds the facts of a unit that ended', () => {
     let facts = buildIsolatedFacts(
-      createOutcome(
+      createTestProcessOutcome(
         [
           START,
           createNodeTestTry({ reached: true, failed: true, name: 'a', seq: 0 }),
           { message: 'late', kind: 'error', load: false, tries: [], hits: 0 },
           createNodeTestEnd({ reached: true, duration: 30, total: 9 }),
         ],
-        { code: 1 },
+        { spawned: 100, code: 1 },
       ),
       INPUT,
     )
@@ -76,7 +55,7 @@ describe('buildIsolatedFacts', () => {
 
   it('counts failures of a process that exited with 0 as passed', () => {
     let facts = buildIsolatedFacts(
-      createOutcome([
+      createTestProcessOutcome([
         createNodeTestTry({ failed: true, name: 'todo', seq: 0 }),
         createNodeTestEnd(),
       ]),
@@ -89,7 +68,7 @@ describe('buildIsolatedFacts', () => {
 
   it('reports a failure outside tests as the hook error', () => {
     let facts = buildIsolatedFacts(
-      createOutcome(
+      createTestProcessOutcome(
         [createNodeTestTry({ name: 'a', seq: 0 }), createNodeTestEnd()],
         {
           code: 1,
@@ -103,7 +82,10 @@ describe('buildIsolatedFacts', () => {
     )
     expect(
       buildIsolatedFacts(
-        createOutcome([createNodeTestEnd()], { signal: 'SIGTERM', code: null }),
+        createTestProcessOutcome([createNodeTestEnd()], {
+          signal: 'SIGTERM',
+          code: null,
+        }),
         INPUT,
       ).hookError,
     ).toBe('The test file failed outside its tests (exit code SIGTERM).')
@@ -114,7 +96,7 @@ describe('buildIsolatedFacts', () => {
 
     expect(
       buildIsolatedFacts(
-        createOutcome([
+        createTestProcessOutcome([
           createNodeTestTry({ name: 'a', seq: 0 }),
           hook,
           createNodeTestEnd(),
@@ -124,7 +106,7 @@ describe('buildIsolatedFacts', () => {
     ).toBe('A root hook of the test file failed: boom')
     expect(
       buildIsolatedFacts(
-        createOutcome(
+        createTestProcessOutcome(
           [
             createNodeTestTry({ failed: true, name: 'a', seq: 0 }),
             hook,
@@ -139,7 +121,7 @@ describe('buildIsolatedFacts', () => {
 
   it('takes a failed todo test as the reason of a failing exit code', () => {
     let facts = buildIsolatedFacts(
-      createOutcome(
+      createTestProcessOutcome(
         [
           createNodeTestTry({ name: 'a', seq: 0 }),
           { failed: false, kind: 'todo' },
@@ -157,7 +139,7 @@ describe('buildIsolatedFacts', () => {
 
   it('fails outside tests when a test or suite that is not todo failed', () => {
     let facts = buildIsolatedFacts(
-      createOutcome(
+      createTestProcessOutcome(
         [
           createNodeTestTry({ name: 'a', seq: 0 }),
           { kind: 'todo', failed: true },
@@ -176,7 +158,7 @@ describe('buildIsolatedFacts', () => {
 
   it('drops uncaught errors that node:test gave to a todo test', () => {
     let facts = buildIsolatedFacts(
-      createOutcome(
+      createTestProcessOutcome(
         [
           createNodeTestTry({ name: 'a', seq: 0 }),
           { message: 'todo', kind: 'error', load: false, tries: [], hits: 0 },
@@ -194,13 +176,13 @@ describe('buildIsolatedFacts', () => {
 
   it('reports load errors, crashes and hangs', () => {
     let load = buildIsolatedFacts(
-      createOutcome(
+      createTestProcessOutcome(
         [
           START,
           { message: 'first', kind: 'error', load: true, tries: [], hits: 12 },
           { message: 'second', kind: 'error', load: true, tries: [], hits: 3 },
         ],
-        { code: 1 },
+        { spawned: 100, code: 1 },
       ),
       INPUT,
     )
@@ -216,7 +198,7 @@ describe('buildIsolatedFacts', () => {
     })
 
     let crash = buildIsolatedFacts(
-      createOutcome(
+      createTestProcessOutcome(
         [
           { kind: 'loaded' },
           createNodeTestTry({
@@ -244,7 +226,7 @@ describe('buildIsolatedFacts', () => {
     // The test file threw at its top level after registering a test, which
     // Node started before it reported the error.
     let thrown = buildIsolatedFacts(
-      createOutcome(
+      createTestProcessOutcome(
         [
           createNodeTestTry({ name: 'a', seq: 0 }),
           {
@@ -269,7 +251,7 @@ describe('buildIsolatedFacts', () => {
     })
 
     let hang = buildIsolatedFacts(
-      createOutcome(
+      createTestProcessOutcome(
         [{ message: 'early', kind: 'error', load: true, tries: [], hits: 0 }],
         { signal: 'SIGKILL', code: null, hung: true },
       ),

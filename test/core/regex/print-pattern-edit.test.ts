@@ -1,29 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import type { RegexSource } from '../../../types/regex/regex-source'
 import type { TextEdit } from '../../../types/source/text-edit'
 
-import { readRegexArgument } from '../../../core/regex/read-regex-argument'
-import { readRegexLiteral } from '../../../core/regex/read-regex-literal'
 import { printPatternEdit } from '../../../core/regex/print-pattern-edit'
-import { readRegexCall } from '../../../core/regex/read-regex-call'
-import { createTestFile } from '../../helpers/create-test-file'
-
-/**
- * Reads the regular expression of `x = <expression>`: a literal, or the pattern
- * of a `RegExp` call.
- *
- * @param expression - Text of the literal or the call.
- * @returns The regular expression as read.
- */
-function read(expression: string): RegexSource {
-  let file = createTestFile(`x = ${expression}`)
-  if (expression.startsWith('/')) {
-    return readRegexLiteral(file.find('Literal'), file.sourceCode.text)!
-  }
-  let call = readRegexCall(file.find('CallExpression'), file)!
-  return readRegexArgument(call, file.sourceCode.text)!
-}
+import { readTestRegex } from '../../helpers/read-test-regex'
 
 /**
  * Prints an edit and leaves out the focus offsets.
@@ -33,14 +13,18 @@ function read(expression: string): RegexSource {
  * @returns New text of the node and text of the focus.
  */
 function print(expression: string, change: TextEdit): [string, string] {
-  let { focus, text } = printPatternEdit(read(expression), change)
+  let { focus, text } = printPatternEdit(readTestRegex(expression), change)
   return [text, focus.text]
 }
 
 describe('printPatternEdit', () => {
   it('splices a literal and focuses the edit', () => {
     expect(
-      printPatternEdit(read('/a+b/g'), { text: '*', start: 1, end: 2 }),
+      printPatternEdit(readTestRegex('/a+b/g'), {
+        text: '*',
+        start: 1,
+        end: 2,
+      }),
     ).toStrictEqual({
       focus: { text: '*', start: 6, end: 7 },
       text: '/a*b/g',
@@ -124,7 +108,7 @@ describe('printPatternEdit', () => {
 
   it('keeps the escapes of a string outside the edit', () => {
     expect(
-      printPatternEdit(read(String.raw`RegExp('\x41\\d+')`), {
+      printPatternEdit(readTestRegex(String.raw`RegExp('\x41\\d+')`), {
         text: '[^]',
         start: 1,
         end: 3,
@@ -176,7 +160,7 @@ describe('printPatternEdit', () => {
   )
 
   it('removes an anchor at an edge of a template with expressions', () => {
-    let source = read(`RegExp(\`^\${a}$\`)`)
+    let source = readTestRegex(`RegExp(\`^\${a}$\`)`)
 
     expect(printPatternEdit(source, { start: 0, text: '', end: 1 }).text).toBe(
       `\`\${a}$\``,

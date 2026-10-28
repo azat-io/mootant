@@ -18,6 +18,7 @@ import type { MutantResult } from '../../../types/run/mutant-result'
 import type { RunResult } from '../../../types/run/run-result'
 
 import { getCachePath } from '../../../core/cache/get-cache-path'
+import { createBuiltIns } from '../../helpers/create-built-ins'
 import { vitestAdapter } from '../../../adapters/vitest/index'
 import { runMutants } from '../../../core/run-mutants'
 
@@ -114,40 +115,6 @@ let variables = Object.fromEntries(
 let copies: string[] = []
 
 /**
- * Runs the mutants of the copy with Vitest and counts the isolated units.
- *
- * @param root - Root of the copy.
- * @param options - Fast mode and the cache setting.
- * @param options.fast - Whether to run in fast mode.
- * @param options.cache - Whether to use the cache; on when omitted.
- * @returns Result of the run and the isolated units it ran.
- */
-async function run(
-  root: string,
-  options: { cache?: boolean; fast?: boolean } = {},
-): Promise<{ result: RunResult; units: number }> {
-  let units = 0
-  let result = await runMutants({
-    builtIns: {
-      vitest: {
-        load: () => Promise.resolve(vitestAdapter()),
-        detect: () => Promise.resolve(true),
-      },
-    },
-    onProgress: event => {
-      if (event.kind === 'run-start' && event.run === 'isolated') {
-        units += event.units
-      }
-    },
-    paths: ['src'],
-    concurrency: 2,
-    cwd: root,
-    ...options,
-  })
-  return { result, units }
-}
-
-/**
  * Copies the fixture into a temporary directory with a `node_modules` of its
  * own, where a link to the repository's Vitest stands for the installed one, so
  * the cache file of every test is private.
@@ -171,6 +138,35 @@ async function copyFixture(source = fixture): Promise<string> {
   // Files modified in the millisecond a run starts count as changed during it.
   await setTimeout(5)
   return root
+}
+
+/**
+ * Runs the mutants of the copy with Vitest and counts the isolated units.
+ *
+ * @param root - Root of the copy.
+ * @param options - Fast mode and the cache setting.
+ * @param options.fast - Whether to run in fast mode.
+ * @param options.cache - Whether to use the cache; on when omitted.
+ * @returns Result of the run and the isolated units it ran.
+ */
+async function run(
+  root: string,
+  options: { cache?: boolean; fast?: boolean } = {},
+): Promise<{ result: RunResult; units: number }> {
+  let units = 0
+  let result = await runMutants({
+    onProgress: event => {
+      if (event.kind === 'run-start' && event.run === 'isolated') {
+        units += event.units
+      }
+    },
+    builtIns: createBuiltIns('vitest', vitestAdapter()),
+    paths: ['src'],
+    concurrency: 2,
+    cwd: root,
+    ...options,
+  })
+  return { result, units }
 }
 
 /**

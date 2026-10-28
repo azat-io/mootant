@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { RegexSource } from '../../../types/regex/regex-source'
-
 import { createRegexReplacement } from '../../../core/regex/create-regex-replacement'
-import { readRegexArgument } from '../../../core/regex/read-regex-argument'
-import { readRegexLiteral } from '../../../core/regex/read-regex-literal'
-import { readRegexCall } from '../../../core/regex/read-regex-call'
-import { createTestFile } from '../../helpers/create-test-file'
+import { readTestRegex } from '../../helpers/read-test-regex'
 
 /**
  * Settings of `recommended`.
@@ -18,34 +13,9 @@ const SETTINGS = {
   loggers: [],
 }
 
-/**
- * Reads the pattern argument of the `RegExp` call of `x = <call>`.
- *
- * @param call - Text of the call.
- * @returns The regular expression as read.
- */
-function readCall(call: string): RegexSource {
-  let file = createTestFile(`x = ${call}`)
-  let node = file.find(
-    call.startsWith('new') ? 'NewExpression' : 'CallExpression',
-  )
-  return readRegexArgument(readRegexCall(node, file)!, file.sourceCode.text)!
-}
-
-/**
- * Reads the literal of `x = <regex>`.
- *
- * @param regex - Text of the literal.
- * @returns The literal as read.
- */
-function read(regex: string): RegexSource {
-  let { sourceCode, find } = createTestFile(`x = ${regex}`)
-  return readRegexLiteral(find('Literal'), sourceCode.text)!
-}
-
 describe('createRegexReplacement', () => {
   it('prints the whole literal with the focus', () => {
-    let literal = read('/ab/')
+    let literal = readTestRegex('/ab/')
 
     expect(
       createRegexReplacement(
@@ -61,7 +31,7 @@ describe('createRegexReplacement', () => {
   })
 
   it('prints new flags of a literal', () => {
-    let literal = read('/a/gi')
+    let literal = readTestRegex('/a/gi')
 
     expect(
       createRegexReplacement(
@@ -81,7 +51,7 @@ describe('createRegexReplacement', () => {
 
     expect(
       createRegexReplacement(
-        read('/a/'),
+        readTestRegex('/a/'),
         { change: { text: '(', start: 0, end: 1 }, flags: '', skip },
         SETTINGS,
       ).skip,
@@ -98,8 +68,9 @@ describe('createRegexReplacement', () => {
   ])(
     'skips the invalid regular expression of %s changed to %o with %o',
     (regex, text, flags) => {
-      let source =
-        regex.startsWith('/') ? read(regex) : readCall(`RegExp(${regex})`)
+      let source = readTestRegex(
+        regex.startsWith('/') ? regex : `RegExp(${regex})`,
+      )
 
       expect(
         createRegexReplacement(
@@ -117,7 +88,7 @@ describe('createRegexReplacement', () => {
   ])('accepts what the form of %s can hold, such as %o', (pattern, text) => {
     expect(
       createRegexReplacement(
-        readCall(`RegExp(${pattern})`),
+        readTestRegex(`RegExp(${pattern})`),
         { change: { start: 0, end: 1, text }, skip: null, flags: '' },
         SETTINGS,
       ).skip,
@@ -134,7 +105,7 @@ describe('createRegexReplacement', () => {
     ({ regex, flags, rule }) => {
       expect(
         createRegexReplacement(
-          read(regex),
+          readTestRegex(regex),
           { change: { text: '*', start: 1, end: 2 }, skip: null, flags },
           SETTINGS,
         ).skip?.rule,
@@ -145,7 +116,7 @@ describe('createRegexReplacement', () => {
   it('keeps a change of the flags alone with g', () => {
     expect(
       createRegexReplacement(
-        read('/a/'),
+        readTestRegex('/a/'),
         { change: null, skip: null, flags: 'g' },
         SETTINGS,
       ).skip,
@@ -155,7 +126,7 @@ describe('createRegexReplacement', () => {
   it('keeps a pattern that starts to match empty with the timeouts setting', () => {
     expect(
       createRegexReplacement(
-        read('/a+/g'),
+        readTestRegex('/a+/g'),
         { change: { text: '*', start: 1, end: 2 }, skip: null, flags: 'g' },
         { coarseMutants: false, templates: true, timeouts: true, loggers: [] },
       ).skip,
@@ -165,7 +136,7 @@ describe('createRegexReplacement', () => {
   it('skips an edit that merges the tokens around it', () => {
     expect(
       createRegexReplacement(
-        read(String.raw`/(a)\1?0/`),
+        readTestRegex(String.raw`/(a)\1?0/`),
         { change: { start: 5, text: '', end: 6 }, skip: null, flags: '' },
         SETTINGS,
       ).skip?.rule,
@@ -173,7 +144,7 @@ describe('createRegexReplacement', () => {
   })
 
   it('prints the string argument of a call with its escapes', () => {
-    let source = readCall(String.raw`new RegExp('^\\d+$')`)
+    let source = readTestRegex(String.raw`new RegExp('^\\d+$')`)
 
     expect(
       createRegexReplacement(

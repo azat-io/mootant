@@ -2,8 +2,7 @@ import type { TestProject } from 'vitest/node'
 
 import { describe, expect, it } from 'vitest'
 
-import type { VitestSessionState } from '../../../adapters/vitest/types/vitest-session-state'
-
+import { createVitestSessionState } from '../../helpers/create-vitest-session-state'
 import { configureProject } from '../../../adapters/vitest/configure-project'
 
 /**
@@ -33,32 +32,10 @@ function createProject(config: Record<string, unknown> = {}): TestProject {
   } as never
 }
 
-/**
- * Creates an empty session state.
- *
- * @returns Session state.
- */
-function createState(): VitestSessionState {
-  return {
-    pool: { createPoolWorker: () => null as never, name: 'mootant-forks' },
-    runnerPath: '/mootant/runner.ts',
-    mismatched: new Set(),
-    instrumented: true,
-    outside: new Set(),
-    spawns: new Map(),
-    served: new Set(),
-    environment: {},
-    keys: new Map(),
-    diagnostics: [],
-    files: null,
-    error: null,
-  }
-}
-
 describe('configureProject', () => {
   it("overrides the project's settings for mootant", () => {
     let project = createProject()
-    let state = createState()
+    let state = createVitestSessionState()
     configureProject(project, state)
 
     expect(project.config).toMatchObject({
@@ -79,7 +56,7 @@ describe('configureProject', () => {
 
   it('warns when it changes the pool or isolation', () => {
     let project = createProject({ pool: 'threads', isolate: false })
-    let state = createState()
+    let state = createVitestSessionState()
     configureProject(project, state)
 
     expect(state.diagnostics).toStrictEqual([
@@ -105,7 +82,7 @@ describe('configureProject', () => {
   })
 
   it('records the first unsupported setting', () => {
-    let state = createState()
+    let state = createVitestSessionState()
     configureProject(createProject({ browser: { enabled: true } }), state)
     configureProject(createProject({ pool: 'vmForks' }), state)
 
@@ -117,7 +94,7 @@ describe('configureProject', () => {
       typecheck: { enabled: true, only: true },
       pool: 'vmForks',
     })
-    let state = createState()
+    let state = createVitestSessionState()
     configureProject(project, state)
     configureProject(
       createProject({ typecheck: { enabled: true, only: false } }),

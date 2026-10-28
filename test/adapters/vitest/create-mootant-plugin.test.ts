@@ -6,6 +6,7 @@ import type { VitestSessionState } from '../../../adapters/vitest/types/vitest-s
 import type { AdapterContext } from '../../../types/adapter/adapter-context'
 
 import { createMootantPlugin } from '../../../adapters/vitest/create-mootant-plugin'
+import { createVitestSessionState } from '../../helpers/create-vitest-session-state'
 import { configureProject } from '../../../adapters/vitest/configure-project'
 
 vi.mock(import('../../../adapters/vitest/configure-project'), () => ({
@@ -25,20 +26,7 @@ function setup(): {
   let context = {
     files: [{ file: '/project/src/a.ts', switched: 'B', original: 'A' }],
   } as never
-  let state: VitestSessionState = {
-    pool: { createPoolWorker: () => null as never, name: 'pool' },
-    runnerPath: '/runner.ts',
-    mismatched: new Set(),
-    instrumented: true,
-    outside: new Set(),
-    spawns: new Map(),
-    served: new Set(),
-    environment: {},
-    keys: new Map(),
-    diagnostics: [],
-    files: null,
-    error: null,
-  }
+  let state = createVitestSessionState()
   let plugin = createMootantPlugin(context, state)
   let { handler } = plugin.transform as {
     handler(code: string, id: string): unknown

@@ -4,9 +4,9 @@ import type { BatchResult } from '../../../types/adapter/batch-result'
 import type { FakeWorld } from '../../helpers/create-fake-adapter'
 import type { TryFacts } from '../../../types/adapter/try-facts'
 import type { PlannedTry } from '../../../types/run/run-state'
-import type { RunCache } from '../../../types/cache/run-cache'
 
 import { applyBatchResult } from '../../../core/run/apply-batch-result'
+import { createFakeCache } from '../../helpers/create-fake-cache'
 import { createTestRun } from '../../helpers/create-test-run'
 import { planBatch } from '../../../core/run/plan-batch'
 
@@ -476,25 +476,13 @@ describe('applyBatchResult', () => {
       { mutants: ['killed', 'survived', 'unreached'] },
     )
     let recorded: string[] = []
-    let cache: RunCache = {
+    state.cache = createFakeCache({
       recordBatch: (mutant, test, { verdict }) => {
         recorded.push(
           `${mutant.mutant.id} ${test} ${verdict === 'survived' ? verdict : verdict.status}`,
         )
       },
-      lookupBatch: () => null,
-      dependencies: new Map(),
-      lookupUnit: () => null,
-      recordUnit: () => {},
-      regional: new Set(),
-      entries: new Map(),
-      pending: new Map(),
-      hashes: new Map(),
-      inputs: new Map(),
-      forget: () => {},
-      environment: [],
-    }
-    state.cache = cache
+    })
     let plan = planBatch(
       state,
       ['killed', 'survived', 'unreached'].map(mutant => ({

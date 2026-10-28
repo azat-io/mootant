@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ReadCheck } from '../../../types/syntax/read-check'
 
 import { resolveClosedExpression } from '../../../core/syntax/resolve-closed-expression'
+import { createTestProgram } from '../../helpers/create-test-program'
 import { createTestFile } from '../../helpers/create-test-file'
 import { findProbe } from '../../helpers/find-probe'
 
@@ -17,7 +18,7 @@ import { findProbe } from '../../helpers/find-probe'
 function resolve(source: string, isAllowedRead: ReadCheck): string | null {
   let file = createTestFile(source)
   let value = resolveClosedExpression(
-    { scopes: file.scopes, shared: new Set(), tree: file.tree },
+    createTestProgram(file),
     findProbe(file),
     isAllowedRead,
   )

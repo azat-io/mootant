@@ -6,6 +6,18 @@ import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
+/**
+ * Lists the mutants of logical-operator for a snippet.
+ *
+ * @param source - Text of the snippet.
+ * @param setup - Preset, mutator settings, preset settings and file name of the
+ *   run.
+ * @returns Mutants as `original -> replacement`.
+ */
+function mutate(source: string, setup: MutatorSetup = {}): string[] {
+  return runMutator('logical-operator', source, setup).map(formatMutant)
+}
+
 describe('logicalOperator', () => {
   it.each<{ expected: string[]; source: string }>([
     {
@@ -125,9 +137,7 @@ describe('logicalOperator', () => {
   ])(
     'drops the operands of $source in boolean mode',
     ({ expected, source }) => {
-      expect(
-        runMutator('logical-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -183,9 +193,7 @@ describe('logicalOperator', () => {
       expected: [],
     },
   ])('treats $source as a truth position', ({ expected, source }) => {
-    expect(
-      runMutator('logical-operator', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string; file: string }>([
@@ -388,9 +396,7 @@ describe('logicalOperator', () => {
       file: 'example.ts',
     },
   ])('mutates $source in value mode', ({ expected, source, file }) => {
-    expect(
-      runMutator('logical-operator', source, { file }).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source, { file })).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string; file: string }>([
@@ -457,9 +463,7 @@ describe('logicalOperator', () => {
       file: 'example.js',
     },
   ])('mutates the returned group $source', ({ expected, source, file }) => {
-    expect(
-      runMutator('logical-operator', source, { file }).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source, { file })).toStrictEqual(expected)
   })
 
   it.each<{ setup: MutatorSetup; expected: string[] }>([
@@ -475,11 +479,7 @@ describe('logicalOperator', () => {
   ])(
     'emits the constant that keeps a loop running with $setup',
     ({ expected, setup }) => {
-      expect(
-        runMutator('logical-operator', 'while (a || b) step()', setup).map(
-          formatMutant,
-        ),
-      ).toStrictEqual(expected)
+      expect(mutate('while (a || b) step()', setup)).toStrictEqual(expected)
     },
   )
 
@@ -536,9 +536,7 @@ describe('logicalOperator', () => {
   ])(
     'applies the options of $setup to $source',
     ({ expected, source, setup }) => {
-      expect(
-        runMutator('logical-operator', source, setup).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source, setup)).toStrictEqual(expected)
     },
   )
 
@@ -560,11 +558,9 @@ describe('logicalOperator', () => {
   ])(
     'leaves the leave-now constant of a first exit test to condition in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('logical-operator', source, {
-          settings: { timeouts: true },
-        }).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source, { settings: { timeouts: true } })).toStrictEqual(
+        expected,
+      )
     },
   )
 
@@ -606,11 +602,7 @@ describe('logicalOperator', () => {
   ])(
     'skips drops a running comparison subsumes, $lines',
     ({ expected, setup, lines }) => {
-      expect(
-        runMutator('logical-operator', lines.join('\n'), setup).map(
-          formatMutant,
-        ),
-      ).toStrictEqual(expected)
+      expect(mutate(lines.join('\n'), setup)).toStrictEqual(expected)
     },
   )
 
@@ -681,12 +673,9 @@ describe('logicalOperator', () => {
     ({ expected, setup, lines }) => {
       let file = 'example.js'
 
-      expect(
-        runMutator('logical-operator', lines.join('\n'), {
-          ...setup,
-          file,
-        }).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(lines.join('\n'), { ...setup, file })).toStrictEqual(
+        expected,
+      )
     },
   )
 
@@ -784,9 +773,7 @@ describe('logicalOperator', () => {
   ])(
     'owns the truth of the operands that other mutators leave in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('logical-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -818,9 +805,7 @@ describe('logicalOperator', () => {
   ])(
     'reads no direction from a ?? in a value position in $lines',
     ({ expected, lines }) => {
-      expect(
-        runMutator('logical-operator', lines.join('\n')).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(lines.join('\n'))).toStrictEqual(expected)
     },
   )
 
@@ -879,9 +864,7 @@ describe('logicalOperator', () => {
   ])(
     'keeps the drops in the timer delay of $source',
     ({ expected, skipped, source }) => {
-      expect(
-        runMutator('logical-operator', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
       expect(listSkipped('logical-operator', source)).toStrictEqual(skipped)
     },
   )

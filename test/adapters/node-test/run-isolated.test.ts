@@ -7,6 +7,7 @@ import path from 'node:path'
 import type { NodeTestHandle } from '../../../adapters/node-test/types/node-test-handle'
 import type { UnitEnd } from '../../../types/adapter/unit-end'
 
+import { createTestProcessOutcome } from '../../helpers/create-test-process-outcome'
 import { runTestFile } from '../../../adapters/node-test/run-test-file'
 import { runIsolated } from '../../../adapters/node-test/run-isolated'
 import { createNodeTestTry } from '../../helpers/create-node-test-try'
@@ -61,16 +62,13 @@ describe('runIsolated', () => {
       env: {},
     }
     vi.mocked(runTestFile).mockImplementation((_handle, input) =>
-      Promise.resolve({
-        records:
+      Promise.resolve(
+        createTestProcessOutcome(
           input.mutant === 'm3' ?
             []
           : [createNodeTestEnd({ environment: ['A'], reached: true })],
-        signal: null,
-        hung: false,
-        spawned: 0,
-        code: 0,
-      }),
+        ),
+      ),
     )
     let limits = { hitLimit: 10, timeout: 500 }
 
@@ -171,8 +169,8 @@ describe('runIsolated', () => {
       env: {},
     }
     vi.mocked(runTestFile).mockImplementation((_handle, input) =>
-      Promise.resolve({
-        records:
+      Promise.resolve(
+        createTestProcessOutcome(
           input.bail ?
             [
               createNodeTestTry({ failed: true, name: 'a', seq: 0 }),
@@ -185,11 +183,8 @@ describe('runIsolated', () => {
               createNodeTestTry({ name: 'b', seq: 1 }),
               createNodeTestEnd(),
             ],
-        signal: null,
-        hung: false,
-        spawned: 0,
-        code: 0,
-      }),
+        ),
+      ),
     )
     let limits = { hitLimit: 10, timeout: 500 }
 

@@ -18,6 +18,7 @@ import type { CacheEntry } from '../../../types/cache/cache-entry'
 import type { RunCache } from '../../../types/cache/run-cache'
 
 import { saveRunCache } from '../../../core/cache/save-run-cache'
+import { createFakeCache } from '../../helpers/create-fake-cache'
 
 /**
  * Real path of the temporary project of the tests.
@@ -65,7 +66,7 @@ function createCache(): RunCache {
       },
     ],
   ])
-  return {
+  return createFakeCache({
     hashes: new Map([
       [
         path.join(root, 'a.test.ts'),
@@ -85,14 +86,9 @@ function createCache(): RunCache {
     ]),
     environment: [path.join(root, 'vitest.config.ts')],
     inputs: new Map([['r1', reused]]),
-    lookupBatch: () => null,
-    lookupUnit: () => null,
-    recordBatch: () => {},
-    recordUnit: () => {},
-    regional: new Set(),
     entries,
     pending,
-  }
+  })
 }
 
 /**

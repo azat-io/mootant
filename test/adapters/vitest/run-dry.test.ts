@@ -4,15 +4,13 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import type {
-  VitestSessionState,
-  VitestHandle,
-} from '../../../adapters/vitest/types/vitest-session-state'
-import type {
   VitestOutRecord,
   VitestHeartbeat,
 } from '../../../adapters/vitest/types/vitest-worker'
+import type { VitestHandle } from '../../../adapters/vitest/types/vitest-session-state'
 import type { SwitchedFile } from '../../../types/adapter/switched-file'
 
+import { createVitestSessionState } from '../../helpers/create-vitest-session-state'
 import { getFileHash } from '../../../adapters/vitest/worker/get-file-hash'
 import { watchHeartbeats } from '../../../adapters/vitest/watch-heartbeats'
 import { stopHungWorker } from '../../../adapters/vitest/stop-hung-worker'
@@ -138,20 +136,7 @@ describe('runDry', () => {
     vi.mocked(stopHungWorker).mockImplementation(pid =>
       Promise.resolve(pid > 0),
     )
-    let state: VitestSessionState = {
-      pool: { createPoolWorker: () => null as never, name: 'pool' },
-      runnerPath: '/runner.ts',
-      mismatched: new Set(),
-      instrumented: true,
-      outside: new Set(),
-      spawns: new Map(),
-      served: new Set(),
-      environment: {},
-      keys: new Map(),
-      diagnostics: [],
-      files: null,
-      error: null,
-    }
+    let state = createVitestSessionState()
     let vitest = {
       runTestSpecifications: async (specifications: FakeSpecification[]) => {
         ran.push(specifications)

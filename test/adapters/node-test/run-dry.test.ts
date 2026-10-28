@@ -9,6 +9,7 @@ import type { NodeTestHandle } from '../../../adapters/node-test/types/node-test
 import type { NodeTestRecord } from '../../../adapters/node-test/types/node-test-record'
 import type { DryRunRequest } from '../../../types/adapter/dry-run-request'
 
+import { createTestProcessOutcome } from '../../helpers/create-test-process-outcome'
 import { runTestFile } from '../../../adapters/node-test/run-test-file'
 import { createNodeTestEnd } from '../../helpers/create-node-test-end'
 import { createNodeTestTry } from '../../helpers/create-node-test-try'
@@ -66,14 +67,7 @@ function mockRuns(
 ): void {
   vi.mocked(runTestFile).mockImplementation((_handle, input) => {
     let [records, fields = {}] = byFile[input.file]!
-    return Promise.resolve({
-      signal: null,
-      hung: false,
-      spawned: 0,
-      code: 0,
-      records,
-      ...fields,
-    })
+    return Promise.resolve(createTestProcessOutcome(records, fields))
   })
 }
 

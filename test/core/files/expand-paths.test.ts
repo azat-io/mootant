@@ -1,32 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { realpath, readdir, stat } from 'node:fs/promises'
 
 import type { FakeEntry } from '../../helpers/create-fake-file-system'
 
-import { createFakeFileSystem } from '../../helpers/create-fake-file-system'
+import { installFakeFileSystem } from '../../helpers/install-fake-file-system'
 import { expandPaths } from '../../../core/files/expand-paths'
 
 vi.mock(import('node:fs/promises'), () => ({
   realpath: vi.fn(),
+  readFile: vi.fn(),
   readdir: vi.fn(),
   stat: vi.fn(),
 }))
-
-/**
- * Serves `realpath`, `stat` and `readdir` from an in-memory tree for the
- * running test.
- *
- * @param entries - Absolute paths mapped to file text or special entries.
- */
-function installFileSystem(entries: Record<string, FakeEntry | string>): void {
-  let fileSystem = createFakeFileSystem(entries)
-  vi.mocked(realpath).mockImplementation(path => fileSystem.realpath(path))
-  vi.mocked(stat).mockImplementation(path => fileSystem.stat(path))
-  vi.mocked(readdir).mockImplementation(((
-    path: string,
-    options?: { withFileTypes?: boolean },
-  ) => fileSystem.readdir(path, options)) as typeof readdir)
-}
 
 /**
  * Builds a skipped-path warning.
@@ -61,7 +45,7 @@ describe('expandPaths', () => {
   })
 
   it('lists an explicit file with its real and display paths', async () => {
-    installFileSystem({ '/repo/src/a.ts': '' })
+    installFakeFileSystem({ '/repo/src/a.ts': '' })
 
     await expect(expandPaths(['src/a.ts'], '/repo')).resolves.toStrictEqual({
       files: [{ absolute: '/repo/src/a.ts', file: 'src/a.ts' }],
@@ -70,7 +54,7 @@ describe('expandPaths', () => {
   })
 
   it('writes display paths relative to the base directory', async () => {
-    installFileSystem({ '/repo/src/a.ts': '', '/other/b.ts': '' })
+    installFakeFileSystem({ '/repo/src/a.ts': '', '/other/b.ts': '' })
 
     await expect(
       expandPaths(['a.ts', '../../other/b.ts'], '/repo/src', '/repo'),
@@ -84,7 +68,7 @@ describe('expandPaths', () => {
   })
 
   it('walks a directory and keeps only source files', async () => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/src/node_modules/package/index.js': '',
       '/repo/src/link.ts': link('/repo/lib/b.ts'),
       '/repo/src/socket.ts': { kind: 'socket' },
@@ -121,7 +105,7 @@ describe('expandPaths', () => {
   })
 
   it('walks the directories given on the command line even when they are skipped in walks', async () => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/node_modules/package/index.js': '',
       '/repo/.config/settings.ts': '',
     })
@@ -141,7 +125,7 @@ describe('expandPaths', () => {
   })
 
   it('warns about an unreadable directory and keeps walking', async () => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/src/locked': { kind: 'unreadable-directory' },
       '/repo/src/a.ts': '',
     })
@@ -155,7 +139,7 @@ describe('expandPaths', () => {
   })
 
   it('names the working directory "." when it cannot be read', async () => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo': { kind: 'unreadable-directory' },
       '/other/a.ts': '',
     })
@@ -186,7 +170,7 @@ describe('expandPaths', () => {
       'Skipped socket.d.ts: not a JavaScript or TypeScript source file.',
     ],
   ])('warns about the explicit path %s', async (input, message) => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/socket.d.ts': { kind: 'socket' },
       '/repo/styles.D.CSS.TS': '',
       '/repo/types.d.ts': '',
@@ -201,7 +185,7 @@ describe('expandPaths', () => {
   })
 
   it('lists a file once when it is named through a link, another letter case and a directory', async () => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/link.ts': link('/repo/src/a.ts'),
       '/repo/src/a.ts': '',
     })
@@ -215,7 +199,7 @@ describe('expandPaths', () => {
   })
 
   it('resolves links in the working directory and in the middle of a path', async () => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/linked': link('/repo/src'),
       '/home/project': link('/repo'),
       '/repo/src/a.ts': '',
@@ -231,7 +215,7 @@ describe('expandPaths', () => {
 
   it('normalizes display paths to NFC', async () => {
     let decomposed = 'cafe\u{301}.ts'
-    installFileSystem({ [`/repo/src/${decomposed}`]: '' })
+    installFakeFileSystem({ [`/repo/src/${decomposed}`]: '' })
 
     await expect(expandPaths(['src'], '/repo')).resolves.toStrictEqual({
       files: [{ absolute: `/repo/src/${decomposed}`, file: 'src/café.ts' }],
@@ -240,7 +224,7 @@ describe('expandPaths', () => {
   })
 
   it('keeps parent segments for files outside the working directory', async () => {
-    installFileSystem({ '/repo/lib/a.ts': '', '/repo/app/b.ts': '' })
+    installFakeFileSystem({ '/repo/lib/a.ts': '', '/repo/app/b.ts': '' })
 
     let { files } = await expandPaths(['../lib/a.ts', 'b.ts'], '/repo/app')
 
@@ -263,7 +247,7 @@ describe('expandPaths', () => {
       'Paths not found: lib, src/{a,b}.ts. Mootant does not expand glob patterns; let the shell expand them or pass a directory.',
     ],
   ])('throws for the missing paths of %j', async (inputs, message) => {
-    installFileSystem({ '/repo/a.ts': '' })
+    installFakeFileSystem({ '/repo/a.ts': '' })
 
     await expect(expandPaths(inputs, '/repo')).rejects.toThrow(
       new Error(message),
@@ -274,7 +258,7 @@ describe('expandPaths', () => {
     [['missing.ts', 'locked/a.ts'], 'Cannot access locked/a.ts (EACCES).'],
     [['loop.ts'], 'Cannot access loop.ts (ELOOP).'],
   ])('throws for the inaccessible path in %j', async (inputs, message) => {
-    installFileSystem({
+    installFakeFileSystem({
       '/repo/locked': { kind: 'unreadable-directory' },
       '/repo/loop.ts': link('/repo/loop.ts'),
     })
@@ -285,7 +269,7 @@ describe('expandPaths', () => {
   })
 
   it('throws when no source file is found', async () => {
-    installFileSystem({ '/repo/docs/guide.md': '', '/repo/readme.md': '' })
+    installFakeFileSystem({ '/repo/docs/guide.md': '', '/repo/readme.md': '' })
 
     await expect(expandPaths(['docs', 'readme.md'], '/repo')).rejects.toThrow(
       new Error('No JavaScript or TypeScript files found in docs, readme.md.'),

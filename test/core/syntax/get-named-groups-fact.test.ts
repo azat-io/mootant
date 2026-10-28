@@ -2,10 +2,8 @@ import type { Node } from 'oxc-parser'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import type { AnalyzedProgram } from '../../../types/syntax/analyzed-program'
-import type { TestFile } from '../../helpers/create-test-file'
-
 import { getNamedGroupsFact } from '../../../core/syntax/get-named-groups-fact'
+import { createTestProgram } from '../../helpers/create-test-program'
 import { createTestFile } from '../../helpers/create-test-file'
 
 /**
@@ -32,25 +30,9 @@ function explain(
     type = 'TSNonNullExpression'
   }
   return getNamedGroupsFact(
-    programOf(file, component),
+    createTestProgram(file, component),
     file.find(type, receiver),
   )
-}
-
-/**
- * Builds the analyzed program of a parsed snippet.
- *
- * @param file - Parsed snippet.
- * @param component - Whether the snippet is the script of a component, whose
- *   top level other code shares.
- * @returns The runtime tree, scope analysis and shared scopes of the snippet.
- */
-function programOf(file: TestFile, component: boolean): AnalyzedProgram {
-  return {
-    shared: new Set(component ? [file.parsed.program] : []),
-    scopes: file.scopes,
-    tree: file.tree,
-  }
 }
 
 /**
@@ -352,7 +334,7 @@ describe('getNamedGroupsFact', () => {
     let file = createTestFile('const m = /(?<a>x)/u.exec(s); x = m?.()')
     expect(
       getNamedGroupsFact(
-        programOf(file, false),
+        createTestProgram(file),
         file.find('Identifier', 'm', 1),
       ),
     ).toBeNull()
@@ -390,7 +372,7 @@ describe('getNamedGroupsFact', () => {
     let file = createTestFile(
       ['const m = /(?<a>x)/u.exec(s)', ...reads].join('\n'),
     )
-    let program = programOf(file, false)
+    let program = createTestProgram(file)
     let links = reads.map((_, index) =>
       file.find('MemberExpression', 'm?.groups', index),
     )

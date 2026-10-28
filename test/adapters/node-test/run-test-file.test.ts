@@ -7,6 +7,7 @@ import path from 'node:path'
 import type { NodeTestHandle } from '../../../adapters/node-test/types/node-test-handle'
 import type { NodeTestUnit } from '../../../adapters/node-test/types/node-test-unit'
 
+import { createTestProcessOutcome } from '../../helpers/create-test-process-outcome'
 import { runTestProcess } from '../../../adapters/node-test/run-test-process'
 import { runTestFile } from '../../../adapters/node-test/run-test-file'
 
@@ -74,13 +75,7 @@ describe('runTestFile', () => {
       unit = JSON.parse(options.env['MOOTANT_UNIT']!) as NodeTestUnit
       expect(readFileSync(unit.out, 'utf8')).toBe('')
       options.onOutput!('text')
-      return Promise.resolve({
-        signal: null,
-        records: [],
-        hung: false,
-        spawned: 1,
-        code: 0,
-      })
+      return Promise.resolve(createTestProcessOutcome([], { spawned: 1 }))
     })
     /**
      * Deadline that is checked to be passed through.

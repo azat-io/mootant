@@ -6,6 +6,18 @@ import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
+/**
+ * Lists the mutants of string-literal for a snippet.
+ *
+ * @param source - Text of the snippet.
+ * @param setup - Preset, mutator settings, preset settings and file name of the
+ *   run.
+ * @returns Mutants as `original -> replacement`.
+ */
+function mutate(source: string, setup: MutatorSetup = {}): string[] {
+  return runMutator('string-literal', source, setup).map(formatMutant)
+}
+
 describe('stringLiteral', () => {
   it.each<{ expected: string[]; source: string; file?: string }>([
     { expected: ["'Hello' -> ''"], source: "x = 'Hello'" },
@@ -59,9 +71,7 @@ describe('stringLiteral', () => {
       file: 'example.tsx',
     },
   ])('mutates $source as in the catalog', ({ expected, source, file }) => {
-    expect(
-      runMutator('string-literal', source, { file }).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source, { file })).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string }>([
@@ -129,9 +139,7 @@ describe('stringLiteral', () => {
     { source: "f(void 'x')", expected: [] },
     { source: `f(void \`a\${x}\`)`, expected: [] },
   ])('handles $source', ({ expected, source }) => {
-    expect(
-      runMutator('string-literal', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string }>([
@@ -169,9 +177,7 @@ describe('stringLiteral', () => {
     { source: "if (s.includes(a, 'x')) run()", expected: ["'x' -> ''"] },
     { source: "if (Object.keys(o, 'k')) run()", expected: ["'k' -> ''"] },
   ])('treats the lookup key of $source', ({ expected, source }) => {
-    expect(
-      runMutator('string-literal', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string }>([
@@ -233,9 +239,7 @@ describe('stringLiteral', () => {
   ])(
     'leaves a forced decision to its owner in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('string-literal', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -256,9 +260,10 @@ describe('stringLiteral', () => {
   ])(
     'copies a branch when the comparison will not run in $source',
     ({ source, setup }) => {
-      expect(
-        runMutator('string-literal', source, setup).map(formatMutant),
-      ).toStrictEqual(["'' -> 'mootant'", "'small' -> ''"])
+      expect(mutate(source, setup)).toStrictEqual([
+        "'' -> 'mootant'",
+        "'small' -> ''",
+      ])
     },
   )
 
@@ -279,9 +284,7 @@ describe('stringLiteral', () => {
   ])(
     'empties an || default when the swap will not run in $source',
     ({ source, setup }) => {
-      expect(
-        runMutator('string-literal', source, setup).map(formatMutant),
-      ).toStrictEqual(["'anon' -> ''"])
+      expect(mutate(source, setup)).toStrictEqual(["'anon' -> ''"])
     },
   )
 
@@ -289,11 +292,9 @@ describe('stringLiteral', () => {
     { setup: { mutators: { 'string-literal': ['on', { caseTests: true }] } } },
     { setup: { preset: 'strict' } },
   ])('mutates case labels with $setup', ({ setup }) => {
-    expect(
-      runMutator('string-literal', "switch (x) { case 'x': run() }", setup).map(
-        formatMutant,
-      ),
-    ).toStrictEqual(["'x' -> ''"])
+    expect(mutate("switch (x) { case 'x': run() }", setup)).toStrictEqual([
+      "'x' -> ''",
+    ])
   })
 
   it.each<{ setup: MutatorSetup; expected: string[]; source: string }>([
@@ -320,9 +321,7 @@ describe('stringLiteral', () => {
   ])(
     'keeps the static owner of $source with $setup',
     ({ expected, source, setup }) => {
-      expect(
-        runMutator('string-literal', source, setup).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source, setup)).toStrictEqual(expected)
     },
   )
 
@@ -339,9 +338,7 @@ describe('stringLiteral', () => {
   ])(
     'decides the literal of $source with its owner',
     ({ expected, source }) => {
-      expect(
-        runMutator('string-literal', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -405,25 +402,22 @@ describe('stringLiteral', () => {
     ["x = RegExp('a', flags)", ["'a' -> ''"]],
     ["x = f('a', 'g')", ["'a' -> ''", "'g' -> ''"]],
   ])('keeps the strings of %s', (source, expected) => {
-    expect(
-      runMutator('string-literal', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it('keeps the flags of a RegExp call when regex-flag is off', () => {
     expect(
-      runMutator('string-literal', "x = new RegExp('^a$', 'mi')", {
+      mutate("x = new RegExp('^a$', 'mi')", {
         mutators: { 'regex-flag': 'off' },
-      }).map(formatMutant),
+      }),
     ).toStrictEqual(["'mi' -> ''"])
   })
 
   it('keeps the flags of a RegExp call whose regex-flag mutants are ignored', () => {
     expect(
-      runMutator(
-        'string-literal',
+      mutate(
         "// mootant-ignore-next-line regex-flag\nx = new RegExp('^a$', 'mi')",
-      ).map(formatMutant),
+      ),
     ).toStrictEqual(["'mi' -> ''"])
   })
 })

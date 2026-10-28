@@ -7,9 +7,8 @@ import type { FileScore } from '../../../types/report/file-score'
 import { formatRunTextReport } from '../../../cli/report/format-run-text-report'
 import { getShortIdLength } from '../../../cli/report/get-short-id-length'
 import { getDisplayWidth } from '../../../cli/terminal/get-display-width'
-import { buildRunReport } from '../../../cli/report/build-run-report'
 import { createTextStyle } from '../../helpers/create-text-style'
-import { createRunResult } from '../../helpers/create-run-result'
+import { createRunReport } from '../../helpers/create-run-report'
 import { showEscapes } from '../../helpers/show-escapes'
 
 /**
@@ -67,21 +66,9 @@ function getField(text: string, label: string): undefined | string {
     ?.slice(16)
 }
 
-/**
- * Builds the report of the shared run result.
- *
- * @returns Report with a mutant of every status.
- */
-function createReport(): RunReport {
-  return buildRunReport(createRunResult(), {
-    recheck: 'mootant run src',
-    all: true,
-  })
-}
-
 describe('formatRunTextReport', () => {
   it('prints the header, the work, the counts, the mutants to act on and a hint', () => {
-    expect(format(createReport())).toMatchInlineSnapshot(`
+    expect(format(createRunReport())).toMatchInlineSnapshot(`
       "● mootant run src                                                            vitest 5.0.4
 
       dry run         3 tests in 0.2s
@@ -124,7 +111,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('colors the counts, statuses and the score', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.threshold = 50
 
     expect(showEscapes(format(report, { colors: true })))
@@ -171,7 +158,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('adds covering tests and runs when verbose, in ASCII', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.runs = {
       confirmation: 1,
       isolated: 2,
@@ -226,7 +213,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('cuts reasons to a narrow terminal', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.mutants[3]!.message = 'x'.repeat(80)
 
     expect(format(report, { width: 40 }).split('\n').slice(-4))
@@ -241,7 +228,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('cuts a long line around the change, both sides at the same columns', () => {
-    let report = createReport()
+    let report = createRunReport()
     Object.assign(report.mutants[2]!, {
       before: [
         `  if (${'value.'.repeat(12)}size < limit && ${'other.'.repeat(8)}ok) {`,
@@ -279,7 +266,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('starts a change too wide for the line a few columns before it', () => {
-    let report = createReport()
+    let report = createRunReport()
     Object.assign(report.mutants[2]!, {
       before: [`call(first, ${'a'.repeat(70)})`],
       after: [`call(first, ${'b'.repeat(70)})`],
@@ -299,7 +286,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('shows the first and last lines of a long multi-line change', () => {
-    let report = createReport()
+    let report = createRunReport()
     Object.assign(report.mutants[2]!, {
       before: [
         '    if (ready) {',
@@ -328,7 +315,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('keeps short multi-line changes whole and trims their indentation', () => {
-    let report = createReport()
+    let report = createRunReport()
     Object.assign(report.mutants[2]!, {
       before: ['\t\tlet total =', '\t\t\tfirst + second'],
       after: ['\t\tlet total =', '\t\t\tfirst - second'],
@@ -349,7 +336,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('keeps every line within a narrow terminal, with wide characters', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.mutants[2]!.file = `src/${'deep/'.repeat(12)}cart.ts`
     report.mutants[2]!.mutator = 'acme/a-very-long-mutator-name-of-a-plugin'
     Object.assign(report.mutants[2]!, {
@@ -375,7 +362,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('suggests to re-check the first survivor, else the first listed mutant', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.mutants[2]!.line = 9
 
     expect(format(report).split('\n').at(-1)).toBe(
@@ -392,7 +379,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('names a single covering test without a line, and no reason', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.mutants[2]!.test = {
       file: 'test/cart.test.ts',
       name: 'cart > unit',
@@ -416,7 +403,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('names the test file but no covering test of a survivor reached only at load', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.mutants[2]!.testFiles = { 'test/other.test.ts': 0 }
     report.mutants[2]!.coveredBy = []
     report.mutants[2]!.test = null
@@ -429,7 +416,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('names the test file to extend of a mutant without coverage', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.mutants[4]!.testFiles = { 'test/cart.test.ts': 0 }
 
     expect(getSection(format(report), 'unco')).toBe(
@@ -443,7 +430,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('keeps the end of a long test file path in a narrow terminal', () => {
-    let report = createReport()
+    let report = createRunReport()
     let file =
       'test/features/billing/invoices/calculations/compute-invoice-total.test.ts'
     report.mutants[4]!.testFiles = { [file]: 0 }
@@ -456,14 +443,14 @@ describe('formatRunTextReport', () => {
   })
 
   it('names no test file of a mutant without one', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.mutants[2]!.testFiles = {}
 
     expect(getSection(format(report), 'surv')).not.toContain('test:')
   })
 
   it('prints neither the list nor the hint when no mutant needs action', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.mutants = report.mutants.filter(mutant => mutant.status === 'Killed')
     report.summary.totalBatch = 0
 
@@ -480,14 +467,14 @@ describe('formatRunTextReport', () => {
       threshold: 70,
     },
   ])('checks the threshold $threshold', ({ threshold, expected }) => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.threshold = threshold
 
     expect(getField(format(report), 'score')).toBe(expected)
   })
 
   it('names scores without mutants to score', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.coveredScore = null
     report.summary.score = null
 
@@ -495,7 +482,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('leaves out the covered score when it equals the score', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.coveredScore = 50
     report.summary.threshold = 50
 
@@ -503,7 +490,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('names a covered score without covered mutants', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.coveredScore = null
     report.summary.score = 0
 
@@ -511,7 +498,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('leaves out errors and ignored mutants when there are none', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.totalErrorMutants = 0
     report.summary.totalIgnored = 0
     let text = format(report)
@@ -521,7 +508,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('counts the verdicts that came from the cache after the ignored ones', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.totalCached = 4
 
     expect(getField(format(report), 'mutants')).toBe(
@@ -534,14 +521,14 @@ describe('formatRunTextReport', () => {
   })
 
   it('prints no runs when nothing ran', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.runs = {}
 
     expect(getField(format(report, { verbose: true }), 'runs')).toBe('none')
   })
 
   it('names the modules with the largest share of test time in a long run', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.duration.total = 60_000
     report.summary.duration.isolated = 40_000
     report.summary.staticCost = [3000, 1500, 1000, 500].map(
@@ -559,7 +546,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('shares no test time without any', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.duration.total = 60_000
     report.summary.duration.isolated = 40_000
     report.summary.staticCost = [
@@ -576,7 +563,7 @@ describe('formatRunTextReport', () => {
   ])(
     'leaves out the most test time with $given',
     ({ isolated, costs, total }) => {
-      let report = createReport()
+      let report = createRunReport()
       report.summary.duration.isolated = isolated
       report.summary.duration.total = total
       report.summary.staticCost = report.summary.staticCost.slice(0, costs)
@@ -586,7 +573,7 @@ describe('formatRunTextReport', () => {
   )
 
   it('counts several batch verdicts in fast mode', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.totalBatch = 3
 
     expect(format(report)).toContain(
@@ -595,13 +582,13 @@ describe('formatRunTextReport', () => {
   })
 
   it('wraps the note about batch verdicts to a narrow terminal', () => {
-    expect(format(createReport(), { width: 40 })).toContain(
+    expect(format(createRunReport(), { width: 40 })).toContain(
       '\n1 kill or timeout comes from batch tries\nand may be false; run without --fast to\nconfirm.\n',
     )
   })
 
   it('leaves out the batch phase and its note in the default mode', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.mode = 'isolated'
     report.summary.totalBatch = null
     report.summary.duration.batch = null
@@ -614,14 +601,14 @@ describe('formatRunTextReport', () => {
   })
 
   it('names the test runner without a version', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.runnerVersion = null
 
     expect(format(report).split('\n', 1)[0]).toMatch(/ {2}vitest$/u)
   })
 
   it('marks the focus of a mutant that the replacement applies as it is', () => {
-    let report = createReport()
+    let report = createRunReport()
     Object.assign(report.mutants[2]!, {
       before: ['  return /^a+b$/u.test(size)'],
       after: ['  return /^a+b/u.test(size)'],
@@ -649,7 +636,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('marks the changed words of a focus the replacement does not apply as it is', () => {
-    let report = createReport()
+    let report = createRunReport()
     Object.assign(report.mutants[2]!, {
       before: ["  return new RegExp('x[0-9]')"],
       after: ["  return new RegExp('x[^]')"],
@@ -677,10 +664,7 @@ describe('formatRunTextReport', () => {
   })
 
   it('lists the files with the lowest scores after the counts', () => {
-    let report = buildRunReport(createRunResult(), {
-      recheck: 'mootant run src',
-      all: false,
-    })
+    let report = createRunReport(false)
     let files = Array.from({ length: 7 }, (_, position) => ({
       file: `src/very/long/directory/file-${position}.ts`,
       noCoverage: position === 1 ? 2 : 0,

@@ -2,9 +2,8 @@ import type { IdentifierReference } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
-import type { AnalyzedProgram } from '../../../types/syntax/analyzed-program'
-
 import { isGlobalTypeName } from '../../../core/syntax/is-global-type-name'
+import { createTestProgram } from '../../helpers/create-test-program'
 import { createTestFile } from '../../helpers/create-test-file'
 
 /**
@@ -16,13 +15,9 @@ import { createTestFile } from '../../helpers/create-test-file'
  * @returns Whether the name refers to a type from outside the file.
  */
 function check(source: string, component = false): boolean {
-  let { parsed, scopes, find, tree } = createTestFile(source)
-  let program: AnalyzedProgram = {
-    shared: new Set(component ? [parsed.program] : []),
-    scopes,
-    tree,
-  }
-  let reference = find('TSTypeReference', 'Promise<void>')
+  let file = createTestFile(source)
+  let program = createTestProgram(file, component)
+  let reference = file.find('TSTypeReference', 'Promise<void>')
   return isGlobalTypeName(program, reference.typeName as IdentifierReference)
 }
 

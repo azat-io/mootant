@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-candidates'
 
-import { createMutatorRegistry } from '../../../core/plugins/create-mutator-registry'
-import { generateFileMutants } from '../../../core/generate/generate-file-mutants'
-import { resolvePreset } from '../../../core/plugins/resolve-preset'
-import { corePlugin } from '../../../core/plugins/core-plugin'
+import { generateMutants } from '../../helpers/generate-mutants'
 import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
@@ -158,15 +155,7 @@ describe('optionalChaining', () => {
   })
 
   it('comes before the statement removal of the same range', () => {
-    let registry = createMutatorRegistry(corePlugin, {})
-    let { mutators, settings } = resolvePreset(registry, 'recommended')
-    let { mutants } = generateFileMutants({
-      knownMutatorIds: new Set(registry.mutators.keys()),
-      source: 'callback?.()',
-      file: 'example.ts',
-      settings,
-      mutators,
-    })
+    let mutants = generateMutants('callback?.()')
 
     expect(mutants).toMatchObject([
       { mutator: 'optional-chaining', replacement: 'callback()', start: 0 },

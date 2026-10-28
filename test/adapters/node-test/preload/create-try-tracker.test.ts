@@ -144,6 +144,24 @@ function pick<Kind extends NodeTestRecord['kind']>(
   )
 }
 
+/**
+ * Runs a fake test with no sites between its start and its end.
+ *
+ * @param tracker - Tracker that sees the test.
+ * @param fullName - Suites and name of the test, joined by `>`.
+ * @param state - State the context reads from; a passed test when omitted.
+ */
+function runTest(
+  tracker: ReturnType<typeof createTryTracker>,
+  fullName: string,
+  state: Partial<FakeTest['state']> = {},
+): void {
+  let test = createTest(fullName)
+  Object.assign(test.state, state)
+  tracker.open(test.context)
+  test.end()
+}
+
 let inputs = {
   required: ['/a.cjs'],
   environment: ['A'],
@@ -268,19 +286,14 @@ describe('createTryTracker', () => {
 
   it('reads timeouts and messages of failed tries', () => {
     let { tracker, records } = setup()
-    let timeout = createTest('timeout')
-    timeout.state.passed = false
-    timeout.state.error = {
-      cause: new Error('test timed out after 30ms'),
-      failureType: 'testTimeoutFailure',
-    }
-    tracker.open(timeout.context)
-    timeout.end()
-    let thrown = createTest('thrown')
-    thrown.state.passed = false
-    thrown.state.error = 'plain'
-    tracker.open(thrown.context)
-    thrown.end()
+    runTest(tracker, 'timeout', {
+      error: {
+        cause: new Error('test timed out after 30ms'),
+        failureType: 'testTimeoutFailure',
+      },
+      passed: false,
+    })
+    runTest(tracker, 'thrown', { error: 'plain', passed: false })
     tracker.exit(1, inputs)
 
     expect(
@@ -327,11 +340,10 @@ describe('createTryTracker', () => {
     tracker.open(passed.context)
     runtime.hit('m1')
     passed.end()
-    let failed = createTest('failed')
-    failed.state.passed = false
-    failed.state.error = new Error('expected 1')
-    tracker.open(failed.context)
-    failed.end()
+    runTest(tracker, 'failed', {
+      error: new Error('expected 1'),
+      passed: false,
+    })
     let skipped = createTest('skipped')
 
     expect(() => {
@@ -370,18 +382,10 @@ describe('createTryTracker', () => {
       mutant: 'm1',
       bail: true,
     })
-    let early = createTest('early')
-    early.state.passed = false
-    tracker.open(early.context)
-    early.end()
+    runTest(tracker, 'early', { passed: false })
     runtime.hit('m1')
-    let todo = createTest('todo')
-    todo.state.passed = false
-    tracker.open(todo.context)
-    todo.end()
-    let last = createTest('last')
-    tracker.open(last.context)
-    last.end()
+    runTest(tracker, 'todo', { passed: false })
+    runTest(tracker, 'last')
     tracker.exit(0, inputs)
 
     expect(
@@ -403,16 +407,8 @@ describe('createTryTracker', () => {
     let error = new Error('todo')
     tracker.todo(undefined)
     tracker.todo(error)
-    let own = createTest('own')
-    own.state.passed = false
-    own.state.error = error
-    tracker.open(own.context)
-    own.end()
-    let unset = createTest('unset')
-    unset.state.passed = false
-    unset.state.error = undefined
-    tracker.open(unset.context)
-    unset.end()
+    runTest(tracker, 'own', { passed: false, error })
+    runTest(tracker, 'unset', { error: undefined, passed: false })
     tracker.exit(1, inputs)
 
     expect(
@@ -432,11 +428,7 @@ describe('createTryTracker', () => {
     })
     runtime.hit('m1')
     let error = new Error('todo')
-    let late = createTest('late')
-    late.state.passed = false
-    late.state.error = error
-    tracker.open(late.context)
-    late.end()
+    runTest(tracker, 'late', { passed: false, error })
     let skipped = createTest('skipped')
 
     expect(() => {
@@ -483,9 +475,7 @@ describe('createTryTracker', () => {
     tracker.open(failed.context)
     runtime.hit('m1')
     failed.end()
-    let next = createTest('next')
-    tracker.open(next.context)
-    next.end()
+    runTest(tracker, 'next')
     tracker.exit(1, inputs)
 
     expect(pick(records, 'try').map(entry => entry.name)).toStrictEqual([

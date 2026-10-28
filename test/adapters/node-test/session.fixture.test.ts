@@ -2,12 +2,11 @@ import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 
-import type { BuiltInAdapters } from '../../../types/adapter/built-in-adapters'
-import type { TestAdapter } from '../../../types/adapter/test-adapter'
-
 import { createWorkDirectory } from '../../../core/run/create-work-directory'
 import { buildNodeTestPreload } from '../../helpers/build-node-test-preload'
 import { nodeTestAdapter } from '../../../adapters/node-test/index'
+import { createBuiltIns } from '../../helpers/create-built-ins'
+import { shortenDryRuns } from '../../helpers/shorten-dry-runs'
 import { runMutants } from '../../../core/run-mutants'
 
 /**
@@ -29,42 +28,6 @@ let fixtures = path.resolve(import.meta.dirname, '../../fixtures/node-test')
  * older Node in CI, else the one running the tests.
  */
 let node = process.env['MOOTANT_TEST_NODE'] ?? process.execPath
-
-/**
- * Creates a node:test adapter whose dry runs use shorter watchdog budgets, so a
- * hang shows within seconds.
- *
- * @returns Adapter with the shortened dry runs.
- */
-function createShortenedAdapter(): TestAdapter {
-  let adapter = nodeTestAdapter({ node })
-  return {
-    ...adapter,
-    start: async context => {
-      let session = await adapter.start(context)
-      return {
-        ...session,
-        dryRun: request =>
-          session.dryRun({ ...request, timeouts: { file: 3000, test: 500 } }),
-      }
-    },
-  }
-}
-
-/**
- * Creates built-in adapters with only the given node:test adapter.
- *
- * @param adapter - Adapter `node-test` loads.
- * @returns Built-in adapters of a run.
- */
-function createBuiltIns(adapter: TestAdapter): BuiltInAdapters {
-  return {
-    'node-test': {
-      load: () => Promise.resolve(adapter),
-      detect: () => Promise.resolve(true),
-    },
-  }
-}
 
 describe('node-test adapter', () => {
   let built: Awaited<ReturnType<typeof buildNodeTestPreload>>
@@ -164,7 +127,7 @@ describe('node-test adapter', () => {
   it('stops on a test file that fails to load without mutants', async () => {
     await expect(
       runMutants({
-        builtIns: createBuiltIns(nodeTestAdapter({ node })),
+        builtIns: createBuiltIns('node-test', nodeTestAdapter({ node })),
         cwd: path.join(fixtures, 'broken'),
         paths: ['src'],
         concurrency: 1,
@@ -178,7 +141,10 @@ describe('node-test adapter', () => {
   it('stops on a test that hangs without mutants and names it', async () => {
     await expect(
       runMutants({
-        builtIns: createBuiltIns(createShortenedAdapter()),
+        builtIns: createBuiltIns(
+          'node-test',
+          shortenDryRuns(nodeTestAdapter({ node }), { file: 3000, test: 500 }),
+        ),
         cwd: path.join(fixtures, 'stuck'),
         paths: ['src'],
         concurrency: 1,

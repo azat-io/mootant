@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { getTruthOnlyName } from '../../../core/syntax/get-truth-only-name'
+import { createTestProgram } from '../../helpers/create-test-program'
 import { createTestFile } from '../../helpers/create-test-file'
 
 /**
@@ -15,11 +16,7 @@ import { createTestFile } from '../../helpers/create-test-file'
 function check(source: string, component = false): string | null {
   let file = createTestFile(source)
   return getTruthOnlyName(
-    {
-      shared: new Set(component ? [file.parsed.program] : []),
-      scopes: file.scopes,
-      tree: file.tree,
-    },
+    createTestProgram(file, component),
     file.find('LogicalExpression'),
   )
 }

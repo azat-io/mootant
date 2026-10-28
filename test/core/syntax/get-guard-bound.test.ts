@@ -2,9 +2,9 @@ import type { AssignmentExpression, UpdateExpression } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
-import type { AnalyzedProgram } from '../../../types/syntax/analyzed-program'
 import type { ValueBound } from '../../../types/syntax/value-bound'
 
+import { createTestProgram } from '../../helpers/create-test-program'
 import { getGuardBound } from '../../../core/syntax/get-guard-bound'
 import { createTestFile } from '../../helpers/create-test-file'
 import { walkTree } from '../../../core/tree/walk-tree'
@@ -40,11 +40,7 @@ function guardOf(
     }
     return true
   })
-  let program: AnalyzedProgram = {
-    scopes: file.scopes,
-    shared: new Set(),
-    tree: file.tree,
-  }
+  let program = createTestProgram(file)
   let bound = getGuardBound(program, decrement!, {
     nullable: false,
     integer: true,

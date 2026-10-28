@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import { formatRunTextReport } from '../../../cli/report/format-run-text-report'
 import { formatRunReport } from '../../../cli/report/format-run-report'
-import { buildRunReport } from '../../../cli/report/build-run-report'
 import { slimRunReport } from '../../../cli/report/slim-run-report'
 import { createTextStyle } from '../../helpers/create-text-style'
-import { createRunResult } from '../../helpers/create-run-result'
+import { createRunReport } from '../../helpers/create-run-report'
 
 /**
  * Command, style and verbosity of the text format.
@@ -20,10 +19,7 @@ let options = {
 
 describe('formatRunReport', () => {
   it('formats the text report', () => {
-    let report = buildRunReport(createRunResult(), {
-      recheck: 'mootant run src',
-      all: true,
-    })
+    let report = createRunReport()
 
     expect(formatRunReport(report, 'text', options)).toBe(
       formatRunTextReport(report, options),
@@ -31,10 +27,7 @@ describe('formatRunReport', () => {
   })
 
   it('prints the slim report as compact JSON', () => {
-    let report = buildRunReport(createRunResult(), {
-      recheck: 'mootant run src',
-      all: true,
-    })
+    let report = createRunReport()
 
     let text = formatRunReport(report, 'json', options)
 
@@ -42,10 +35,7 @@ describe('formatRunReport', () => {
   })
 
   it('prints the full report as compact JSON when verbose', () => {
-    let report = buildRunReport(createRunResult(), {
-      recheck: 'mootant run src',
-      all: true,
-    })
+    let report = createRunReport()
 
     let text = formatRunReport(report, 'json', { ...options, verbose: true })
 

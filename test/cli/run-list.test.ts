@@ -4,6 +4,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ListResult } from '../../types/report/list-result'
 import type { Diagnostic } from '../../types/mutant/diagnostic'
+import type { ListOptions } from '../../cli/parse-arguments'
 
 import { listMutants } from '../../core/list-mutants'
 import { runList } from '../../cli/run-list'
@@ -98,6 +99,24 @@ function createResult(diagnostics: Diagnostic[]): ListResult {
   }
 }
 
+/**
+ * Runs `mootant list src --preset recommended` with the mocked result.
+ *
+ * @param options - Options that differ from a text report without skipped
+ *   candidates or verbosity.
+ * @returns Promise of the command.
+ */
+function listSource(options: Partial<ListOptions> = {}): Promise<void> {
+  return runList({
+    preset: 'recommended',
+    paths: ['src'],
+    skipped: false,
+    verbose: false,
+    json: false,
+    ...options,
+  })
+}
+
 describe('runList', () => {
   let consoleErrorSpy: MockInstance<typeof console.error>
   let consoleInfoSpy: MockInstance<typeof console.info>
@@ -141,13 +160,7 @@ describe('runList', () => {
   it('prints the text report and leaves the exit code alone', async () => {
     vi.mocked(listMutants).mockResolvedValue(createResult([]))
 
-    await runList({
-      preset: 'recommended',
-      paths: ['src'],
-      skipped: false,
-      verbose: false,
-      json: false,
-    })
+    await listSource()
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
       [
@@ -169,13 +182,7 @@ describe('runList', () => {
       createResult([readError, unknownMutator, skippedPath]),
     )
 
-    await runList({
-      preset: 'recommended',
-      paths: ['src'],
-      skipped: false,
-      verbose: false,
-      json: false,
-    })
+    await listSource()
 
     expect(consoleWarnSpy.mock.calls).toStrictEqual([
       [
@@ -201,13 +208,7 @@ describe('runList', () => {
       createResult([readError, skippedPath]),
     )
 
-    await runList({
-      preset: 'recommended',
-      paths: ['src'],
-      skipped: false,
-      verbose: false,
-      json: true,
-    })
+    await listSource({ json: true })
 
     let [[output]] = consoleInfoSpy.mock.calls as [[string]]
 
@@ -228,13 +229,7 @@ describe('runList', () => {
   it('prints the full JSON report with --verbose', async () => {
     vi.mocked(listMutants).mockResolvedValue(createResult([]))
 
-    await runList({
-      preset: 'recommended',
-      paths: ['src'],
-      skipped: false,
-      verbose: true,
-      json: true,
-    })
+    await listSource({ verbose: true, json: true })
 
     let [[output]] = consoleInfoSpy.mock.calls as [[string]]
 
@@ -250,13 +245,7 @@ describe('runList', () => {
       new Error('Paths not found: src/missing.ts, lib.'),
     )
 
-    await runList({
-      preset: 'recommended',
-      paths: ['src'],
-      skipped: false,
-      verbose: false,
-      json: false,
-    })
+    await listSource()
 
     expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
       'Error: Paths not found: src/missing.ts, lib.',

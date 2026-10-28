@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { AnalyzedProgram } from '../../../types/syntax/analyzed-program'
-
+import { createTestProgram } from '../../helpers/create-test-program'
 import { isJoinedArray } from '../../../core/syntax/is-joined-array'
 import { createTestFile } from '../../helpers/create-test-file'
 
@@ -16,11 +15,7 @@ import { createTestFile } from '../../helpers/create-test-file'
  */
 function check(source: string, component = false): boolean {
   let file = createTestFile(source)
-  let program: AnalyzedProgram = {
-    shared: new Set(component ? [file.parsed.program] : []),
-    scopes: file.scopes,
-    tree: file.tree,
-  }
+  let program = createTestProgram(file, component)
   return isJoinedArray(program, file.find('ArrayExpression', '[]'))
 }
 

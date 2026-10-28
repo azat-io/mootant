@@ -26,9 +26,9 @@ import type {
   VitestOutRecord,
   VitestHeartbeat,
 } from '../../../adapters/vitest/types/vitest-worker'
+import type { BatchUnit, BatchTest } from '../../../types/adapter/batch-plan'
 import type { MutantRuntime } from '../../../types/adapter/mutant-runtime'
 import type { IsolatedUnit } from '../../../types/adapter/isolated-plan'
-import type { BatchUnit } from '../../../types/adapter/batch-plan'
 
 import { getFileHash } from '../../../adapters/vitest/worker/get-file-hash'
 import MootantRunner from '../../../adapters/vitest/runner'
@@ -71,6 +71,29 @@ const ROOT = '/project'
  */
 const FILE = '/project/test/a.test.ts'
 
+/**
+ * Watchdog budgets of the dry runs of the tests.
+ */
+const TIMEOUTS = { file: 100, test: 50 }
+
+/**
+ * Bounds of loading the fake test file and of its whole batch unit.
+ */
+const BATCH_LIMITS: BatchUnit['limits'] = {
+  load: { hitLimit: 50, timeout: 300 },
+  total: 5000,
+}
+
+/**
+ * Isolated unit of the fake test file with the mutant `m`.
+ */
+const ISOLATED_UNIT: IsolatedUnit = {
+  limits: { hitLimit: 100, timeout: 4000 },
+  project: '',
+  mutant: 'm',
+  file: FILE,
+}
+
 let listeners = {
   unhandledRejection: process.listeners('unhandledRejection'),
   uncaughtException: process.listeners('uncaughtException'),
@@ -80,7 +103,7 @@ let bodies = new WeakMap<RunnerTask, Body>()
 let hooks = new WeakMap<object, FakeHooks>()
 let cleanups: (() => unknown)[] = []
 let workerState = Reflect.get(globalThis, '__vitest_worker__') as {
-  ctx: { traces?: unknown }
+  ctx: { environment: { name: string }; traces?: unknown; pool: string }
 }
 let realTraces = workerState.ctx.traces
 let traces: FakeTraces | undefined
@@ -350,31 +373,6 @@ async function tearDownWorker(
 }
 
 /**
- * Runs a whole fake file with the runner as Vitest 5 does: the cleanup of the
- * worker-scoped fixtures is handed to the runner first, and runs in the
- * worker's teardown, after the file.
- *
- * @param runner - Runner under test.
- * @param file - Collected file.
- * @param load - What loading the file does.
- */
-async function runFile(
-  runner: MootantRunner,
-  file: RunnerTestFile,
-  load: () => void = () => {},
-): Promise<void> {
-  runner.onCleanupWorkerContext!(() => {})
-  await runner.onBeforeCollect([FILE])
-  load()
-  runner.onCollected([file])
-  if (file.result?.state !== 'fail') {
-    await runTasks(runner, file, file.tasks)
-  }
-  runner.onAfterRunFiles([file])
-  await tearDownWorker()
-}
-
-/**
  * Gets the suite hooks of a fake file, as `TestRunner.getSuiteHooks` does: a
  * file that failed to collect has none.
  *
@@ -397,6 +395,30 @@ function getHooks(
   }
   hooks.set(file, found)
   return found
+}
+
+/**
+ * Collects and runs a fake file with the runner as Vitest 5's `startTests`
+ * does, but without handing the cleanup of the worker-scoped fixtures to the
+ * runner and without the worker's teardown: a file that failed to collect runs
+ * no tests.
+ *
+ * @param runner - Runner under test.
+ * @param file - Collected file.
+ * @param load - What loading the file does.
+ */
+async function collectAndRun(
+  runner: MootantRunner,
+  file: RunnerTestFile,
+  load: () => void = () => {},
+): Promise<void> {
+  await runner.onBeforeCollect([FILE])
+  load()
+  runner.onCollected([file])
+  if (file.result?.state !== 'fail') {
+    await runTasks(runner, file, file.tasks)
+  }
+  runner.onAfterRunFiles([file])
 }
 
 /**
@@ -488,6 +510,59 @@ function createSuite(
 }
 
 /**
+ * Runs a whole fake file with the runner as Vitest 5 does: the cleanup of the
+ * worker-scoped fixtures is handed to the runner first, and runs in the
+ * worker's teardown, after the file.
+ *
+ * @param runner - Runner under test.
+ * @param file - Collected file.
+ * @param load - What loading the file does.
+ */
+async function runFile(
+  runner: MootantRunner,
+  file: RunnerTestFile,
+  load: () => void = () => {},
+): Promise<void> {
+  runner.onCleanupWorkerContext!(() => {})
+  await collectAndRun(runner, file, load)
+  await tearDownWorker()
+}
+
+/**
+ * Creates a runner for the current options in a `vmForks` pool, where Vitest
+ * hands the runner no cleanup of the worker-scoped fixtures.
+ *
+ * @returns Runner without `onCleanupWorkerContext`.
+ */
+function createVmRunner(): MootantRunner {
+  let { pool } = workerState.ctx
+  workerState.ctx.pool = 'vmForks'
+  try {
+    return createRunner().runner
+  } finally {
+    workerState.ctx.pool = pool
+  }
+}
+
+/**
+ * Sets the worker options the next runner reads: a dry run gets the watchdog
+ * budgets of the tests, batch and isolated runs get none.
+ *
+ * @param mode - Kind of the run.
+ * @param repeat - Whether a dry run tries every test twice in a row; false when
+ *   omitted.
+ */
+function setOptions(mode: VitestWorkerOptions['mode'], repeat = false): void {
+  options = {
+    timeouts: mode === 'dry' ? TIMEOUTS : null,
+    root: ROOT,
+    directory,
+    repeat,
+    mode,
+  }
+}
+
+/**
  * Reads the heartbeat file of this process.
  *
  * @returns Last beat.
@@ -496,6 +571,25 @@ function readBeat(): VitestHeartbeat {
   return JSON.parse(
     readFileSync(path.join(directory, 'beat', `${process.pid}.json`), 'utf8'),
   ) as VitestHeartbeat
+}
+
+/**
+ * Writes the plan of the fake test file with one batch unit.
+ *
+ * @param tests - Planned tests of the unit in file order.
+ * @param project - Name of the project of the file.
+ */
+function writeBatchPlan(tests: BatchTest[], project = ''): void {
+  writePlan([{ limits: BATCH_LIMITS, file: FILE, project, tests }], project)
+}
+
+/**
+ * Tells whether the heartbeat file of this process exists.
+ *
+ * @returns Whether the file is there.
+ */
+function hasBeat(): boolean {
+  return existsSync(path.join(directory, 'beat', `${process.pid}.json`))
 }
 
 /**
@@ -558,13 +652,7 @@ describe('mootantRunner', () => {
   })
 
   it('records coverage, stray errors and flips in a dry run with beats', async () => {
-    options = {
-      timeouts: { file: 100, test: 50 },
-      repeat: true,
-      mode: 'dry',
-      root: ROOT,
-      directory,
-    }
+    setOptions('dry', true)
     let { runner } = createRunner()
     let first = true
     let beats: VitestHeartbeat[] = []
@@ -654,13 +742,7 @@ describe('mootantRunner', () => {
   })
 
   it('records what the unit depended on in a dry run, its teardown included', async () => {
-    options = {
-      timeouts: { file: 100, test: 50 },
-      repeat: false,
-      mode: 'dry',
-      root: ROOT,
-      directory,
-    }
+    setOptions('dry')
     let project = path.join(directory, 'project')
     await mkdir(path.join(project, 'node_modules'), { recursive: true })
     options.root = project
@@ -746,25 +828,11 @@ describe('mootantRunner', () => {
   })
 
   it('surrounds every planned mutant with control tries in a batch run', async () => {
-    options = {
-      timeouts: null,
-      repeat: false,
-      mode: 'batch',
-      root: ROOT,
-      directory,
-    }
-    let limits = { load: { hitLimit: 50, timeout: 300 }, total: 5000 }
-    writePlan([
-      {
-        tests: [
-          { mutants: ['m1', 'm2'], timeout: 1000, hitLimit: 10, id: 'b' },
-          { mutants: ['m1', 'm3'], timeout: 1000, hitLimit: 10, id: 'c' },
-          { mutants: ['m1'], timeout: 1000, hitLimit: 10, id: 'd' },
-        ],
-        project: '',
-        file: FILE,
-        limits,
-      },
+    setOptions('batch')
+    writeBatchPlan([
+      { mutants: ['m1', 'm2'], timeout: 1000, hitLimit: 10, id: 'b' },
+      { mutants: ['m1', 'm3'], timeout: 1000, hitLimit: 10, id: 'c' },
+      { mutants: ['m1'], timeout: 1000, hitLimit: 10, id: 'd' },
     ])
     let { runner, config } = createRunner()
     let body: Body = runtime => {
@@ -784,7 +852,7 @@ describe('mootantRunner', () => {
     ]
     let file = createFile(tests)
     await runFile(runner, file, () => {
-      expect(getRuntime().hitLimit).toBe(50)
+      expect(getRuntime().hitLimit).toBe(BATCH_LIMITS.load.hitLimit)
       getRuntime().hit('m3')
     })
     let records = (await readRecords())[`${hash}-0`]!
@@ -811,28 +879,13 @@ describe('mootantRunner', () => {
     expect(records.at(-1)).toMatchObject({ environment: [] })
     expect(records.at(-1)).toHaveProperty('dependencies')
     expect(tests[4]!.mode).toBe('skip')
-    expect(
-      existsSync(path.join(directory, 'beat', `${process.pid}.json`)),
-    ).toBe(false)
+    expect(hasBeat()).toBe(false)
   })
 
   it('reads a try after its aroundEach teardown, with its mutant active', async () => {
-    options = {
-      timeouts: null,
-      repeat: false,
-      mode: 'batch',
-      root: ROOT,
-      directory,
-    }
-    writePlan([
-      {
-        tests: [
-          { mutants: ['m1', 'm2'], timeout: 1000, hitLimit: 10, id: 'a' },
-        ],
-        limits: { load: { hitLimit: 50, timeout: 300 }, total: 5000 },
-        project: '',
-        file: FILE,
-      },
+    setOptions('batch')
+    writeBatchPlan([
+      { mutants: ['m1', 'm2'], timeout: 1000, hitLimit: 10, id: 'a' },
     ])
     let { runner } = createRunner()
     let result = 0
@@ -869,23 +922,10 @@ describe('mootantRunner', () => {
   })
 
   it('writes late errors and abandons a unit after a timeout', async () => {
-    options = {
-      timeouts: null,
-      repeat: false,
-      mode: 'batch',
-      root: ROOT,
-      directory,
-    }
-    writePlan([
-      {
-        tests: [
-          { mutants: ['m1', 'm2'], hitLimit: 10, timeout: 20, id: 'a' },
-          { mutants: ['m2'], hitLimit: 10, timeout: 20, id: 'b' },
-        ],
-        limits: { load: { hitLimit: 50, timeout: 300 }, total: 5000 },
-        project: '',
-        file: FILE,
-      },
+    setOptions('batch')
+    writeBatchPlan([
+      { mutants: ['m1', 'm2'], hitLimit: 10, timeout: 20, id: 'a' },
+      { mutants: ['m2'], hitLimit: 10, timeout: 20, id: 'b' },
     ])
     let { runner, config } = createRunner(0)
     let tests = [
@@ -904,7 +944,7 @@ describe('mootantRunner', () => {
 
     let records = (await readRecords())[`${hash}-0`]!
 
-    expect(config.hookTimeout).toBe(300)
+    expect(config.hookTimeout).toBe(BATCH_LIMITS.load.timeout)
     expect(records).toMatchObject([
       { message: 'late one', kind: 'late', mutant: 'm2', test: 'a' },
       {
@@ -923,22 +963,9 @@ describe('mootantRunner', () => {
   })
 
   it('claims the unit planned for the project of the file', async () => {
-    options = {
-      timeouts: null,
-      repeat: false,
-      mode: 'batch',
-      root: ROOT,
-      directory,
-    }
-    writePlan(
-      [
-        {
-          tests: [{ mutants: ['m1'], hitLimit: 10, timeout: 20, id: 'a' }],
-          limits: { load: { hitLimit: 50, timeout: 300 }, total: 5000 },
-          project: 'unit',
-          file: FILE,
-        },
-      ],
+    setOptions('batch')
+    writeBatchPlan(
+      [{ mutants: ['m1'], hitLimit: 10, timeout: 20, id: 'a' }],
       'unit',
     )
     let { runner } = createRunner(10_000, 'unit')
@@ -950,13 +977,7 @@ describe('mootantRunner', () => {
   })
 
   it('skips every test of a file without a free unit', async () => {
-    options = {
-      timeouts: null,
-      repeat: false,
-      mode: 'batch',
-      root: ROOT,
-      directory,
-    }
+    setOptions('batch')
     let { runner } = createRunner()
     let tests = [createTest('a')]
     await runFile(runner, createFile(tests))
@@ -973,20 +994,8 @@ describe('mootantRunner', () => {
   })
 
   it('runs the file with the mutant active from loading until a test kills it in an isolated run', async () => {
-    options = {
-      mode: 'isolated',
-      timeouts: null,
-      repeat: false,
-      root: ROOT,
-      directory,
-    }
-    let unit = {
-      limits: { hitLimit: 100, timeout: 4000 },
-      project: '',
-      mutant: 'm',
-      file: FILE,
-    }
-    writePlan([unit, unit])
+    setOptions('isolated')
+    writePlan([ISOLATED_UNIT, ISOLATED_UNIT])
     let body: Body = runtime => {
       if (runtime.hit('m')) {
         throw new Error('killed')
@@ -1013,7 +1022,7 @@ describe('mootantRunner', () => {
 
     let records = await readRecords()
 
-    expect(config.hookTimeout).toBe(4000)
+    expect(config.hookTimeout).toBe(ISOLATED_UNIT.limits.timeout)
     // A failure before the mutant was reached proves nothing, so the unit
     // goes on; the kill of `c` skips what has not started.
     expect(tests.map(task => task.mode)).toStrictEqual([
@@ -1044,21 +1053,8 @@ describe('mootantRunner', () => {
   })
 
   it('ends a unit after the cleanup of the worker-scoped fixtures', async () => {
-    options = {
-      mode: 'isolated',
-      timeouts: null,
-      repeat: false,
-      root: ROOT,
-      directory,
-    }
-    writePlan([
-      {
-        limits: { hitLimit: 100, timeout: 4000 },
-        project: '',
-        mutant: 'm',
-        file: FILE,
-      },
-    ])
+    setOptions('isolated')
+    writePlan([ISOLATED_UNIT])
     let { runner } = createRunner()
     let file = createFile([createTest('a')])
     let seen: (string | null)[] = []
@@ -1070,15 +1066,10 @@ describe('mootantRunner', () => {
       await Promise.resolve()
       throw new Error('2 left open\nstack')
     })
-    await runner.onBeforeCollect([FILE])
-    runner.onCollected([file])
-    await runTasks(runner, file, file.tasks)
-    runner.onAfterRunFiles([file])
+    await collectAndRun(runner, file)
     let before = await readRecords()
 
-    expect(
-      existsSync(path.join(directory, 'beat', `${process.pid}.json`)),
-    ).toBe(true)
+    expect(hasBeat()).toBe(true)
     await expect(tearDownWorker()).resolves.toMatchObject({
       message: '2 left open\nstack',
     })
@@ -1097,41 +1088,23 @@ describe('mootantRunner', () => {
       hits: 1,
     })
     expect(getRuntime().active).toBeNull()
-    expect(
-      existsSync(path.join(directory, 'beat', `${process.pid}.json`)),
-    ).toBe(false)
+    expect(hasBeat()).toBe(false)
   })
 
   it('ends a unit after the environment teardown, whose error fails it', async () => {
-    options = {
-      mode: 'isolated',
-      timeouts: null,
-      repeat: false,
-      root: ROOT,
-      directory,
-    }
-    writePlan([
-      {
-        limits: { hitLimit: 100, timeout: 4000 },
-        project: '',
-        mutant: 'm',
-        file: FILE,
-      },
-    ])
+    setOptions('isolated')
+    writePlan([ISOLATED_UNIT])
     let { runner } = createRunner()
     let file = createFile([createTest('a')])
     let seen: unknown[] = []
     runner.onCleanupWorkerContext!(() => {})
-    await runner.onBeforeCollect([FILE])
-    runner.onCollected([file])
-    await runTasks(runner, file, file.tasks)
-    runner.onAfterRunFiles([file])
+    await collectAndRun(runner, file)
 
     await expect(
       tearDownWorker(() => {
         seen.push(
           getRuntime().active,
-          existsSync(path.join(directory, 'beat', `${process.pid}.json`)),
+          hasBeat(),
           readFileSync(path.join(directory, 'out', `${hash}-0.jsonl`), 'utf8')
             .trim()
             .split('\n')
@@ -1146,19 +1119,11 @@ describe('mootantRunner', () => {
       kind: 'end',
     })
     expect(getRuntime().active).toBeNull()
-    expect(
-      existsSync(path.join(directory, 'beat', `${process.pid}.json`)),
-    ).toBe(false)
+    expect(hasBeat()).toBe(false)
   })
 
   it('keeps the error of a failed cleanup over the environment teardown', async () => {
-    options = {
-      timeouts: null,
-      mode: 'batch',
-      repeat: false,
-      root: ROOT,
-      directory,
-    }
+    setOptions('batch')
     writePlan([
       {
         tests: [{ mutants: ['m'], timeout: 1000, hitLimit: 10, id: 'a' }],
@@ -1172,10 +1137,7 @@ describe('mootantRunner', () => {
       throw new Error('cleanup')
     })
     let file = createFile([createTest('a')])
-    await runner.onBeforeCollect([FILE])
-    runner.onCollected([file])
-    await runTasks(runner, file, file.tasks)
-    runner.onAfterRunFiles([file])
+    await collectAndRun(runner, file)
 
     await expect(
       tearDownWorker(() => {
@@ -1189,29 +1151,13 @@ describe('mootantRunner', () => {
   })
 
   it('ends a unit after the cleanup when the teardown cannot be watched', async () => {
-    options = {
-      mode: 'isolated',
-      timeouts: null,
-      repeat: false,
-      root: ROOT,
-      directory,
-    }
-    writePlan([
-      {
-        limits: { hitLimit: 100, timeout: 4000 },
-        project: '',
-        mutant: 'm',
-        file: FILE,
-      },
-    ])
+    setOptions('isolated')
+    writePlan([ISOLATED_UNIT])
     workerState.ctx.traces = undefined
     let { runner } = createRunner()
     let file = createFile([createTest('a')])
     runner.onCleanupWorkerContext!(() => {})
-    await runner.onBeforeCollect([FILE])
-    runner.onCollected([file])
-    await runTasks(runner, file, file.tasks)
-    runner.onAfterRunFiles([file])
+    await collectAndRun(runner, file)
     await Promise.all(cleanups.splice(0).map(listener => listener()))
 
     expect(
@@ -1220,21 +1166,8 @@ describe('mootantRunner', () => {
   })
 
   it('writes no end record when the files never finished', async () => {
-    options = {
-      mode: 'isolated',
-      timeouts: null,
-      repeat: false,
-      root: ROOT,
-      directory,
-    }
-    writePlan([
-      {
-        limits: { hitLimit: 100, timeout: 4000 },
-        project: '',
-        mutant: 'm',
-        file: FILE,
-      },
-    ])
+    setOptions('isolated')
+    writePlan([ISOLATED_UNIT])
     let { runner } = createRunner()
     runner.onCleanupWorkerContext!(() => {})
     await runner.onBeforeCollect([FILE])
@@ -1247,37 +1180,11 @@ describe('mootantRunner', () => {
   })
 
   it('ends a unit with its files without a teardown hook', async () => {
-    options = {
-      mode: 'isolated',
-      timeouts: null,
-      repeat: false,
-      root: ROOT,
-      directory,
-    }
-    writePlan([
-      {
-        limits: { hitLimit: 100, timeout: 4000 },
-        project: '',
-        mutant: 'm',
-        file: FILE,
-      },
-    ])
-    let state = Reflect.get(createRunner().runner, 'workerState') as {
-      ctx: { pool: string }
-    }
-    let { pool } = state.ctx
-    state.ctx.pool = 'vmForks'
-    let runner: MootantRunner
-    try {
-      ;({ runner } = createRunner())
-    } finally {
-      state.ctx.pool = pool
-    }
+    setOptions('isolated')
+    writePlan([ISOLATED_UNIT])
+    let runner = createVmRunner()
     let file = createFile([createTest('a')])
-    await runner.onBeforeCollect([FILE])
-    runner.onCollected([file])
-    await runTasks(runner, file, file.tasks)
-    runner.onAfterRunFiles([file])
+    await collectAndRun(runner, file)
 
     expect(runner.onCleanupWorkerContext).toBeUndefined()
     expect(
@@ -1286,41 +1193,22 @@ describe('mootantRunner', () => {
   })
 
   it('reports no dependencies with a test environment of its own', async () => {
-    options = {
-      mode: 'isolated',
-      timeouts: null,
-      repeat: false,
-      root: ROOT,
-      directory,
-    }
-    writePlan([
-      {
-        limits: { hitLimit: 100, timeout: 4000 },
-        project: '',
-        mutant: 'm',
-        file: FILE,
-      },
-    ])
-    let state = Reflect.get(createRunner().runner, 'workerState') as {
-      ctx: { environment: { name: string }; pool: string }
-    }
-    let { environment, pool } = state.ctx
-    state.ctx.pool = 'vmForks'
-    let runner: MootantRunner
-    try {
-      ;({ runner } = createRunner())
-    } finally {
-      state.ctx.pool = pool
-    }
+    setOptions('isolated')
+    writePlan([ISOLATED_UNIT])
+    let { environment } = workerState.ctx
+    let runner = createVmRunner()
     let file = createFile([createTest('a')])
     await runner.onBeforeCollect([FILE])
     runner.onCollected([file])
     await runTasks(runner, file, file.tasks)
-    state.ctx.environment = { ...environment, name: './test/environment.ts' }
+    workerState.ctx.environment = {
+      ...environment,
+      name: './test/environment.ts',
+    }
     try {
       runner.onAfterRunFiles([file])
     } finally {
-      state.ctx.environment = environment
+      workerState.ctx.environment = environment
     }
 
     expect((await readRecords())[`${hash}-0`]!.at(-1)).toMatchObject({
@@ -1330,13 +1218,7 @@ describe('mootantRunner', () => {
   })
 
   it('keeps the own repeats and retries of a test within each try', async () => {
-    options = {
-      timeouts: { file: 100, test: 50 },
-      repeat: true,
-      mode: 'dry',
-      root: ROOT,
-      directory,
-    }
+    setOptions('dry', true)
     let { runner } = createRunner()
     let calls = { repeated: 0, broken: 0, flaky: 0, once: 0 }
     let tests = [
@@ -1396,22 +1278,9 @@ describe('mootantRunner', () => {
   })
 
   it('keeps the mutant of a batch try active through its repetitions', async () => {
-    options = {
-      timeouts: null,
-      repeat: false,
-      mode: 'batch',
-      root: ROOT,
-      directory,
-    }
-    writePlan([
-      {
-        tests: [
-          { mutants: ['m1', 'm2'], timeout: 1000, hitLimit: 10, id: 'a' },
-        ],
-        limits: { load: { hitLimit: 50, timeout: 300 }, total: 5000 },
-        project: '',
-        file: FILE,
-      },
+    setOptions('batch')
+    writeBatchPlan([
+      { mutants: ['m1', 'm2'], timeout: 1000, hitLimit: 10, id: 'a' },
     ])
     let { runner } = createRunner()
     let active: (string | null)[] = []
@@ -1455,21 +1324,8 @@ describe('mootantRunner', () => {
   })
 
   it('abandons a unit when a repetition of a try runs out of time', async () => {
-    options = {
-      timeouts: null,
-      repeat: false,
-      mode: 'batch',
-      root: ROOT,
-      directory,
-    }
-    writePlan([
-      {
-        tests: [{ mutants: ['m1'], hitLimit: 10, timeout: 20, id: 'a' }],
-        limits: { load: { hitLimit: 50, timeout: 300 }, total: 5000 },
-        project: '',
-        file: FILE,
-      },
-    ])
+    setOptions('batch')
+    writeBatchPlan([{ mutants: ['m1'], hitLimit: 10, timeout: 20, id: 'a' }])
     let { runner } = createRunner()
     let tests = [
       Object.assign(
@@ -1494,13 +1350,7 @@ describe('mootantRunner', () => {
   })
 
   it('gives the dry watchdog the timeouts of the hooks', async () => {
-    options = {
-      timeouts: { file: 100, test: 50 },
-      repeat: false,
-      mode: 'dry',
-      root: ROOT,
-      directory,
-    }
+    setOptions('dry')
     let { runner } = createRunner(300)
     let beats: VitestHeartbeat[] = []
     let tests = [
@@ -1529,22 +1379,16 @@ describe('mootantRunner', () => {
     let after = readBeat().budget
     runner.onAfterRunFiles([file])
 
-    expect(outside).toBe(100 + 300 + 1000)
+    expect(outside).toBe(TIMEOUTS.file + 300 + 1000)
     expect(after).toBe(outside)
     expect(beats.map(beat => beat.budget)).toStrictEqual([
-      50 + 1000 + 2 * 200 + 1000,
+      TIMEOUTS.test + 1000 + 2 * 200 + 1000,
       2 ** 31 - 1 + 1000,
     ])
   })
 
   it('records a test that skipped itself at the next suite or the end', async () => {
-    options = {
-      timeouts: { file: 100, test: 50 },
-      repeat: true,
-      mode: 'dry',
-      root: ROOT,
-      directory,
-    }
+    setOptions('dry', true)
     let { runner } = createRunner()
     let skip: Body = () => {
       throw Object.assign(new Error('skipped'), { skip: true })
@@ -1575,13 +1419,7 @@ describe('mootantRunner', () => {
   })
 
   it('tries each test once in a dry run without repeats', async () => {
-    options = {
-      timeouts: { file: 100, test: 50 },
-      repeat: false,
-      mode: 'dry',
-      root: ROOT,
-      directory,
-    }
+    setOptions('dry')
     let { runner } = createRunner()
     let file = createFile([createTest('a'), createTest('b')])
     await runFile(runner, file)
@@ -1597,13 +1435,7 @@ describe('mootantRunner', () => {
   })
 
   it('keeps concurrent tests concurrent in a dry run that tries each once', async () => {
-    options = {
-      timeouts: { file: 100, test: 50 },
-      repeat: false,
-      mode: 'dry',
-      root: ROOT,
-      directory,
-    }
+    setOptions('dry')
     let { runner } = createRunner()
     let gates = {
       bRunning: Promise.withResolvers<undefined>(),
@@ -1693,13 +1525,7 @@ describe('mootantRunner', () => {
   })
 
   it('records a collection failure without running tests', async () => {
-    options = {
-      timeouts: { file: 100, test: 50 },
-      repeat: true,
-      mode: 'dry',
-      root: ROOT,
-      directory,
-    }
+    setOptions('dry', true)
     let { runner } = createRunner()
     let file = createFile([createTest('a')])
     file.result = { errors: [{ message: 'collect' }], state: 'fail' } as never
@@ -1711,13 +1537,7 @@ describe('mootantRunner', () => {
   })
 
   it('sends unhandled errors to the runner of the current file', () => {
-    options = {
-      timeouts: { file: 100, test: 50 },
-      repeat: true,
-      mode: 'dry',
-      root: ROOT,
-      directory,
-    }
+    setOptions('dry', true)
     let first = createRunner().runner
     let second = createRunner().runner
     let stray = vi.spyOn(second, 'onStray').mockReturnValue()

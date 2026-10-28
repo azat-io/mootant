@@ -2,13 +2,15 @@ import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 
-import type { BuiltInAdapters } from '../../../types/adapter/built-in-adapters'
 import type { MutantResult } from '../../../types/run/mutant-result'
 import type { RunEvent } from '../../../types/run/run-event'
 
 import { runNodeTestReference } from '../../helpers/run-node-test-reference'
 import { buildNodeTestPreload } from '../../helpers/build-node-test-preload'
 import { nodeTestAdapter } from '../../../adapters/node-test/index'
+import { classifyVerdict } from '../../helpers/classify-verdict'
+import { createBuiltIns } from '../../helpers/create-built-ins'
+import { describeMutant } from '../../helpers/describe-mutant'
 import { listMutants } from '../../../core/list-mutants'
 import { runMutants } from '../../../core/run-mutants'
 
@@ -53,7 +55,7 @@ interface Row {
   reference: string
 
   /**
-   * Verdict of mootant's run, reduced by `classify`.
+   * Verdict of mootant's run, reduced by `classifyVerdict`.
    */
   verdict: string
 
@@ -93,10 +95,13 @@ async function runBothWays(
 }> {
   let events: RunEvent[] = []
   let result = await runMutants({
+    builtIns: createBuiltIns(
+      'node-test',
+      nodeTestAdapter({ command: options.command, node }),
+    ),
     onProgress: event => {
       events.push(event)
     },
-    builtIns: createBuiltIns(options.command),
     fast: options.fast,
     paths: ['src'],
     concurrency: 2,
@@ -118,8 +123,8 @@ async function runBothWays(
   return {
     rows: result.results.map(entry => ({
       reference: reference.verdicts.get(entry.mutant.id)!,
+      verdict: classifyVerdict(entry),
       mutant: describeMutant(entry),
-      verdict: classify(entry),
     })),
     original: reference.original,
     result,
@@ -147,52 +152,6 @@ function pick(results: MutantResult[], mutants: string[]): string[] {
         result.isolatedBecause ?? '-',
       ].join(' | '),
     )
-}
-
-/**
- * Reduces a verdict to whether the mutant was detected; a mutant no test
- * reached survives a plain run too.
- *
- * @param result - Verdict of a mutant.
- * @returns `killed`, `survived`, or the status itself when it is neither.
- */
-function classify(result: MutantResult): string {
-  if (result.status === 'Killed') {
-    return 'killed'
-  }
-  if (result.status === 'Survived' || result.status === 'NoCoverage') {
-    return 'survived'
-  }
-  return result.status
-}
-
-/**
- * Creates built-in adapters with only the node:test adapter.
- *
- * @param command - Test command, when not the one of the project's scripts.
- * @returns Built-in adapters of a run.
- */
-function createBuiltIns(command?: string): BuiltInAdapters {
-  return {
-    'node-test': {
-      load: () => Promise.resolve(nodeTestAdapter({ command, node })),
-      detect: () => Promise.resolve(true),
-    },
-  }
-}
-
-/**
- * Names a mutant for a readable comparison.
- *
- * @param result - Verdict of a mutant.
- * @returns File, mutator and replacement of the mutant.
- */
-function describeMutant(result: MutantResult): string {
-  return [
-    result.mutant.file,
-    result.mutant.mutator,
-    result.mutant.replacement.replaceAll(/\s+/gu, ' '),
-  ].join(' | ')
 }
 
 describe('node:test verdict equivalence', () => {

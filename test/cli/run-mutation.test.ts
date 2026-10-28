@@ -5,6 +5,7 @@ import path from 'node:path'
 
 import type { RunProgress } from '../../cli/create-run-progress'
 import type { RunReport } from '../../types/report/run-report'
+import type { RunOptions } from '../../cli/parse-arguments'
 
 import { formatRunTextReport } from '../../cli/report/format-run-text-report'
 import { buildRunReport } from '../../cli/report/build-run-report'
@@ -21,6 +22,24 @@ import { runMutants } from '../../core/run-mutants'
 vi.mock(import('../../core/run-mutants'))
 vi.mock(import('../../cli/html/write-html-report'))
 vi.mock(import('../../cli/create-run-progress'))
+
+/**
+ * Runs `mootant run src` with the result the mocked core resolves.
+ *
+ * @param options - Options that differ from a text report without verbosity,
+ *   mutant ids or `--all`.
+ * @returns Promise of the command.
+ */
+function runSource(options: Partial<RunOptions> = {}): Promise<void> {
+  return runMutation({
+    paths: ['src'],
+    verbose: false,
+    mutantIds: [],
+    json: false,
+    all: false,
+    ...options,
+  })
+}
 
 /**
  * Builds a run result that passes: its mutant without a verdict is killed.
@@ -161,13 +180,7 @@ describe('runMutation', () => {
       return Promise.resolve(createPassingResult())
     })
 
-    await runMutation({
-      paths: ['src'],
-      verbose: false,
-      mutantIds: [],
-      all: false,
-      json: true,
-    })
+    await runSource({ json: true })
 
     expect(progress.handle).toHaveBeenCalledExactlyOnceWith({
       message: 'note',
@@ -182,13 +195,7 @@ describe('runMutation', () => {
     let result = createPassingResult()
     vi.mocked(runMutants).mockResolvedValue(result)
 
-    await runMutation({
-      paths: ['src'],
-      verbose: false,
-      mutantIds: [],
-      json: false,
-      all: false,
-    })
+    await runSource()
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
       formatRunTextReport(
@@ -219,13 +226,7 @@ describe('runMutation', () => {
   it('prints only the JSON document in JSON mode', async () => {
     vi.mocked(runMutants).mockResolvedValue(createPassingResult())
 
-    await runMutation({
-      paths: ['src'],
-      verbose: false,
-      mutantIds: [],
-      all: false,
-      json: true,
-    })
+    await runSource({ json: true })
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
       JSON.stringify(
@@ -243,13 +244,7 @@ describe('runMutation', () => {
   it('sets exit code 1 when the run does not pass', async () => {
     vi.mocked(runMutants).mockResolvedValue(createRunResult())
 
-    await runMutation({
-      paths: ['src'],
-      verbose: false,
-      mutantIds: [],
-      all: false,
-      json: true,
-    })
+    await runSource({ json: true })
 
     expect(consoleInfoSpy).toHaveBeenCalledExactlyOnceWith(
       JSON.stringify(
@@ -267,15 +262,7 @@ describe('runMutation', () => {
   it('lists every mutant in the JSON report with --all', async () => {
     vi.mocked(runMutants).mockResolvedValue(createRunResult())
 
-    await runMutation({
-      preset: 'strict',
-      paths: ['src'],
-      verbose: false,
-      mutantIds: [],
-      fast: false,
-      json: true,
-      all: true,
-    })
+    await runSource({ preset: 'strict', fast: false, json: true, all: true })
 
     let report = JSON.parse(
       consoleInfoSpy.mock.calls[0]![0] as string,
@@ -291,13 +278,7 @@ describe('runMutation', () => {
   it('prints the full JSON report with --verbose', async () => {
     vi.mocked(runMutants).mockResolvedValue(createRunResult())
 
-    await runMutation({
-      paths: ['src'],
-      mutantIds: [],
-      verbose: true,
-      json: true,
-      all: false,
-    })
+    await runSource({ verbose: true, json: true })
 
     let report = JSON.parse(
       consoleInfoSpy.mock.calls[0]![0] as string,
@@ -316,15 +297,7 @@ describe('runMutation', () => {
       new Error('Unknown mutant id "nope".'),
     )
 
-    await expect(
-      runMutation({
-        mutantIds: ['nope'],
-        verbose: false,
-        paths: ['src'],
-        json: false,
-        all: false,
-      }),
-    ).resolves.toBeUndefined()
+    await expect(runSource({ mutantIds: ['nope'] })).resolves.toBeUndefined()
 
     expect(progress.finish).toHaveBeenCalledExactlyOnceWith()
     expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
@@ -340,13 +313,7 @@ describe('runMutation', () => {
       new Error('Tests fail without mutants; fix them first.'),
     )
 
-    await runMutation({
-      verbose: false,
-      paths: ['src'],
-      mutantIds: [],
-      json: false,
-      all: false,
-    })
+    await runSource()
 
     expect(consoleErrorSpy.mock.calls).toStrictEqual([
       ['Output of the tests:\n(node) Warning: x\nlog\n'],
@@ -360,14 +327,7 @@ describe('runMutation', () => {
     vi.mocked(runMutants).mockResolvedValue(result)
     vi.mocked(writeHtmlReport).mockResolvedValue()
 
-    await runMutation({
-      paths: ['src'],
-      verbose: false,
-      mutantIds: [],
-      json: true,
-      all: false,
-      html: true,
-    })
+    await runSource({ json: true, html: true })
 
     expect(vi.mocked(runMutants).mock.calls[0]![0]).toMatchObject({
       html: true,
@@ -392,13 +352,7 @@ describe('runMutation', () => {
     vi.mocked(runMutants).mockResolvedValue(result)
     vi.mocked(writeHtmlReport).mockRejectedValue(new Error('EACCES'))
 
-    await runMutation({
-      paths: ['src'],
-      verbose: false,
-      mutantIds: [],
-      json: false,
-      all: false,
-    })
+    await runSource()
 
     expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
       'Error: The HTML report could not be written to /repo/.mootant/report.html: EACCES',
@@ -415,13 +369,7 @@ describe('runMutation', () => {
     try {
       vi.mocked(runMutants).mockResolvedValue(createPassingResult())
 
-      await runMutation({
-        paths: ['src'],
-        verbose: false,
-        mutantIds: [],
-        json: false,
-        all: false,
-      })
+      await runSource()
 
       expect(getFileScores(createPassingResult())).toHaveLength(1)
       expect(consoleInfoSpy.mock.calls[0]![0]).toContain(

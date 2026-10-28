@@ -1,19 +1,13 @@
 import type { MutatorSetup } from './generate-candidates'
 
-import { createMutatorRegistry } from '../../core/plugins/create-mutator-registry'
-import { generateFileMutants } from '../../core/generate/generate-file-mutants'
-import { resolvePreset } from '../../core/plugins/resolve-preset'
-import { corePlugin } from '../../core/plugins/core-plugin'
-
-/**
- * Id of the preset a test run resolves.
- */
-const TEST_PRESET = 'test-run'
+import { generateCandidates } from './generate-candidates'
 
 /**
  * Runs the whole pipeline with every built-in mutator over a snippet, as
  * `mootant list --skipped` would, and describes the skipped candidates of one
- * mutator as `original -> replacement (category rule)`.
+ * mutator as `original -> replacement (category rule)`. Svelte and Vue
+ * templates are read with the compilers of the repository unless the
+ * `templates` setting is off.
  *
  * @param id - Id of the mutator whose skipped candidates are returned.
  * @param source - Text of the snippet.
@@ -27,29 +21,8 @@ export function listSkipped(
   source: string,
   setup: MutatorSetup = {},
 ): string[] {
-  let registry = createMutatorRegistry(corePlugin, {})
-  registry.presets.set(TEST_PRESET, {
-    extends: [setup.preset ?? 'recommended'],
-    description: 'Preset of one test run.',
-    mutators: setup.mutators ?? {},
-    settings: setup.settings ?? {},
-  })
-  let { mutators, settings } = resolvePreset(registry, TEST_PRESET)
-  let result = generateFileMutants({
-    knownMutatorIds: new Set(registry.mutators.keys()),
-    file: setup.file ?? 'example.ts',
-    skipped: true,
-    settings,
-    mutators,
-    source,
-  })
-  let errors = result.diagnostics.filter(
-    diagnostic => diagnostic.severity === 'error',
-  )
-  if (errors.length > 0) {
-    throw new Error(errors.map(diagnostic => diagnostic.message).join('\n'))
-  }
-  return result.skipped
+  let { skipped } = generateCandidates(source, setup)
+  return skipped
     .filter(candidate => candidate.mutator === id)
     .map(
       candidate =>

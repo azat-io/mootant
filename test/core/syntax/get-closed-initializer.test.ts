@@ -4,7 +4,9 @@ import type { AnalyzedProgram } from '../../../types/syntax/analyzed-program'
 import type { Binding } from '../../../types/syntax/binding'
 
 import { getClosedInitializer } from '../../../core/syntax/get-closed-initializer'
+import { createTestProgram } from '../../helpers/create-test-program'
 import { createTestFile } from '../../helpers/create-test-file'
+import { findBinding } from '../../helpers/find-binding'
 
 /**
  * Snippet with the program a question about its name `n` reads.
@@ -22,30 +24,6 @@ interface NamedSnippet {
 }
 
 /**
- * Parses a snippet that declares the name `n`.
- *
- * @param source - Snippet that declares `n`.
- * @param component - Whether the snippet is the script of a component, whose
- *   top level other code shares; false when omitted.
- * @returns The program of the snippet and the binding of `n`.
- */
-function parse(source: string, component = false): NamedSnippet {
-  let file = createTestFile(source)
-  return {
-    binding: [...file.scopes.bindings.values()].find(
-      binding =>
-        binding.identifier.type === 'Identifier' &&
-        binding.identifier.name === 'n',
-    )!,
-    program: {
-      shared: new Set(component ? [file.parsed.program] : []),
-      scopes: file.scopes,
-      tree: file.tree,
-    },
-  }
-}
-
-/**
  * Finds the initializer of the name `n` of a snippet with a check that allows
  * every read.
  *
@@ -58,6 +36,22 @@ function readInitializer(source: string, component = false): string | null {
   let { binding, program } = parse(source, component)
   let initializer = getClosedInitializer(program, binding, () => true)
   return initializer ? source.slice(initializer.start, initializer.end) : null
+}
+
+/**
+ * Parses a snippet that declares the name `n`.
+ *
+ * @param source - Snippet that declares `n`.
+ * @param component - Whether the snippet is the script of a component, whose
+ *   top level other code shares; false when omitted.
+ * @returns The program of the snippet and the binding of `n`.
+ */
+function parse(source: string, component = false): NamedSnippet {
+  let file = createTestFile(source)
+  return {
+    program: createTestProgram(file, component),
+    binding: findBinding(file.scopes, 'n'),
+  }
 }
 
 describe('getClosedInitializer', () => {

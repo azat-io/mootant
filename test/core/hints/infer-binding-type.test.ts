@@ -1,26 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import type { TypeInference } from '../../../types/hints/type-inference'
-import type { Binding } from '../../../types/syntax/binding'
-
 import { createInferenceSnippet } from '../../helpers/create-inference-snippet'
 import { inferBindingType } from '../../../core/hints/infer-binding-type'
-
-/**
- * Finds the first binding named `x`.
- *
- * @param inference - Inference context whose scope analysis is searched.
- * @returns The first binding in declaration order whose identifier is `x`.
- */
-function findBinding(inference: TypeInference): Binding {
-  for (let binding of inference.scopes.bindings.values()) {
-    let { identifier } = binding
-    if (identifier.type === 'Identifier' && identifier.name === 'x') {
-      return binding
-    }
-  }
-  throw new Error('No binding named x.')
-}
+import { findBinding } from '../../helpers/find-binding'
 
 /**
  * Infers the kinds of the first binding named `x` of a snippet.
@@ -34,7 +16,7 @@ function inferKinds(
   file = 'example.ts',
 ): readonly string[] | null {
   let { inference } = createInferenceSnippet(source, file)
-  return inferBindingType(findBinding(inference), inference).kinds
+  return inferBindingType(findBinding(inference.scopes, 'x'), inference).kinds
 }
 
 describe('inferBindingType', () => {

@@ -1,26 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import type { RunReport } from '../../../types/report/run-report'
-
-import { buildRunReport } from '../../../cli/report/build-run-report'
 import { slimRunReport } from '../../../cli/report/slim-run-report'
-import { createRunResult } from '../../helpers/create-run-result'
-
-/**
- * Builds the full report of the shared run result with every mutant.
- *
- * @returns Report of the run.
- */
-function createReport(): RunReport {
-  return buildRunReport(createRunResult(), {
-    recheck: 'mootant run src',
-    all: true,
-  })
-}
+import { createRunReport } from '../../helpers/create-run-report'
 
 describe('slimRunReport', () => {
   it('keeps what an agent needs of each mutant, shortening killed and timed-out ones', () => {
-    let slim = slimRunReport(createReport())
+    let slim = slimRunReport(createRunReport())
 
     expect(slim.mutants).toStrictEqual([
       {
@@ -111,7 +96,7 @@ describe('slimRunReport', () => {
   })
 
   it('keeps the counts, scores, total duration and the run settings, without null fields', () => {
-    let report = createReport()
+    let report = createRunReport()
 
     expect(slimRunReport(report)).toMatchObject({
       summary: {
@@ -147,7 +132,7 @@ describe('slimRunReport', () => {
   })
 
   it('keeps the threshold, the revision of --since and a test without a line, and leaves out what is null', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.summary.threshold = 80
     report.summary.score = null
     report.summary.coveredScore = null
@@ -173,7 +158,7 @@ describe('slimRunReport', () => {
   })
 
   it('puts the mutants last, after the counts, diagnostics and settings', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.since = { base: 'abc123', ref: 'main' }
 
     expect(Object.keys(slimRunReport(report))).toStrictEqual([
@@ -191,7 +176,7 @@ describe('slimRunReport', () => {
   })
 
   it('keeps the cause of a verdict and the scope when they are set', () => {
-    let report = createReport()
+    let report = createRunReport()
     report.mutants[3]!.cause = 'assertion'
     report.mutants[3]!.scope = 'fits'
 

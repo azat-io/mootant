@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { TestProcessOutcome } from '../../../adapters/node-test/types/test-process-outcome'
-import type { NodeTestRecord } from '../../../adapters/node-test/types/node-test-record'
-
+import { createTestProcessOutcome } from '../../helpers/create-test-process-outcome'
 import { buildDryFile } from '../../../adapters/node-test/build-dry-file'
 import { createNodeTestEnd } from '../../helpers/create-node-test-end'
 import { createNodeTestTry } from '../../helpers/create-node-test-try'
@@ -12,20 +10,6 @@ import { getTestId } from '../../../adapters/node-test/get-test-id'
  * Input of the test file.
  */
 const INPUT = { file: '/p/a.test.js', root: '/p' }
-
-/**
- * Creates the outcome of a process.
- *
- * @param records - Its records.
- * @param fields - Fields that differ from a clean exit.
- * @returns What the process left behind.
- */
-function createOutcome(
-  records: NodeTestRecord[],
-  fields: Partial<TestProcessOutcome> = {},
-): TestProcessOutcome {
-  return { signal: null, hung: false, spawned: 0, code: 0, records, ...fields }
-}
 
 /**
  * Gives the id of a test of the file.
@@ -40,7 +24,7 @@ function id(name: string): string {
 describe('buildDryFile', () => {
   it('builds the file and its tests from a clean process', () => {
     let report = buildDryFile(
-      createOutcome([
+      createTestProcessOutcome([
         createNodeTestTry({ covers: ['m1'], name: 'a', hits: 1, seq: 0 }),
         createNodeTestEnd({
           environment: ['HOME'],
@@ -98,7 +82,7 @@ describe('buildDryFile', () => {
 
   it('keeps failures of a process that exited with 0 as expected', () => {
     let report = buildDryFile(
-      createOutcome([
+      createTestProcessOutcome([
         createNodeTestTry({
           occurrence: 1,
           failed: true,
@@ -116,7 +100,7 @@ describe('buildDryFile', () => {
 
   it('fails a file whose process failed outside its tests', () => {
     let outside = buildDryFile(
-      createOutcome(
+      createTestProcessOutcome(
         [createNodeTestTry({ name: 'a', seq: 0 }), createNodeTestEnd()],
         {
           code: 1,
@@ -131,7 +115,7 @@ describe('buildDryFile', () => {
     })
 
     let stray = buildDryFile(
-      createOutcome(
+      createTestProcessOutcome(
         [
           { message: 'late', kind: 'error', load: false, tries: [], hits: 0 },
           createNodeTestEnd(),
@@ -144,7 +128,10 @@ describe('buildDryFile', () => {
     expect(stray.entry).toMatchObject({ errors: ['late'], loadFailed: true })
 
     let signalled = buildDryFile(
-      createOutcome([createNodeTestEnd()], { signal: 'SIGTERM', code: null }),
+      createTestProcessOutcome([createNodeTestEnd()], {
+        signal: 'SIGTERM',
+        code: null,
+      }),
       INPUT,
     )
 
@@ -153,7 +140,7 @@ describe('buildDryFile', () => {
     ])
 
     let failing = buildDryFile(
-      createOutcome(
+      createTestProcessOutcome(
         [
           createNodeTestTry({ failed: true, name: 'a', seq: 0 }),
           createNodeTestEnd(),
@@ -169,7 +156,7 @@ describe('buildDryFile', () => {
 
   it('fails a file whose root hook failed, even after an exit with 0', () => {
     let file = buildDryFile(
-      createOutcome([
+      createTestProcessOutcome([
         createNodeTestTry({ name: 'a', seq: 0 }),
         { kind: 'root-hook', message: 'boom' },
         createNodeTestEnd(),
@@ -185,7 +172,7 @@ describe('buildDryFile', () => {
 
   it('fails a file that did not load or did not end', () => {
     let load = buildDryFile(
-      createOutcome(
+      createTestProcessOutcome(
         [{ message: 'missing', kind: 'error', load: true, tries: [], hits: 0 }],
         { code: 1 },
       ),
@@ -207,7 +194,7 @@ describe('buildDryFile', () => {
     // The test file threw at its top level after registering a test, which
     // Node started before it reported the error.
     let thrown = buildDryFile(
-      createOutcome(
+      createTestProcessOutcome(
         [
           createNodeTestTry({ name: 'a', seq: 0 }),
           {
@@ -227,7 +214,7 @@ describe('buildDryFile', () => {
     expect(thrown.entry).toMatchObject({ errors: ['thrown'], loadFailed: true })
 
     let late = buildDryFile(
-      createOutcome(
+      createTestProcessOutcome(
         [
           { kind: 'loaded' },
           createNodeTestTry({ name: 'a', seq: 0 }),
@@ -244,7 +231,7 @@ describe('buildDryFile', () => {
       loadFailed: true,
     })
 
-    let crash = buildDryFile(createOutcome([], { code: 134 }), INPUT)
+    let crash = buildDryFile(createTestProcessOutcome([], { code: 134 }), INPUT)
 
     expect(crash.entry).toMatchObject({
       errors: [
@@ -256,7 +243,7 @@ describe('buildDryFile', () => {
 
   it('names the test a hung process ran', () => {
     let report = buildDryFile(
-      createOutcome(
+      createTestProcessOutcome(
         [
           { occurrence: 0, kind: 'open', name: 'a', seq: 0 },
           { kind: 'close', seq: 0 },
@@ -274,7 +261,10 @@ describe('buildDryFile', () => {
     })
     expect(
       buildDryFile(
-        createOutcome([createNodeTestEnd()], { hung: true, code: null }),
+        createTestProcessOutcome([createNodeTestEnd()], {
+          hung: true,
+          code: null,
+        }),
         INPUT,
       ).hung,
     ).toStrictEqual({ name: null, test: null })

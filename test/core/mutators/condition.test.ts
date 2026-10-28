@@ -18,6 +18,18 @@ const PARAMETERS = [
   'nothing: null',
 ].join(', ')
 
+/**
+ * Lists the mutants of condition for a snippet.
+ *
+ * @param source - Text of the snippet.
+ * @param setup - Preset, mutator settings, preset settings and file name of the
+ *   run.
+ * @returns Mutants as `original -> replacement`.
+ */
+function mutate(source: string, setup: MutatorSetup = {}): string[] {
+  return runMutator('condition', source, setup).map(formatMutant)
+}
+
 describe('condition', () => {
   it.each<{ expected: string[]; body: string }>([
     {
@@ -83,9 +95,7 @@ describe('condition', () => {
   ])('forces $body', ({ expected, body }) => {
     let source = [`function f(${PARAMETERS}) {`, `  ${body}`, '}'].join('\n')
 
-    expect(runMutator('condition', source).map(formatMutant)).toStrictEqual(
-      expected,
-    )
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it('forces an awaited test next to the await removal', () => {
@@ -95,7 +105,7 @@ describe('condition', () => {
       '}',
     ].join('\n')
 
-    expect(runMutator('condition', source).map(formatMutant)).toStrictEqual([
+    expect(mutate(source)).toStrictEqual([
       'await exists(id) -> true',
       'await exists(id) -> false',
     ])
@@ -214,9 +224,7 @@ describe('condition', () => {
   ])(
     'forces a loop without a test to never run in $source',
     ({ expected, source }) => {
-      expect(runMutator('condition', source).map(formatMutant)).toStrictEqual(
-        expected,
-      )
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -248,26 +256,21 @@ describe('condition', () => {
   ])(
     'emits the running value of $source with timeouts',
     ({ expected, source }) => {
-      expect(
-        runMutator('condition', source, {
-          settings: { timeouts: true },
-        }).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source, { settings: { timeouts: true } })).toStrictEqual(
+        expected,
+      )
     },
   )
 
   it('emits the running value in the strict preset', () => {
-    expect(
-      runMutator('condition', 'while (!done) step()', {
-        preset: 'strict',
-      }).map(formatMutant),
-    ).toStrictEqual(['!done -> true', '!done -> false'])
+    expect(mutate('while (!done) step()', { preset: 'strict' })).toStrictEqual([
+      '!done -> true',
+      '!done -> false',
+    ])
   })
 
   it('skips the running value of a negated loop test', () => {
-    expect(
-      runMutator('condition', 'while (!done) step()').map(formatMutant),
-    ).toStrictEqual(['!done -> false'])
+    expect(mutate('while (!done) step()')).toStrictEqual(['!done -> false'])
   })
 
   it.each<{ expected: string[]; source: string; file: string }>([
@@ -325,9 +328,7 @@ describe('condition', () => {
   ])(
     'leaves only the constants that empty a sort comparator to method-call in $source',
     ({ expected, source, file }) => {
-      expect(
-        runMutator('condition', source, { file }).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source, { file })).toStrictEqual(expected)
     },
   )
 
@@ -353,9 +354,7 @@ describe('condition', () => {
     ({ expected, body }) => {
       let source = [`function f(${PARAMETERS}) {`, `  ${body}`, '}'].join('\n')
 
-      expect(runMutator('condition', source).map(formatMutant)).toStrictEqual(
-        expected,
-      )
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -406,9 +405,7 @@ describe('condition', () => {
   ])(
     'brings back a constant of a nullish test when $situation',
     ({ expected, setup, lines }) => {
-      expect(
-        runMutator('condition', lines.join('\n'), setup).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(lines.join('\n'), setup)).toStrictEqual(expected)
     },
   )
 
@@ -501,9 +498,10 @@ describe('condition', () => {
   ])('keeps only its constants for $source', ({ source }) => {
     let file = 'example.js'
 
-    expect(
-      runMutator('condition', source, { file }).map(formatMutant),
-    ).toStrictEqual(['ok -> true', 'ok -> false'])
+    expect(mutate(source, { file })).toStrictEqual([
+      'ok -> true',
+      'ok -> false',
+    ])
     expect(runMutator('boolean-literal', source, { file })).toStrictEqual([])
     expect(runMutator('return-value', source, { file })).toStrictEqual([])
   })
@@ -528,9 +526,7 @@ describe('condition', () => {
   ])(
     'owns the decision that other mutators leave in $source',
     ({ expected, source }) => {
-      expect(runMutator('condition', source).map(formatMutant)).toStrictEqual(
-        expected,
-      )
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -554,9 +550,7 @@ describe('condition', () => {
   ])(
     'keeps the falsy primitives that an empty object type allows in $source',
     ({ expected, source }) => {
-      expect(runMutator('condition', source).map(formatMutant)).toStrictEqual(
-        expected,
-      )
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -602,9 +596,7 @@ describe('condition', () => {
   ])(
     'keeps the tests in the timer delay of $source',
     ({ expected, skipped, source }) => {
-      expect(runMutator('condition', source).map(formatMutant)).toStrictEqual(
-        expected,
-      )
+      expect(mutate(source)).toStrictEqual(expected)
       expect(listSkipped('condition', source)).toStrictEqual(skipped)
     },
   )

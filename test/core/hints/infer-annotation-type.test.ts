@@ -2,11 +2,9 @@ import type { Node } from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
-import type { TypeInference } from '../../../types/hints/type-inference'
-import type { Binding } from '../../../types/syntax/binding'
-
 import { createInferenceSnippet } from '../../helpers/create-inference-snippet'
 import { inferAnnotationType } from '../../../core/hints/infer-annotation-type'
+import { findBinding } from '../../helpers/find-binding'
 
 /**
  * Sorted kinds of a value that is anything but `null` and `undefined`.
@@ -24,22 +22,6 @@ const NON_NULLISH = [
 ]
 
 /**
- * Finds the first binding named `x`.
- *
- * @param inference - Inference context whose scope analysis is searched.
- * @returns The first binding in declaration order whose identifier is `x`.
- */
-function findBinding(inference: TypeInference): Binding {
-  for (let binding of inference.scopes.bindings.values()) {
-    let { identifier } = binding
-    if (identifier.type === 'Identifier' && identifier.name === 'x') {
-      return binding
-    }
-  }
-  throw new Error('No binding named x.')
-}
-
-/**
  * Infers the kinds of the annotation of the first binding named `x` in a
  * snippet.
  *
@@ -48,7 +30,7 @@ function findBinding(inference: TypeInference): Binding {
  */
 function inferKinds(source: string): readonly string[] | null {
   let { inference } = createInferenceSnippet(source)
-  let { identifier } = findBinding(inference)
+  let { identifier } = findBinding(inference.scopes, 'x')
   let wrapper = Reflect.get(identifier, 'typeAnnotation') as Node
   return inferAnnotationType(wrapper, inference).kinds
 }

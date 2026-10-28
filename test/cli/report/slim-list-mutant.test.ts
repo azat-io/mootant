@@ -1,34 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ListReportMutant } from '../../../types/report/list-report-mutant'
-
+import { createListReportMutant } from '../../helpers/create-list-report-mutant'
 import { slimListMutant } from '../../../cli/report/slim-list-mutant'
 
 /**
  * Pending mutant of `example.ts` at the top level, its line cut at the end.
  */
-let mutant: ListReportMutant = {
-  before: ["let unit = 'cm'"],
-  mutator: 'string-literal',
-  after: ["let unit = ''"],
-  id: '000000000001',
-  kind: 'expression',
-  file: 'example.ts',
-  status: 'Pending',
-  replacement: "''",
-  original: "'cm'",
-  ignoredBy: null,
-  endColumn: 16,
-  reason: null,
-  cutStart: 0,
-  scope: null,
-  cutEnd: 12,
-  column: 12,
-  endLine: 1,
-  start: 11,
-  line: 1,
-  end: 15,
-}
+let mutant = createListReportMutant({ cutEnd: 12 })
 
 describe('slimListMutant', () => {
   it('keeps the position, mutator, status and source lines marked where they were cut, without offsets and null fields', () => {

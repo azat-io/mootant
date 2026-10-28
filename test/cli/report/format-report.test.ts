@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import type { ListReport } from '../../../types/report/list-report'
 
+import { createListReportMutant } from '../../helpers/create-list-report-mutant'
 import { formatTextReport } from '../../../cli/report/format-text-report'
 import { slimListReport } from '../../../cli/report/slim-list-report'
+import { createListReport } from '../../helpers/create-list-report'
 import { createTextStyle } from '../../helpers/create-text-style'
 import { formatReport } from '../../../cli/report/format-report'
 
@@ -11,30 +13,9 @@ import { formatReport } from '../../../cli/report/format-report'
  * Report of a run with one pending mutant and one warning.
  */
 let report: ListReport = {
-  mutants: [
-    {
-      before: ["let unit = 'cm'"],
-      mutator: 'string-literal',
-      after: ["let unit = ''"],
-      id: '000000000001',
-      kind: 'expression',
-      file: 'example.ts',
-      status: 'Pending',
-      replacement: "''",
-      original: "'cm'",
-      ignoredBy: null,
-      endColumn: 16,
-      scope: 'unit',
-      reason: null,
-      cutStart: 0,
-      column: 12,
-      endLine: 1,
-      cutEnd: 0,
-      start: 11,
-      line: 1,
-      end: 15,
-    },
-  ],
+  ...createListReport([createListReportMutant({ scope: 'unit' })], {
+    totalWarnings: 1,
+  }),
   diagnostics: [
     {
       message: 'Skipped notes.md: not a JavaScript or TypeScript source file.',
@@ -45,26 +26,6 @@ let report: ListReport = {
       line: null,
     },
   ],
-  summary: {
-    totalWarnings: 1,
-    totalMutants: 1,
-    totalPending: 1,
-    totalIgnored: 0,
-    totalErrors: 0,
-    totalFiles: 1,
-  },
-  mutators: [
-    {
-      description: 'Empties a string literal.',
-      id: 'string-literal',
-      mutants: 1,
-    },
-  ],
-  files: [{ file: 'example.ts', parsed: true, mutants: 1 }],
-  preset: 'recommended',
-  schemaVersion: 3,
-  command: 'list',
-  since: null,
 }
 
 /**

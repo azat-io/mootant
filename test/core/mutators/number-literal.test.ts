@@ -6,6 +6,18 @@ import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
+/**
+ * Lists the mutants of number-literal for a snippet.
+ *
+ * @param source - Text of the snippet.
+ * @param setup - Preset, mutator settings, preset settings and file name of the
+ *   run.
+ * @returns Mutants as `original -> replacement`.
+ */
+function mutate(source: string, setup: MutatorSetup = {}): string[] {
+  return runMutator('number-literal', source, setup).map(formatMutant)
+}
+
 describe('numberLiteral', () => {
   it.each<{ expected: string[]; source: string }>([
     { expected: ['0 -> 1'], source: 'x = 0' },
@@ -35,9 +47,7 @@ describe('numberLiteral', () => {
     { source: 'x = path.slice(-1)', expected: [] },
     { source: 'function f(n: number) { x = n || -1 }', expected: [] },
   ])('mutates $source as in the catalog', ({ expected, source }) => {
-    expect(
-      runMutator('number-literal', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string }>([
@@ -99,9 +109,7 @@ describe('numberLiteral', () => {
     { source: 'let z = x ?? void 0', expected: [] },
     { source: 'x = void f(0)', expected: ['0 -> 1'] },
   ])('handles $source', ({ expected, source }) => {
-    expect(
-      runMutator('number-literal', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string }>([
@@ -171,9 +179,7 @@ describe('numberLiteral', () => {
       expected: ['2 -> 3', '-1 -> 0'],
     },
   ])('treats slice(-1) in $source', ({ expected, source }) => {
-    expect(
-      runMutator('number-literal', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string }>([
@@ -198,9 +204,7 @@ describe('numberLiteral', () => {
       expected: ['1 -> 2', '-1 -> 0'],
     },
   ])('keeps the sign of a comparator in $source', ({ expected, source }) => {
-    expect(
-      runMutator('number-literal', source).map(formatMutant),
-    ).toStrictEqual(expected)
+    expect(mutate(source)).toStrictEqual(expected)
   })
 
   it.each<{ expected: string[]; source: string }>([
@@ -238,9 +242,7 @@ describe('numberLiteral', () => {
   ])(
     'leaves a forced decision to its owner in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('number-literal', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 
@@ -261,9 +263,7 @@ describe('numberLiteral', () => {
   ])(
     'copies a branch when the comparison will not run in $source',
     ({ source, setup }) => {
-      expect(
-        runMutator('number-literal', source, setup).map(formatMutant),
-      ).toStrictEqual(['0 -> 1', '1 -> 2'])
+      expect(mutate(source, setup)).toStrictEqual(['0 -> 1', '1 -> 2'])
     },
   )
 
@@ -296,9 +296,7 @@ describe('numberLiteral', () => {
   ])(
     'empties an || default of $source with $setup',
     ({ expected, source, setup }) => {
-      expect(
-        runMutator('number-literal', source, setup).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source, setup)).toStrictEqual(expected)
     },
   )
 
@@ -310,20 +308,16 @@ describe('numberLiteral', () => {
       '\n',
     )
 
-    expect(
-      runMutator('number-literal', source, setup).map(formatMutant),
-    ).toStrictEqual(['0 -> 1', '-1 -> 0'])
+    expect(mutate(source, setup)).toStrictEqual(['0 -> 1', '-1 -> 0'])
   })
 
   it.each<{ setup: MutatorSetup }>([
     { setup: { mutators: { 'number-literal': ['on', { caseTests: true }] } } },
     { setup: { preset: 'strict' } },
   ])('mutates case labels with $setup', ({ setup }) => {
-    expect(
-      runMutator('number-literal', 'switch (x) { case 2: run() }', setup).map(
-        formatMutant,
-      ),
-    ).toStrictEqual(['2 -> 3'])
+    expect(mutate('switch (x) { case 2: run() }', setup)).toStrictEqual([
+      '2 -> 3',
+    ])
   })
 
   it.each<{ setup: MutatorSetup; expected: string[]; source: string }>([
@@ -345,9 +339,7 @@ describe('numberLiteral', () => {
   ])(
     'keeps the static owner of $source with $setup',
     ({ expected, source, setup }) => {
-      expect(
-        runMutator('number-literal', source, setup).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source, setup)).toStrictEqual(expected)
     },
   )
 
@@ -357,9 +349,7 @@ describe('numberLiteral', () => {
   ])(
     'owns the truth of the literal test in $source',
     ({ expected, source }) => {
-      expect(
-        runMutator('number-literal', source).map(formatMutant),
-      ).toStrictEqual(expected)
+      expect(mutate(source)).toStrictEqual(expected)
     },
   )
 

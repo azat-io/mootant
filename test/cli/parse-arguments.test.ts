@@ -253,9 +253,11 @@ describe('parseArguments', () => {
   })
 
   it.each([
-    [['--html'], true],
-    [['--no-html'], false],
-  ])('reads %j', (flags, html) => {
+    [['--html'], { html: true }],
+    [['--no-html'], { html: false }],
+    [['--incremental'], { incremental: true }],
+    [['--no-incremental'], { incremental: false }],
+  ])('reads %j', (flags, option) => {
     expect(parseArguments(['run', 'src', ...flags], '1.0.0')).toStrictEqual({
       options: {
         paths: ['src'],
@@ -263,24 +265,7 @@ describe('parseArguments', () => {
         mutantIds: [],
         json: false,
         all: false,
-        html,
-      },
-      kind: 'run',
-    })
-  })
-
-  it.each([
-    [['--incremental'], true],
-    [['--no-incremental'], false],
-  ])('reads %j', (flags, incremental) => {
-    expect(parseArguments(['run', 'src', ...flags], '1.0.0')).toStrictEqual({
-      options: {
-        paths: ['src'],
-        verbose: false,
-        mutantIds: [],
-        json: false,
-        incremental,
-        all: false,
+        ...option,
       },
       kind: 'run',
     })

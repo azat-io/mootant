@@ -5,6 +5,7 @@ import path from 'node:path'
 import type { MutantResult } from '../../../types/run/mutant-result'
 
 import { createWorkDirectory } from '../../../core/run/create-work-directory'
+import { createBuiltIns } from '../../helpers/create-built-ins'
 import { vitestAdapter } from '../../../adapters/vitest/index'
 import { runMutants } from '../../../core/run-mutants'
 
@@ -34,12 +35,7 @@ function summarize(result: MutantResult): string {
 describe('vitest adapter', () => {
   it('runs every mutant of a project isolated by default', async () => {
     let result = await runMutants({
-      builtIns: {
-        vitest: {
-          load: () => Promise.resolve(vitestAdapter()),
-          detect: () => Promise.resolve(true),
-        },
-      },
+      builtIns: createBuiltIns('vitest', vitestAdapter()),
       paths: ['src'],
       concurrency: 2,
       cache: false,
@@ -88,12 +84,7 @@ describe('vitest adapter', () => {
 
   it('runs the mutants of a project on the batch and isolated paths in fast mode', async () => {
     let result = await runMutants({
-      builtIns: {
-        vitest: {
-          load: () => Promise.resolve(vitestAdapter()),
-          detect: () => Promise.resolve(true),
-        },
-      },
+      builtIns: createBuiltIns('vitest', vitestAdapter()),
       paths: ['src'],
       concurrency: 2,
       cache: false,
