@@ -7,9 +7,7 @@ import type { Mutator } from '../../types/mutator/mutator'
 
 import { createRegexReplacement } from '../regex/create-regex-replacement'
 import { collectPatternChanges } from '../regex/collect-pattern-changes'
-import { readRegexArgument } from '../regex/read-regex-argument'
-import { readRegexLiteral } from '../regex/read-regex-literal'
-import { readRegexCall } from '../regex/read-regex-call'
+import { createRegexVisitors } from '../regex/create-regex-visitors'
 
 /**
  * Changes the pattern of a regular expression literal, or of the string,
@@ -30,32 +28,6 @@ import { readRegexCall } from '../regex/read-regex-call'
  * does not compile is not changed.
  */
 export let regexPattern: Mutator<RegexPatternOptions> = {
-  create(context) {
-    let { sourceCode } = context
-
-    /**
-     * Mutates the pattern of a call of `RegExp`.
-     *
-     * @param node - Call or `new` expression.
-     * @returns Replacements of the pattern argument.
-     */
-    function visitCall(
-      node: Parameters<typeof readRegexCall>[0],
-    ): Replacement[] {
-      let call = readRegexCall(node, context)
-      let source = call && readRegexArgument(call, sourceCode.text)
-      return source ? mutatePattern(source, context) : []
-    }
-
-    return {
-      Literal(node) {
-        let source = readRegexLiteral(node, sourceCode.text)
-        return source ? mutatePattern(source, context) : []
-      },
-      CallExpression: visitCall,
-      NewExpression: visitCall,
-    }
-  },
   meta: {
     description:
       'Removes an anchor, assertion or alternative of a regular expression, makes an optional part required, or widens a class to any character.',
@@ -65,6 +37,11 @@ export let regexPattern: Mutator<RegexPatternOptions> = {
       quantifiers: false,
       negations: false,
     },
+  },
+  create(context) {
+    return createRegexVisitors(context, source =>
+      mutatePattern(source, context),
+    )
   },
 }
 

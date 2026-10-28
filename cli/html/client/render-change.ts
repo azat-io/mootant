@@ -1,30 +1,7 @@
+import type { ShownChange } from '../../../types/html/shown-change'
+
 import { escapeHtml } from './escape-html'
 import { html } from './html'
-
-/**
- * Change to show on one line.
- */
-interface Change {
-  /**
-   * Part of the range the change amounts to, when a mutator names one.
-   */
-  focus?: { replacement: string; start: number; end: number }
-
-  /**
-   * Text written in place of the range.
-   */
-  replacement: string
-
-  /**
-   * Offset of the first replaced code unit.
-   */
-  start: number
-
-  /**
-   * Offset just past the last replaced code unit.
-   */
-  end: number
-}
 
 /**
  * Longest text of either side of the change before it is cut.
@@ -40,7 +17,7 @@ const MAX_LENGTH = 64
  * @param change - Range, replacement and focus of the change.
  * @returns HTML of the change.
  */
-export function renderChange(source: string, change: Change): string {
+export function renderChange(source: string, change: ShownChange): string {
   let before = fold(source.slice(change.start, change.end))
   let after = fold(change.replacement)
   if (before.length > MAX_LENGTH && change.focus) {

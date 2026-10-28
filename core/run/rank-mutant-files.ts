@@ -3,8 +3,8 @@ import path from 'node:path'
 import type { MutantState } from '../../types/run/mutant-state'
 import type { RunState } from '../../types/run/run-state'
 
-import { compareCodeUnits } from '../compare-code-units'
 import { getTestFileKey } from './get-test-file-key'
+import { sortTestFiles } from './sort-test-files'
 import { rankTestFile } from './rank-test-file'
 
 /**
@@ -55,10 +55,5 @@ export function rankMutantFiles(
       }),
     )
   }
-  return [...files].toSorted(
-    (left, right) =>
-      ranks.get(left)! - ranks.get(right)! ||
-      (reaching.get(right) ?? 0) - (reaching.get(left) ?? 0) ||
-      compareCodeUnits(left, right),
-  )
+  return sortTestFiles(files, { reaching, ranks })
 }

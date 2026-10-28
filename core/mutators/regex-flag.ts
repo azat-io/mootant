@@ -6,10 +6,8 @@ import type { SkipNote } from '../../types/mutant/skip-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { createRegexReplacement } from '../regex/create-regex-replacement'
+import { createRegexVisitors } from '../regex/create-regex-visitors'
 import { hasCasedCharacter } from '../regex/has-cased-character'
-import { readRegexArgument } from '../regex/read-regex-argument'
-import { readRegexLiteral } from '../regex/read-regex-literal'
-import { readRegexCall } from '../regex/read-regex-call'
 import { getRegexUsage } from '../regex/get-regex-usage'
 import { canMatchEmpty } from '../regex/can-match-empty'
 import { loadRegexpp } from '../regex/load-regexpp'
@@ -36,36 +34,15 @@ const REMOVABLE_FLAGS = 'ims'
  * second argument. A regular expression that does not compile is not changed.
  */
 export let regexFlag: Mutator<RegexFlagOptions> = {
-  create(context) {
-    let { sourceCode } = context
-
-    /**
-     * Changes the flags of a call of `RegExp` whose pattern is known.
-     *
-     * @param node - Call or `new` expression.
-     * @returns Replacements of the flags argument or of the call.
-     */
-    function visitCall(
-      node: Parameters<typeof readRegexCall>[0],
-    ): Replacement[] {
-      let call = readRegexCall(node, context)
-      let source = call && readRegexArgument(call, sourceCode.text)
-      return source && !source.dynamic ? getFlagChanges(source, context) : []
-    }
-
-    return {
-      Literal(node) {
-        let source = readRegexLiteral(node, sourceCode.text)
-        return source ? getFlagChanges(source, context) : []
-      },
-      CallExpression: visitCall,
-      NewExpression: visitCall,
-    }
-  },
   meta: {
     description:
       'Removes a flag of a regular expression (i, m, s, or g where it picks all matches).',
     defaultOptions: { additions: false },
+  },
+  create(context) {
+    return createRegexVisitors(context, source =>
+      source.dynamic ? [] : getFlagChanges(source, context),
+    )
   },
 }
 

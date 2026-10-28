@@ -12,8 +12,8 @@ import { createSpinner } from './terminal/create-spinner'
 import { measureParts } from './terminal/measure-parts'
 import { cutToWidth } from './terminal/cut-to-width'
 import { getSymbols } from './terminal/get-symbols'
+import { pluralize } from '../core/text/pluralize'
 import { fitParts } from './terminal/fit-parts'
-import { pluralize } from './report/pluralize'
 
 /**
  * Live progress of a mutation run on standard error.

@@ -4,10 +4,10 @@ import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { Replacement } from '../../../types/mutator/replacement'
 import type { SkipNote } from '../../../types/mutant/skip-note'
 
-import { distinguishesNullishSwap } from './distinguishes-nullish-swap'
 import { isTruthFlippingLiteral } from './is-truth-flipping-literal'
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
 import { isBooleanModeOperand } from './is-boolean-mode-operand'
+import { getNullishSwapSkip } from './get-nullish-swap-skip'
 import { isNullishConstant } from './is-nullish-constant'
 import { getLiteralMutator } from './get-literal-mutator'
 import { isAlwaysNullish } from './is-always-nullish'
@@ -158,30 +158,16 @@ export function getNullishPlan(
     name === null ? null : (
       `\`${name}\` is only read for its truth and the default is falsy`
     )
-  let neverFalsy =
-    readForTruth === null ? context.syntax.getNeverFalsyFact(left) : null
-  if (readForTruth !== null) {
-    skip(swapText, {
-      reason: `${readForTruth}, so ?? and || agree`,
-      rule: 'falsy-default',
-    })
-  } else if (neverFalsy === null) {
-    plan.swap = distinguishesNullishSwap(
-      node,
-      context.hints,
-      options.nullishSwap,
-    )
-    if (!plan.swap) {
-      skip(swapText, {
-        reason:
-          '?? and || differ here only on falsy values that the nullishSwap option does not count, such as the default itself',
-        rule: 'nullish-swap',
-      })
+  if (readForTruth === null) {
+    let swapSkip = getNullishSwapSkip(node, context, options.nullishSwap)
+    plan.swap = swapSkip === null
+    if (swapSkip) {
+      skip(swapText, swapSkip)
     }
   } else {
     skip(swapText, {
-      reason: `the left side is never falsy when defined (${neverFalsy}), so || and ?? agree`,
-      rule: 'never-falsy',
+      reason: `${readForTruth}, so ?? and || agree`,
+      rule: 'falsy-default',
     })
   }
   if (!isNullishGroup(left)) {

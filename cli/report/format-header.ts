@@ -1,5 +1,6 @@
 import type { TextStyle } from '../../types/cli/text-style'
 
+import { getMaxDisplayWidth } from '../terminal/get-max-display-width'
 import { getDisplayWidth } from '../terminal/get-display-width'
 import { cutToWidth } from '../terminal/cut-to-width'
 import { getSymbols } from '../terminal/get-symbols'
@@ -42,12 +43,7 @@ export function formatHeader(
     ellipsis,
   })
   let line = `${colors.greenBright(dot)} ${colors.bold(shown)}`
-  let widest = body
-    .split('\n')
-    .reduce(
-      (widestLine, bodyLine) => Math.max(widestLine, getDisplayWidth(bodyLine)),
-      0,
-    )
+  let widest = getMaxDisplayWidth(body.split('\n'))
   let needed = getDisplayWidth(`${dot} ${shown}  ${note}`)
   let width = Math.min(
     style.width,

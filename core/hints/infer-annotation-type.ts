@@ -17,6 +17,7 @@ import { unionInferredTypes } from './union-inferred-types'
 import { createInferredType } from './create-inferred-type'
 import { NON_NULLISH_KINDS } from './non-nullish-kinds'
 import { inferBindingType } from './infer-binding-type'
+import { removeNullish } from './remove-nullish'
 import { OBJECT_KINDS } from './object-kinds'
 
 /**
@@ -186,13 +187,7 @@ function inferReferenceType(
         return createInferredType(null)
       }
       let argumentType = inferAnnotationType(argument, inference)
-      return name === 'Readonly' ? argumentType : (
-          createInferredType(
-            argumentType.kinds?.filter(
-              kind => kind !== 'null' && kind !== 'undefined',
-            ) ?? null,
-          )
-        )
+      return name === 'Readonly' ? argumentType : removeNullish(argumentType)
     }
     let kinds = standardTypes.get(name)
     if (kinds) {

@@ -21,6 +21,7 @@ import { parseComponentTemplate } from '../parser/parse-component-template'
 import { parseIgnoreDirectives } from '../ignore/parse-ignore-directives'
 import { getComponentFramework } from '../parser/get-component-framework'
 import { createSyntaxHelpers } from '../syntax/create-syntax-helpers'
+import { getTemplateLanguage } from '../parser/get-template-language'
 import { createIgnoreRules } from '../ignore/create-ignore-rules'
 import { deduplicateCandidates } from './deduplicate-candidates'
 import { findLoggingCalls } from '../syntax/find-logging-calls'
@@ -222,10 +223,7 @@ export function generateFileMutants(
   }
   if (input.compilers && input.settings.templates) {
     let template = parseComponentTemplate(input.compilers, {
-      lang:
-        blocks.some(block => block.options.lang!.startsWith('ts')) ? 'ts' : (
-          'js'
-        ),
+      lang: getTemplateLanguage(blocks),
       source,
       file,
     })

@@ -1,7 +1,7 @@
+import type { StatusCounts } from '../run/status-counts'
 import type { HtmlReport } from '../report/html-report'
 import type { IndexedMutator } from './indexed-mutator'
 import type { IndexedMutant } from './indexed-mutant'
-import type { StatusCounts } from './status-counts'
 import type { IndexedFile } from './indexed-file'
 
 /**

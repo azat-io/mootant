@@ -16,13 +16,16 @@ import { getProvenComparisonValue } from './get-proven-comparison-value'
 import { isNoOpCallbackConstant } from './is-no-op-callback-constant'
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
 import { unwrapExpression } from '../../tree/unwrap-expression'
+import { getLoopRunningSkip } from './get-loop-running-skip'
 import { getMemberPath } from '../../syntax/get-member-path'
+import { NO_OP_CALLBACK_SKIP } from './no-op-callback-skip'
 import { getOwnedConstants } from './get-owned-constants'
 import { getLeaveNowValue } from './get-leave-now-value'
 import { getRootName } from '../../syntax/get-root-name'
 import { getRunningValue } from './get-running-value'
 import { getLiteralValue } from './get-literal-value'
 import { isFunction } from '../../syntax/is-function'
+import { LEAVE_NOW_SKIP } from './leave-now-skip'
 import { isNumericPair } from './is-numeric-pair'
 import { getNumberText } from './get-number-text'
 import { walkTree } from '../../tree/walk-tree'
@@ -462,19 +465,12 @@ function getValueSkips(
     let note: SkipNote | null = null
     switch (value) {
       case running?.value: {
-        note = {
-          reason: `${value} keeps the loop running forever, so only a timeout could kill it`,
-          rule: 'loop-running',
-        }
+        note = getLoopRunningSkip(value)
 
         break
       }
       case leaveNow: {
-        note = {
-          reason:
-            "leaving a first exit test's loop at once is the loop's never-run mutant",
-          rule: 'O13',
-        }
+        note = LEAVE_NOW_SKIP
 
         break
       }
@@ -488,11 +484,7 @@ function getValueSkips(
       }
       default:
         if (isNoOpCallbackConstant(node, value, context)) {
-          note = {
-            reason:
-              "it makes the callback a no-op, which is method-call's removal of the call",
-            rule: 'O12',
-          }
+          note = NO_OP_CALLBACK_SKIP
         }
     }
     if (note) {

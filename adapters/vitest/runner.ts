@@ -16,15 +16,15 @@ import path from 'node:path'
 import type { BatchUnit, BatchTest } from '../../types/adapter/batch-plan'
 import type { MutantRuntime } from '../../types/adapter/mutant-runtime'
 import type { IsolatedUnit } from '../../types/adapter/isolated-plan'
+import type { InputTracking } from '../shared/types/input-tracking'
 import type { VitestWorkerOptions } from './types/vitest-worker'
 import type { TryFacts } from '../../types/adapter/try-facts'
 
 import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
 import { watchWorkerClose } from './worker/watch-worker-close'
-import { trackEnvironment } from '../shared/track-environment'
 import { listDependencies } from './worker/list-dependencies'
 import { getErrorMessage } from '../shared/get-error-message'
-import { trackFileReads } from '../shared/track-file-reads'
+import { VITEST_VARIABLES } from './worker/vitest-variables'
 import { readWorkerPlan } from './worker/read-worker-plan'
 import { raceTryTimeout } from './worker/race-try-timeout'
 import { writeOutRecord } from './worker/write-out-record'
@@ -34,6 +34,7 @@ import { findHookError } from './worker/find-hook-error'
 import { getHookBudget } from './worker/get-hook-budget'
 import { readTryFacts } from './worker/read-try-facts'
 import { captureClock } from '../shared/capture-clock'
+import { trackInputs } from '../shared/track-inputs'
 import { getFileHash } from './worker/get-file-hash'
 import { waitForTurn } from './worker/wait-for-turn'
 import { orderTests } from './worker/order-tests'
@@ -186,12 +187,6 @@ const MAX_BUDGET = 2 ** 31 - 1
 const STRAY_SLOT = Symbol.for('mootant.vitest.strays')
 
 /**
- * Variables Vitest numbers its workers with: they differ from worker to worker
- * and are not inputs of a test, so the environment tracking ignores them.
- */
-const VITEST_VARIABLES = ['VITEST_WORKER_ID', 'VITEST_POOL_ID']
-
-/**
  * Timers of the worker, captured when the runner loads: before setup files and
  * tests can install fake timers.
  */
@@ -256,19 +251,6 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
-   * Project files the test code read through `node:fs` while the unit ran, its
-   * teardown included, those it wrote, which are no inputs when it reads them
-   * later, the paths it changed with the directories they are in, and the
-   * environment variables it read; null while nothing records.
-   */
-  private inputs: {
-    environment: Set<string>
-    written: Set<string>
-    touched: Set<string>
-    files: Set<string>
-  } | null = null
-
-  /**
    * Mutant runtime the switched code calls.
    */
   private readonly runtime: MutantRuntime = installMutantRuntime()
@@ -309,7 +291,7 @@ export default class MootantRunner extends TestRunner {
   /**
    * What the test file depended on (`listDependencies`) when its file suite
    * ended, its snapshot files included, read before Vitest drops its snapshot
-   * state, or null before; the end of the unit adds what its teardown read.
+   * state, or null before.
    */
   private dependencies: string[] | null = null
 
@@ -317,6 +299,12 @@ export default class MootantRunner extends TestRunner {
    * Descriptor of the heartbeat file, or null until the first beat.
    */
   private beatDescriptor: number | null = null
+
+  /**
+   * What the test code reads while the unit runs, its teardown included
+   * (`trackInputs`); null while nothing records.
+   */
+  private inputs: InputTracking | null = null
 
   /**
    * Mutants a try of this unit already failed with; they are not tried again.
@@ -365,22 +353,10 @@ export default class MootantRunner extends TestRunner {
   private lastTest: string | null = null
 
   /**
-   * Name of the claimed unit, `<hash>-<n>`, or null in a dry run and when the
-   * worker claimed no unit.
-   */
-  private unitName: string | null = null
-
-  /**
    * Whether suites and tests run one at a time even where the user marked them
    * concurrent: in a batch run and in a dry run that tries each test twice.
    */
   private readonly sequential: boolean
-
-  /**
-   * Names of the environment variables the unit read, `*` for all of them,
-   * sorted; read when the unit ends.
-   */
-  private environment: string[] = []
 
   /**
    * Descriptor of the out file of this unit, open for appending, or null when
@@ -392,12 +368,6 @@ export default class MootantRunner extends TestRunner {
    * Heartbeat file of this worker.
    */
   private readonly beatFile: string
-
-  /**
-   * Files and directories the test code read and changed itself while the unit
-   * ran, sorted; read when the unit ends.
-   */
-  private modified: string[] = []
 
   /**
    * Whether the unit ends in the worker's teardown, after Vitest cleaned up the
@@ -568,11 +538,10 @@ export default class MootantRunner extends TestRunner {
       this.runnable = new Set()
       return
     }
-    this.unitName = `${hash}-${index}`
     await waitForTurn(options.directory, { index, hash }, clock)
     this.started = clock.now()
     this.unitIndex = plan!.indexes[index]!
-    this.outName = this.unitName
+    this.outName = `${hash}-${index}`
     this.out = openSync(path.join(out, `${this.outName}.jsonl`), 'a')
     let hookTimeout =
       this.config.hookTimeout > 0 ? this.config.hookTimeout : Infinity
@@ -827,74 +796,6 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
-   * Starts recording the project files the test code reads through `node:fs`
-   * and the environment variables it reads, before the test file and its setup
-   * files load. The first worker of a project in a dry run also writes the
-   * hashes of the worker's environment variables, as Vitest set them up, to
-   * `env/<hash>.json` of the work directory, for the main process to tell what
-   * the variables read were.
-   *
-   * @param snapshot - Whether to write the environment of the project.
-   */
-  private startTracking(snapshot: boolean): void {
-    let { directory, root } = this.options
-    let inputs = {
-      environment: new Set<string>(),
-      written: new Set<string>(),
-      touched: new Set<string>(),
-      files: new Set<string>(),
-    }
-    this.inputs = inputs
-    /**
-     * Tells whether a path is a file of the project.
-     *
-     * @param file - Absolute path.
-     * @returns Whether it is in the root, outside `node_modules`.
-     */
-    function isProjectFile(file: string): boolean {
-      return (
-        (file === root || file.startsWith(root + path.sep)) &&
-        !file.includes(`${path.sep}node_modules${path.sep}`)
-      )
-    }
-    trackFileReads({
-      write: file => {
-        inputs.written.add(file)
-        inputs.touched.add(file)
-        inputs.touched.add(path.dirname(file))
-      },
-      read: file => {
-        if (isProjectFile(file) && !inputs.written.has(file)) {
-          inputs.files.add(file)
-        }
-      },
-    })
-    let real = trackEnvironment(
-      { holder: Reflect.get(this, 'workerState'), ignored: VITEST_VARIABLES },
-      name => {
-        inputs.environment.add(name)
-      },
-    )
-    if (snapshot) {
-      let variables: Record<string, string> = {}
-      for (let [name, value = ''] of Object.entries(real)) {
-        variables[name] = createHash('sha256').update(value).digest('hex')
-      }
-      try {
-        writeFileSync(
-          path.join(
-            directory,
-            'env',
-            `${getFileHash('', this.config.name ?? '')}.json`,
-          ),
-          JSON.stringify({ project: this.config.name ?? '', variables }),
-          { flag: 'wx' },
-        )
-      } catch {}
-    }
-  }
-
-  /**
    * Starts a try of a test after its previous try finished: in a batch run,
    * resets the counters and activates the try's mutant with the test's bounds;
    * in a dry run, collects the sites the try evaluates. After a timed-out try
@@ -1019,18 +920,18 @@ export default class MootantRunner extends TestRunner {
       } else if (mode === 'dry') {
         hits -= this.inside.hits
       }
-      let dependencies = this.stopTracking()
+      let { dependencies, ...read } = this.stopTracking()
       writeOutRecord(this.out, {
         covers: [...this.loadCovers].toSorted(),
         duration: clock.now() - this.started,
         loadDuration: this.loadDuration,
-        environment: this.environment,
+        environment: read.environment,
         concurrent: this.concurrent,
         loadError: this.loadError,
         hookError: this.hookError,
         abandoned: this.abandoned,
         reached: runtime.reached,
-        modified: this.modified,
+        modified: read.modified,
         strays: this.loadStrays,
         unit: this.unitIndex,
         booted: this.booted,
@@ -1102,6 +1003,42 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
+   * Starts recording the project files the test code reads through `node:fs`
+   * and the environment variables it reads, before the test file and its setup
+   * files load. The first worker of a project in a dry run also writes the
+   * hashes of the worker's environment variables, as Vitest set them up, to
+   * `env/<hash>.json` of the work directory, for the main process to tell what
+   * the variables read were.
+   *
+   * @param snapshot - Whether to write the environment of the project.
+   */
+  private startTracking(snapshot: boolean): void {
+    let { directory, root } = this.options
+    let inputs = trackInputs(root, {
+      holder: Reflect.get(this, 'workerState'),
+      ignored: VITEST_VARIABLES,
+    })
+    this.inputs = inputs
+    if (snapshot) {
+      let variables: Record<string, string> = {}
+      for (let [name, value = ''] of Object.entries(inputs.real)) {
+        variables[name] = createHash('sha256').update(value).digest('hex')
+      }
+      try {
+        writeFileSync(
+          path.join(
+            directory,
+            'env',
+            `${getFileHash('', this.config.name ?? '')}.json`,
+          ),
+          JSON.stringify({ project: this.config.name ?? '', variables }),
+          { flag: 'wx' },
+        )
+      } catch {}
+    }
+  }
+
+  /**
    * Stops recording what the code reads once the unit ended and lists what it
    * depended on: what the test file depended on when its file suite ended, with
    * what the worker evaluated, required and read through `node:fs` until now,
@@ -1111,27 +1048,32 @@ export default class MootantRunner extends TestRunner {
    * to `process.env` and `node:fs` they keep, are out of sight: such a unit
    * reports no dependencies, so it is never cached.
    *
-   * @returns What the unit depended on, sorted, or null when it cannot tell.
+   * @returns What the unit depended on, sorted, or null when it cannot tell,
+   *   with the names of the environment variables it read, `*` for all of them,
+   *   and the files and directories it read and changed itself, both sorted.
    */
-  private stopTracking(): string[] | null {
-    let { environment, touched, files } = this.inputs!
+  private stopTracking(): {
+    dependencies: string[] | null
+    environment: string[]
+    modified: string[]
+  } {
     let dependencies = new Set([
       ...(this.dependencies ?? []),
       ...this.listDependencies(undefined),
     ])
-    this.environment = [...environment].toSorted()
-    this.modified = [...files].filter(file => touched.has(file)).toSorted()
+    let { environment, modified } = this.inputs!.stop()
     this.inputs = null
     let state = Reflect.get(this, 'workerState') as {
       ctx: { environment: { name: string } }
-      metaEnv: object
     }
-    trackFileReads(null)
-    trackEnvironment({ ignored: VITEST_VARIABLES, holder: state }, null)
-    this.dependencies = [...dependencies].toSorted()
-    return Object.hasOwn(builtinEnvironments, state.ctx.environment.name) ?
-        this.dependencies
-      : null
+    let sorted = [...dependencies].toSorted()
+    return {
+      dependencies:
+        Object.hasOwn(builtinEnvironments, state.ctx.environment.name) ? sorted
+        : null,
+      environment,
+      modified,
+    }
   }
 
   /**

@@ -13,9 +13,14 @@ import { installModuleHooks } from './install-module-hooks'
 import { createRecordWriter } from './create-record-writer'
 import { createFileRecorder } from './create-file-recorder'
 import { captureClock } from '../../shared/capture-clock'
+import { trackInputs } from '../../shared/track-inputs'
 import { createTryTracker } from './create-try-tracker'
-import { trackInputs } from './track-inputs'
 import { readUnit } from './read-unit'
+
+/**
+ * Variables node:test reads on its own, which say nothing about the tests.
+ */
+const NODE_TEST_VARIABLES = ['NODE_TEST_CONTEXT', 'FORCE_COLOR']
 
 /**
  * Preload of mootant's node:test processes, the first `--import` of a test
@@ -64,7 +69,7 @@ if (unit !== null) {
     hooks: new URL(name, import.meta.url),
   })
   write({ node: process.version, pid: process.pid, kind: 'start', hooks, time })
-  let stop = trackInputs(unit.root)
+  let inputs = trackInputs(unit.root, { ignored: NODE_TEST_VARIABLES })
   let require = moduleApi.createRequire(import.meta.url)
   beforeEach(context => {
     tracker.open(context as TestContext)
@@ -76,6 +81,9 @@ if (unit !== null) {
     tracker.error(error)
   })
   process.on('exit', code => {
-    tracker.exit(code, { ...stop(), required: Object.keys(require.cache) })
+    tracker.exit(code, {
+      ...inputs.stop(),
+      required: Object.keys(require.cache),
+    })
   })
 }

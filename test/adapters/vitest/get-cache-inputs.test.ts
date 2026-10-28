@@ -95,6 +95,8 @@ describe('getCacheInputs', () => {
       } as never,
       {
         '': {
+          VITEST_WORKER_ID: 'v',
+          VITEST_POOL_ID: 'q',
           LC_TIME: 'l2',
           NODE_ENV: 'n',
           LANG: 'l1',
@@ -168,6 +170,8 @@ describe('getCacheInputs', () => {
           ['PATH', 'p'],
           ['TZ', 't'],
         ]),
+        VITEST_WORKER_ID: 'v',
+        VITEST_POOL_ID: 'q',
         LC_TIME: 'l2',
         NODE_ENV: 'n',
         LANG: 'l1',
@@ -178,5 +182,17 @@ describe('getCacheInputs', () => {
       },
       web: { '*': createDigest([]) },
     })
+    expect(Object.keys(inputs.environment?.[''] ?? {})).toStrictEqual([
+      'LANG',
+      'LC_TIME',
+      'NODE_ENV',
+      'PATH',
+      'PWD',
+      'SHLVL',
+      'TZ',
+      'VITEST_POOL_ID',
+      'VITEST_WORKER_ID',
+      '*',
+    ])
   })
 })

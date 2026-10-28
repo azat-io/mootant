@@ -5,35 +5,15 @@ import path from 'node:path'
 
 import type { CacheInputs } from '../../types/adapter/cache-inputs'
 
-import { compareCodeUnits } from '../../core/compare-code-units'
-import { createDigest } from '../../core/cache/create-digest'
+import { VERDICT_VARIABLE_PATTERN } from '../shared/verdict-variable-pattern'
+import { indexEnvironmentHashes } from '../shared/index-environment-hashes'
+import { VITEST_VARIABLES } from './worker/vitest-variables'
+import { getModuleFile } from './get-module-file'
 
 /**
  * Pattern of a test environment given as a path rather than a name.
  */
 const PATH_PATTERN = /^\.{0,2}[/\\]|^[a-z]:/iu
-
-/**
- * Query or hash at the end of a module id.
- */
-const SUFFIX_PATTERN = /[#?].*$/u
-
-/**
- * Environment variables that change from one shell, terminal or worker to
- * another without changing what tests do; left out of the hash of all
- * variables, which stands for code that lists them.
- */
-const VOLATILE = new Set([
-  'ITERM_SESSION_ID',
-  'VITEST_WORKER_ID',
-  'TERM_SESSION_ID',
-  'VITEST_POOL_ID',
-  'WINDOWID',
-  'OLDPWD',
-  'SHLVL',
-  'PWD',
-  '_',
-])
 
 /**
  * Options of `inspect` that write every part of a value, for values that are
@@ -46,13 +26,6 @@ const INSPECT_OPTIONS = {
   breakLength: Infinity,
   depth: Infinity,
 }
-
-/**
- * Environment variables that change verdicts of code that never reads them
- * through `process.env`, such as dates and collation, and the mode libraries
- * pick up.
- */
-const ALWAYS_PATTERN = /^(?:NODE_ENV|LANG|LC_.+|TZ)$/u
 
 /**
  * Lists what every verdict of a Vitest session depends on beyond the modules of
@@ -86,13 +59,11 @@ export function getCacheInputs(
   let settings: unknown[] = []
   for (let project of vitest.projects) {
     let { config } = project
-    let hashes = Object.entries(variables[project.name] ?? {}).toSorted(
-      ([left], [right]) => compareCodeUnits(left, right),
+    let hashes = indexEnvironmentHashes(
+      Object.entries(variables[project.name] ?? {}),
+      VITEST_VARIABLES,
     )
-    environment[project.name] = {
-      ...Object.fromEntries(hashes),
-      '*': createDigest(hashes.filter(([name]) => !VOLATILE.has(name))),
-    }
+    environment[project.name] = hashes
     for (let file of project.vite.config.configFileDependencies) {
       files.add(file)
     }
@@ -116,8 +87,8 @@ export function getCacheInputs(
     if (runner.evaluatedModules !== undefined) {
       let ids = [...runner.evaluatedModules.idToModuleMap.keys()]
       for (let id of ids) {
-        let file = id.replace(SUFFIX_PATTERN, '')
-        if (path.isAbsolute(file) && !file.includes('/node_modules/')) {
+        let file = getModuleFile(id)
+        if (file !== null) {
           files.add(file)
         }
       }
@@ -143,7 +114,9 @@ export function getCacheInputs(
         shuffle: config.sequence.shuffle,
         hooks: config.sequence.hooks,
       },
-      variables: hashes.filter(([name]) => ALWAYS_PATTERN.test(name)),
+      variables: Object.entries(hashes).filter(([name]) =>
+        VERDICT_VARIABLE_PATTERN.test(name),
+      ),
       environmentOptions: config.environmentOptions,
       update: config.snapshotOptions.updateSnapshot,
       maxConcurrency: config.maxConcurrency,

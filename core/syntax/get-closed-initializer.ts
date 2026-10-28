@@ -1,17 +1,11 @@
 import type { Node } from 'oxc-parser'
 
 import type { AnalyzedProgram } from '../../types/syntax/analyzed-program'
-import type { TreeIndex } from '../../types/syntax/tree-index'
+import type { ReadCheck } from '../../types/syntax/read-check'
 import type { Binding } from '../../types/syntax/binding'
 
 import { getFixedInitializer } from './get-fixed-initializer'
 import { getBindingClosure } from './get-binding-closure'
-
-/**
- * Check of one read of a name, given the runtime tree of the program and the
- * identifier of the read.
- */
-type ReadCheck = (tree: TreeIndex, reference: Node) => boolean
 
 /**
  * Whether every read of a name is a node of the runtime tree that passes a

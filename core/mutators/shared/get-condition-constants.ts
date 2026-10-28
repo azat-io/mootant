@@ -10,6 +10,8 @@ import { isNoOpCallbackConstant } from './is-no-op-callback-constant'
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
 import { getNullishDirections } from './get-nullish-directions'
 import { getNextLiteralValue } from './get-next-literal-value'
+import { getLoopRunningSkip } from './get-loop-running-skip'
+import { NO_OP_CALLBACK_SKIP } from './no-op-callback-skip'
 import { getComparisonPlan } from './get-comparison-plan'
 import { getLiteralMutator } from './get-literal-mutator'
 import { getOwnedConstants } from './get-owned-constants'
@@ -19,6 +21,7 @@ import { getRunningValue } from './get-running-value'
 import { getLiteralValue } from './get-literal-value'
 import { getLiteralSkip } from './get-literal-skip'
 import { isAlwaysTruthy } from './is-always-truthy'
+import { LEAVE_NOW_SKIP } from './leave-now-skip'
 import { getInnermost } from './get-innermost'
 import { isComparison } from './is-comparison'
 import { isNegation } from './is-negation'
@@ -192,54 +195,6 @@ export function getConditionConstants(
 }
 
 /**
- * Finds the first rule that skips a constant of condition's replaced node.
- *
- * @param value - Truth value written in place of the node.
- * @param facts - Values the rules compare the constant with.
- * @returns Rule and reason of the skip, or null when the constant is emitted.
- */
-function getConstantSkip(
-  value: boolean,
-  facts: ConstantFacts,
-): SkipNote | null {
-  if (value === facts.fixed) {
-    return {
-      reason: `the type hints make the condition always ${value}`,
-      rule: 'typed-constant',
-    }
-  }
-  if (value === facts.running) {
-    return {
-      reason: `${value} keeps the loop running forever, so only a timeout could kill it`,
-      rule: 'loop-running',
-    }
-  }
-  if (value === facts.leaveNow) {
-    return {
-      reason:
-        "leaving a first exit test's loop at once is the loop's never-run mutant",
-      rule: 'O13',
-    }
-  }
-  let direction = facts.subsumed.find(item => item.value === value)
-  if (direction) {
-    return {
-      reason: `a running mutant of the ?? test moves it toward ${value}`,
-      by: direction.by,
-      rule: 'R3',
-    }
-  }
-  if (facts.noOp()) {
-    return {
-      reason:
-        "it makes the callback a no-op, which is method-call's removal of the call",
-      rule: 'O12',
-    }
-  }
-  return null
-}
-
-/**
  * Finds why a constant of condition's replaced node is skipped when its
  * innermost node is a literal (catalog 4.7, O1 and O7): the constant that keeps
  * the literal's truth value changes nothing, the other one is the literal
@@ -322,4 +277,41 @@ function getComparisonConstantSkip(
     }
   }
   return plan.skippedConstants.get(truth) ?? null
+}
+
+/**
+ * Finds the first rule that skips a constant of condition's replaced node.
+ *
+ * @param value - Truth value written in place of the node.
+ * @param facts - Values the rules compare the constant with.
+ * @returns Rule and reason of the skip, or null when the constant is emitted.
+ */
+function getConstantSkip(
+  value: boolean,
+  facts: ConstantFacts,
+): SkipNote | null {
+  if (value === facts.fixed) {
+    return {
+      reason: `the type hints make the condition always ${value}`,
+      rule: 'typed-constant',
+    }
+  }
+  if (value === facts.running) {
+    return getLoopRunningSkip(value)
+  }
+  if (value === facts.leaveNow) {
+    return LEAVE_NOW_SKIP
+  }
+  let direction = facts.subsumed.find(item => item.value === value)
+  if (direction) {
+    return {
+      reason: `a running mutant of the ?? test moves it toward ${value}`,
+      by: direction.by,
+      rule: 'R3',
+    }
+  }
+  if (facts.noOp()) {
+    return NO_OP_CALLBACK_SKIP
+  }
+  return null
 }

@@ -1,8 +1,9 @@
 import type { ReportIndex } from '../../../types/html/report-index'
 import type { RunStatus } from '../../../types/run/run-status'
 
+import { pluralize } from '../../../core/text/pluralize'
 import { renderMutantRow } from './render-mutant-row'
-import { pluralize } from '../../report/pluralize'
+import { filterByStatus } from './filter-by-status'
 import { formatScore } from './format-score'
 import { escapeHtml } from './escape-html'
 import { html } from './html'
@@ -32,9 +33,7 @@ export function renderAttention(
 ): string {
   let groups = index.worstFiles
     .map(file => ({
-      mutants: file.actionable.filter(
-        mutant => filter === 'all' || mutant.status === filter,
-      ),
+      mutants: filterByStatus(file.actionable, filter),
       file,
     }))
     .filter(group => group.mutants.length > 0)

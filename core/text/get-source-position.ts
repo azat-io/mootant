@@ -1,5 +1,7 @@
 import type { SourcePosition } from '../../types/source/source-position'
 
+import { findLastStart } from './find-last-start'
+
 /**
  * Converts an offset into a 1-based line and UTF-16 column with a binary search
  * over the line starts.
@@ -13,19 +15,9 @@ export function getSourcePosition(
   lineStarts: readonly number[],
   offset: number,
 ): SourcePosition {
-  let low = 0
-  let high = lineStarts.length - 1
-  while (low < high) {
-    let middle = Math.ceil((low + high) / 2)
-    if (lineStarts[middle]! <= offset) {
-      low = middle
-    } else {
-      high = middle - 1
-    }
-  }
-
+  let index = findLastStart(lineStarts, offset, start => start)
   return {
-    column: Math.max(offset - lineStarts[low]!, 0) + 1,
-    line: low + 1,
+    column: Math.max(offset - lineStarts[index]!, 0) + 1,
+    line: index + 1,
   }
 }

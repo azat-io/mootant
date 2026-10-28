@@ -1,8 +1,8 @@
 import type { ReportIndex } from '../../../types/html/report-index'
 import type { IndexedFile } from '../../../types/html/indexed-file'
 
+import { pluralize } from '../../../core/text/pluralize'
 import { renderStatusBar } from './render-status-bar'
-import { pluralize } from '../../report/pluralize'
 import { escapeHtml } from './escape-html'
 import { html } from './html'
 

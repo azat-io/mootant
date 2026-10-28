@@ -1,4 +1,4 @@
-import type { RunStatus } from '../run/run-status'
+import type { RunStatus } from './run-status'
 
 /**
  * Number of mutants with each final status.

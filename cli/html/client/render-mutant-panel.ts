@@ -2,10 +2,12 @@ import type { IndexedMutant } from '../../../types/html/indexed-mutant'
 import type { ReportIndex } from '../../../types/html/report-index'
 import type { RunStatus } from '../../../types/run/run-status'
 
+import { pluralize } from '../../../core/text/pluralize'
+import { renderMutantLink } from './render-mutant-link'
 import { renderTestName } from './render-test-name'
-import { pluralize } from '../../report/pluralize'
 import { describeStatus } from './describe-status'
 import { renderCommand } from './render-command'
+import { isOverlapping } from './is-overlapping'
 import { renderChange } from './render-change'
 import { getFileHref } from './get-file-href'
 import { escapeHtml } from './escape-html'
@@ -145,43 +147,19 @@ export function renderMutantPanel(
     DETAILS[mutant.status](index, mutant),
   ]
   let near = file.mutants.filter(
-    other =>
-      other !== mutant &&
-      other.start < Math.max(mutant.end, mutant.start + 1) &&
-      mutant.start < Math.max(other.end, other.start + 1),
+    other => other !== mutant && isOverlapping(other, mutant),
   )
   if (near.length > 0) {
     sections.push(
       html`<div class="panel-section">
         <span class="label">Also here</span>
         <ul class="also">
-          ${near
-            .map(other => {
-              let status = describeStatus(other.status)
-              return html`<li>
-                <a
-                  class="also-link"
-                  href="#/mutant/${other.id}"
-                  ><span class="dot status-${status.key}"></span
-                  ><span class="grow"
-                    ><code
-                      >${escapeHtml(report.mutators[other.mutator]!.id)}</code
-                    >
-                    ${renderChange(file.source, other)}</span
-                  ><span class="muted">${status.label}</span></a
-                >
-              </li>`
-            })
-            .join('')}
+          ${near.map(other => renderMutantLink(index, other)).join('')}
         </ul>
       </div>`,
     )
   }
-  let skipped = file.skipped.filter(
-    entry =>
-      entry.start < Math.max(mutant.end, mutant.start + 1) &&
-      mutant.start < Math.max(entry.end, entry.start + 1),
-  )
+  let skipped = file.skipped.filter(entry => isOverlapping(entry, mutant))
   if (skipped.length > 0) {
     sections.push(
       html`<div class="panel-section">

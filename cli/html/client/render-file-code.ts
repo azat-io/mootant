@@ -1,16 +1,11 @@
 import type { ReportIndex } from '../../../types/html/report-index'
-import type { RunStatus } from '../../../types/run/run-status'
 import type { FileView } from '../../../types/html/file-view'
 
+import { filterByStatus } from './filter-by-status'
 import { tokenizeSource } from './tokenize-source'
 import { describeStatus } from './describe-status'
 import { paintRanges } from './paint-ranges'
 import { renderCode } from './render-code'
-
-/**
- * Statuses the code marks when the filter shows every mutant.
- */
-const ACTIONABLE = new Set<RunStatus>(['NoCoverage', 'Survived', 'Error'])
 
 /**
  * Renders the code of the shown file: the badges count the mutants the filter
@@ -23,13 +18,8 @@ const ACTIONABLE = new Set<RunStatus>(['NoCoverage', 'Survived', 'Error'])
  */
 export function renderFileCode(index: ReportIndex, view: FileView): string {
   let { filter, file } = view
-  let visible = file.mutants.filter(
-    mutant => filter === 'all' || mutant.status === filter,
-  )
-  let marked =
-    filter === 'all' ?
-      visible.filter(mutant => ACTIONABLE.has(mutant.status))
-    : visible
+  let visible = filterByStatus(file.mutants, filter)
+  let marked = filter === 'all' ? file.actionable : visible
   let { length } = file.source
   return renderCode({
     skipped:

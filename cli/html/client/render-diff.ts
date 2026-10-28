@@ -1,31 +1,8 @@
+import type { ShownChange } from '../../../types/html/shown-change'
+
 import { getSourcePosition } from '../../../core/text/get-source-position'
 import { getLineEnd } from './get-line-end'
 import { escapeHtml } from './escape-html'
-
-/**
- * Change of a text to show as a diff.
- */
-interface DiffChange {
-  /**
-   * Part of the range the change amounts to, when a mutator names one.
-   */
-  focus?: { replacement: string; start: number; end: number }
-
-  /**
-   * Text written in place of the range.
-   */
-  replacement: string
-
-  /**
-   * Offset of the first replaced code unit.
-   */
-  start: number
-
-  /**
-   * Offset just past the last replaced code unit.
-   */
-  end: number
-}
 
 /**
  * Part of a line of the diff.
@@ -83,7 +60,7 @@ const MAX_ROWS = 8
 export function renderDiff(
   source: string,
   lineStarts: readonly number[],
-  change: DiffChange,
+  change: ShownChange,
 ): string {
   let [start, end, replacement] =
     change.focus ?

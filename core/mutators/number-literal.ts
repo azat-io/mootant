@@ -5,6 +5,7 @@ import type { Replacement } from '../../types/mutator/replacement'
 import type { SkipNote } from '../../types/mutant/skip-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
+import { isGlobalIdentifier } from './shared/is-global-identifier'
 import { isComparatorResult } from './shared/is-comparator-result'
 import { createRunContext } from './shared/create-run-context'
 import { getLiteralValue } from './shared/get-literal-value'
@@ -164,7 +165,11 @@ function isIdentityArgument(node: Node, context: MutatorContext): boolean {
     return false
   }
   let [, end, ...rest] = parent.arguments
-  if (rest.length > 0 || (end && !isUndefined(end, context))) {
+  if (
+    rest.length > 0 ||
+    (end &&
+      !isGlobalIdentifier(syntax.unwrapParentheses(end), 'undefined', context))
+  ) {
     return false
   }
   let { type } = getTypeView(hints.getType(parent.callee.object))
@@ -194,23 +199,6 @@ function mutateNumber(
   }
   let skip = getNumberSkip(node, context)
   return [skip ? { text, skip, node } : { text, node }]
-}
-
-/**
- * Tells whether an argument is the global `undefined`.
- *
- * @param node - Argument of a call.
- * @param context - Mutator context of the file.
- * @returns Whether the argument is, through parentheses, the identifier
- *   `undefined` that resolves to no same-file binding.
- */
-function isUndefined(node: Node, context: MutatorContext): boolean {
-  let inner = context.syntax.unwrapParentheses(node)
-  return (
-    inner.type === 'Identifier' &&
-    inner.name === 'undefined' &&
-    context.sourceCode.getBinding(inner) === null
-  )
 }
 
 /**

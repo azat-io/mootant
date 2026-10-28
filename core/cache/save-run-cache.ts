@@ -1,11 +1,10 @@
-import path from 'node:path'
-
 import type { CachedInputs } from '../../types/cache/cached-inputs'
 import type { Diagnostic } from '../../types/mutant/diagnostic'
 import type { RunCache } from '../../types/cache/run-cache'
 
 import { getDisplayPath } from '../run/get-display-path'
 import { findChangedFiles } from './find-changed-files'
+import { getPortablePath } from './get-portable-path'
 import { writeRunCache } from './write-run-cache'
 import { createDigest } from './create-digest'
 import { hashFiles } from './hash-files'
@@ -106,7 +105,7 @@ export async function saveRunCache(input: {
     }
     let stored: CachedInputs = {
       files: value.files.map(dependency => [
-        path.relative(root, dependency).replaceAll('\\', '/'),
+        getPortablePath(dependency, root),
         hashes.get(dependency)!,
       ]),
       environment: value.environment,

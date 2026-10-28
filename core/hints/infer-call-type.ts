@@ -18,6 +18,7 @@ import { unwrapExpression } from '../tree/unwrap-expression'
 import { unionInferredTypes } from './union-inferred-types'
 import { createInferredType } from './create-inferred-type'
 import { getMemberPath } from '../syntax/get-member-path'
+import { getMemberRoot } from '../syntax/get-member-root'
 import { WELL_KNOWN_CALLS } from './well-known-calls'
 import { findThisClass } from './find-this-class'
 
@@ -88,7 +89,7 @@ export function inferCallType(
 ): InferredType {
   let callee = unwrapExpression(node.callee)
   let path = getMemberPath(callee)
-  if (path && !inference.scopes.bindings.has(getChainRoot(callee))) {
+  if (path && !inference.scopes.bindings.has(getMemberRoot(callee))) {
     let name = path.join('.')
     if (firstArgumentCalls.has(name)) {
       return inferFirstArgument(node, name, inference)
@@ -341,23 +342,4 @@ function getDeclaredFunctions(binding: undefined | Binding): Node[] {
     default:
       return []
   }
-}
-
-/**
- * Finds the expression at the root of a member chain.
- *
- * @param node - Identifier or member chain, without outer wrappers.
- * @returns The innermost object of the chain.
- */
-function getChainRoot(node: Node): Node {
-  let current = node
-  while (
-    current.type === 'MemberExpression' ||
-    current.type === 'ChainExpression'
-  ) {
-    current = unwrapExpression(
-      current.type === 'ChainExpression' ? current.expression : current.object,
-    )
-  }
-  return current
 }

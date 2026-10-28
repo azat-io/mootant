@@ -1,5 +1,5 @@
-import type { StatusCounts } from '../../../types/html/status-counts'
-import type { RunStatus } from '../../../types/run/run-status'
+import type { StatusCounts } from '../../types/run/status-counts'
+import type { RunStatus } from '../../types/run/run-status'
 
 /**
  * Counts mutants by final status.

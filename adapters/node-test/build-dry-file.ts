@@ -3,7 +3,10 @@ import type { DryFile } from '../../types/adapter/dry-file'
 import type { DryTest } from '../../types/adapter/dry-test'
 import type { NodeTestUnit } from './types/node-test-unit'
 
+import { describeHookFailure } from './describe-hook-failure'
+import { listRunningTries } from './list-running-tries'
 import { dropTodoErrors } from './drop-todo-errors'
+import { listFileErrors } from './list-file-errors'
 import { describeExit } from './describe-exit'
 import { getTestId } from './get-test-id'
 import { readTries } from './read-tries'
@@ -41,12 +44,10 @@ interface DryFileReport {
  * early), or when the process failed with no failed test: an unhandled error
  * outside tests, a failed suite hook or teardown, or a failed root hook, which
  * mootant's reporter records since plain `node` exits with 0 after it from Node
- * 22 on. Uncaught errors outside tries are its errors. So is an error that came
- * while a test ran in a test file that never finished evaluating: Node starts
- * the first test a file registered before it reports the error that stopped the
- * file's top level, and that error stopped its loading. Uncaught errors that
- * node:test gave to a todo test count nowhere (`dropTodoErrors`). Dependencies
- * are left for the caller.
+ * 22 on (`describeHookFailure`). The uncaught errors that count against the
+ * file are its errors (`listFileErrors`). Uncaught errors that node:test gave
+ * to a todo test count nowhere (`dropTodoErrors`). Dependencies are left for
+ * the caller.
  *
  * @param outcome - What the process left behind.
  * @param input - Test file and project root.
@@ -68,17 +69,9 @@ export function buildDryFile(
   })
   let end = records.find(record => record.kind === 'end')
   let hook = records.find(record => record.kind === 'root-hook')
-  let unfinished = records.every(record => record.kind !== 'loaded')
-  let errors: string[] = []
-  let loadErrors = 0
-  for (let record of records) {
-    if (record.kind === 'error' && (unfinished || record.tries.length === 0)) {
-      errors.push(record.message)
-      if (record.load || record.tries.length > 0) {
-        loadErrors += 1
-      }
-    }
-  }
+  let fileErrors = listFileErrors(records)
+  let errors = fileErrors.map(entry => entry.message)
+  let loadErrors = fileErrors.filter(entry => entry.load).length
   let failed = tries.some(entry => entry.facts.failed)
   let loadFailed = outcome.hung || end === undefined || loadErrors > 0
   if (end === undefined || outcome.hung) {
@@ -88,11 +81,7 @@ export function buildDryFile(
   } else if (!failed && (hook !== undefined || outcome.code !== 0)) {
     loadFailed = true
     if (errors.length === 0) {
-      errors.push(
-        hook === undefined ?
-          `The test file failed outside its tests (exit code ${outcome.code ?? outcome.signal}).`
-        : `A root hook of the test file failed: ${hook.message}`,
-      )
+      errors.push(describeHookFailure(outcome, hook))
     }
   }
   return {
@@ -127,8 +116,8 @@ export function buildDryFile(
 }
 
 /**
- * Finds the test that ran last in a process the watchdog stopped: the last
- * `open` record without its `close`.
+ * Finds the test that ran last in a process the watchdog stopped: the last of
+ * the tries that still ran (`listRunningTries`).
  *
  * @param outcome - What the process left behind.
  * @param input - Test file and project root.
@@ -140,15 +129,7 @@ function findRunningTest(
   outcome: TestProcessOutcome,
   input: { root: string; file: string },
 ): { name: string | null; test: string | null } {
-  let running = new Map<number, { occurrence: number; name: string }>()
-  for (let record of outcome.records) {
-    if (record.kind === 'open') {
-      running.set(record.seq, record)
-    } else if (record.kind === 'close') {
-      running.delete(record.seq)
-    }
-  }
-  let last = [...running.values()].at(-1)
+  let last = listRunningTries(outcome.records).at(-1)
   return last === undefined ?
       { name: null, test: null }
     : { test: getTestId(input.root, input.file, last), name: last.name }

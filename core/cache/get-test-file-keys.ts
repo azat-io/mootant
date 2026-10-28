@@ -1,9 +1,9 @@
-import path from 'node:path'
-
 import type { DryFile } from '../../types/adapter/dry-file'
 
 import { getTestFileKey } from '../run/get-test-file-key'
 import { compareCodeUnits } from '../compare-code-units'
+import { getPortablePath } from './get-portable-path'
+import { listFileHashes } from './list-file-hashes'
 import { createDigest } from './create-digest'
 
 /**
@@ -42,17 +42,13 @@ export function getTestFileKeys(input: {
     if (!Array.isArray(file.dependencies)) {
       continue
     }
-    let dependencies = [
-      ...new Set([
+    let dependencies = listFileHashes(
+      [
         file.file,
         ...file.dependencies.filter(dependency => !mutated.has(dependency)),
-      ]),
-    ]
-      .map(dependency => [
-        path.relative(root, dependency).replaceAll('\\', '/'),
-        hashes.get(dependency) ?? null,
-      ])
-      .toSorted(([left], [right]) => compareCodeUnits(left!, right!))
+      ],
+      { hashes, root },
+    )
     let values =
       Object.hasOwn(variables, file.project) ? variables[file.project]! : {}
     let read = [...new Set(file.environment)]
@@ -62,7 +58,7 @@ export function getTestFileKeys(input: {
       getTestFileKey(file),
       createDigest([
         environment,
-        path.relative(root, file.file).replaceAll('\\', '/'),
+        getPortablePath(file.file, root),
         file.project,
         dependencies,
         read,

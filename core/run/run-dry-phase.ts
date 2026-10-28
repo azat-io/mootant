@@ -7,9 +7,11 @@ import type { DryFile } from '../../types/adapter/dry-file'
 import type { DryTest } from '../../types/adapter/dry-test'
 import type { RunEvent } from '../../types/run/run-event'
 
+import { compareDryEntries } from './compare-dry-entries'
 import { compareCodeUnits } from '../compare-code-units'
 import { getTestFileKey } from './get-test-file-key'
 import { getDisplayPath } from './get-display-path'
+import { pluralize } from '../text/pluralize'
 
 /**
  * What the dry phase needs to know about the run.
@@ -213,7 +215,7 @@ export async function runDryPhase(
     unrepeatableFiles = new Set()
     if (kept.length > 0) {
       input.report({
-        message: `Running the dry run again without ${countFiles(broken.size, 'file')} that broke tests.`,
+        message: `Running the dry run again without ${pluralize(broken.size, 'file')} that broke tests.`,
         kind: 'dry-again',
       })
       let again = await runCheckedDry(
@@ -301,7 +303,7 @@ async function runCheckedDry(
   }
   let files = listTestFiles([...failing, ...unloaded])
   input.report({
-    message: `${countFiles(files.length, 'test file')} failed with each test run twice; running them again with each test once.`,
+    message: `${pluralize(files.length, 'test file')} failed with each test run twice; running them again with each test once.`,
     kind: 'dry-again',
   })
   let once = await runDry(
@@ -328,11 +330,11 @@ async function runCheckedDry(
       tests: [
         ...dry.tests.filter(test => !isRerun(test)),
         ...once.tests,
-      ].toSorted(compareEntries),
+      ].toSorted(compareDryEntries),
       files: [
         ...dry.files.filter(file => !isRerun(file)),
         ...once.files,
-      ].toSorted(compareEntries),
+      ].toSorted(compareDryEntries),
       mismatched: mergeSorted(dry.mismatched, once.mismatched),
       outside: mergeSorted(dry.outside, once.outside),
       served: mergeSorted(dry.served, once.served),
@@ -376,9 +378,8 @@ function formatFailures(
     ),
   ]
   let counts = [
-    tests.length > 0 && `${tests.length} test${tests.length === 1 ? '' : 's'}`,
-    files.length > 0 &&
-      `${files.length} test file${files.length === 1 ? '' : 's'}`,
+    tests.length > 0 && pluralize(tests.length, 'test'),
+    files.length > 0 && pluralize(files.length, 'test file'),
   ].filter(Boolean)
   let message = `${heading} (${counts.join(', ')}):\n${lines.slice(0, LISTED_FAILURES).join('\n')}`
   if (lines.length > LISTED_FAILURES) {
@@ -483,29 +484,6 @@ function reportFailedFiles(
 }
 
 /**
- * Orders tests and test files by path, then by project, keeping the order of
- * tests within a file.
- *
- * @param left - Entry expected first.
- * @param right - Entry expected second.
- * @param left.project - Name of its project.
- * @param left.file - Absolute path of its test file.
- * @param right.project - Name of its project.
- * @param right.file - Absolute path of its test file.
- * @returns A negative number when `left` sorts first, a positive number when
- *   `right` sorts first and 0 when both are equal.
- */
-function compareEntries(
-  left: { project: string; file: string },
-  right: { project: string; file: string },
-): number {
-  return (
-    compareCodeUnits(left.file, right.file) ||
-    compareCodeUnits(left.project, right.project)
-  )
-}
-
-/**
  * Finds the tests whose first try failed and the test files that failed to
  * load.
  *
@@ -531,15 +509,4 @@ function findFailures(dry: DryRunResult): {
  */
 function mergeSorted(left: string[], right: string[]): string[] {
   return [...new Set([...left, ...right])].toSorted(compareCodeUnits)
-}
-
-/**
- * Counts files in words.
- *
- * @param count - Number of files.
- * @param noun - What the files are, singular.
- * @returns Such as "1 mutated file" or "3 mutated files".
- */
-function countFiles(count: number, noun: string): string {
-  return count === 1 ? `1 ${noun}` : `${count} ${noun}s`
 }

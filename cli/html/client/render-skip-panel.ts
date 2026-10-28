@@ -2,8 +2,9 @@ import type { ReportIndex } from '../../../types/html/report-index'
 import type { IndexedFile } from '../../../types/html/indexed-file'
 import type { IndexedSkip } from '../../../types/html/indexed-skip'
 
+import { renderMutantLink } from './render-mutant-link'
 import { describeStatus } from './describe-status'
-import { renderChange } from './render-change'
+import { isOverlapping } from './is-overlapping'
 import { escapeHtml } from './escape-html'
 import { renderDiff } from './render-diff'
 import { getIcon } from './get-icon'
@@ -44,33 +45,14 @@ export function renderSkipPanel(
           }
         </dd>`
     : ''
-  let near = file.mutants.filter(
-    mutant =>
-      mutant.start < Math.max(skip.end, skip.start + 1) &&
-      skip.start < Math.max(mutant.end, mutant.start + 1),
-  )
+  let near = file.mutants.filter(mutant => isOverlapping(mutant, skip))
   let running =
     near.length === 0 ?
       ''
     : html`<div class="panel-section">
         <span class="label">Mutants that run here</span>
         <ul class="also">
-          ${near
-            .map(mutant => {
-              let status = describeStatus(mutant.status)
-              return html`<li>
-                <a
-                  class="also-link"
-                  href="#/mutant/${mutant.id}"
-                  ><span class="dot status-${status.key}"></span
-                  ><span class="grow"
-                    ><code>${escapeHtml(mutators[mutant.mutator]!.id)}</code>
-                    ${renderChange(file.source, mutant)}</span
-                  ><span class="muted">${status.label}</span></a
-                >
-              </li>`
-            })
-            .join('')}
+          ${near.map(mutant => renderMutantLink(index, mutant)).join('')}
         </ul>
       </div>`
   return html`<div class="card panel-card is-detail">

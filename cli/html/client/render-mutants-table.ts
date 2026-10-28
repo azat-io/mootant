@@ -2,6 +2,7 @@ import type { MutantsFilter } from '../../../types/html/mutants-filter'
 import type { ReportIndex } from '../../../types/html/report-index'
 
 import { getTableLayout } from './get-table-layout'
+import { filterByStatus } from './filter-by-status'
 import { describeStatus } from './describe-status'
 import { measureColumn } from './measure-column'
 import { renderChange } from './render-change'
@@ -46,12 +47,9 @@ export function renderMutantsTable(
   let { mutator, filter, query, limit } = shown
   let { report } = index
   let text = query.trim().toLowerCase()
-  let matched = index.mutants.filter(mutant => {
+  let matched = filterByStatus(index.mutants, filter).filter(mutant => {
     let { id } = report.mutators[mutant.mutator]!
-    if (
-      (filter !== 'all' && mutant.status !== filter) ||
-      (mutator !== null && id !== mutator)
-    ) {
+    if (mutator !== null && id !== mutator) {
       return false
     }
     let file = index.files[mutant.file]!

@@ -3,6 +3,7 @@ import type { Node } from 'oxc-parser'
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 import { unwrapExpression } from '../../tree/unwrap-expression'
+import { isGlobalIdentifier } from './is-global-identifier'
 import { isComparison } from './is-comparison'
 import { getTypeView } from './get-type-view'
 import { isNegation } from './is-negation'
@@ -53,10 +54,5 @@ function isGlobalBooleanCall(node: Node, context: MutatorContext): boolean {
   if (call.type !== 'CallExpression') {
     return false
   }
-  let callee = unwrapExpression(call.callee)
-  return (
-    callee.type === 'Identifier' &&
-    callee.name === 'Boolean' &&
-    context.sourceCode.getBinding(callee) === null
-  )
+  return isGlobalIdentifier(unwrapExpression(call.callee), 'Boolean', context)
 }

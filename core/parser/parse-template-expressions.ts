@@ -14,6 +14,7 @@ import type { ParsedFile } from '../../types/source/parsed-file'
 import { isExpressionWrapper } from '../tree/is-expression-wrapper'
 import { unwrapExpression } from '../tree/unwrap-expression'
 import { getLineStarts } from '../text/get-line-starts'
+import { findLastStart } from '../text/find-last-start'
 import { blankOutside } from '../text/blank-outside'
 import { walkTree } from '../tree/walk-tree'
 
@@ -335,27 +336,6 @@ function readEventForm(statement: Node): EventForm {
 }
 
 /**
- * Finds the segment whose text holds an offset of the module.
- *
- * @param segments - Segments in module order.
- * @param offset - Offset in the module.
- * @returns Last segment that starts at or before the offset, or the first one.
- */
-function findSegment(segments: readonly Segment[], offset: number): Segment {
-  let low = 0
-  let high = segments.length - 1
-  while (low < high) {
-    let middle = Math.ceil((low + high) / 2)
-    if (segments[middle]!.outerStart <= offset) {
-      low = middle
-    } else {
-      high = middle - 1
-    }
-  }
-  return segments[low]!
-}
-
-/**
  * Moves an offset of the module to the file. An offset in the text around the
  * code of a segment is clamped to the edge of that code.
  *
@@ -367,4 +347,16 @@ function moveOffset(segments: readonly Segment[], offset: number): number {
   let segment = findSegment(segments, offset)
   let clamped = Math.min(Math.max(offset, segment.start), segment.end)
   return clamped + segment.shift
+}
+
+/**
+ * Finds the segment whose text holds an offset of the module.
+ *
+ * @param segments - Segments in module order.
+ * @param offset - Offset in the module.
+ * @returns Last segment that starts at or before the offset, or the first one.
+ */
+function findSegment(segments: readonly Segment[], offset: number): Segment {
+  let index = findLastStart(segments, offset, segment => segment.outerStart)
+  return segments[index]!
 }

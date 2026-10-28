@@ -223,7 +223,7 @@ function inferUnaryType(
 }
 
 /**
- * Infers `a && b`, `a || b` and `a ?? B`..
+ * Infers `a && b`, `a || b` and `a ?? B`.
  *
  * @param operator - One of `&&`, `||` and `??`.
  * @param left - Type of the left operand.

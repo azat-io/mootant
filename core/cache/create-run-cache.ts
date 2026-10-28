@@ -13,6 +13,7 @@ import type { DryAnalysis } from '../../types/run/dry-analysis'
 
 import { getTestFileKey } from '../run/get-test-file-key'
 import { compareCodeUnits } from '../compare-code-units'
+import { getPortablePath } from './get-portable-path'
 import { createDigest } from './create-digest'
 
 /**
@@ -214,7 +215,7 @@ export function createRunCache(input: RunCacheInput): RunCache {
     let entry = analysis.testFiles.get(file)!
     let slot = createDigest([
       mutant.mutant.id,
-      path.relative(root, entry.file).replaceAll('\\', '/'),
+      getPortablePath(entry.file, root),
       entry.project,
       test === null ? 'isolated' : 'batch',
       test ?? '',

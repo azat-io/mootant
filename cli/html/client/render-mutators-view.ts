@@ -1,8 +1,8 @@
 import type { ReportIndex } from '../../../types/html/report-index'
 
+import { pluralize } from '../../../core/text/pluralize'
 import { renderCountCells } from './render-count-cells'
 import { renderStatusBar } from './render-status-bar'
-import { pluralize } from '../../report/pluralize'
 import { formatScore } from './format-score'
 import { escapeHtml } from './escape-html'
 import { html } from './html'

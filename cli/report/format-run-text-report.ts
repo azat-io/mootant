@@ -9,16 +9,17 @@ import type { RunStatus } from '../../types/run/run-status'
 import type { DiffEntry } from '../diff/format-diff-groups'
 import type { RunKind } from '../../types/run/run-kind'
 
+import { getMaxDisplayWidth } from '../terminal/get-max-display-width'
 import { getDisplayWidth } from '../terminal/get-display-width'
 import { formatDiffGroups } from '../diff/format-diff-groups'
 import { cutToWidth } from '../terminal/cut-to-width'
+import { pluralize } from '../../core/text/pluralize'
 import { getSymbols } from '../terminal/get-symbols'
 import { sortByLocation } from './sort-by-location'
 import { formatDuration } from './format-duration'
 import { wrapText } from '../terminal/wrap-text'
 import { formatHeader } from './format-header'
 import { formatFields } from './format-fields'
-import { pluralize } from './pluralize'
 
 /**
  * How a run report is printed as text.
@@ -264,7 +265,7 @@ function formatFileScores(
   let { ellipsis } = getSymbols(style.unicode)
   let shown = files.slice(0, MAX_FILE_SCORES)
   let width = Math.min(
-    Math.max(...shown.map(file => getDisplayWidth(file.file))),
+    getMaxDisplayWidth(shown.map(file => file.file)),
     Math.max(16, style.width - 38),
   )
   let lines = shown.map(file => {

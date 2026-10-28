@@ -1,6 +1,6 @@
 import type { IndexedFile } from '../../../types/html/indexed-file'
 
-import { pluralize } from '../../report/pluralize'
+import { pluralize } from '../../../core/text/pluralize'
 import { getFileHref } from './get-file-href'
 import { escapeHtml } from './escape-html'
 import { html } from './html'

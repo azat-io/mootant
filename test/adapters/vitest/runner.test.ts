@@ -681,6 +681,7 @@ describe('mootantRunner', () => {
     let written = path.join(project, 'written.json')
     let fixture = path.join(project, 'fixture.json')
     let setting = path.join(project, 'environment.json')
+    let changed = path.join(project, 'changed.json')
     let file = createFile([
       createTest('a', () => {
         expect(process.env['MOOTANT_PROBE']).toBeUndefined()
@@ -689,6 +690,8 @@ describe('mootantRunner', () => {
           false,
         )
         expect(existsSync(path.join(tmpdir(), 'outside.json'))).toBe(false)
+        expect(existsSync(changed)).toBe(false)
+        writeFileSync(changed, '{}')
         writeFileSync(written, '{}')
         expect(readFileSync(written, 'utf8')).toBe('{}')
       }),
@@ -715,6 +718,7 @@ describe('mootantRunner', () => {
     let end = records!.at(-1) as {
       dependencies: string[]
       environment: string[]
+      modified: string[]
     }
     let [saved] = await readdir(path.join(directory, 'env'))
     let environment = JSON.parse(
@@ -728,13 +732,14 @@ describe('mootantRunner', () => {
     expect(end.dependencies).not.toContain(written)
     expect(
       end.dependencies.filter(dependency => dependency.startsWith(project)),
-    ).toStrictEqual([data, setting, fixture])
+    ).toStrictEqual([changed, data, setting, fixture])
     expect(end.environment).toStrictEqual([
       'MOOTANT_ENVIRONMENT',
       'MOOTANT_FIXTURE',
       'MOOTANT_LATE',
       'MOOTANT_PROBE',
     ])
+    expect(end.modified).toStrictEqual([changed])
     expect(saved).toBe(`${getFileHash('', '')}.json`)
     expect(environment.project).toBe('')
     expect(environment.variables['PATH']).toMatch(/^[\da-f]{64}$/u)
@@ -1061,7 +1066,7 @@ describe('mootantRunner', () => {
     runner.onCleanupWorkerContext!(async () => {
       seen.push(getRuntime().active)
       getRuntime().hit('m')
-      ended.push(existsSync(path.join(directory, 'out', `${hash}-0.jsonl`)))
+      ended.push(existsSync(path.join(directory, 'done', `${hash}-0`)))
       await Promise.resolve()
       throw new Error('2 left open\nstack')
     })
@@ -1084,6 +1089,7 @@ describe('mootantRunner', () => {
       'test',
     ])
     expect(seen).toStrictEqual(['m'])
+    expect(ended).toStrictEqual([false])
     expect(records.at(-1)).toMatchObject({
       hookError: '2 left open',
       reached: true,

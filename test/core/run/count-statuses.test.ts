@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { countStatuses } from '../../../../cli/html/client/count-statuses'
+import { countStatuses } from '../../../core/run/count-statuses'
 
 describe('countStatuses', () => {
   it('counts every status, zero included', () => {

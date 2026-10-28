@@ -1,6 +1,6 @@
-import type { StatusCounts } from '../../../types/html/status-counts'
+import type { StatusCounts } from '../../../types/run/status-counts'
 
-import { pluralize } from '../../report/pluralize'
+import { pluralize } from '../../../core/text/pluralize'
 import { html } from './html'
 
 /**

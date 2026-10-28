@@ -4,6 +4,7 @@ import type { FileView } from '../../../types/html/file-view'
 import { renderMutantPanel } from './render-mutant-panel'
 import { renderFilePanel } from './render-file-panel'
 import { renderSkipPanel } from './render-skip-panel'
+import { filterByStatus } from './filter-by-status'
 
 /**
  * Renders the panel next to the code: of the selected mutant, with buttons
@@ -20,9 +21,7 @@ export function renderSidePanel(index: ReportIndex, view: FileView): string {
     return renderMutantPanel(
       index,
       selected,
-      file.mutants.filter(
-        mutant => filter === 'all' || mutant.status === filter,
-      ),
+      filterByStatus(file.mutants, filter),
     )
   }
   return skip ?

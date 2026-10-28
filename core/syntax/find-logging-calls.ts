@@ -9,6 +9,7 @@ import { findMessageTexts } from './find-message-texts'
 import { isPlainMessage } from './is-plain-message'
 import { isLoggingCall } from './is-logging-call'
 import { getMemberPath } from './get-member-path'
+import { getMemberRoot } from './get-member-root'
 import { isConsolePath } from './is-console-path'
 import { isFormatFree } from './is-format-free'
 
@@ -109,12 +110,7 @@ export function findLoggingCalls(
  * @returns Whether the call is ordinary code.
  */
 function isLocalCode(node: CallExpression, scopes: ScopeAnalysis): boolean {
-  let root = unwrapExpression(node.callee)
-  while (root.type === 'MemberExpression' || root.type === 'ChainExpression') {
-    root = unwrapExpression(
-      root.type === 'MemberExpression' ? root.object : root.expression,
-    )
-  }
+  let root = getMemberRoot(node.callee)
   let binding = scopes.bindings.get(root)
   if (binding && root.type === 'Identifier' && root.name === 'console') {
     return true

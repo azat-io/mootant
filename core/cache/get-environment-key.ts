@@ -1,10 +1,8 @@
-import path from 'node:path'
-
 import type { LimitSettings } from '../../types/run/run-state'
 
 import { INSTRUMENTER_VERSION } from '../instrument/instrumenter-version'
 import { RUNTIME_VERSION } from '../runtime/runtime-version'
-import { compareCodeUnits } from '../compare-code-units'
+import { listFileHashes } from './list-file-hashes'
 import { CACHE_VERSION } from './cache-version'
 import { createDigest } from './create-digest'
 import { version } from '../../package.json'
@@ -71,12 +69,7 @@ interface EnvironmentInput {
  */
 export function getEnvironmentKey(input: EnvironmentInput): string {
   let { hashes, root } = input
-  let files = [...new Set(input.files)]
-    .map(file => [
-      path.relative(root, file).replaceAll('\\', '/'),
-      hashes.get(file) ?? null,
-    ])
-    .toSorted(([left], [right]) => compareCodeUnits(left!, right!))
+  let files = listFileHashes(input.files, { hashes, root })
   return createDigest([
     CACHE_VERSION,
     version,

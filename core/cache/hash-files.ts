@@ -2,6 +2,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 
 import { compareCodeUnits } from '../compare-code-units'
+import { runInChunks } from './run-in-chunks'
 
 /**
  * Most files read at once, so a large project does not run out of file
@@ -22,27 +23,16 @@ const CHUNK_SIZE = 32
 export async function hashFiles(
   paths: Iterable<string>,
 ): Promise<Map<string, string | null>> {
-  let unique = [...new Set(paths)]
   let hashes = new Map<string, string | null>()
-  let chunks = Array.from(
-    { length: Math.ceil(unique.length / CHUNK_SIZE) },
-    (_value, index) =>
-      unique.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE),
-  )
-  await chunks.reduce(async (previous, chunk) => {
-    await previous
-    await Promise.all(
-      chunk.map(async file => {
-        let content = await readContent(file)
-        hashes.set(
-          file,
-          content === null ? null : (
-            createHash('sha256').update(content).digest('hex')
-          ),
-        )
-      }),
+  await runInChunks([...new Set(paths)], CHUNK_SIZE, async file => {
+    let content = await readContent(file)
+    hashes.set(
+      file,
+      content === null ? null : (
+        createHash('sha256').update(content).digest('hex')
+      ),
     )
-  }, Promise.resolve())
+  })
   return hashes
 }
 

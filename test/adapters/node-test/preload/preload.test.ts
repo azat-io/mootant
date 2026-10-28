@@ -7,6 +7,7 @@ import type { NodeTestRecord } from '../../../../adapters/node-test/types/node-t
 import type { TryContext } from '../../../../adapters/node-test/types/try-context'
 
 import { installModuleHooks } from '../../../../adapters/node-test/preload/install-module-hooks'
+import { trackInputs } from '../../../../adapters/shared/track-inputs'
 
 vi.mock(import('node:test'), () => ({ beforeEach: vi.fn() }) as never)
 
@@ -17,11 +18,11 @@ vi.mock(
   () => ({ installModuleHooks: vi.fn(() => 'sync' as const) }),
 )
 
-vi.mock(import('../../../../adapters/node-test/preload/track-inputs'), () => ({
-  trackInputs: vi.fn(() => () => ({
-    environment: ['A'],
-    modified: [],
-    files: [],
+vi.mock(import('../../../../adapters/shared/track-inputs'), () => ({
+  trackInputs: vi.fn(() => ({
+    stop: () => ({ environment: ['A'], modified: [], files: [] }),
+    files: new Set<string>(),
+    real: {},
   })),
 }))
 
@@ -114,6 +115,9 @@ describe('preload', () => {
       main: options.data.main,
       plan,
       out,
+    })
+    expect(vi.mocked(trackInputs)).toHaveBeenCalledWith(directory, {
+      ignored: ['NODE_TEST_CONTEXT', 'FORCE_COLOR'],
     })
 
     let global = globalThis as Record<

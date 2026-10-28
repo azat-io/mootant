@@ -1,5 +1,7 @@
 import { stat } from 'node:fs/promises'
 
+import { runInChunks } from './run-in-chunks'
+
 /**
  * Most files checked at once, so a large project does not run out of file
  * descriptors.
@@ -19,24 +21,13 @@ export async function findChangedFiles(
   paths: Iterable<string>,
   since: number,
 ): Promise<Set<string>> {
-  let unique = [...new Set(paths)]
   let changed = new Set<string>()
-  let chunks = Array.from(
-    { length: Math.ceil(unique.length / CHUNK_SIZE) },
-    (_value, index) =>
-      unique.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE),
-  )
-  await chunks.reduce(async (previous, chunk) => {
-    await previous
-    await Promise.all(
-      chunk.map(async file => {
-        try {
-          if ((await stat(file)).mtimeMs >= since) {
-            changed.add(file)
-          }
-        } catch {}
-      }),
-    )
-  }, Promise.resolve())
+  await runInChunks([...new Set(paths)], CHUNK_SIZE, async file => {
+    try {
+      if ((await stat(file)).mtimeMs >= since) {
+        changed.add(file)
+      }
+    } catch {}
+  })
   return changed
 }

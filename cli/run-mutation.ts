@@ -36,53 +36,37 @@ import { version } from '../package.json'
  * @param options - Options of the run command.
  */
 export async function runMutation(options: RunOptions): Promise<void> {
+  let { verbose, json, all, ...settings } = options
   let errorStyle = getTextStyle(process.stderr)
-  let progress = createRunProgress(errorStyle, options.verbose)
+  let progress = createRunProgress(errorStyle, verbose)
   try {
     let result = await runMutants({
-      ...(options.concurrency !== undefined && {
-        concurrency: options.concurrency,
-      }),
-      ...(options.threshold !== undefined && { threshold: options.threshold }),
-      ...(options.incremental !== undefined && {
-        incremental: options.incremental,
-      }),
-      ...(options.fast !== undefined && { fast: options.fast }),
-      ...(options.html !== undefined && { html: options.html }),
-      ...(options.cache !== undefined && { cache: options.cache }),
-      ...(options.config !== undefined && { config: options.config }),
-      ...(options.preset !== undefined && { preset: options.preset }),
-      ...(options.since !== undefined && { since: options.since }),
       onProgress: event => {
         progress.handle(event)
       },
       builtIns: getBuiltInAdapters(),
-      mutantIds: options.mutantIds,
-      paths: options.paths,
+      ...settings,
       cwd: process.cwd(),
     })
     progress.finish()
     let recheck = formatCommand('run', {
-      ...(options.config !== undefined && { config: options.config }),
-      ...(options.preset !== undefined && { preset: options.preset }),
-      ...(options.incremental !== undefined && {
-        incremental: options.incremental,
-      }),
-      ...(options.fast !== undefined && { fast: options.fast }),
+      incremental: options.incremental,
+      config: options.config,
+      preset: options.preset,
       paths: options.paths,
+      fast: options.fast,
     })
-    let report = buildRunReport(result, { all: options.all, recheck })
-    if (!options.json) {
+    let report = buildRunReport(result, { recheck, all })
+    if (!json) {
       printDiagnostics(report.diagnostics, errorStyle)
     }
     console.info(
-      formatRunReport(report, options.json ? 'json' : 'text', {
-        ...(!options.json &&
-          process.stdout.isTTY && { files: getFileScores(result) }),
+      formatRunReport(report, json ? 'json' : 'text', {
+        ...(!json && process.stdout.isTTY && { files: getFileScores(result) }),
         idLength: getShortIdLength(result.listedIds),
         command: formatCommand('run', options),
         style: getTextStyle(process.stdout),
-        verbose: options.verbose,
+        verbose,
         recheck,
       }),
     )

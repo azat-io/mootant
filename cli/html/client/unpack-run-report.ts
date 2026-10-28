@@ -3,34 +3,17 @@ import type {
   RunReportTest,
   RunReport,
 } from '../../../types/report/run-report'
+import type {
+  HtmlReportMutant,
+  HtmlReport,
+} from '../../../types/report/html-report'
 import type { ListReportSkipped } from '../../../types/report/list-report-skipped'
 import type { ListReportFocus } from '../../../types/report/list-report-focus'
-import type { HtmlReport } from '../../../types/report/html-report'
 
 import { getSourcePosition } from '../../../core/text/get-source-position'
 import { getLineStarts } from '../../../core/text/get-line-starts'
 import { unpackReplacement } from './unpack-replacement'
 import { getDiffLines } from '../../diff/get-diff-lines'
-
-/**
- * Focus of a change as the HTML report stores it.
- */
-interface PackedFocus {
-  /**
-   * Text written in place of the focus.
-   */
-  replacement: string
-
-  /**
-   * Offset of the first replaced code unit.
-   */
-  start: number
-
-  /**
-   * Offset just past the last replaced code unit.
-   */
-  end: number
-}
 
 /**
  * Rebuilds the run report the data of the HTML report was packed from, as
@@ -175,7 +158,7 @@ export function unpackRunReport(report: HtmlReport): RunReport {
  * @returns Object to spread into the entry: with `focus`, or empty.
  */
 function unpackFocus(
-  focus: PackedFocus | undefined,
+  focus: HtmlReportMutant['focus'],
   source: string,
   lineStarts: readonly number[],
 ): { focus?: ListReportFocus } {

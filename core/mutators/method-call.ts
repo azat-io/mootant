@@ -6,6 +6,7 @@ import type { SkipNote } from '../../types/mutant/skip-note'
 import type { TextEdit } from '../../types/source/text-edit'
 import type { Mutator } from '../../types/mutator/mutator'
 
+import { isGlobalIdentifier } from './shared/is-global-identifier'
 import { isLookupPosition } from './shared/is-lookup-position'
 import { getLiteralValue } from './shared/get-literal-value'
 import { getTypeView } from './shared/get-type-view'
@@ -223,52 +224,6 @@ function getEquivalentSkip(
 }
 
 /**
- * Tells whether a call returns the receiver's contents (catalog 4.9,
- * identities): `slice()`, `slice(0)`, `substring(0)`, `substr(0)`, and
- * `slice(0, x)`, `substring(0, x)` and `substr(0, x)` with `x` the global
- * `undefined` or the receiver's own `.length`; `substring()` and `substr()`
- * without arguments as well. `slice` counts only on a receiver known to be a
- * string: on an array it makes a copy, and removing the copy shares the
- * receiver, which a later in-place change or an identity check can tell.
- *
- * @param call - Method call.
- * @param context - Mutator context of the file.
- * @returns Whether removing the call changes nothing observable.
- */
-function isIdentityCall(call: MethodCall, context: MutatorContext): boolean {
-  let { sourceCode, syntax } = context
-  let { name } = call.callee.property
-  let [start, end, ...rest] = call.arguments
-  if (
-    !identityMethods.has(name) ||
-    (name === 'slice' &&
-      getTypeView(context.hints.getType(call.callee.object)).type !== 'string')
-  ) {
-    return false
-  }
-  if (!start) {
-    return true
-  }
-  if (rest.length > 0 || getLiteralValue(start) !== 0) {
-    return false
-  }
-  if (!end) {
-    return true
-  }
-  let inner = syntax.unwrapParentheses(end)
-  if (inner.type === 'Identifier') {
-    return inner.name === 'undefined' && sourceCode.getBinding(inner) === null
-  }
-  return (
-    inner.type === 'MemberExpression' &&
-    !inner.computed &&
-    inner.property.name === 'length' &&
-    sourceCode.getText(syntax.unwrapParentheses(inner.object)) ===
-      sourceCode.getText(syntax.unwrapParentheses(call.callee.object))
-  )
-}
-
-/**
  * Finds the literal that makes a case swap's decision constant or unchanged
  * (catalog 4.9, O17): the value is compared by equality with, or searched by
  * `includes`, `startsWith` or `endsWith` without a position argument in a
@@ -359,6 +314,52 @@ function getRemovalEdits(
 }
 
 /**
+ * Tells whether a call returns the receiver's contents (catalog 4.9,
+ * identities): `slice()`, `slice(0)`, `substring(0)`, `substr(0)`, and
+ * `slice(0, x)`, `substring(0, x)` and `substr(0, x)` with `x` the global
+ * `undefined` or the receiver's own `.length`; `substring()` and `substr()`
+ * without arguments as well. `slice` counts only on a receiver known to be a
+ * string: on an array it makes a copy, and removing the copy shares the
+ * receiver, which a later in-place change or an identity check can tell.
+ *
+ * @param call - Method call.
+ * @param context - Mutator context of the file.
+ * @returns Whether removing the call changes nothing observable.
+ */
+function isIdentityCall(call: MethodCall, context: MutatorContext): boolean {
+  let { sourceCode, syntax } = context
+  let { name } = call.callee.property
+  let [start, end, ...rest] = call.arguments
+  if (
+    !identityMethods.has(name) ||
+    (name === 'slice' &&
+      getTypeView(context.hints.getType(call.callee.object)).type !== 'string')
+  ) {
+    return false
+  }
+  if (!start) {
+    return true
+  }
+  if (rest.length > 0 || getLiteralValue(start) !== 0) {
+    return false
+  }
+  if (!end) {
+    return true
+  }
+  let inner = syntax.unwrapParentheses(end)
+  if (isGlobalIdentifier(inner, 'undefined', context)) {
+    return true
+  }
+  return (
+    inner.type === 'MemberExpression' &&
+    !inner.computed &&
+    inner.property.name === 'length' &&
+    sourceCode.getText(syntax.unwrapParentheses(inner.object)) ===
+      sourceCode.getText(syntax.unwrapParentheses(call.callee.object))
+  )
+}
+
+/**
  * Builds the mutant of a method call: the rename to the partner or the removal
  * of the call. A mutant that the receiver gate or a skip of catalog 4.9 rules
  * out, or whose node the mutant switch cannot wrap, follows as a skipped
@@ -409,17 +410,16 @@ function acceptsReceiver(
   rule: MethodRule,
   context: MutatorContext<MethodCallOptions>,
 ): boolean {
-  let { sourceCode, options, syntax, hints } = context
+  let { options, syntax, hints } = context
   if (options.anyReceiver) {
     return true
   }
   let receiver = call.callee.object
   if (rule.receivers === null) {
-    let inner = syntax.unwrapParentheses(receiver)
-    return (
-      inner.type === 'Identifier' &&
-      inner.name === 'Math' &&
-      sourceCode.getBinding(inner) === null
+    return isGlobalIdentifier(
+      syntax.unwrapParentheses(receiver),
+      'Math',
+      context,
     )
   }
   let { type } = getTypeView(hints.getType(receiver))

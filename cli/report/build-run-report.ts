@@ -8,6 +8,7 @@ import type { RunStatus } from '../../types/run/run-status'
 import type { DryTest } from '../../types/adapter/dry-test'
 
 import { getDisplayPath } from '../../core/run/get-display-path'
+import { countStatuses } from '../../core/run/count-statuses'
 import { computeScore } from '../../core/run/compute-score'
 import { buildListReport } from './build-list-report'
 
@@ -121,20 +122,12 @@ export function buildRunReport(
 
   let unrepeatable =
     result.unrepeatable === null ? null : new Set(result.unrepeatable)
-  let counts: Record<RunStatus, number> = {
-    NoCoverage: 0,
-    Survived: 0,
-    Ignored: 0,
-    Timeout: 0,
-    Killed: 0,
-    Error: 0,
-  }
+  let counts = countStatuses(result.results)
   let totalIsolated = 0
   let totalStatic = 0
   let fast = result.mode === 'fast'
   let totalBatch = 0
   for (let verdict of result.results) {
-    counts[verdict.status] += 1
     totalIsolated += Number(verdict.path === 'isolated')
     totalBatch += Number(
       verdict.path === 'batch' &&
@@ -142,7 +135,7 @@ export function buildRunReport(
     )
     totalStatic += Number(verdict.isolatedBecause === 'static')
   }
-  let score = computeScore(result.results)
+  let score = computeScore(counts)
   let { totalWarnings, totalErrors, totalFiles } = list.summary
 
   return {

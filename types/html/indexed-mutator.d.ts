@@ -1,5 +1,5 @@
 import type { ListReportMutator } from '../report/list-report-mutator'
-import type { StatusCounts } from './status-counts'
+import type { StatusCounts } from '../run/status-counts'
 
 /**
  * Mutator of the HTML report with the verdicts of its mutants.

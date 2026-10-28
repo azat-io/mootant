@@ -2,6 +2,7 @@ import type { MutantResult } from '../../types/run/mutant-result'
 import type { FileScore } from '../../types/report/file-score'
 import type { RunResult } from '../../types/run/run-result'
 
+import { countStatuses } from '../../core/run/count-statuses'
 import { computeScore } from '../../core/run/compute-score'
 
 /**
@@ -24,13 +25,12 @@ export function getFileScores(result: RunResult): FileScore[] {
   }
   let scores: FileScore[] = []
   for (let [file, verdicts] of files) {
-    let { total } = computeScore(verdicts)
+    let counts = countStatuses(verdicts)
+    let { total } = computeScore(counts)
     if (total !== null && total < 100) {
       scores.push({
-        noCoverage: verdicts.filter(verdict => verdict.status === 'NoCoverage')
-          .length,
-        survived: verdicts.filter(verdict => verdict.status === 'Survived')
-          .length,
+        noCoverage: counts.NoCoverage,
+        survived: counts.Survived,
         score: total,
         file,
       })

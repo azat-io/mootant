@@ -4,10 +4,10 @@ import type { TextStyle } from '../../types/cli/text-style'
 
 import { getShortIdLength } from './get-short-id-length'
 import { formatFileGroups } from './format-file-groups'
+import { pluralize } from '../../core/text/pluralize'
 import { sortByLocation } from './sort-by-location'
 import { formatHeader } from './format-header'
 import { formatFields } from './format-fields'
-import { pluralize } from './pluralize'
 
 /**
  * How a list report is printed as text.

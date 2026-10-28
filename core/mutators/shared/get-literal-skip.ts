@@ -7,6 +7,7 @@ import type { RunContext } from './create-run-context'
 import { isNoOpCallbackLiteral } from './is-no-op-callback-literal'
 import { isBooleanModeOperand } from './is-boolean-mode-operand'
 import { isComparisonOperand } from './is-comparison-operand'
+import { NO_OP_CALLBACK_SKIP } from './no-op-callback-skip'
 import { getBranchCopySkip } from './get-branch-copy-skip'
 import { getLiteralMutator } from './get-literal-mutator'
 import { getOrDefaultSkip } from './get-or-default-skip'
@@ -111,11 +112,7 @@ export function getLiteralSkip(
     return copy
   }
   if (isNoOpCallbackLiteral(node, value, context)) {
-    return {
-      reason:
-        "it makes the callback a no-op, which is method-call's removal of the call",
-      rule: 'O12',
-    }
+    return NO_OP_CALLBACK_SKIP
   }
   return getOrDefaultSkip(node, value, context)
 }

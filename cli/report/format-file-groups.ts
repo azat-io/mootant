@@ -1,7 +1,9 @@
 import type { TextStyle } from '../../types/cli/text-style'
 import type { Color } from '../terminal/colors'
 
+import { getMaxDisplayWidth } from '../terminal/get-max-display-width'
 import { getDisplayWidth } from '../terminal/get-display-width'
+import { formatByFile } from '../terminal/format-by-file'
 import { padToWidth } from '../terminal/pad-to-width'
 import { cutToWidth } from '../terminal/cut-to-width'
 import { formatChange } from '../diff/format-change'
@@ -110,30 +112,11 @@ export function formatFileGroups(
   rows: readonly EntryRow[],
   style: TextStyle,
 ): string {
-  let { ellipsis } = getSymbols(style.unicode)
-  let groups = new Map<string, EntryRow[]>()
-  for (let row of rows) {
-    let group = groups.get(row.file)
-    if (group === undefined) {
-      groups.set(row.file, [row])
-    } else {
-      group.push(row)
-    }
-  }
-  return [...groups]
-    .map(([file, group]) =>
-      [
-        style.colors.bold(
-          cutToWidth(file, {
-            width: style.width,
-            side: 'start',
-            ellipsis,
-          }),
-        ),
-        ...formatGroup(group, style),
-      ].join('\n'),
-    )
-    .join('\n\n')
+  return formatByFile(rows, {
+    formatGroup: group => formatGroup(group, style).join('\n'),
+    getFile: row => row.file,
+    style,
+  })
 }
 
 /**
@@ -146,8 +129,8 @@ export function formatFileGroups(
 function formatGroup(rows: readonly EntryRow[], style: TextStyle): string[] {
   let { colors, width } = style
   let { ellipsis, arrow } = getSymbols(style.unicode)
-  let locationWidth = getWidestCell(rows.map(row => row.location))
-  let mutatorWidth = getWidestCell(rows.map(row => row.mutator))
+  let locationWidth = getMaxDisplayWidth(rows.map(row => row.location))
+  let mutatorWidth = getMaxDisplayWidth(rows.map(row => row.mutator))
   let prefixWidth =
     INDENT.length + locationWidth + GAP.length + mutatorWidth + GAP.length
   let tailWidths = getTailWidths(rows)
@@ -218,19 +201,6 @@ function getTailWidths(rows: readonly EntryRow[]): number[] {
     }
   }
   return widths
-}
-
-/**
- * Finds the widest of the texts of a column.
- *
- * @param texts - Texts of the column.
- * @returns Columns of the widest text.
- */
-function getWidestCell(texts: readonly string[]): number {
-  return texts.reduce(
-    (widest, text) => Math.max(widest, getDisplayWidth(text)),
-    0,
-  )
 }
 
 /**

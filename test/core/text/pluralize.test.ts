@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { pluralize } from '../../../cli/report/pluralize'
+import { pluralize } from '../../../core/text/pluralize'
 
 describe('pluralize', () => {
   it.each([

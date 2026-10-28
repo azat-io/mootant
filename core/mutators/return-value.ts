@@ -12,12 +12,15 @@ import type { Binding } from '../../types/syntax/binding'
 
 import { getReturnValueKind } from './shared/get-return-value-kind'
 import { isPlainReturnValue } from './shared/is-plain-return-value'
+import { isGlobalIdentifier } from './shared/is-global-identifier'
+import { NO_OP_CALLBACK_SKIP } from './shared/no-op-callback-skip'
 import { getCallbackResult } from './shared/get-callback-result'
 import { getOwnerConstant } from './shared/get-owner-constant'
 import { createRunContext } from './shared/create-run-context'
 import { getLiteralValue } from './shared/get-literal-value'
 import { getTowardMutant } from './shared/get-toward-mutant'
 import { emptiesCallback } from './shared/empties-callback'
+import { getMemberRoot } from '../syntax/get-member-root'
 
 /**
  * Default written in place of a returned value.
@@ -168,11 +171,7 @@ function getReplacements(
       : { text: item.text, node: target }
     let skip: SkipNote | null =
       callback && emptiesCallback(callback.owner, item.value) ?
-        {
-          reason:
-            "it makes the callback a no-op, which is method-call's removal of the call",
-          rule: 'O12',
-        }
+        NO_OP_CALLBACK_SKIP
       : null
     if (!skip && kind === 'boolean') {
       skip = getConstantSkip(target, item.value === true, context)
@@ -231,9 +230,7 @@ function resolvesWith(
       (inner.type === 'UnaryExpression' &&
         inner.operator === 'void' &&
         syntax.unwrapExpression(inner.argument).type === 'Literal') ||
-      (inner.type === 'Identifier' &&
-        inner.name === 'undefined' &&
-        context.sourceCode.getBinding(inner) === null)
+      isGlobalIdentifier(inner, 'undefined', context)
     )
   }
   if (resolved === null) {
@@ -328,37 +325,6 @@ function getDefaults(
 }
 
 /**
- * Finds the binding of a returned local (catalog 2.6): the value is, through
- * wrappers, an identifier or a member chain whose root object is an identifier,
- * bound by a `const`, `let` or `var` declarator of the function that returns
- * it. A name declared outside the runtime tree, such as by a `declare`
- * statement, is not a local.
- *
- * @param value - Returned expression, through wrappers.
- * @param context - Mutator context of the file.
- * @returns The binding, or null.
- */
-function getLocalBinding(value: Node, context: MutatorContext): Binding | null {
-  let { sourceCode, syntax } = context
-  let root = value
-  while (root.type === 'MemberExpression' || root.type === 'ChainExpression') {
-    root = syntax.unwrapExpression(
-      root.type === 'ChainExpression' ? root.expression : root.object,
-    )
-  }
-  let binding = sourceCode.getBinding(root)
-  return (
-      binding &&
-        localKinds.has(binding.kind) &&
-        syntax.isRuntimeNode(binding.declaration) &&
-        syntax.getEnclosingFunction(binding.declaration) ===
-          syntax.getEnclosingFunction(value)
-    ) ?
-      binding
-    : null
-}
-
-/**
  * Lists the extra solitary ranges of a returned value (catalog 2.6): the
  * initializer of a returned local, or of the root of a returned member chain,
  * and its writes in the same function. Writes outside the runtime tree, such as
@@ -384,6 +350,32 @@ function getLocalRanges(value: Node, context: MutatorContext): Node[] {
         syntax.getEnclosingFunction(write) === enclosing,
     ),
   ]
+}
+
+/**
+ * Finds the binding of a returned local (catalog 2.6): the value is, through
+ * wrappers, an identifier or a member chain whose root object is an identifier,
+ * bound by a `const`, `let` or `var` declarator of the function that returns
+ * it. A name declared outside the runtime tree, such as by a `declare`
+ * statement, is not a local.
+ *
+ * @param value - Returned expression, through wrappers.
+ * @param context - Mutator context of the file.
+ * @returns The binding, or null.
+ */
+function getLocalBinding(value: Node, context: MutatorContext): Binding | null {
+  let { sourceCode, syntax } = context
+  let root = getMemberRoot(value)
+  let binding = sourceCode.getBinding(root)
+  return (
+      binding &&
+        localKinds.has(binding.kind) &&
+        syntax.isRuntimeNode(binding.declaration) &&
+        syntax.getEnclosingFunction(binding.declaration) ===
+          syntax.getEnclosingFunction(value)
+    ) ?
+      binding
+    : null
 }
 
 /**

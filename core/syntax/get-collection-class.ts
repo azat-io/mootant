@@ -3,7 +3,7 @@ import type { Node } from 'oxc-parser'
 import type { AnalyzedProgram } from '../../types/syntax/analyzed-program'
 import type { TreeIndex } from '../../types/syntax/tree-index'
 
-import { getClosedInitializer } from './get-closed-initializer'
+import { resolveClosedExpression } from './resolve-closed-expression'
 import { unwrapExpression } from '../tree/unwrap-expression'
 import { getContextSlot } from '../tree/get-context-slot'
 import { isResultUnused } from './is-result-unused'
@@ -57,17 +57,8 @@ export function getCollectionClass(
   program: AnalyzedProgram,
   node: Node,
 ): 'Map' | 'Set' | null {
-  let current = unwrapExpression(node)
-  if (current.type === 'Identifier') {
-    let binding = program.scopes.bindings.get(current)
-    let initializer =
-      binding && getClosedInitializer(program, binding, readsCollection)
-    if (!initializer) {
-      return null
-    }
-    current = unwrapExpression(initializer)
-  }
-  if (current.type !== 'NewExpression') {
+  let current = resolveClosedExpression(program, node, readsCollection)
+  if (current?.type !== 'NewExpression') {
     return null
   }
   let callee = unwrapExpression(current.callee)

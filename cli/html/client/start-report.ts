@@ -16,6 +16,7 @@ import { renderSidePanel } from './render-side-panel'
 import { unpackRunReport } from './unpack-run-report'
 import { renderAttention } from './render-attention'
 import { renderFileCode } from './render-file-code'
+import { filterByStatus } from './filter-by-status'
 import { renderOverview } from './render-overview'
 import { getTestGroups } from './get-test-groups'
 import { downloadJson } from './download-json'
@@ -339,10 +340,9 @@ export function startReport(document: Document): void {
       let { selected, filter, file } = view!
       let status = element.dataset['status'] as RunStatus
       let line = Number(element.dataset['line'])
-      let candidates = file.mutants.filter(
+      let candidates = filterByStatus(file.mutants, filter).filter(
         mutant =>
           mutant.line === line &&
-          (filter === 'all' || mutant.status === filter) &&
           (mutant.status === status ||
             (status === 'Killed' && mutant.status === 'Timeout')),
       )
@@ -387,9 +387,7 @@ export function startReport(document: Document): void {
     },
     step: element => {
       let { selected, filter, file } = view!
-      let list = file.mutants.filter(
-        mutant => filter === 'all' || mutant.status === filter,
-      )
+      let list = filterByStatus(file.mutants, filter)
       let next = list[list.indexOf(selected!) + Number(element.dataset['step'])]
       if (next) {
         go(`#/mutant/${next.id}`)

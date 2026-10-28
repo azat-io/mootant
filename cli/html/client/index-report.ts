@@ -1,15 +1,19 @@
+import type {
+  HtmlReportSkipped,
+  HtmlReportMutant,
+  HtmlReport,
+} from '../../../types/report/html-report'
 import type { IndexedMutator } from '../../../types/html/indexed-mutator'
 import type { IndexedMutant } from '../../../types/html/indexed-mutant'
 import type { ReportIndex } from '../../../types/html/report-index'
 import type { IndexedFile } from '../../../types/html/indexed-file'
-import type { HtmlReport } from '../../../types/report/html-report'
 import type { RunStatus } from '../../../types/run/run-status'
 
 import { getSourcePosition } from '../../../core/text/get-source-position'
 import { getLineStarts } from '../../../core/text/get-line-starts'
+import { countStatuses } from '../../../core/run/count-statuses'
+import { computeScore } from '../../../core/run/compute-score'
 import { unpackReplacement } from './unpack-replacement'
-import { countStatuses } from './count-statuses'
-import { getScore } from './get-score'
 
 /**
  * Statuses of the mutants to act on.
@@ -50,18 +54,9 @@ export function indexReport(report: HtmlReport): ReportIndex {
   })
   let mutants = report.mutants.map((mutant, index): IndexedMutant => {
     let file = files[mutant.file]!
-    let start = getSourcePosition(file.lineStarts, mutant.start)
-    let original = file.source.slice(mutant.start, mutant.end)
     let indexed: IndexedMutant = {
       ...mutant,
-      endLine: getSourcePosition(
-        file.lineStarts,
-        Math.max(mutant.start, mutant.end - 1),
-      ).line,
-      replacement: unpackReplacement(original, mutant),
-      column: start.column,
-      line: start.line,
-      original,
+      ...locateEntry(mutant, file),
       index,
     }
     file.mutants.push(indexed)
@@ -69,24 +64,15 @@ export function indexReport(report: HtmlReport): ReportIndex {
   })
   for (let entry of report.skipped) {
     let file = files[entry.file]!
-    let start = getSourcePosition(file.lineStarts, entry.start)
-    let original = file.source.slice(entry.start, entry.end)
     file.skipped.push({
       ...entry,
-      endLine: getSourcePosition(
-        file.lineStarts,
-        Math.max(entry.start, entry.end - 1),
-      ).line,
-      replacement: unpackReplacement(original, entry),
+      ...locateEntry(entry, file),
       index: file.skipped.length,
-      column: start.column,
-      line: start.line,
-      original,
     })
   }
   for (let file of files) {
     file.counts = countStatuses(file.mutants)
-    file.score = getScore(file.counts)
+    file.score = computeScore(file.counts).total
     file.actionable = file.mutants.filter(mutant =>
       ACTIONABLE.has(mutant.status),
     )
@@ -104,7 +90,7 @@ export function indexReport(report: HtmlReport): ReportIndex {
     return {
       ...mutator,
       skipped: report.skipped.filter(entry => entry.mutator === index).length,
-      score: getScore(counts),
+      score: computeScore(counts).total,
       counts,
     }
   })
@@ -117,5 +103,34 @@ export function indexReport(report: HtmlReport): ReportIndex {
     mutants,
     report,
     files,
+  }
+}
+
+/**
+ * Reads where a mutant or a skipped candidate is in its file, the text it
+ * replaces and its whole replacement.
+ *
+ * @param entry - Mutant or skipped candidate as packed.
+ * @param file - Its file with source and line starts.
+ * @returns Original text, whole replacement and position.
+ */
+function locateEntry(
+  entry: HtmlReportSkipped | HtmlReportMutant,
+  file: IndexedFile,
+): Pick<
+  IndexedMutant,
+  'replacement' | 'original' | 'endLine' | 'column' | 'line'
+> {
+  let start = getSourcePosition(file.lineStarts, entry.start)
+  let original = file.source.slice(entry.start, entry.end)
+  return {
+    endLine: getSourcePosition(
+      file.lineStarts,
+      Math.max(entry.start, entry.end - 1),
+    ).line,
+    replacement: unpackReplacement(original, entry),
+    column: start.column,
+    line: start.line,
+    original,
   }
 }

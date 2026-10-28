@@ -4,8 +4,8 @@ import type { AST } from '@eslint-community/regexpp'
 import type { AnalyzedProgram } from '../../types/syntax/analyzed-program'
 import type { TreeIndex } from '../../types/syntax/tree-index'
 
+import { resolveClosedExpression } from './resolve-closed-expression'
 import { parseRegexPattern } from '../regex/parse-regex-pattern'
-import { getClosedInitializer } from './get-closed-initializer'
 import { isMandatoryGroup } from '../regex/is-mandatory-group'
 import { unwrapExpression } from '../tree/unwrap-expression'
 import { getContextSlot } from '../tree/get-context-slot'
@@ -75,43 +75,6 @@ export function getNamedGroupsFact(
 }
 
 /**
- * Parses the pattern of the match that an expression holds: a match call, or a
- * name that always holds one and whose every read only tests the match or reads
- * its groups, through parentheses and TypeScript wrappers. A `match` call of a
- * regex with the `g` flag gives an array of strings without groups, so it has
- * none.
- *
- * @param program - Runtime tree, scope analysis and shared scopes of the
- *   program.
- * @param node - Object of the `groups` member.
- * @returns The pattern tree of the regex, or null when the expression is not a
- *   match whose groups the regex tells, or regexpp cannot parse the pattern.
- */
-function readMatchPattern(
-  program: AnalyzedProgram,
-  node: Node,
-): AST.Pattern | null {
-  let current = unwrapExpression(node)
-  if (current.type === 'Identifier') {
-    let binding = program.scopes.bindings.get(current)
-    let initializer =
-      binding && getClosedInitializer(program, binding, readsGroups)
-    if (!initializer) {
-      return null
-    }
-    current = initializer
-  }
-  let match = getMatchRegex(program, current)
-  if (!match) {
-    return null
-  }
-  let { pattern, flags } = match.literal.regex
-  return match.method === 'match' && flags.includes('g') ?
-      null
-    : parseRegexPattern(pattern, flags)
-}
-
-/**
  * Tells whether a read of a match name only tests the match or reads its
  * groups, through parentheses and TypeScript wrappers: it tests the truth of
  * the match (see `isTruthTest`) or is the object of a `groups` member that is
@@ -141,6 +104,34 @@ function readsGroups(tree: TreeIndex, reference: Node): boolean {
     return !isWritten(tree, member.parent)
   }
   return isTruthTest(tree, getChainEnd(tree, parent))
+}
+
+/**
+ * Parses the pattern of the match that an expression holds: a match call, or a
+ * name that always holds one and whose every read only tests the match or reads
+ * its groups, through parentheses and TypeScript wrappers. A `match` call of a
+ * regex with the `g` flag gives an array of strings without groups, so it has
+ * none.
+ *
+ * @param program - Runtime tree, scope analysis and shared scopes of the
+ *   program.
+ * @param node - Object of the `groups` member.
+ * @returns The pattern tree of the regex, or null when the expression is not a
+ *   match whose groups the regex tells, or regexpp cannot parse the pattern.
+ */
+function readMatchPattern(
+  program: AnalyzedProgram,
+  node: Node,
+): AST.Pattern | null {
+  let current = resolveClosedExpression(program, node, readsGroups)
+  let match = current && getMatchRegex(program, current)
+  if (!match) {
+    return null
+  }
+  let { pattern, flags } = match.literal.regex
+  return match.method === 'match' && flags.includes('g') ?
+      null
+    : parseRegexPattern(pattern, flags)
 }
 
 /**

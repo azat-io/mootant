@@ -2,8 +2,8 @@ import path from 'node:path'
 
 import type { RunState } from '../../types/run/run-state'
 
-import { compareCodeUnits } from '../compare-code-units'
 import { getTestFileKey } from './get-test-file-key'
+import { sortTestFiles } from './sort-test-files'
 import { rankTestFile } from './rank-test-file'
 
 /**
@@ -48,10 +48,5 @@ export function rankModuleFiles(state: RunState, file: string): string[] {
       ranks.set(key, rank)
     }
   }
-  return [...ranks.keys()].toSorted(
-    (left, right) =>
-      ranks.get(left)! - ranks.get(right)! ||
-      (reaching.get(right) ?? 0) - (reaching.get(left) ?? 0) ||
-      compareCodeUnits(left, right),
-  )
+  return sortTestFiles(ranks.keys(), { reaching, ranks })
 }

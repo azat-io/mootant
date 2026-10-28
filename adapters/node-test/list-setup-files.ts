@@ -1,7 +1,13 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
-import { listLoaders } from './list-loaders'
+import { listFlagValues } from './list-flag-values'
+import { LOADER_FLAGS } from './loader-flags'
+
+/**
+ * Flag that names the global setup module of node:test.
+ */
+const GLOBAL_SETUP_FLAGS = new Set(['--test-global-setup'])
 
 /**
  * Lists the project files Node flags load before the test file or around the
@@ -17,14 +23,10 @@ export function listSetupFiles(
   root: string,
   execArgv: readonly string[],
 ): string[] {
-  let specifiers = listLoaders(execArgv)
-  for (let [index, flag] of execArgv.entries()) {
-    if (flag === '--test-global-setup') {
-      specifiers.push(execArgv[index + 1] ?? '')
-    } else if (flag.startsWith('--test-global-setup=')) {
-      specifiers.push(flag.slice(20))
-    }
-  }
+  let specifiers = [
+    ...listFlagValues(execArgv, LOADER_FLAGS),
+    ...listFlagValues(execArgv, GLOBAL_SETUP_FLAGS),
+  ]
   return specifiers.flatMap(specifier => {
     if (specifier.startsWith('file:')) {
       return [fileURLToPath(specifier)]

@@ -3,6 +3,7 @@ import type { Node } from 'oxc-parser'
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
+import { isGlobalIdentifier } from './is-global-identifier'
 
 /**
  * Tells whether an expression is always `null` or `undefined` by its syntax:
@@ -22,10 +23,7 @@ export function isNullishConstant(
     case 'UnaryExpression':
       return inner.operator === 'void'
     case 'Identifier':
-      return (
-        inner.name === 'undefined' &&
-        context.sourceCode.getBinding(inner) === null
-      )
+      return isGlobalIdentifier(inner, 'undefined', context)
     case 'Literal':
       return inner.raw === 'null'
     default:

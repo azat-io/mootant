@@ -2,10 +2,10 @@ import type { ReportIndex } from '../../../types/html/report-index'
 import type { RunStatus } from '../../../types/run/run-status'
 import type { FileView } from '../../../types/html/file-view'
 
+import { renderStatusFilter } from './render-status-filter'
+import { pluralize } from '../../../core/text/pluralize'
 import { renderSidePanel } from './render-side-panel'
 import { renderFileCode } from './render-file-code'
-import { pluralize } from '../../report/pluralize'
-import { describeStatus } from './describe-status'
 import { formatScore } from './format-score'
 import { renderTree } from './render-tree'
 import { escapeHtml } from './escape-html'
@@ -39,29 +39,13 @@ const FILTERS: RunStatus[] = [
 export function renderFilesView(index: ReportIndex, view: FileView): string {
   let { filter, file } = view
   let { counts } = file
-  let filters = (
-    ['all', ...FILTERS.filter(status => counts[status] > 0)] as (
-      RunStatus | 'all'
-    )[]
-  )
-    .map(status => {
-      let count = status === 'all' ? file.mutants.length : counts[status]
-      let label = status === 'all' ? 'All' : describeStatus(status).label
-      let dot =
-        status === 'all' ? '' : (
-          html`<span class="dot status-${describeStatus(status).key}"></span>`
-        )
-      return html`<button
-        class="segment-button"
-        type="button"
-        data-filter="${status}"
-        aria-pressed="${filter === status}"
-      >
-        ${dot}${label.charAt(0).toUpperCase() + label.slice(1)}
-        <span class="count">${count}</span>
-      </button>`
-    })
-    .join('')
+  let filters = renderStatusFilter({
+    total: file.mutants.length,
+    attribute: 'data-filter',
+    statuses: FILTERS,
+    filter,
+    counts,
+  })
   let detected = counts.Killed + counts.Timeout
   let stats = [
     pluralize(file.mutants.length, 'mutant'),

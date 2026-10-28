@@ -5,11 +5,14 @@ import type { RunContext } from './create-run-context'
 
 import { isConstantEligibleGroup } from './is-constant-eligible-group'
 import { isNoOpCallbackConstant } from './is-no-op-callback-constant'
+import { getLoopRunningSkip } from './get-loop-running-skip'
+import { NO_OP_CALLBACK_SKIP } from './no-op-callback-skip'
 import { getLeaveNowValue } from './get-leave-now-value'
 import { isBooleanValued } from './is-boolean-valued'
 import { getRunningValue } from './get-running-value'
 import { hasPolarMutant } from './has-polar-mutant'
 import { getNegationTop } from './get-negation-top'
+import { LEAVE_NOW_SKIP } from './leave-now-skip'
 import { getFixedTruth } from './get-fixed-truth'
 import { isBooleanMode } from './is-boolean-mode'
 import { isAndOr } from './is-and-or'
@@ -77,23 +80,12 @@ export function getGroupConstant(
     !context.settings.timeouts &&
     getRunningValue(node, context)?.value === absorbing
   ) {
-    skip = {
-      reason: `${absorbing} keeps the loop running forever, so only a timeout could kill it`,
-      rule: 'loop-running',
-    }
+    skip = getLoopRunningSkip(absorbing)
   } else if (getLeaveNowValue(node, context) === absorbing) {
-    skip = {
-      reason:
-        "leaving a first exit test's loop at once is the loop's never-run mutant",
-      rule: 'O13',
-    }
+    skip = LEAVE_NOW_SKIP
   }
   if (skip === null && isNoOpCallbackConstant(node, absorbing, context)) {
-    skip = {
-      reason:
-        "it makes the callback a no-op, which is method-call's removal of the call",
-      rule: 'O12',
-    }
+    skip = NO_OP_CALLBACK_SKIP
   }
   if (skip === null && hasPolarMutant(polar, context)) {
     skip = {

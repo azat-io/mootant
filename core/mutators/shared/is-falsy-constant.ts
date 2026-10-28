@@ -3,6 +3,7 @@ import type { Node } from 'oxc-parser'
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
 
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
+import { isGlobalIdentifier } from './is-global-identifier'
 import { isNullishConstant } from './is-nullish-constant'
 import { getLiteralValue } from './get-literal-value'
 
@@ -24,8 +25,6 @@ export function isFalsyConstant(node: Node, context: MutatorContext): boolean {
   let inner = unwrapParentheses(node)
   return (
     isNullishConstant(inner, context) ||
-    (inner.type === 'Identifier' &&
-      inner.name === 'NaN' &&
-      context.sourceCode.getBinding(inner) === null)
+    isGlobalIdentifier(inner, 'NaN', context)
   )
 }

@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import path from 'node:path'
 
-import { trackInputs } from '../../../../adapters/node-test/preload/track-inputs'
-import { trackEnvironment } from '../../../../adapters/shared/track-environment'
-import { trackFileReads } from '../../../../adapters/shared/track-file-reads'
+import { trackEnvironment } from '../../../adapters/shared/track-environment'
+import { trackFileReads } from '../../../adapters/shared/track-file-reads'
+import { trackInputs } from '../../../adapters/shared/track-inputs'
 
-vi.mock(import('../../../../adapters/shared/track-environment'), () => ({
+vi.mock(import('../../../adapters/shared/track-environment'), () => ({
   trackEnvironment: vi.fn(() => process.env),
 }))
 
-vi.mock(import('../../../../adapters/shared/track-file-reads'), () => ({
+vi.mock(import('../../../adapters/shared/track-file-reads'), () => ({
   trackFileReads: vi.fn<(receiver: unknown) => void>(),
 }))
 
@@ -26,9 +26,10 @@ function file(name: string): string {
 describe('trackInputs', () => {
   it('records project files, changed files and variables until it stops', () => {
     let root = path.resolve('/project')
-    let stop = trackInputs(root)
+    let options = { ignored: ['RUNNER_VARIABLE'] }
+    let inputs = trackInputs(root, options)
     let receiver = vi.mocked(trackFileReads).mock.calls[0]![0]!
-    let [options, record] = vi.mocked(trackEnvironment).mock.calls[0]!
+    let [received, record] = vi.mocked(trackEnvironment).mock.calls[0]!
     receiver.read(file('b.json'))
     receiver.read(file('a.json'))
     receiver.read(root)
@@ -40,10 +41,14 @@ describe('trackInputs', () => {
     record!('B')
     record!('A')
 
-    expect(options).toStrictEqual({
-      ignored: ['NODE_TEST_CONTEXT', 'FORCE_COLOR'],
-    })
-    expect(stop()).toStrictEqual({
+    expect(received).toBe(options)
+    expect(inputs.real).toBe(process.env)
+    expect([...inputs.files]).toStrictEqual([
+      file('b.json'),
+      file('a.json'),
+      root,
+    ])
+    expect(inputs.stop()).toStrictEqual({
       files: [root, file('a.json'), file('b.json')],
       modified: [root, file('a.json')],
       environment: ['A', 'B'],

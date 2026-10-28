@@ -2,8 +2,10 @@ import path from 'node:path'
 
 import type { CacheInputs } from '../../types/adapter/cache-inputs'
 
+import { VERDICT_VARIABLE_PATTERN } from '../shared/verdict-variable-pattern'
 import { listTsconfigFiles } from '../shared/list-tsconfig-files'
 import { hashEnvironment } from './hash-environment'
+import { listFlagValues } from './list-flag-values'
 
 /**
  * Flags whose value is a file Node reads itself: `.env` files and the Node
@@ -14,13 +16,6 @@ const FILE_FLAGS = new Set([
   '--env-file-if-exists',
   '--env-file',
 ])
-
-/**
- * Environment variables that change verdicts of code that never reads them
- * through `process.env`, such as dates and collation, and the mode libraries
- * pick up.
- */
-const ALWAYS_PATTERN = /^(?:NODE_ENV|LANG|LC_.+|TZ)$/u
 
 /**
  * Lists what every verdict of a node:test session depends on beyond the
@@ -58,14 +53,8 @@ export function getNodeCacheInputs(input: {
     path.join(root, 'package.json'),
     ...input.setup,
   ])
-  for (let [index, flag] of execArgv.entries()) {
-    let [name, ...value] = flag.split('=')
-    if (FILE_FLAGS.has(name!)) {
-      let target = value.length > 0 ? value.join('=') : execArgv[index + 1]
-      if (target !== undefined) {
-        files.add(path.resolve(root, target))
-      }
-    }
+  for (let target of listFlagValues(execArgv, FILE_FLAGS)) {
+    files.add(path.resolve(root, target))
   }
   let tsconfigs = input.tsx ? listTsconfigFiles(root, new Map()) : []
   for (let file of tsconfigs) {
@@ -75,7 +64,7 @@ export function getNodeCacheInputs(input: {
   return {
     settings: {
       variables: Object.entries(hashes).filter(([name]) =>
-        ALWAYS_PATTERN.test(name),
+        VERDICT_VARIABLE_PATTERN.test(name),
       ),
       nodeOptions: input.env['NODE_OPTIONS'] ?? null,
       version: input.version,

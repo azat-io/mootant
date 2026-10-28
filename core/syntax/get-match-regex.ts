@@ -4,7 +4,7 @@ import type { AnalyzedProgram } from '../../types/syntax/analyzed-program'
 import type { MatchRegex } from '../../types/syntax/match-regex'
 import type { TreeIndex } from '../../types/syntax/tree-index'
 
-import { getClosedInitializer } from './get-closed-initializer'
+import { resolveClosedExpression } from './resolve-closed-expression'
 import { unwrapExpression } from '../tree/unwrap-expression'
 import { getContextSlot } from '../tree/get-context-slot'
 
@@ -126,18 +126,11 @@ function findRegexLiteral(
   program: AnalyzedProgram,
   node: Node,
 ): RegExpLiteral | null {
-  let current = unwrapExpression(node)
-  if (current.type === 'Identifier') {
-    let binding = program.scopes.bindings.get(current)
-    let initializer =
-      binding && getClosedInitializer(program, binding, runsRegex)
-    if (!initializer) {
-      return null
-    }
-    current = unwrapExpression(initializer)
-  }
+  let current = resolveClosedExpression(program, node, runsRegex)
   return (
-      current.type === 'Literal' && 'regex' in current && current.value !== null
+      current?.type === 'Literal' &&
+        'regex' in current &&
+        current.value !== null
     ) ?
       current
     : null

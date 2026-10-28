@@ -5,6 +5,7 @@ import type { TreeIndex } from '../../types/syntax/tree-index'
 import type { Binding } from '../../types/syntax/binding'
 import type { Mutant } from '../../types/mutant/mutant'
 
+import { findLastStart } from '../text/find-last-start'
 import { createDigest } from '../cache/create-digest'
 
 /**
@@ -220,29 +221,6 @@ function collectRegion(
 }
 
 /**
- * Finds the top-level statement that holds an offset: the last one that starts
- * at or before it.
- *
- * @param statements - Top-level statements in source order, one of which holds
- *   the offset.
- * @param offset - Offset in the text of the file.
- * @returns Index of the statement.
- */
-function findStatement(statements: readonly Node[], offset: number): number {
-  let low = 0
-  let high = statements.length - 1
-  while (low < high) {
-    let middle = Math.ceil((low + high) / 2)
-    if (statements[middle]!.start <= offset) {
-      low = middle
-    } else {
-      high = middle - 1
-    }
-  }
-  return low
-}
-
-/**
  * Gives every mutant of a file the whole text as its region.
  *
  * @param mutants - Mutants of the file.
@@ -255,4 +233,17 @@ function fillWhole(
 ): Map<string, string> {
   let whole = createDigest([source])
   return new Map(mutants.map(mutant => [mutant.id, whole]))
+}
+
+/**
+ * Finds the top-level statement that holds an offset: the last one that starts
+ * at or before it.
+ *
+ * @param statements - Top-level statements in source order, one of which holds
+ *   the offset.
+ * @param offset - Offset in the text of the file.
+ * @returns Index of the statement.
+ */
+function findStatement(statements: readonly Node[], offset: number): number {
+  return findLastStart(statements, offset, statement => statement.start)
 }

@@ -4,11 +4,7 @@ import path from 'node:path'
 
 import { listTsconfigFiles } from '../shared/list-tsconfig-files'
 import { compareCodeUnits } from '../../core/compare-code-units'
-
-/**
- * Query or hash at the end of a module id.
- */
-const SUFFIX_PATTERN = /[#?].*$/u
+import { getModuleFile } from './get-module-file'
 
 /**
  * Module of Vite's module graph, as much of it as mootant reads.
@@ -95,12 +91,12 @@ export async function collectDependencies(input: {
    * @returns Whether the file is a project file.
    */
   function add(candidate: string): boolean {
-    let clean = candidate.replace(SUFFIX_PATTERN, '')
-    if (path.isAbsolute(clean) && !clean.includes('/node_modules/')) {
-      files.add(clean)
-      return true
+    let file = getModuleFile(candidate)
+    if (file === null) {
+      return false
     }
-    return false
+    files.add(file)
+    return true
   }
   let environments: GraphEnvironment[] = Object.values(
     project.vite.environments,

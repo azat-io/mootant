@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { renderCountCells } from '../../../../cli/html/client/render-count-cells'
-import { countStatuses } from '../../../../cli/html/client/count-statuses'
+import { countStatuses } from '../../../../core/run/count-statuses'
 import { squashHtml } from '../../../helpers/squash-html'
 
 describe('renderCountCells', () => {

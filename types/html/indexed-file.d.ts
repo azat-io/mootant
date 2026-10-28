@@ -1,6 +1,6 @@
+import type { StatusCounts } from '../run/status-counts'
 import type { IndexedMutant } from './indexed-mutant'
 import type { ModuleCost } from '../run/module-cost'
-import type { StatusCounts } from './status-counts'
 import type { IndexedSkip } from './indexed-skip'
 
 /**

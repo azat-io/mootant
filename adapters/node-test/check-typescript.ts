@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { listPackageFiles } from './list-package-files'
+import { includesTsx } from './includes-tsx'
 
 /**
  * Specifier of a module other than tsx that compiles TypeScript on load, such
@@ -11,11 +12,6 @@ import { listPackageFiles } from './list-package-files'
  */
 const OTHER_TYPESCRIPT_LOADER =
   /(?:^|[/\\])(?:esbuild-register|ts-node|tsm|@swc-node|@esbuild-kit)(?:$|[/@\\])/u
-
-/**
- * Specifier of tsx or of a module inside it.
- */
-const TSX = /(?:^|[/\\])tsx(?:$|[/@\\])/u
 
 /**
  * Pattern of the paths of TypeScript files.
@@ -54,7 +50,7 @@ export function checkTypeScript(input: {
   if (other !== undefined) {
     return `mootant switches TypeScript files only through Node's type stripping or tsx (--import tsx), so it cannot run the tests of ${input.root} with ${other}.`
   }
-  let tsx = input.loaders.some(loader => TSX.test(loader))
+  let tsx = includesTsx(input.loaders)
   if (!tsx && !input.strips) {
     return `Node ${input.version} cannot run the TypeScript files of ${input.root} without a loader; add tsx (--import tsx) to the test command or use Node 22.18 or later.`
   }

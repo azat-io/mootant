@@ -4,6 +4,7 @@ import type { TemplateCompilers } from '../../types/source/template-compilers'
 
 import { parseComponentTemplate } from '../parser/parse-component-template'
 import { getComponentFramework } from '../parser/get-component-framework'
+import { getTemplateLanguage } from '../parser/get-template-language'
 import { getStatementList } from '../syntax/get-statement-list'
 import { getSourceBlocks } from '../parser/get-source-blocks'
 import { parseFile } from '../parser/parse-file'
@@ -80,10 +81,7 @@ export function findStatementStarts(
   }
   if (compilers) {
     let template = parseComponentTemplate(compilers, {
-      lang:
-        blocks.some(block => block.options.lang!.startsWith('ts')) ? 'ts' : (
-          'js'
-        ),
+      lang: getTemplateLanguage(blocks),
       source,
       file,
     })

@@ -1,4 +1,4 @@
-import type { MutantResult } from '../../types/run/mutant-result'
+import type { StatusCounts } from '../../types/run/status-counts'
 import type { RunScore } from '../../types/run/run-score'
 
 /**
@@ -6,37 +6,15 @@ import type { RunScore } from '../../types/run/run-score'
  * plus `Survived`, and over those plus `NoCoverage` for the total. `Ignored`
  * and `Error` are never scored.
  *
- * @param results - Verdicts of the run.
+ * @param counts - Mutants by final status, as `countStatuses` returns them.
  * @returns Scores in percent with two decimals, null without a denominator.
  */
-export function computeScore(results: readonly MutantResult[]): RunScore {
-  let detected = 0
-  let survived = 0
-  let uncovered = 0
-  for (let { status } of results) {
-    switch (status) {
-      case 'NoCoverage': {
-        uncovered += 1
-
-        break
-      }
-      case 'Survived': {
-        survived += 1
-
-        break
-      }
-      case 'Timeout':
-      case 'Killed': {
-        detected += 1
-
-        break
-      }
-      // No default
-    }
-  }
+export function computeScore(counts: StatusCounts): RunScore {
+  let detected = counts.Killed + counts.Timeout
+  let covered = detected + counts.Survived
   return {
-    total: getPercent(detected, detected + survived + uncovered),
-    covered: getPercent(detected, detected + survived),
+    total: getPercent(detected, covered + counts.NoCoverage),
+    covered: getPercent(detected, covered),
   }
 }
 

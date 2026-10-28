@@ -15,6 +15,7 @@ import { getAssertedType } from './get-asserted-type'
 import { inferMemberType } from './infer-member-type'
 import { inferThisType } from './infer-this-type'
 import { inferCallType } from './infer-call-type'
+import { removeNullish } from './remove-nullish'
 
 /**
  * Kinds of global names that are not declared in the file.
@@ -224,17 +225,4 @@ function inferConstructedType(callee: Node): InferredType {
       constructedKinds.get(constructor.name)
     : undefined
   return createInferredType([kind ?? 'object'])
-}
-
-/**
- * Removes `null` and `undefined` from a type.
- *
- * @param type - Type to narrow.
- * @returns The type without nullish kinds; unknown stays unknown, and a type
- *   that was only nullish becomes unknown.
- */
-function removeNullish(type: InferredType): InferredType {
-  return createInferredType(
-    type.kinds?.filter(kind => kind !== 'null' && kind !== 'undefined') ?? null,
-  )
 }

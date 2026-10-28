@@ -2,8 +2,8 @@ import type { MutantsFilter } from '../../../types/html/mutants-filter'
 import type { ReportIndex } from '../../../types/html/report-index'
 import type { RunStatus } from '../../../types/run/run-status'
 
+import { renderStatusFilter } from './render-status-filter'
 import { renderMutantsTable } from './render-mutants-table'
-import { describeStatus } from './describe-status'
 import { escapeHtml } from './escape-html'
 import { getIcon } from './get-icon'
 import { html } from './html'
@@ -34,29 +34,13 @@ export function renderMutantsView(
   shown: MutantsFilter,
 ): string {
   let { mutator, filter, query } = shown
-  let buttons = (
-    ['all', ...FILTERS.filter(status => index.counts[status] > 0)] as (
-      RunStatus | 'all'
-    )[]
-  )
-    .map(status => {
-      let count = status === 'all' ? index.mutants.length : index.counts[status]
-      let label = status === 'all' ? 'All' : describeStatus(status).label
-      let dot =
-        status === 'all' ? '' : (
-          html`<span class="dot status-${describeStatus(status).key}"></span>`
-        )
-      return html`<button
-        class="segment-button"
-        type="button"
-        data-mutants-filter="${status}"
-        aria-pressed="${filter === status}"
-      >
-        ${dot}${label.charAt(0).toUpperCase() + label.slice(1)}
-        <span class="count">${count}</span>
-      </button>`
-    })
-    .join('')
+  let buttons = renderStatusFilter({
+    attribute: 'data-mutants-filter',
+    total: index.mutants.length,
+    counts: index.counts,
+    statuses: FILTERS,
+    filter,
+  })
   let narrowed =
     mutator === null ? '' : (
       html`<span class="mutator-filter"

@@ -2,7 +2,9 @@ import type { ListReportFocus } from '../../types/report/list-report-focus'
 import type { ListReportDiff } from '../../types/report/list-report-diff'
 import type { TextStyle } from '../../types/cli/text-style'
 
+import { getMaxDisplayWidth } from '../terminal/get-max-display-width'
 import { getDisplayWidth } from '../terminal/get-display-width'
+import { formatByFile } from '../terminal/format-by-file'
 import { padToWidth } from '../terminal/pad-to-width'
 import { cutToWidth } from '../terminal/cut-to-width'
 import { getSymbols } from '../terminal/get-symbols'
@@ -83,26 +85,11 @@ export function formatDiffGroups(
   entries: readonly DiffEntry[],
   style: TextStyle,
 ): string {
-  let { ellipsis } = getSymbols(style.unicode)
-  let groups = new Map<string, DiffEntry[]>()
-  for (let entry of entries) {
-    let group = groups.get(entry.mutant.file)
-    if (group === undefined) {
-      groups.set(entry.mutant.file, [entry])
-    } else {
-      group.push(entry)
-    }
-  }
-  return [...groups]
-    .map(([file, group]) =>
-      [
-        style.colors.bold(
-          cutToWidth(file, { width: style.width, side: 'start', ellipsis }),
-        ),
-        formatGroup(group, style),
-      ].join('\n'),
-    )
-    .join('\n\n')
+  return formatByFile(entries, {
+    formatGroup: group => formatGroup(group, style),
+    getFile: entry => entry.mutant.file,
+    style,
+  })
 }
 
 /**
@@ -119,10 +106,10 @@ function formatGroup(entries: readonly DiffEntry[], style: TextStyle): string {
     let position = entry.mutant.focus ?? entry.mutant
     return `${position.line}:${position.column}`
   })
-  let locationWidth = getWidest(locations)
-  let idWidth = getWidest(entries.map(entry => entry.id))
+  let locationWidth = getMaxDisplayWidth(locations)
+  let idWidth = getMaxDisplayWidth(entries.map(entry => entry.id))
   let mutatorWidth = Math.min(
-    getWidest(entries.map(entry => entry.mutant.mutator)),
+    getMaxDisplayWidth(entries.map(entry => entry.mutant.mutator)),
     Math.max(
       MIN_WIDTH,
       width - INDENT.length - locationWidth - GAP.length * 2 - idWidth,
@@ -168,17 +155,4 @@ function formatGroup(entries: readonly DiffEntry[], style: TextStyle): string {
         .join('\n')
     })
     .join('\n\n')
-}
-
-/**
- * Finds the widest of the texts of a column.
- *
- * @param texts - Texts of the column.
- * @returns Columns of the widest text.
- */
-function getWidest(texts: readonly string[]): number {
-  return texts.reduce(
-    (widest, text) => Math.max(widest, getDisplayWidth(text)),
-    0,
-  )
 }

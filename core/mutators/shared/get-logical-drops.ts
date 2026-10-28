@@ -4,9 +4,9 @@ import type { Replacement } from '../../../types/mutator/replacement'
 import type { SkipNote } from '../../../types/mutant/skip-note'
 import type { RunContext } from './create-run-context'
 
-import { distinguishesNullishSwap } from './distinguishes-nullish-swap'
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
 import { hasDefinedFalsyValue } from './has-defined-falsy-value'
+import { getNullishSwapSkip } from './get-nullish-swap-skip'
 import { isCanonicalFalsy } from './is-canonical-falsy'
 import { isBooleanValued } from './is-boolean-valued'
 import { isAlwaysNullish } from './is-always-nullish'
@@ -185,25 +185,13 @@ export function getLogicalDrops(
     !booleanMode &&
     mayBeNullish(leftType) &&
     unwrapParentheses(left).type !== 'LogicalExpression'
-  let neverFalsy = swapApplies ? context.syntax.getNeverFalsyFact(left) : null
-  let swap =
-    swapApplies &&
-    neverFalsy === null &&
-    distinguishesNullishSwap(node, hints, nullishSwap)
-  if (swapApplies && !swap) {
+  let swapSkip =
+    swapApplies ? getNullishSwapSkip(node, context, nullishSwap) : null
+  let swap = swapApplies && swapSkip === null
+  if (swapSkip) {
     skipped.push({
-      skip:
-        neverFalsy === null ?
-          {
-            reason:
-              '?? and || differ here only on falsy values that the nullishSwap option does not count, such as the default itself',
-            rule: 'nullish-swap',
-          }
-        : {
-            reason: `the left side is never falsy when defined (${neverFalsy}), so || and ?? agree`,
-            rule: 'never-falsy',
-          },
       text: sourceCode.replaceOperator(node, '??'),
+      skip: swapSkip,
       node,
     })
   }

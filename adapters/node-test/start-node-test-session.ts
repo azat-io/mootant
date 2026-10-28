@@ -17,10 +17,12 @@ import { findTestCommand } from './find-test-command'
 import { readTestTimeout } from './read-test-timeout'
 import { checkTypeScript } from './check-typescript'
 import { filterExecArgv } from './filter-exec-argv'
+import { listFlagValues } from './list-flag-values'
 import { listSetupFiles } from './list-setup-files'
 import { getPreloadPath } from './get-preload-path'
 import { placePreload } from './place-preload'
-import { listLoaders } from './list-loaders'
+import { LOADER_FLAGS } from './loader-flags'
+import { includesTsx } from './includes-tsx'
 import { runIsolated } from './run-isolated'
 import { resolveTsx } from './resolve-tsx'
 import { runDry } from './run-dry'
@@ -117,8 +119,8 @@ export async function startNodeTestSession(
     ...(environment['NODE_OPTIONS'] ?? '').split(/\s+/u).filter(Boolean),
     ...execArgv,
   ]
-  let loaders = listLoaders(flags)
-  for (let loader of listLoaders(flags, LEGACY_LOADER_FLAGS)) {
+  let loaders = listFlagValues(flags, LOADER_FLAGS)
+  for (let loader of listFlagValues(flags, LEGACY_LOADER_FLAGS)) {
     diagnostics.push({
       message: `The loader ${loader} runs before mootant's module hooks, so mootant cannot switch the modules it changes.`,
       code: 'config-overridden',
@@ -147,7 +149,7 @@ export async function startNodeTestSession(
   if (problem !== null) {
     throw new Error(problem)
   }
-  let tsx = loaders.some(loader => /(?:^|[/\\])tsx(?:$|[/@\\])/u.test(loader))
+  let tsx = includesTsx(loaders)
   let setup = listSetupFiles(root, execArgv)
   let inputs = getNodeCacheInputs({
     set: { ...command.env, ...options.env },
