@@ -67,7 +67,7 @@ let { keywords = [], headings = [], description, editLink, title } = Astro.props
      listener on the document serves them on every page. */
   document.addEventListener('click', async event => {
     let button = (event.target as Element).closest<HTMLButtonElement>(
-      '.copy-button',
+      '.code-block > .copy-button',
     )
     let code = button?.parentElement?.querySelector('pre')?.textContent
     if (!button || !code) {

@@ -15,7 +15,6 @@
  */
 
 :root {
-  --font-family-code: 'JetBrains Mono', ui-monospace, monospace;
   --report-tabs-size: 48px;
   --report-on-brand: oklch(20.5% 0.0081 274.52deg);
   --report-radius-l: calc(var(--border-radius) * 1.5);
@@ -192,9 +191,7 @@ kbd {
 
 .badge {
   padding: 4px 8px;
-  font:
-    600 var(--font-size-2xs) / 1 'JetBrains Mono',
-    monospace;
+  font: 600 var(--font-size-2xs) / 1 var(--font-family-code);
   white-space: nowrap;
   background: var(--color-background-tertiary);
   border-radius: var(--border-radius);
@@ -310,13 +307,7 @@ kbd {
 
 .search-button kbd {
   min-inline-size: 24px;
-  padding-inline: var(--space-2xs);
-  font-size: var(--font-size-2xs);
-  line-height: 1.6;
-  text-align: center;
   background: none;
-  border-block-end-width: 1px;
-  border-radius: calc(var(--border-radius) / 2);
 }
 
 .icon-button {
@@ -468,9 +459,7 @@ kbd {
 
 .label {
   display: block;
-  font:
-    600 var(--font-size-2xs) / 1.5 'JetBrains Mono',
-    monospace;
+  font: 600 var(--font-size-2xs) / 1.5 var(--font-family-code);
   color: var(--color-content-secondary);
   text-transform: uppercase;
 }
@@ -583,7 +572,25 @@ kbd {
   font: var(--font-size-2xs) / 1.6 var(--font-family-code);
   white-space: nowrap;
   border-radius: 999px;
+}
 
+.tally {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 18px;
+  block-size: 18px;
+  padding: 0 5px;
+  font: 11px / 1 var(--font-family-code);
+  color: var(--color-content-secondary);
+  background: none;
+  border: none;
+  border-radius: 999px;
+}
+
+.status,
+.tally {
   &.status-survived {
     color: var(--report-on-brand);
     background: var(--report-survived);
@@ -607,44 +614,6 @@ kbd {
   &.status-ignored,
   &.status-skipped {
     color: var(--color-content-secondary);
-    box-shadow: inset 0 0 0 1px var(--color-border-primary);
-  }
-}
-
-.tally {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: center;
-  min-inline-size: 18px;
-  block-size: 18px;
-  padding: 0 5px;
-  font: 11px / 1 var(--font-family-code);
-  color: var(--color-content-secondary);
-  background: none;
-  border: none;
-  border-radius: 999px;
-  box-shadow: inset 0 0 0 1px var(--report-killed);
-
-  &.status-survived {
-    color: var(--report-on-brand);
-    background: var(--report-survived);
-    box-shadow: none;
-  }
-
-  &.status-no-coverage {
-    color: var(--report-no-coverage);
-    box-shadow: inset 0 0 0 1.5px var(--report-no-coverage);
-  }
-
-  &.status-error {
-    color: var(--report-on-error);
-    background: var(--report-error);
-    box-shadow: none;
-  }
-
-  &.status-ignored,
-  &.status-skipped {
     box-shadow: inset 0 0 0 1px var(--color-border-primary);
   }
 }
@@ -1024,9 +993,7 @@ kbd {
   border-block-start: 1px solid var(--color-border-primary);
 
   & dt {
-    font:
-      600 var(--font-size-2xs) / 1.5 'JetBrains Mono',
-      monospace;
+    font: 600 var(--font-size-2xs) / 1.5 var(--font-family-code);
     color: var(--color-content-secondary);
     text-transform: uppercase;
   }
@@ -1969,9 +1936,7 @@ html:has(.panel .is-detail) {
   gap: 0;
 
   & dt {
-    font:
-      600 var(--font-size-2xs) / 1.5 'JetBrains Mono',
-      monospace;
+    font: 600 var(--font-size-2xs) / 1.5 var(--font-family-code);
     color: var(--color-content-secondary);
     text-transform: uppercase;
 

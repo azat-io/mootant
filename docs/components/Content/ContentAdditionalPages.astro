@@ -27,10 +27,7 @@ let nextPage = index === -1 ? undefined : links[index + 1]
           title="Previous page"
           rel="prev"
         >
-          <IconArrowLeft
-            class="icon"
-            slot="icon"
-          />
+          <IconArrowLeft slot="icon" />
           {previousPage.title}
         </ContentFooterLink>
       )}
@@ -41,10 +38,7 @@ let nextPage = index === -1 ? undefined : links[index + 1]
           class="next"
           rel="next"
         >
-          <IconArrowRight
-            class="icon"
-            slot="icon"
-          />
+          <IconArrowRight slot="icon" />
           {nextPage.title}
         </ContentFooterLink>
       )}
@@ -72,11 +66,5 @@ let nextPage = index === -1 ? undefined : links[index + 1]
       margin-inline-start: auto;
       text-align: end;
     }
-  }
-
-  .icon {
-    flex-shrink: 0;
-    inline-size: var(--size-icon-s);
-    block-size: var(--size-icon-s);
   }
 </style>

@@ -32,6 +32,12 @@ let { class: className, title, url, ...props } = Astro.props
     align-items: center;
     font: var(--font-xs);
     text-decoration: none;
+
+    & > :global(svg) {
+      flex-shrink: 0;
+      inline-size: var(--size-icon-s);
+      block-size: var(--size-icon-s);
+    }
   }
 
   .content {

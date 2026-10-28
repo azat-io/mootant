@@ -1,12 +1,10 @@
 ---
 import VersionBadge from './VersionBadge.astro'
-import IconGithub from '../icons/github.svg'
+import HeaderTools from './HeaderTools.astro'
 import IconCross from '../icons/cross.svg'
 import Container from './Container.astro'
-import IconMoon from '../icons/moon.svg'
 import IconMenu from '../icons/menu.svg'
 import Wordmark from './Wordmark.astro'
-import IconSun from '../icons/sun.svg'
 import Button from './Button.astro'
 import Search from './Search.astro'
 
@@ -54,52 +52,14 @@ let hasNavigation = Astro.slots.has('navigation')
           }
         </ul>
         <div class="navigation-tools">
-          <Button
-            aria-label="Toggle theme"
-            data-toggle-theme
-            color="tertiary"
-            square
-          >
-            <IconSun class="icon icon-dark" />
-            <IconMoon class="icon icon-light" />
-          </Button>
-          <Button
-            href="https://github.com/azat-io/mootant"
-            rel="noopener noreferrer"
-            aria-label="GitHub"
-            color="tertiary"
-            target="_blank"
-            tag="a"
-            square
-          >
-            <IconGithub class="icon" />
-          </Button>
+          <HeaderTools />
         </div>
       </nav>
     </div>
     <div class="menu">
       <Search />
       <div class="tools">
-        <Button
-          aria-label="Toggle theme"
-          data-toggle-theme
-          color="tertiary"
-          square
-        >
-          <IconSun class="icon icon-dark" />
-          <IconMoon class="icon icon-light" />
-        </Button>
-        <Button
-          href="https://github.com/azat-io/mootant"
-          rel="noopener noreferrer"
-          aria-label="GitHub"
-          color="tertiary"
-          target="_blank"
-          tag="a"
-          square
-        >
-          <IconGithub class="icon" />
-        </Button>
+        <HeaderTools />
       </div>
       <div class="menu-toggle">
         <Button
@@ -341,7 +301,6 @@ let hasNavigation = Astro.slots.has('navigation')
     block-size: var(--size-icon-m);
   }
 
-  .icon-dark,
   .icon-cross,
   [aria-expanded='true'] .icon-menu {
     display: none;
@@ -349,15 +308,5 @@ let hasNavigation = Astro.slots.has('navigation')
 
   [aria-expanded='true'] .icon-cross {
     display: block;
-  }
-
-  :global([data-theme='dark']) {
-    .icon-dark {
-      display: block;
-    }
-
-    .icon-light {
-      display: none;
-    }
   }
 </style>

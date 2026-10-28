@@ -16,19 +16,8 @@ let { url } = Astro.props
       target="_blank"
       {url}
     >
-      <IconEdit
-        class="icon"
-        slot="icon"
-      />
+      <IconEdit slot="icon" />
       Edit this page
     </ContentFooterLink>
   )
 }
-
-<style>
-  .icon {
-    flex-shrink: 0;
-    inline-size: var(--size-icon-s);
-    block-size: var(--size-icon-s);
-  }
-</style>

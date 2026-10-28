@@ -1,0 +1,48 @@
+---
+import IconGithub from '../icons/github.svg'
+import IconMoon from '../icons/moon.svg'
+import IconSun from '../icons/sun.svg'
+import Button from './Button.astro'
+---
+
+<Button
+  aria-label="Toggle theme"
+  data-toggle-theme
+  color="tertiary"
+  square
+>
+  <IconSun class="icon icon-dark" />
+  <IconMoon class="icon icon-light" />
+</Button>
+<Button
+  href="https://github.com/azat-io/mootant"
+  rel="noopener noreferrer"
+  aria-label="GitHub"
+  color="tertiary"
+  target="_blank"
+  tag="a"
+  square
+>
+  <IconGithub class="icon" />
+</Button>
+
+<style>
+  .icon {
+    inline-size: var(--size-icon-m);
+    block-size: var(--size-icon-m);
+  }
+
+  .icon-dark {
+    display: none;
+  }
+
+  :global([data-theme='dark']) {
+    .icon-dark {
+      display: block;
+    }
+
+    .icon-light {
+      display: none;
+    }
+  }
+</style>

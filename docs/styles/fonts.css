@@ -45,7 +45,7 @@
 :root {
   --font-family-base: 'Sora', 'Sora Fallback', sans-serif;
   --font-family-title: 'Sora', 'Sora Fallback', sans-serif;
-  --font-family-code: monospace;
+  --font-family-code: 'JetBrains Mono', monospace;
   --font-size-2xs: clamp(0.82rem, 0.09vi + 0.8rem, 0.88rem);
   --font-size-xs: clamp(0.88rem, 0.1vi + 0.85rem, 0.93rem);
   --font-size-s: clamp(0.94rem, 0.11vi + 0.91rem, 1rem);

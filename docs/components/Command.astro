@@ -18,11 +18,11 @@ let { class: className, command, ...props } = Astro.props
   <button
     aria-label="Copy command"
     data-command={command}
+    class="copy-button"
     type="button"
-    class="copy"
   >
-    <IconCopy class="icon icon-default" />
-    <IconCopyCheck class="icon icon-copied" />
+    <IconCopy />
+    <IconCopyCheck />
   </button>
 </div>
 
@@ -84,7 +84,7 @@ let { class: className, command, ...props } = Astro.props
   .text {
     padding: 0;
     overflow: auto;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-family-code);
     font-size: var(--font-size-s);
     line-height: 1;
     color: var(--color-code-foreground);
@@ -101,55 +101,5 @@ let { class: className, command, ...props } = Astro.props
   .prompt {
     color: var(--color-code-ansi-bright-black);
     user-select: none;
-  }
-
-  .copy {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: center;
-    inline-size: 36px;
-    block-size: 36px;
-    padding: 0;
-    color: var(--color-content-secondary);
-    outline: none;
-    background: var(--color-background-primary);
-    border: none;
-    border-radius: calc(var(--border-radius) - 4px);
-
-    @media (prefers-reduced-motion: no-preference) {
-      transition: all 200ms ease-in-out;
-    }
-
-    @media (hover: hover) {
-      &:hover {
-        color: var(--color-content-primary);
-        background: var(--color-background-primary-hover);
-      }
-    }
-
-    &:focus-visible {
-      color: var(--color-content-primary);
-      background: var(--color-overlay-brand);
-      box-shadow: 0 0 0 3px var(--color-border-brand);
-    }
-
-    &[data-copied] {
-      color: var(--color-code-ansi-green);
-    }
-  }
-
-  .icon {
-    inline-size: var(--size-icon-s);
-    block-size: var(--size-icon-s);
-  }
-
-  .icon-copied,
-  [data-copied] .icon-default {
-    display: none;
-  }
-
-  [data-copied] .icon-copied {
-    display: block;
   }
 </style>
