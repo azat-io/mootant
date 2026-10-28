@@ -72,10 +72,10 @@ let { icon: Icon, title, text } = Astro.props
     flex-direction: column;
     gap: calc(var(--space-2xs) / 1.5);
     min-inline-size: 0;
-  }
 
-  .line {
-    line-height: 1.4;
+    & .line {
+      line-height: 1.4;
+    }
   }
 
   .badge {
