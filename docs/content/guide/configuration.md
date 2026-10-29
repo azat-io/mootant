@@ -174,14 +174,28 @@ export default defineConfig({
 
 ### loggers
 
-Loggers whose messages are not mutated. Mootant skips the mutants that only
-change the text of a log call or remove the call, and leaves alone the labels of
-child loggers, such as `'db'` in `logger.child('db')`.
+Loggers whose message text is not mutated. Mootant skips changes to the text of
+their calls, such as `'Saved'` → `''` in `logger.info('Saved')`. The text is a
+string or a template with only variable names in `${}`, alone or joined with
+`+`. Mootant also skips the removal of a `console` call with only such text,
+such as `console.log('Saved')`. It leaves alone the labels of child loggers,
+such as `'db'` in `logger.child('db')`.
+
+Mootant still makes these changes in log calls:
+
+- Changes to the code that builds the message, such as `name.trim()` → `name` or
+  `'Total: ' + total` → `'Total: '`.
+- Changes to a text with `%` or `${}` before other arguments, such as
+  `'Order %j'` in `logger.info('Order %j', order)`: `%j` converts `order` to
+  JSON and may throw, and `${}` may insert a `%`.
+- The removal of other calls, such as `logger.info('Saved')` or
+  `console.log('Saved', order.id)`: `logger` may be `undefined`, and `order.id`
+  throws when `order` is `null`.
 
 A name is a receiver whose log methods write entries, such as `logger` in
 `logger.info('Saved')`, or a function called with a text first, such as
-`debug('Saved')`. A name matches in any letter case, and a leading `*` matches
-any start: `*Logger` matches `requestLogger`.
+`debug('Saved')`. A name matches in any letter case. After a leading `*`, the
+rest matches as written: `*Logger` matches `requestLogger`, but not `blogger`.
 
 `recommended` sets `['console', 'log', 'logger', '*Logger', 'debug']`. Your list
 replaces it, so repeat these names to add one:
