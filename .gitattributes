@@ -1,2 +1,3 @@
-docs/** linguist-documentation=false
+bin/** linguist-detectable=false
+cli/html/report.css linguist-detectable=false
 test/fixtures/** text eol=lf
