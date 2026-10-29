@@ -47,7 +47,9 @@ mutant of this mutator, and neither does a `!` on a side of `&&` or `||`. Their
 own mutators change them instead:
 [comparison-operator](/mutators/comparison-operator),
 [logical-operator](/mutators/logical-operator) and the literal mutators, such as
-[boolean-literal](/mutators/boolean-literal).
+[boolean-literal](/mutators/boolean-literal). When comparison-operator is off or
+ignored, a comparison can get mutants of this mutator; see
+[Skipped changes](#skipped-changes).
 
 ## Kill a surviving mutant
 
@@ -140,9 +142,9 @@ categories.
 | Literal test, taken as written on purpose                                               | `1` → `false` in `if (1)`                             | `constant-test`, noise          |
 
 The [`timeouts`](/guide/configuration#timeouts) setting, on in `strict`, brings
-back `loop-running` and `loop-advance`. `R3` comes back when the other mutant
-doesn't run, for example because its mutator is off. The other changes stay
-skipped.
+back `loop-running` and `loop-advance`. `R3` and `comparison-region` come back
+when the other mutant doesn't run, for example because its mutator is off. The
+other changes stay skipped.
 
 A returned boolean, such as `return product.inStock`, belongs to
 [return-value](/mutators/return-value).

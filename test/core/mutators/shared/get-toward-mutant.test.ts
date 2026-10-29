@@ -50,10 +50,18 @@ describe('getTowardMutant', () => {
       setup: {},
     },
     {
-      setup: { disabled: ['comparison-operator'] },
+      setup: { disabled: ['comparison-operator', 'condition'] },
       source: 'if (x > 1) save(x)',
       type: 'BinaryExpression',
       expected: false,
+      text: 'x > 1',
+      value: false,
+    },
+    {
+      setup: { disabled: ['comparison-operator'] },
+      source: 'if (x > 1) save(x)',
+      type: 'BinaryExpression',
+      expected: true,
       text: 'x > 1',
       value: false,
     },
@@ -319,10 +327,17 @@ describe('getTowardMutant', () => {
   it.each<[string, boolean]>([
     [
       [
-        '// mootant-ignore-next-line comparison-operator',
+        '// mootant-ignore-next-line comparison-operator, condition',
         'if (x > 1) save(x)',
       ].join('\n'),
       false,
+    ],
+    [
+      [
+        '// mootant-ignore-next-line comparison-operator',
+        'if (x > 1) save(x)',
+      ].join('\n'),
+      true,
     ],
     [['// mootant-ignore-next-line', 'if (x > 1) save(x)'].join('\n'), true],
   ])('follows ignore comments in %s', (source, expected) => {

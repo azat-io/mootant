@@ -86,7 +86,8 @@ Mootant never removes a whole `if`, loop or block, a declaration, such as
 - The only statement of an `if` without `else`, such as the `throw` in
   `if (!coupon) throw new Error('No coupon')`: another mutant already makes the
   test `false`. For `if (order.total > 100) addGift(order)`, the removal comes
-  back when [comparison-operator](/mutators/comparison-operator) is off.
+  back when [comparison-operator](/mutators/comparison-operator) and
+  [condition](/mutators/condition) are off.
 - In `recommended`, a statement with a finer mutant inside, such as `count++`,
   `await save(order)` or `return 0`, unless it is a plain `=` assignment.
   Mootant assumes that a test that catches the finer mutant also catches the

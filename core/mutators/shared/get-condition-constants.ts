@@ -78,8 +78,10 @@ interface ConstantFacts {
  * Plans the constants condition emits on a node (catalog 4.7): the node must be
  * condition's replaced node, a test without parentheses or a value negation
  * (the top of a `!` chain that is not a test and not an operand of `&&` or
- * `||`), and its innermost node must not be a comparison, a `&&` or `||` or a
- * literal, which other mutators own. `true` and `false` are then emitted except
+ * `||`), and its innermost node must not be a `&&` or `||` or a literal, which
+ * other mutators own. A comparison keeps a constant only when
+ * comparison-operator neither emits it nor will run a mutant that subsumes it
+ * (see `getComparisonConstantSkip`). `true` and `false` are then emitted except
  * the constant the types already give, the loop's running value, a constant
  * that a running directional mutant of a `??` test subsumes, the leave-now
  * constant of a first exit test, and a constant that makes a no-op callback.
@@ -167,7 +169,11 @@ export function getConditionConstants(
   for (let value of [true, false]) {
     let note =
       (comparison &&
-        getComparisonConstantSkip(inner, value !== negated, comparison)) ??
+        getComparisonConstantSkip(
+          inner,
+          { truth: value !== negated, plan: comparison, node },
+          context,
+        )) ??
       getConstantSkip(value, {
         noOp: () => isNoOpCallbackConstant(node, value, context),
         running: running?.value,
@@ -231,21 +237,26 @@ function getLiteralConstantSkip(
 
 /**
  * Finds why a constant of condition's replaced node is skipped when its
- * innermost node is a comparison (catalog 4.7, O1): comparison-operator emits
- * the same constant, or a swap or shifted literal that gives the comparison
- * this value on part of the inputs where the constant does, so a test that
- * kills it kills the constant too. Otherwise the constant keeps the skip that
+ * innermost node is a comparison (catalog 4.7): comparison-operator emits the
+ * same constant (O1), or, while comparison-operator will run on the comparison,
+ * a swap or shifted literal that gives the comparison this value on part of the
+ * inputs where the constant does, so a test that kills it kills the constant
+ * too (comparison-region). Otherwise the constant keeps the skip that
  * comparison-operator's plan gives a constant of its value, if any.
  *
  * @param comparison - Innermost comparison of the node.
- * @param truth - Truth value the constant gives the comparison.
- * @param plan - Plan of comparison-operator for the comparison.
+ * @param query - Truth value the constant gives the comparison, the plan of
+ *   comparison-operator for it, and the node the constant replaces.
+ * @param query.truth - Truth value the constant gives the comparison.
+ * @param query.plan - Plan of comparison-operator for the comparison.
+ * @param query.node - Node the constant replaces.
+ * @param context - Mutator context with the test of mutants that will run.
  * @returns Rule and reason of the skip, or null when the plan gives none.
  */
 function getComparisonConstantSkip(
   comparison: Node,
-  truth: boolean,
-  plan: ComparisonPlan,
+  { truth, plan, node }: { plan: ComparisonPlan; truth: boolean; node: Node },
+  context: RunContext,
 ): SkipNote | null {
   let by = { mutator: 'comparison-operator', node: comparison }
   if (
@@ -259,7 +270,10 @@ function getComparisonConstantSkip(
       by,
     }
   }
-  if (plan.entries.some(entry => entry.value === truth)) {
+  if (
+    plan.entries.some(entry => entry.value === truth) &&
+    context.runs(by, { mutator: 'condition', node })
+  ) {
     return {
       reason: `a comparison-operator mutant makes the comparison ${truth} on part of the inputs where the constant does`,
       rule: 'comparison-region',

@@ -160,11 +160,20 @@ describe('getBranchCopySkip', () => {
     [
       [
         'function f(x: number) {',
-        '  // mootant-ignore-next-line comparison-operator',
+        '  // mootant-ignore-next-line comparison-operator, condition',
         '  y = x >= 5 ? 0 : 1',
         '}',
       ].join('\n'),
       null,
+    ],
+    [
+      [
+        'function f(x: number) {',
+        '  // mootant-ignore-next-line comparison-operator',
+        '  y = x >= 5 ? 0 : 1',
+        '}',
+      ].join('\n'),
+      'R5',
     ],
     [
       [

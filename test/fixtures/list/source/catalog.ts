@@ -257,7 +257,7 @@ export async function loadUser(api: Api, id: string) {
 
 export function partialIgnore(x: number) {
   // mootant-ignore-next-line comparison-operator: boundary is checked elsewhere
-  if (x > 1) save(x) // the test's mutants are ignored, so the removal is the active probe
+  if (x > 1) save(x) // the test's mutants are ignored, so condition's constants probe it.
 }
 
 interface Query {

@@ -5,8 +5,8 @@
   "since": null,
   "summary": {
     "totalFiles": 13,
-    "totalMutants": 403,
-    "totalPending": 377,
+    "totalMutants": 404,
+    "totalPending": 378,
     "totalIgnored": 26,
     "totalErrors": 0,
     "totalWarnings": 3
@@ -44,8 +44,8 @@
     },
     {
       "id": "condition",
-      "description": "Forces a condition that is not a comparison or a logical expression to true or false.",
-      "mutants": 28
+      "description": "Forces a condition that is not a logical expression to true or false.",
+      "mutants": 30
     },
     {
       "id": "logical-operator",
@@ -95,7 +95,7 @@
     {
       "id": "statement-removal",
       "description": "Removes one statement with an effect: a call, assignment, delete, throw, early return or case break.",
-      "mutants": 28
+      "mutants": 27
     },
     {
       "id": "string-literal",
@@ -122,7 +122,7 @@
     {
       "file": "test/fixtures/list/source/catalog.ts",
       "parsed": true,
-      "mutants": 227
+      "mutants": 228
     },
     {
       "file": "test/fixtures/list/source/component.tsx",
@@ -6024,10 +6024,10 @@
       "original": "x > 1",
       "replacement": "x >= 1",
       "before": [
-        "  if (x > 1) save(x) // the test's mutants are ignored, so the removal is the active probe"
+        "  if (x > 1) save(x) // the test's mutants are ignored, so condition's constants probe it."
       ],
       "after": [
-        "  if (x >= 1) save(x) // the test's mutants are ignored, so the removal is the active probe"
+        "  if (x >= 1) save(x) // the test's mutants are ignored, so condition's constants probe it."
       ],
       "cutStart": 0,
       "cutEnd": 0,
@@ -6054,10 +6054,10 @@
       "original": "x > 1",
       "replacement": "x != 1",
       "before": [
-        "  if (x > 1) save(x) // the test's mutants are ignored, so the removal is the active probe"
+        "  if (x > 1) save(x) // the test's mutants are ignored, so condition's constants probe it."
       ],
       "after": [
-        "  if (x != 1) save(x) // the test's mutants are ignored, so the removal is the active probe"
+        "  if (x != 1) save(x) // the test's mutants are ignored, so condition's constants probe it."
       ],
       "cutStart": 0,
       "cutEnd": 0,
@@ -6084,10 +6084,10 @@
       "original": "x > 1",
       "replacement": "x > 2",
       "before": [
-        "  if (x > 1) save(x) // the test's mutants are ignored, so the removal is the active probe"
+        "  if (x > 1) save(x) // the test's mutants are ignored, so condition's constants probe it."
       ],
       "after": [
-        "  if (x > 2) save(x) // the test's mutants are ignored, so the removal is the active probe"
+        "  if (x > 2) save(x) // the test's mutants are ignored, so condition's constants probe it."
       ],
       "cutStart": 0,
       "cutEnd": 0,
@@ -6100,24 +6100,50 @@
       }
     },
     {
-      "id": "hk6w54t2k52z",
-      "mutator": "statement-removal",
+      "id": "mr6q9f42gw5e",
+      "mutator": "condition",
       "file": "test/fixtures/list/source/catalog.ts",
       "line": 260,
-      "column": 14,
+      "column": 7,
       "endLine": 260,
-      "endColumn": 21,
-      "start": 11175,
-      "end": 11182,
+      "endColumn": 12,
+      "start": 11168,
+      "end": 11173,
       "scope": "partialIgnore",
-      "kind": "block",
-      "original": "save(x)",
-      "replacement": ";",
+      "kind": "expression",
+      "original": "x > 1",
+      "replacement": "true",
       "before": [
-        "  if (x > 1) save(x) // the test's mutants are ignored, so the removal is the active probe"
+        "  if (x > 1) save(x) // the test's mutants are ignored, so condition's constants probe it."
       ],
       "after": [
-        "  if (x > 1) ; // the test's mutants are ignored, so the removal is the active probe"
+        "  if (true) save(x) // the test's mutants are ignored, so condition's constants probe it."
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "s87sp2dnhpa1",
+      "mutator": "condition",
+      "file": "test/fixtures/list/source/catalog.ts",
+      "line": 260,
+      "column": 7,
+      "endLine": 260,
+      "endColumn": 12,
+      "start": 11168,
+      "end": 11173,
+      "scope": "partialIgnore",
+      "kind": "expression",
+      "original": "x > 1",
+      "replacement": "false",
+      "before": [
+        "  if (x > 1) save(x) // the test's mutants are ignored, so condition's constants probe it."
+      ],
+      "after": [
+        "  if (false) save(x) // the test's mutants are ignored, so condition's constants probe it."
       ],
       "cutStart": 0,
       "cutEnd": 0,

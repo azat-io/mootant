@@ -111,6 +111,6 @@ categories.
 | Operand of `void`, whose value is always `undefined`                                  | `true` → `false` in `void true`                                             | `void-operand`, equivalent |
 
 The [`timeouts`](/guide/configuration#timeouts) setting, on in `strict`, brings
-back `loop-advance` and `loop-running`. `R5` and `R7` come back when the finer
-mutant doesn't run: its mutator is off or ignored on that line. The other
+back `loop-advance` and `loop-running`. `O4`, `R5` and `R7` come back when the
+finer mutant doesn't run: its mutator is off or ignored on that line. The other
 changes stay skipped.

@@ -207,13 +207,13 @@ describe('statementRemoval', () => {
   it.each<{ setup: MutatorSetup; lines: string[] }>([
     {
       lines: [
-        '// mootant-ignore-next-line comparison-operator',
+        '// mootant-ignore-next-line comparison-operator, condition',
         'if (x > 1) save(x)',
       ],
       setup: {},
     },
     {
-      setup: { mutators: { 'comparison-operator': 'off' } },
+      setup: { mutators: { 'comparison-operator': 'off', condition: 'off' } },
       lines: ['if (x > 1) save(x)'],
     },
   ])('removes a then-branch nothing else forces', ({ setup, lines }) => {

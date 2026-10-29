@@ -150,8 +150,8 @@ Changes that come back:
 - `loop-advance`, with the [`timeouts`](/guide/configuration#timeouts) setting.
 - `log-message`, for a name removed from
   [`loggers`](/guide/configuration#loggers).
-- `R5` and `R7`, when the other mutant doesn't run, as when its mutator is off
-  or ignored on that line.
+- `O4`, `R5` and `R7`, when the other mutant doesn't run, as when its mutator is
+  off or ignored on that line.
 - The `RegExp` flags, when [regex-flag](/mutators/regex-flag) is off.
 
 `strict` turns on `caseTests` and `timeouts`. The other changes stay skipped.

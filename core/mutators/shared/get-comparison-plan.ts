@@ -20,11 +20,13 @@ import { getLoopRunningSkip } from './get-loop-running-skip'
 import { getMemberPath } from '../../syntax/get-member-path'
 import { NO_OP_CALLBACK_SKIP } from './no-op-callback-skip'
 import { getOwnedConstants } from './get-owned-constants'
+import { getShiftedLiteral } from './get-shifted-literal'
 import { getLeaveNowValue } from './get-leave-now-value'
 import { getRootName } from '../../syntax/get-root-name'
 import { getRunningValue } from './get-running-value'
 import { getLiteralValue } from './get-literal-value'
 import { isFunction } from '../../syntax/is-function'
+import { isNumberLiteral } from './is-number-literal'
 import { LEAVE_NOW_SKIP } from './leave-now-skip'
 import { isNumericPair } from './is-numeric-pair'
 import { getNumberText } from './get-number-text'
@@ -297,7 +299,7 @@ export function getComparisonPlan(
   let { sourceCode, settings } = context
   let { operator } = node
   let planned = getPlannedEntries(node, context)
-  let shift = orderedPlans.has(operator) ? getShift(node, context) : null
+  let shift = getShift(node, context)
   let boundedOperand = getBoundedOperand(node, context)
   let impossible = getImpossibleRegions(boundedOperand, 0)
   let running = settings.timeouts ? null : getRunningValue(node, context)
@@ -708,38 +710,6 @@ function getUpdateDirection(
 }
 
 /**
- * Builds the shifted literal of a relational comparison with exactly one number
- * literal operand (catalog 4.6): strict operators shrink the true region,
- * non-strict ones grow it.
- *
- * @param node - Relational comparison.
- * @param context - Mutator context of the file.
- * @returns The comparison text with the literal moved one step and the step, or
- *   null.
- */
-function getShift(
-  node: PrivateInExpression | BinaryExpression,
-  context: MutatorContext,
-): Shift | null {
-  let leftLiteral = isNumberLiteral(node.left)
-  if (leftLiteral === isNumberLiteral(node.right)) {
-    return null
-  }
-  let literal = unwrapParentheses(leftLiteral ? node.left : node.right)
-  let shrinks = node.operator === '<' || node.operator === '>='
-  let step: -1 | 1 = shrinks === leftLiteral ? 1 : -1
-  let text = getNumberText(literal, step)
-  return text === null ? null : (
-      {
-        text: context.sourceCode.editText(node, [
-          { start: literal.start, end: literal.end, text },
-        ]),
-        step,
-      }
-    )
-}
-
-/**
  * Finds the regions that a lower bound makes impossible (catalog 4.6, rule 1):
  * with one operand bounded below by `L` and the other a number literal `c`,
  * "bounded < c" is impossible when `c <= L`, and "bounded = c" when `c < L`.
@@ -805,6 +775,35 @@ function getBoundedSkip(
     reason: `a lower bound of an operand makes it the constant ${constant} (${skips.operand!.bound.because}), and ${note.reason}`,
     heuristic: true,
   }
+}
+
+/**
+ * Builds the shifted literal of a relational comparison with exactly one number
+ * literal operand (see `getShiftedLiteral`).
+ *
+ * @param node - Comparison.
+ * @param context - Mutator context of the file.
+ * @returns The comparison text with the literal moved one step and the step, or
+ *   null.
+ */
+function getShift(
+  node: PrivateInExpression | BinaryExpression,
+  context: MutatorContext,
+): Shift | null {
+  let shifted = getShiftedLiteral(node)
+  if (!shifted) {
+    return null
+  }
+  let { literal, step } = shifted
+  let text = getNumberText(literal, step)
+  return text === null ? null : (
+      {
+        text: context.sourceCode.editText(node, [
+          { start: literal.start, end: literal.end, text },
+        ]),
+        step,
+      }
+    )
 }
 
 /**
@@ -930,16 +929,4 @@ function getPlannedValue(entry: PlannedEntry): boolean {
   return typeof entry.to === 'boolean' ?
       entry.to
     : trueRegions.get(entry.to)!.includes(entry.region!)
-}
-
-/**
- * Tells whether an operand is a number or BigInt literal, or `-` applied to
- * one.
- *
- * @param node - Operand, through parentheses.
- * @returns Whether the operand is a number literal.
- */
-function isNumberLiteral(node: Node): boolean {
-  let value = getLiteralValue(node)
-  return typeof value === 'number' || typeof value === 'bigint'
 }

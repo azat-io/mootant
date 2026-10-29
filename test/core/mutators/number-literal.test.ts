@@ -250,20 +250,57 @@ describe('numberLiteral', () => {
     {
       source: [
         'function f(x: number) {',
-        '  // mootant-ignore-next-line comparison-operator',
+        '  // mootant-ignore-next-line comparison-operator, condition',
         '  return x >= 5 ? 0 : 1',
         '}',
       ].join('\n'),
       setup: {},
     },
     {
+      setup: { mutators: { 'comparison-operator': 'off', condition: 'off' } },
       source: 'function f(x: number) { return x >= 5 ? 0 : 1 }',
-      setup: { mutators: { 'comparison-operator': 'off' } },
     },
   ])(
-    'copies a branch when the comparison will not run in $source',
+    'copies a branch when no mutant of the test will run in $source',
     ({ source, setup }) => {
-      expect(mutate(source, setup)).toStrictEqual(['0 -> 1', '1 -> 2'])
+      expect(mutate(source, setup)).toStrictEqual([
+        '5 -> 6',
+        '0 -> 1',
+        '1 -> 2',
+      ])
+    },
+  )
+
+  it.each<{ setup: MutatorSetup; expected: string[]; source: string }>([
+    {
+      source: [
+        'function f(count: number) {',
+        '  // mootant-ignore-next-line comparison-operator',
+        '  if (count >= 10) run()',
+        '}',
+      ].join('\n'),
+      expected: ['10 -> 11'],
+      setup: {},
+    },
+    {
+      source: 'function f(count: number) { if (count >= 10) run() }',
+      setup: { mutators: { 'comparison-operator': 'off' } },
+      expected: ['10 -> 11'],
+    },
+    {
+      source: [
+        'function f(count: number) {',
+        '  // mootant-ignore-next-line comparison-operator',
+        '  if (count > 10) run()',
+        '}',
+      ].join('\n'),
+      expected: [],
+      setup: {},
+    },
+  ])(
+    'changes a compared number when the comparison will not run in $source',
+    ({ expected, source, setup }) => {
+      expect(mutate(source, setup)).toStrictEqual(expected)
     },
   )
 

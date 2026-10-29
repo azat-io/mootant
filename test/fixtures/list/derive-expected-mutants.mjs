@@ -52,7 +52,7 @@ const DESCRIPTIONS = {
   'comparison-operator':
     "Moves a comparison's boundary or literal, flips its direction, or makes it constant: the minimal set that subsumes all other comparison mutants.",
   condition:
-    'Forces a condition that is not a comparison or a logical expression to true or false.',
+    'Forces a condition that is not a logical expression to true or false.',
   'logical-operator':
     'Drops one operand of &&, || or ??, swaps ?? and || where falsy values differ, or makes a whole condition constant.',
   'method-call':

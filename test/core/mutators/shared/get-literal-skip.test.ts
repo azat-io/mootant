@@ -3,6 +3,7 @@ import type { Node } from 'oxc-parser'
 import { describe, expect, it } from 'vitest'
 
 import type { LiteralChange } from '../../../../types/syntax/literal-change'
+import type { TestContextSetup } from '../../../helpers/create-test-context'
 import type { SkipRuleId } from '../../../../types/mutant/skip-rule-id'
 import type { SkipNote } from '../../../../types/mutant/skip-note'
 
@@ -28,6 +29,27 @@ describe('getLiteralSkip', () => {
       change: { value: 2 },
       type: 'Literal',
       expected: 'O4',
+      text: '1',
+    },
+    {
+      source: 'declare let n: number; x = n < 1',
+      change: { value: 2 },
+      type: 'Literal',
+      expected: 'O4',
+      text: '1',
+    },
+    {
+      source: 'declare let n: number; x = n > 1',
+      expected: 'shifted-literal',
+      change: { value: 2 },
+      type: 'Literal',
+      text: '1',
+    },
+    {
+      source: 'declare let n: number; x = 1 < n',
+      expected: 'shifted-literal',
+      change: { value: 2 },
+      type: 'Literal',
       text: '1',
     },
     {
@@ -129,6 +151,54 @@ describe('getLiteralSkip', () => {
       expect(
         getLiteralSkip(find(type, text), { change }, createRunContext(context))
           ?.rule ?? null,
+      ).toBe(expected)
+    },
+  )
+
+  it.each<{
+    expected: SkipRuleId | null
+    setup: TestContextSetup
+    source: string
+  }>([
+    {
+      setup: { disabled: ['comparison-operator'] },
+      source: 'declare let n: number; x = n === 1',
+      expected: null,
+    },
+    {
+      source: [
+        'declare let n: number',
+        '// mootant-ignore-next-line comparison-operator',
+        'x = n === 1',
+      ].join('\n'),
+      expected: null,
+      setup: {},
+    },
+    {
+      source: [
+        'declare let n: number',
+        '// mootant-ignore-next-line number-literal',
+        'x = n === 1',
+      ].join('\n'),
+      expected: 'O4',
+      setup: {},
+    },
+    {
+      setup: { disabled: ['comparison-operator'] },
+      source: 'declare let n: number; x = n > 1',
+      expected: 'shifted-literal',
+    },
+  ])(
+    'skips a comparison operand by what will run in $source',
+    ({ expected, source, setup }) => {
+      let { context, find } = createTestContext(source, setup)
+
+      expect(
+        getLiteralSkip(
+          find('Literal', '1'),
+          { change: { value: 2 } },
+          createRunContext(context),
+        )?.rule ?? null,
       ).toBe(expected)
     },
   )

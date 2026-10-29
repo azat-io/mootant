@@ -10,8 +10,7 @@ import { createRunContext } from './shared/create-run-context'
 import { isNegation } from './shared/is-negation'
 
 /**
- * Forces a condition that is not a comparison or a logical expression to true
- * or false.
+ * Forces a condition that is not a logical expression to true or false.
  */
 export let condition: Mutator = {
   create(context) {
@@ -55,7 +54,7 @@ export let condition: Mutator = {
   },
   meta: {
     description:
-      'Forces a condition that is not a comparison or a logical expression to true or false.',
+      'Forces a condition that is not a logical expression to true or false.',
   },
 }
 

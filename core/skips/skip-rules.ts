@@ -187,6 +187,10 @@ export let skipRules = {
     category: 'equivalent',
     heuristic: true,
   },
+  'shifted-literal': {
+    category: 'owned',
+    heuristic: false,
+  },
   'never-falsy': {
     category: 'equivalent',
     heuristic: true,

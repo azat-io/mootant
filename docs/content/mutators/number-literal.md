@@ -132,7 +132,8 @@ categories.
 
 | Reason                                                                                                | Example                                                   | Rule                          |
 | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------- |
-| Literal in a comparison, left to [comparison-operator](/mutators/comparison-operator)                 | `10` → `11` in `quantity > 10`                            | `O4`, subsumed                |
+| Literal in a comparison, left to [comparison-operator](/mutators/comparison-operator)                 | `10` → `11` in `quantity >= 10`                           | `O4`, subsumed                |
+| [comparison-operator](/mutators/comparison-operator) moves the number by one instead                  | `10` → `11` in `quantity > 10`                            | `shifted-literal`, owned      |
 | Delay of a timer, made of literals                                                                    | `1000` → `1001` in `setTimeout(run, 1000)`                | `timer-delay`, noise          |
 | Value of a `case` label                                                                               | `1` → `2` in `case 1:`                                    | `case-label`, noise           |
 | Same result as a `true` or `false` of another mutator                                                 | `1` → `2` in `express ? 1 : 2`                            | `O19`, owned                  |
@@ -151,6 +152,6 @@ categories.
 
 The [`timeouts`](/guide/configuration#timeouts) setting brings back
 `loop-running` and `loop-advance`, and [`caseTests`](#casetests) brings back
-`case-label`; `strict` turns both on. `R5` and `R7` come back when the other
-mutant does not run, for example when its mutator is off. The other changes stay
-skipped.
+`case-label`; `strict` turns both on. `O4`, `R5` and `R7` come back when the
+other mutant does not run, for example when its mutator is off. The other
+changes stay skipped.

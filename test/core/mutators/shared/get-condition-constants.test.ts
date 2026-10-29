@@ -184,6 +184,32 @@ describe('getConditionConstants', () => {
       text: 'r.x',
       setup: {},
     },
+    {
+      setup: { disabled: ['comparison-operator'] },
+      body: 'if (a < b) run()',
+      type: 'BinaryExpression',
+      expected: [true],
+      text: 'a < b',
+    },
+    {
+      body: [
+        '// mootant-ignore-next-line comparison-operator',
+        'if (a < b) run()',
+      ].join('\n'),
+      type: 'BinaryExpression',
+      expected: [true],
+      text: 'a < b',
+      setup: {},
+    },
+    {
+      body: ['// mootant-ignore-next-line condition', 'if (a < b) run()'].join(
+        '\n',
+      ),
+      type: 'BinaryExpression',
+      text: 'a < b',
+      expected: [],
+      setup: {},
+    },
   ])('plans $body', ({ expected, setup, body, type, text }) => {
     let { context, find } = createTestContext(
       `function f(${PARAMETERS}) { ${body} }`,

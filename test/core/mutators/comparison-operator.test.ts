@@ -603,18 +603,24 @@ describe('comparisonOperator', () => {
     },
     {
       lines: [
-        '// mootant-ignore-next-line comparison-operator: boundary is fixed',
+        '// mootant-ignore-next-line comparison-operator, condition: fixed',
         'if (x > 1) save(x)',
       ],
-      situation: 'it is ignored',
+      situation: 'it and condition are ignored',
       expected: ['save(x) -> ;'],
       setup: {},
     },
     {
-      setup: { mutators: { 'comparison-operator': 'off' } },
+      setup: { mutators: { 'comparison-operator': 'off', condition: 'off' } },
+      situation: 'it and condition are off',
       lines: ['if (x > 1) save(x)'],
       expected: ['save(x) -> ;'],
-      situation: 'it is off',
+    },
+    {
+      setup: { mutators: { 'comparison-operator': 'off' } },
+      situation: "it is off, since condition's false runs",
+      lines: ['if (x > 1) save(x)'],
+      expected: [],
     },
   ])(
     'justifies skipping the removal of a then-branch while $situation',
@@ -641,18 +647,24 @@ describe('comparisonOperator', () => {
     },
     {
       lines: [
-        '// mootant-ignore-next-line comparison-operator: boundary is fixed',
+        '// mootant-ignore-next-line comparison-operator, condition: fixed',
         'x = x >= 5 ? 0 : 1',
       ],
-      expected: ['0 -> 1', '1 -> 2'],
-      situation: 'it is ignored',
+      situation: 'it and condition are ignored',
+      expected: ['5 -> 6', '0 -> 1', '1 -> 2'],
       setup: {},
     },
     {
-      setup: { mutators: { 'comparison-operator': 'off' } },
-      expected: ['0 -> 1', '1 -> 2'],
+      setup: { mutators: { 'comparison-operator': 'off', condition: 'off' } },
+      expected: ['5 -> 6', '0 -> 1', '1 -> 2'],
+      situation: 'it and condition are off',
       lines: ['x = x >= 5 ? 0 : 1'],
-      situation: 'it is off',
+    },
+    {
+      setup: { mutators: { 'comparison-operator': 'off' } },
+      situation: "it is off, since condition's false runs",
+      expected: ['5 -> 6', '1 -> 2'],
+      lines: ['x = x >= 5 ? 0 : 1'],
     },
   ])(
     'justifies skipping a branch made equal to the other while $situation',

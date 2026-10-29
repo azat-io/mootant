@@ -137,7 +137,7 @@ describe('booleanLiteral', () => {
   }>([
     {
       source: [
-        '// mootant-ignore-next-line comparison-operator',
+        '// mootant-ignore-next-line comparison-operator, condition',
         'y = x > 1 ? true : false',
       ].join('\n'),
       expected: [
@@ -151,8 +151,13 @@ describe('booleanLiteral', () => {
         { replacement: 'false', original: 'true' },
         { replacement: 'true', original: 'false' },
       ],
+      setup: { mutators: { 'comparison-operator': 'off', condition: 'off' } },
+      source: 'y = x > 1 ? true : false',
+    },
+    {
       setup: { mutators: { 'comparison-operator': 'off' } },
       source: 'y = x > 1 ? true : false',
+      expected: [],
     },
     {
       source: ['// mootant-ignore-next-line', 'y = x > 1 ? true : false'].join(
@@ -211,6 +216,19 @@ describe('booleanLiteral', () => {
       ].join('\n'),
       expected: [{ replacement: 'false', original: 'true' }],
       setup: { mutators: { 'logical-operator': 'off' } },
+    },
+    {
+      source: [
+        '// mootant-ignore-next-line comparison-operator',
+        'y = flag === true',
+      ].join('\n'),
+      expected: [{ replacement: 'false', original: 'true' }],
+      setup: {},
+    },
+    {
+      expected: [{ replacement: 'false', original: 'true' }],
+      setup: { mutators: { 'comparison-operator': 'off' } },
+      source: 'y = flag === true',
     },
   ])(
     'judges the justifying mutant of $source with $setup',

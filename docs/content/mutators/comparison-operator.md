@@ -121,10 +121,11 @@ it:
 let sampled = Math.random() < 0.01
 ```
 
-When this mutator is off, or its mutants on a line are ignored, other mutators
-still skip most changes to a comparison, such as `50` → `51` in `total >= 50`. A
-few of their changes come back, such as `true` and `false` for
-`return total >= 50` from [return-value](/mutators/return-value).
+When this mutator is off, or its mutants on a line are ignored, most changes
+that other mutators leave to it come back, such as `50` → `51` in `total >= 50`
+and `true` and `false` for `return total >= 50` from
+[return-value](/mutators/return-value). A change that this mutator would make
+too stays skipped, such as `50` → `51` in `total > 50`.
 
 This mutator has no options.
 

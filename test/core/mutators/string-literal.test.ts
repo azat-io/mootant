@@ -247,23 +247,42 @@ describe('stringLiteral', () => {
     {
       source: [
         'function f(x: number) {',
-        '  // mootant-ignore-next-line comparison-operator',
+        '  // mootant-ignore-next-line comparison-operator, condition',
         "  return x >= 5 ? '' : 'small'",
         '}',
       ].join('\n'),
       setup: {},
     },
     {
+      setup: { mutators: { 'comparison-operator': 'off', condition: 'off' } },
       source: "function f(x: number) { return x >= 5 ? '' : 'small' }",
-      setup: { mutators: { 'comparison-operator': 'off' } },
     },
   ])(
-    'copies a branch when the comparison will not run in $source',
+    'copies a branch when no mutant of the test will run in $source',
     ({ source, setup }) => {
       expect(mutate(source, setup)).toStrictEqual([
         "'' -> 'mootant'",
         "'small' -> ''",
       ])
+    },
+  )
+
+  it.each<{ setup: MutatorSetup; source: string }>([
+    {
+      source: [
+        '// mootant-ignore-next-line comparison-operator',
+        "x = mode === 'dark'",
+      ].join('\n'),
+      setup: {},
+    },
+    {
+      setup: { mutators: { 'comparison-operator': 'off' } },
+      source: "x = mode === 'dark'",
+    },
+  ])(
+    'changes a compared string when the comparison will not run in $source',
+    ({ source, setup }) => {
+      expect(mutate(source, setup)).toStrictEqual(["'dark' -> ''"])
     },
   )
 
@@ -306,11 +325,6 @@ describe('stringLiteral', () => {
     {
       source: "function f(title: string) { x = title || 'untitled' }",
       setup: { mutators: { 'logical-operator': 'off' } },
-      expected: [],
-    },
-    {
-      setup: { mutators: { 'comparison-operator': 'off' } },
-      source: "x = mode === 'dark'",
       expected: [],
     },
     {

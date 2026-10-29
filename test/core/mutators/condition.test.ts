@@ -409,6 +409,42 @@ describe('condition', () => {
     },
   )
 
+  it.each<{
+    setup: MutatorSetup
+    expected: string[]
+    situation: string
+    lines: string[]
+  }>([
+    {
+      lines: [
+        'function f(price: number) {',
+        '  // mootant-ignore-next-line comparison-operator: boundary is fixed',
+        '  if (price < 100) run()',
+        '}',
+      ],
+      expected: ['price < 100 -> true', 'price < 100 -> false'],
+      situation: 'comparison-operator is ignored',
+      setup: {},
+    },
+    {
+      lines: ['function f(price: number) {', '  if (price < 100) run()', '}'],
+      expected: ['price < 100 -> true', 'price < 100 -> false'],
+      setup: { mutators: { 'comparison-operator': 'off' } },
+      situation: 'comparison-operator is off',
+    },
+    {
+      lines: ['function f(count: number) {', '  if (count === 1) run()', '}'],
+      setup: { mutators: { 'comparison-operator': 'off' } },
+      situation: 'comparison-operator owns the other one',
+      expected: ['count === 1 -> true'],
+    },
+  ])(
+    'brings back a constant of a comparison when $situation',
+    ({ expected, setup, lines }) => {
+      expect(mutate(lines.join('\n'), setup)).toStrictEqual(expected)
+    },
+  )
+
   it.each<{ setup: MutatorSetup; situation: string; lines: string[] }>([
     { lines: ['if (x) notify(x)'], situation: 'it runs', setup: {} },
     {
