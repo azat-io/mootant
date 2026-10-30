@@ -294,7 +294,7 @@ describe('comparisonOperator', () => {
     {
       source: [
         'function f(n: number) {',
-        '  for (let i = 0; i !== n; i++) run(i)',
+        '  for (let i = 0; i !== n; i++) total += i',
         '}',
       ].join('\n'),
       expected: ['i !== n -> i > n'],
@@ -302,7 +302,7 @@ describe('comparisonOperator', () => {
     {
       source: [
         'function f(n: number) {',
-        '  for (let i = n; i !== 0; i--) run(i)',
+        '  for (let i = n; i !== 0; i--) total += i',
         '}',
       ].join('\n'),
       expected: ['i !== 0 -> i < 0'],
@@ -310,7 +310,7 @@ describe('comparisonOperator', () => {
     {
       source: [
         'function f(n: number) {',
-        '  for (let i = 0; n !== i; i++) run(i)',
+        '  for (let i = 0; n !== i; i++) total += i',
         '}',
       ].join('\n'),
       expected: ['n !== i -> n < i'],
@@ -330,6 +330,38 @@ describe('comparisonOperator', () => {
         '}',
       ].join('\n'),
       expected: ['i !== n -> i < n', 'i !== n -> i > n'],
+    },
+    {
+      expected: [
+        'i !== boxes -> i < boxes',
+        'i !== boxes -> i > boxes',
+        'i > 100 -> i >= 100',
+        'i > 100 -> i != 100',
+        'i > 100 -> i > 101',
+      ],
+      source: [
+        'function f(boxes: number) {',
+        '  for (let i = 0; i !== boxes; i++) {',
+        '    if (i > 100) break',
+        '  }',
+        '}',
+      ].join('\n'),
+    },
+    {
+      expected: [
+        'i !== boxes -> i < boxes',
+        'i !== boxes -> i > boxes',
+        'i > 100 -> i >= 100',
+        'i > 100 -> i != 100',
+        'i > 100 -> i > 101',
+      ],
+      source: [
+        'function f(boxes: number) {',
+        '  for (let i = 0; i !== boxes; i++) {',
+        '    if (i > 100) fail()',
+        '  }',
+        '}',
+      ].join('\n'),
     },
     {
       expected: [
@@ -354,7 +386,7 @@ describe('comparisonOperator', () => {
         'function f(n: number) {',
         '  let i = 0',
         '  while (true) {',
-        '    work(i)',
+        '    total += i',
         '    if (i === n) break',
         '    i++',
         '  }',

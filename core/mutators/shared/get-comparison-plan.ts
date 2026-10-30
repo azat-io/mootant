@@ -9,6 +9,7 @@ import type {
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { Replacement } from '../../../types/mutator/replacement'
 import type { ValueBound } from '../../../types/syntax/value-bound'
+import type { NodeSlot } from '../../../types/syntax/node-slot'
 import type { SkipNote } from '../../../types/mutant/skip-note'
 import type { RunningValue } from './get-running-value'
 
@@ -30,6 +31,7 @@ import { isNumberLiteral } from './is-number-literal'
 import { LEAVE_NOW_SKIP } from './leave-now-skip'
 import { isNumericPair } from './is-numeric-pair'
 import { getNumberText } from './get-number-text'
+import { hasOtherExit } from './has-other-exit'
 import { walkTree } from '../../tree/walk-tree'
 import { getTypeView } from './get-type-view'
 
@@ -429,10 +431,10 @@ function getOperatorSkips(
 ): Map<string | null, SkipNote> {
   let operatorSkips = new Map<string | null, SkipNote>([
     [
-      getCounterEntry(node, running),
+      getCounterEntry(node, context, running),
       {
         reason:
-          'the loop moves the counter in one direction only, so this form ends the loop at the same point',
+          'the loop moves the counter one way, keeps the bound and has no other exit, so this form ends the loop at the same point',
         rule: 'one-way-counter',
       },
     ],
@@ -458,6 +460,62 @@ function getOperatorSkips(
     operatorSkips.set('==', operatorSkips.get('==') ?? reference)
   }
   return operatorSkips
+}
+
+/**
+ * Finds the directions in which a loop moves an operand: up for `++` or `+=`
+ * with a positive number literal, down for `--` or `-=` with one. Writes are
+ * matched by member path, so `this.count++` says nothing about `this.pos`; a
+ * write of a prefix of the path, or of a member without a static path on the
+ * same root, is a write of another kind, and so is a write by a destructuring
+ * pattern, a `for...in` or `for...of` head, `delete` or a declarator (see
+ * `isOtherWrite`).
+ *
+ * @param loop - Loop whose test, update and body are searched, without nested
+ *   functions.
+ * @param path - Member path of an operand.
+ * @returns The direction of each write of the operand, `other` for a write of
+ *   another kind; empty when the loop does not write the operand.
+ */
+function getDirections(
+  loop: RunningValue['loop'],
+  path: string[],
+): Set<string> {
+  let directions = new Set<string>()
+  let patternProperties = new Set<Node>()
+  let parts = [
+    loop.test,
+    loop.type === 'ForStatement' ? loop.update : null,
+    loop.body,
+  ]
+  for (let part of parts) {
+    if (part) {
+      walkTree(part, (child, slot) => {
+        let direction: string | null = null
+        if (
+          child.type === 'UpdateExpression' ||
+          child.type === 'AssignmentExpression'
+        ) {
+          direction = getUpdateDirection(child, path)
+        } else if (
+          isOtherWrite(slot, patternProperties) &&
+          getTargetMatch(child, path)
+        ) {
+          direction = 'other'
+        }
+        if (direction) {
+          directions.add(direction)
+        }
+        if (child.type === 'ObjectPattern') {
+          for (let property of child.properties) {
+            patternProperties.add(property)
+          }
+        }
+        return !isFunction(child)
+      })
+    }
+  }
+  return directions
 }
 
 /**
@@ -513,51 +571,45 @@ function getValueSkips(
 }
 
 /**
- * Finds the direction in which a loop moves an operand: up for `++` or `+=`
- * with a positive number literal, down for `--` or `-=` with one. Updates are
- * matched by member path, so `this.count++` says nothing about `this.pos`; an
- * update of a prefix of the path, or of a member without a static path on the
- * same root, counts as an assignment of another kind.
+ * Finds the relational entry that a one-way counter makes equivalent in a loop
+ * condition (catalog 4.6, rule 3): for `!==` or `!=` that keeps the loop
+ * running, or `===` or `==` that leaves it, when one operand is moved under the
+ * loop by updates of one direction only, the loop keeps the other operand (see
+ * `isSteady`) and nothing else can end the loop (see `hasOtherExit`), which
+ * rules out calls too: a call may throw, or change an operand where the loop
+ * does not show it. A counter that starts past the bound or steps over it then
+ * keeps the original loop running forever, so the entry differs only on runs
+ * that never end.
  *
- * @param loop - Loop whose test, update and body are searched, without nested
- *   functions.
- * @param path - Member path of an operand, or null.
- * @returns The only direction of every update of the operand, or null when
- *   there is none, several, or an assignment of another kind.
+ * @param node - Comparison.
+ * @param context - Mutator context of the file.
+ * @param running - Running value of the comparison, or null.
+ * @returns The operator of the entry to skip, or null.
  */
-function getDirection(
-  loop: RunningValue['loop'],
-  path: string[] | null,
-): 'down' | 'up' | null {
-  if (path === null) {
+function getCounterEntry(
+  node: PrivateInExpression | BinaryExpression,
+  context: MutatorContext,
+  running: RunningValue | null,
+): string | null {
+  let expected = running?.value ? ['!==', '!='] : ['===', '==']
+  if (!running || !expected.includes(node.operator)) {
     return null
   }
-  let directions = new Set<string>()
-  let parts = [
-    loop.test,
-    loop.type === 'ForStatement' ? loop.update : null,
-    loop.body,
-  ]
-  for (let part of parts) {
-    if (part) {
-      walkTree(part, child => {
-        if (
-          child.type === 'UpdateExpression' ||
-          child.type === 'AssignmentExpression'
-        ) {
-          let direction = getUpdateDirection(child, path)
-          if (direction !== null) {
-            directions.add(direction)
-          }
-        }
-        return !isFunction(child)
-      })
-    }
+  let leftDirection = getCounterDirection(running.loop, node.left)
+  let direction = leftDirection ?? getCounterDirection(running.loop, node.right)
+  if (
+    direction === null ||
+    !isSteady(running.loop, leftDirection ? node.right : node.left) ||
+    hasOtherExit(node, running, context)
+  ) {
+    return null
   }
-  let [only] = directions
-  return directions.size === 1 && (only === 'up' || only === 'down') ?
-      only
-    : null
+  let towardRight = direction === 'up'
+  let counterLeft = leftDirection !== null
+  if (running.value) {
+    return towardRight === counterLeft ? '<' : '>'
+  }
+  return towardRight === counterLeft ? '>=' : '<='
 }
 
 /**
@@ -602,37 +654,6 @@ function isMinMaxIdiom(
 }
 
 /**
- * Finds the relational entry that a one-way counter makes equivalent in a loop
- * condition (catalog 4.6, rule 3): for `!==` or `!=` that keeps the loop
- * running, or `===` or `==` that leaves it, when exactly one operand is moved
- * under the loop by updates of one direction only.
- *
- * @param node - Comparison.
- * @param running - Running value of the comparison, or null.
- * @returns The operator of the entry to skip, or null.
- */
-function getCounterEntry(
-  node: PrivateInExpression | BinaryExpression,
-  running: RunningValue | null,
-): string | null {
-  let expected = running?.value ? ['!==', '!='] : ['===', '==']
-  if (!running || !expected.includes(node.operator)) {
-    return null
-  }
-  let leftDirection = getDirection(running.loop, getMemberPath(node.left))
-  let rightDirection = getDirection(running.loop, getMemberPath(node.right))
-  if ((leftDirection === null) === (rightDirection === null)) {
-    return null
-  }
-  let towardRight = (leftDirection ?? rightDirection) === 'up'
-  let counterLeft = leftDirection !== null
-  if (running.value) {
-    return towardRight === counterLeft ? '<' : '>'
-  }
-  return towardRight === counterLeft ? '>=' : '<='
-}
-
-/**
  * Finds the operand of a comparison that has a lower bound that is never
  * nullish (see `getValueBound`) while the other operand is a number literal, or
  * a BigInt literal unless the comparison is strict: an `undefined` operand
@@ -674,39 +695,37 @@ function getBoundedOperand(
 }
 
 /**
- * Reads the direction in which an update moves an operand, matched by member
- * path.
+ * Tells whether a slot holds a node that is written other than by an update or
+ * an assignment of its own: a part of a destructuring pattern, the head of a
+ * `for...in` or `for...of` loop, the operand of `delete`, or the name of a
+ * declarator.
  *
- * @param update - Update or assignment expression.
- * @param path - Member path of the operand.
- * @returns `up` or `down` for an update of the operand itself, `other` for an
- *   assignment of another kind, for an update of a prefix of the operand's path
- *   or of a member without a static path on the operand's root, and null when
- *   the update does not touch the operand.
+ * @param slot - Raw slot of the node.
+ * @param patternProperties - Properties of the object patterns walked so far.
+ * @returns Whether the node is written.
  */
-function getUpdateDirection(
-  update: AssignmentExpression | UpdateExpression,
-  path: string[],
-): string | null {
-  let target =
-    update.type === 'UpdateExpression' ? update.argument : update.left
-  let targetPath = getMemberPath(target)
-  if (targetPath === null) {
-    return getRootName(target) === path[0] ? 'other' : null
+function isOtherWrite(
+  slot: NodeSlot,
+  patternProperties: ReadonlySet<Node>,
+): boolean {
+  let { parent, key } = slot
+  switch (parent?.type) {
+    case 'VariableDeclarator':
+      return key === 'id'
+    case 'AssignmentPattern':
+    case 'ForOfStatement':
+    case 'ForInStatement':
+      return key === 'left'
+    case 'UnaryExpression':
+      return parent.operator === 'delete'
+    case 'ArrayPattern':
+    case 'RestElement':
+      return true
+    case 'Property':
+      return key === 'value' && patternProperties.has(parent)
+    default:
+      return false
   }
-  if (
-    targetPath.length > path.length ||
-    targetPath.some((name, index) => name !== path[index])
-  ) {
-    return null
-  }
-  if (targetPath.length < path.length) {
-    return 'other'
-  }
-  if (update.type === 'UpdateExpression') {
-    return update.operator === '++' ? 'up' : 'down'
-  }
-  return getAssignmentDirection(update.operator, update.right)
 }
 
 /**
@@ -778,6 +797,35 @@ function getBoundedSkip(
 }
 
 /**
+ * Tells whether an operand keeps its value while a loop runs: a literal, a name
+ * or member chain that the loop does not change (see `getDirections`), or a
+ * unary or binary operation on such operands. A call may give another value
+ * each time, so an operand with one is not steady.
+ *
+ * @param loop - Loop of the comparison.
+ * @param operand - Operand of the comparison.
+ * @returns Whether the loop leaves the value of the operand as it is.
+ */
+function isSteady(loop: RunningValue['loop'], operand: Node): boolean {
+  let inner = unwrapExpression(operand)
+  while (inner.type === 'UnaryExpression') {
+    inner = unwrapExpression(inner.argument)
+  }
+  let path = getMemberPath(inner)
+  if (path) {
+    return getDirections(loop, path).size === 0
+  }
+  switch (inner.type) {
+    case 'BinaryExpression':
+      return isSteady(loop, inner.left) && isSteady(loop, inner.right)
+    case 'Literal':
+      return true
+    default:
+      return false
+  }
+}
+
+/**
  * Builds the shifted literal of a relational comparison with exactly one number
  * literal operand (see `getShiftedLiteral`).
  *
@@ -804,6 +852,58 @@ function getShift(
         step,
       }
     )
+}
+
+/**
+ * Tells how a write target touches an operand, matched by member path.
+ *
+ * @param target - Target of a write.
+ * @param path - Member path of the operand.
+ * @returns `same` for the operand itself, `other` for a prefix of its path, a
+ *   member without a static path on its root, or a member that changes the
+ *   operand through a `length` (see `isLengthPair`), and null when the target
+ *   does not touch the operand.
+ */
+function getTargetMatch(target: Node, path: string[]): 'other' | 'same' | null {
+  let targetPath = getMemberPath(target)
+  if (targetPath === null) {
+    return getRootName(target) === path[0] ? 'other' : null
+  }
+  if (
+    targetPath.length > path.length ||
+    targetPath.some((name, index) => name !== path[index])
+  ) {
+    return isLengthPair(targetPath, path) ? 'other' : null
+  }
+  return targetPath.length < path.length ? 'other' : 'same'
+}
+
+/**
+ * Reads the direction in which an update moves an operand, matched by member
+ * path (see `getTargetMatch`).
+ *
+ * @param update - Update or assignment expression.
+ * @param path - Member path of the operand.
+ * @returns `up` or `down` for an update of the operand itself, `other` for an
+ *   assignment of another kind, for an update of a prefix of the operand's path
+ *   or of a member without a static path on the operand's root, and null when
+ *   the update does not touch the operand.
+ */
+function getUpdateDirection(
+  update: AssignmentExpression | UpdateExpression,
+  path: string[],
+): string | null {
+  let match = getTargetMatch(
+    update.type === 'UpdateExpression' ? update.argument : update.left,
+    path,
+  )
+  if (match !== 'same') {
+    return match
+  }
+  if (update.type === 'UpdateExpression') {
+    return update.operator === '++' ? 'up' : 'down'
+  }
+  return getAssignmentDirection(update.operator, update.right)
 }
 
 /**
@@ -857,6 +957,35 @@ function getPlannedEntries(
 }
 
 /**
+ * Tells whether a write of a member of an object may change an operand through
+ * the `length` of that object: an array grows when an element past its end is
+ * written, so `list['2'] = 0` changes `list.length`, and drops elements when
+ * its `length` is written, so `list.length = 0` changes `list['0']` and
+ * everything read through it, such as `list['0'].length`.
+ *
+ * @param target - Member path of the write.
+ * @param path - Member path of the operand, which is not the target and does
+ *   not start with it.
+ * @returns Whether the operand reads another member of the object whose member
+ *   the target is, or something through one, and either the target is the
+ *   `length` of the object or the operand is.
+ */
+function isLengthPair(target: string[], path: string[]): boolean {
+  let object = target.slice(0, -1)
+  if (
+    object.length === 0 ||
+    path.length <= object.length ||
+    object.some((name, index) => name !== path[index])
+  ) {
+    return false
+  }
+  return (
+    target.at(-1) === 'length' ||
+    (path.length === target.length && path.at(-1) === 'length')
+  )
+}
+
+/**
  * Finds the value of an entry that the lower bound leaves constant (catalog
  * 4.6, rules 3, 7 and 8): every region the entry's comparison can still take
  * gives it one truth value.
@@ -876,6 +1005,28 @@ function getEntryConstant(
   )
   let [only] = values
   return values.size === 1 ? only! : null
+}
+
+/**
+ * Finds the direction of an operand that a loop moves one way only (see
+ * `getDirections`).
+ *
+ * @param loop - Loop of the comparison.
+ * @param operand - Operand of the comparison.
+ * @returns `up` or `down` when every update of the operand under the loop moves
+ *   it that way, or null when the operand has no member path or the loop does
+ *   not change it, or changes it otherwise.
+ */
+function getCounterDirection(
+  loop: RunningValue['loop'],
+  operand: Node,
+): 'down' | 'up' | null {
+  let path = getMemberPath(operand)
+  let directions = path ? getDirections(loop, path) : new Set<string>()
+  let [only] = directions
+  return directions.size === 1 && (only === 'up' || only === 'down') ?
+      only
+    : null
 }
 
 /**
