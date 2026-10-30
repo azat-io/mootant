@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { generateCandidates } from '../../helpers/generate-candidates'
 import { listMutantTexts } from '../../helpers/list-mutant-texts'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
@@ -100,6 +101,65 @@ describe('missingAwait', () => {
       'await load() -> load()',
     ])
   })
+
+  it.each([
+    'async function f() { const u = await await load(); return u }',
+    'async function f() { return await await load() }',
+    'let f = async () => await await load()',
+    'async function* f() { yield await await load() }',
+    'async function f() { const u = await (await load()); return u }',
+    'async function f() { return await (await load() as T) }',
+    'async function f() { return await await await load() }',
+  ])('skips every removal of a nested await the caller does in %s', code => {
+    expect(listMutantTexts('missing-await', [code])).toStrictEqual([])
+  })
+
+  it('keeps the outer removal of a nested await whose value is used', () => {
+    expect(
+      listMutantTexts('missing-await', [
+        'async function f() { use(await await load()) }',
+      ]),
+    ).toStrictEqual(['await await load() -> await load()'])
+  })
+
+  it.each<[string, boolean]>([
+    ['async function f() { return await await await load() }', false],
+    [
+      'async function f() { if ((await await await load()) === 0) stop() }',
+      true,
+    ],
+  ])(
+    'names the outer await of each skipped inner one in %s',
+    (source, heuristic) => {
+      let outer = source.indexOf('await')
+      let { skipped } = generateCandidates(source)
+
+      expect(
+        skipped
+          .filter(
+            candidate =>
+              candidate.mutator === 'missing-await' &&
+              candidate.rule === 'duplicate',
+          )
+          .map(candidate => ({
+            heuristic: candidate.heuristic,
+            start: candidate.start,
+            by: candidate.by,
+          })),
+      ).toStrictEqual([
+        {
+          by: { mutator: 'missing-await', start: outer, id: null },
+          start: outer + 6,
+          heuristic,
+        },
+        {
+          by: { mutator: 'missing-await', start: outer + 6, id: null },
+          start: outer + 12,
+          heuristic,
+        },
+      ])
+    },
+  )
 
   it.each([
     'if (!await check()) stop()',
@@ -272,6 +332,28 @@ describe('missingAwait', () => {
     ).toStrictEqual(['await reader.read() -> reader.read()'])
   })
 
+  it('skips the inner removal of a nested await that advances a loop', () => {
+    let source = [
+      'async function f() {',
+      '  let done = false',
+      '  while (!done) {',
+      '    done = await await readDone()',
+      '  }',
+      '}',
+    ].join('\n')
+
+    expect(listSkipped('missing-await', source)).toStrictEqual([
+      'await await readDone() -> await readDone() (timeout loop-advance)',
+      'await readDone() -> readDone() (duplicate duplicate)',
+    ])
+    expect(
+      listSkipped('missing-await', source, { settings: { timeouts: true } }),
+    ).toStrictEqual(['await readDone() -> readDone() (duplicate duplicate)'])
+    expect(
+      runMutator('missing-await', source, { settings: { timeouts: true } }),
+    ).toMatchObject([{ replacement: 'await readDone()' }])
+  })
+
   it.each<[string, string[]]>([
     [
       'async function f() { return await load() }',
@@ -290,6 +372,24 @@ describe('missingAwait', () => {
       ['await name -> name (equivalent settled-value)'],
     ],
     ['async function f() { use(await load()) }', []],
+    [
+      'async function f() { const u = await await load(); return u }',
+      [
+        'await await load() -> await load() (equivalent awaited-by-caller)',
+        'await load() -> load() (duplicate duplicate)',
+      ],
+    ],
+    [
+      'async function f() { return await (await load()) }',
+      [
+        'await (await load()) -> (await load()) (equivalent awaited-by-caller)',
+        'await load() -> load() (duplicate duplicate)',
+      ],
+    ],
+    [
+      'async function f() { use(await await load()) }',
+      ['await load() -> load() (duplicate duplicate)'],
+    ],
     [
       "import { setTimeout } from 'node:timers/promises'\nasync function f() { await setTimeout(1000) }",
       ['await setTimeout(1000) -> setTimeout(1000) (noise timer-delay)'],

@@ -18,6 +18,7 @@ import { isComparison } from './shared/is-comparison'
 import { isTimerWait } from './shared/is-timer-wait'
 import { getTypeView } from './shared/get-type-view'
 import { isFunction } from '../syntax/is-function'
+import { skipRules } from '../skips/skip-rules'
 
 /**
  * Types whose values are not thenable: awaiting them only changes timing.
@@ -58,8 +59,10 @@ let relationalOperators = new Set(['<=', '>=', '<', '>'])
  * promise is always truthy, but the constants of the decision's owner skip the
  * awaited call, while the mutant still makes it, with its effects and its
  * rejection. An `await` that only waits for a promise timer, such as `await
- * setTimeout(1000)` of `node:timers/promises`, is skipped as a timer delay.
- * Skipped mutants follow as skipped replacements.
+ * setTimeout(1000)` of `node:timers/promises`, is skipped as a timer delay. The
+ * removal of an `await` that is the operand of another `await` leaves the same
+ * code as the removal of the outer one, so it is skipped as a duplicate while
+ * that removal is skipped. Skipped mutants follow as skipped replacements.
  */
 export let missingAwait: Mutator = {
   create(context) {
@@ -80,7 +83,8 @@ export let missingAwait: Mutator = {
  * Decides whether the removal of an `await` is skipped (catalog 4.10): the
  * caller awaits the same promise (EQ), the `await` only waits for a promise
  * timer (NOISE), the removal makes a comparison with a primitive constant (O3,
- * R8), or the awaited value is not a promise by its type (EQ).
+ * R8), the awaited value is not a promise by its type (EQ), or the `await` is
+ * the operand of another `await` whose removal is skipped (duplicate).
  *
  * @param node - Await expression.
  * @param context - Mutator context of the file.
@@ -130,7 +134,7 @@ function getAwaitSkip(
       rule: 'settled-value',
     }
   }
-  return null
+  return getNestedAwaitSkip(node, context)
 }
 
 /**
@@ -214,6 +218,43 @@ function getConstantComparison(
     ) ?
       comparison
     : null
+}
+
+/**
+ * Skips the removal of an `await` that is the operand of another `await`, as in
+ * `await await x`, while the removal of the outer `await` is skipped, by this
+ * mutator or, without the `timeouts` setting, by the collection as the value
+ * that advances a loop: removing either one leaves the same code, up to
+ * parentheses, and deduplication only compares the candidates that are not
+ * skipped. The skip is a heuristic when the skip of the outer removal is one.
+ *
+ * @param node - Await expression.
+ * @param context - Mutator context of the file.
+ * @returns Duplicate skip that names the outer `await`, or null when the
+ *   `await` is not the operand of another one or the outer removal is emitted.
+ */
+function getNestedAwaitSkip(
+  node: AwaitExpression,
+  context: MutatorContext,
+): SkipNote | null {
+  let { settings, syntax } = context
+  let { parent } = syntax.getContextSlot(node)
+  if (parent?.type !== 'AwaitExpression') {
+    return null
+  }
+  let skip = getAwaitSkip(parent, context)
+  if (!skip && (settings.timeouts || !syntax.isLoopAdvanceValue(parent))) {
+    return null
+  }
+  return {
+    heuristic:
+      skip !== null &&
+      (skipRules[skip.rule].heuristic || skip.heuristic === true),
+    reason:
+      'it produces the same code as the removal of the outer await, which is skipped',
+    by: { mutator: context.id, node: parent },
+    rule: 'duplicate',
+  }
 }
 
 /**
