@@ -15,12 +15,15 @@ import { isPlainReturnValue } from './shared/is-plain-return-value'
 import { isGlobalIdentifier } from './shared/is-global-identifier'
 import { NO_OP_CALLBACK_SKIP } from './shared/no-op-callback-skip'
 import { getCallbackResult } from './shared/get-callback-result'
+import { getComparisonPlan } from './shared/get-comparison-plan'
 import { getOwnerConstant } from './shared/get-owner-constant'
 import { createRunContext } from './shared/create-run-context'
 import { getLiteralValue } from './shared/get-literal-value'
 import { getTowardMutant } from './shared/get-toward-mutant'
 import { emptiesCallback } from './shared/empties-callback'
 import { getMemberRoot } from '../syntax/get-member-root'
+import { isComparison } from './shared/is-comparison'
+import { getInnermost } from './shared/get-innermost'
 
 /**
  * Default written in place of a returned value.
@@ -85,8 +88,9 @@ let resolvedDefaults: Record<PromiseKind['promise'], ReturnDefault[]> = {
  * value or that makes the comparator of an in-place `sort` a no-op (O12) is
  * skipped. Every default but the boolean constants of a boolean kind is
  * solitary (2.6); those constants are skipped when the owner of the result
- * emits them (O19) or while a mutant moves the result toward them (R6). Skipped
- * mutants follow as skipped replacements.
+ * emits them (O19), when a returned comparison always has them (EQ) or while a
+ * mutant moves the result toward them (R6). Skipped mutants follow as skipped
+ * replacements.
  */
 export let returnValue: Mutator = {
   create(context) {
@@ -110,10 +114,11 @@ export let returnValue: Mutator = {
 /**
  * Builds the defaults of one returned value. A logging call (NOISE), a `void`
  * default of a value without an effect (EQ), a default that empties a no-op
- * callback (O12) and a boolean constant that the owner emits (O19) or a mutant
- * moves the result toward (R6) follow as skipped replacements. An async
- * function adopts a returned thenable, so its `void` default is skipped only
- * for a value that is never one.
+ * callback (O12) and a boolean constant that the owner emits (O19), that a
+ * returned comparison always has (EQ) or that a mutant moves the result toward
+ * (R6) follow as skipped replacements. An async function adopts a returned
+ * thenable, so its `void` default is skipped only for a value that is never
+ * one.
  *
  * @param returned - Argument of a `return` or concise body of an arrow.
  * @param context - Mutator context of the file.
@@ -185,8 +190,9 @@ function getReplacements(
 
 /**
  * Decides whether a boolean constant of a returned value is skipped (catalog
- * 4.14): the owner of the result emits the constant (O19), or a mutant that
- * will run moves the result, or a value assigned to its local, toward it (R6).
+ * 4.14): the owner of the result emits the constant (O19), the returned
+ * comparison always has it (see `getComparisonSkip`), or a mutant that will run
+ * moves the result, or a value assigned to its local, toward it (R6).
  *
  * @param target - Returned value, through parentheses.
  * @param value - Constant written in place of the value.
@@ -205,6 +211,10 @@ function getConstantSkip(
       rule: 'O19',
       by: owner,
     }
+  }
+  let comparisonSkip = getComparisonSkip(target, value, context)
+  if (comparisonSkip) {
+    return comparisonSkip
   }
   let sources = [
     target,
@@ -435,6 +445,31 @@ function hasEffect(node: Node): boolean {
     default:
       return effectTypes.has(node.type)
   }
+}
+
+/**
+ * Finds the skip that comparison-operator's plan gives a constant of a returned
+ * comparison, also under `!`, as for condition's constants (catalog 4.7): the
+ * type hints prove the comparison always has the value (proven-comparison), or
+ * a lower bound of an operand makes every other input impossible
+ * (lower-bound).
+ *
+ * @param target - Returned value, through parentheses.
+ * @param value - Constant written in place of the value.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null when the plan gives none.
+ */
+function getComparisonSkip(
+  target: Node,
+  value: boolean,
+  context: MutatorContext,
+): SkipNote | null {
+  let { negations, node } = getInnermost(target)
+  if (!isComparison(node)) {
+    return null
+  }
+  let truth = value !== (negations % 2 === 1)
+  return getComparisonPlan(node, context).skippedConstants.get(truth) ?? null
 }
 
 /**

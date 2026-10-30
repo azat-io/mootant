@@ -163,15 +163,17 @@ Mootant leaves out these changes. `mootant list --skipped` shows them with the
 category and the rule; [Skipped changes](/mutators#skipped-changes) explains the
 categories.
 
-| Reason                                                                 | Example                                 | Rule                      |
-| ---------------------------------------------------------------------- | --------------------------------------- | ------------------------- |
-| Removes code that has a finer mutant inside                            | `price * quantity` → `0`                | `solitary`, subsumed      |
-| Same result as a `true` or `false` of another mutator                  | `!product.stock` → `false`              | `O19`, owned              |
-| Another mutant gives this value on some inputs                         | `cart.total >= 50` → `true`             | `R6`, subsumed            |
-| [method-call](/mutators/method-call) removes the `sort()` call instead | `a.price - b.price` → `0` in `sort()`   | `O12`, owned              |
-| Returned logging call, such as `console.log()`                         | `console.log(cart.total)` → `undefined` | `logging-call`, noise     |
-| Value without an effect in a `void` function                           | `cart.total` → `undefined`              | `void-result`, equivalent |
-| Same code as another mutant                                            | `cart.express ?? false` → `false`       | `duplicate`, duplicate    |
+| Reason                                                                 | Example                                 | Rule                            |
+| ---------------------------------------------------------------------- | --------------------------------------- | ------------------------------- |
+| Removes code that has a finer mutant inside                            | `price * quantity` → `0`                | `solitary`, subsumed            |
+| Same result as a `true` or `false` of another mutator                  | `!product.stock` → `false`              | `O19`, owned                    |
+| Another mutant gives this value on some inputs                         | `cart.total >= 50` → `true`             | `R6`, subsumed                  |
+| Type hints show the comparison already has this result                 | `typeof sku === 'string'` → `true`      | `proven-comparison`, equivalent |
+| Same result, assuming a lower limit, such as 0 for a `length`          | `cart.items.length >= 0` → `true`       | `lower-bound`, equivalent       |
+| [method-call](/mutators/method-call) removes the `sort()` call instead | `a.price - b.price` → `0` in `sort()`   | `O12`, owned                    |
+| Returned logging call, such as `console.log()`                         | `console.log(cart.total)` → `undefined` | `logging-call`, noise           |
+| Value without an effect in a `void` function                           | `cart.total` → `undefined`              | `void-result`, equivalent       |
+| Same code as another mutant                                            | `cart.express ?? false` → `false`       | `duplicate`, duplicate          |
 
 Changes that come back:
 

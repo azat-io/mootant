@@ -893,6 +893,27 @@ describe('returnValue', () => {
       'items.sort(() => x > y)',
       ['x > y -> true (subsumed R6)', 'x > y -> false (owned O12)'],
     ],
+    [
+      "function f(sku: string): boolean { return typeof sku === 'string' }",
+      [
+        "typeof sku === 'string' -> true (equivalent proven-comparison)",
+        "typeof sku === 'string' -> false (owned O19)",
+      ],
+    ],
+    [
+      "(sku: string): boolean => !(typeof sku === 'string')",
+      [
+        "!(typeof sku === 'string') -> true (owned O19)",
+        "!(typeof sku === 'string') -> false (equivalent proven-comparison)",
+      ],
+    ],
+    [
+      'function f(items: string[]): boolean { return items.length >= 0 }',
+      [
+        'items.length >= 0 -> true (equivalent lower-bound)',
+        'items.length >= 0 -> false (subsumed R6)',
+      ],
+    ],
     ['function f() { return x }', []],
     ['function f(): Promise<void> { return Promise.resolve() }', []],
     [
