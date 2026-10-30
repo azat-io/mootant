@@ -1,19 +1,29 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
+import { writeFile, realpath, mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 
+import type { GitRepository } from '../helpers/create-git-repository'
 import type { Plugin } from '../../types/config/plugin'
 
 import { installFakeFileSystem } from '../helpers/install-fake-file-system'
+import { createGitRepository } from '../helpers/create-git-repository'
 import { createMutantId } from '../../core/identity/create-mutant-id'
 import { readChangedLines } from '../../core/git/read-changed-lines'
+import { corePlugin } from '../../core/plugins/core-plugin'
 import { loadConfig } from '../../core/config/load-config'
 import { listMutants } from '../../core/list-mutants'
 
-vi.mock(import('node:fs/promises'), () => ({
-  realpath: vi.fn(),
-  readFile: vi.fn(),
-  readdir: vi.fn(),
-  stat: vi.fn(),
-}))
+vi.mock(import('node:fs/promises'), async importOriginal => {
+  let actual = await importOriginal()
+  return {
+    ...actual,
+    realpath: vi.fn(actual.realpath) as never,
+    readFile: vi.fn(actual.readFile) as never,
+    readdir: vi.fn(actual.readdir) as never,
+    stat: vi.fn(actual.stat) as never,
+  }
+})
 
 vi.mock(
   import('../../core/identity/create-mutant-id'),
@@ -23,46 +33,66 @@ vi.mock(
   },
 )
 
-vi.mock(import('../../core/git/read-changed-lines'), () => ({
-  readChangedLines: vi.fn(),
-}))
-
-vi.mock(import('../../core/config/load-config'), () => ({
-  loadConfig: vi.fn().mockResolvedValue(null),
-}))
-
-vi.mock(import('../../core/plugins/core-plugin'), () => {
-  let corePlugin: Plugin = {
-    mutators: {
-      'number-swap': {
-        create: () => ({
-          Literal(node) {
-            return [
-              { text: '2', node },
-              {
-                skip: { reason: 'comparison owns it', rule: 'O4' },
-                text: '3',
-                node,
-              },
-            ]
-          },
-        }),
-        meta: { description: 'Swaps a number.' },
-      },
-    },
-    presets: {
-      recommended: {
-        description: 'Every test mutator.',
-        mutators: { 'number-swap': 'on' },
-      },
-    },
-  }
-  return { corePlugin }
+vi.mock(import('../../core/git/read-changed-lines'), async importOriginal => {
+  let actual = await importOriginal()
+  return { readChangedLines: vi.fn(actual.readChangedLines) }
 })
 
+vi.mock(import('../../core/config/load-config'), async importOriginal => {
+  let actual = await importOriginal()
+  return { loadConfig: vi.fn(actual.loadConfig) }
+})
+
+vi.mock(import('../../core/plugins/core-plugin'), async importOriginal => {
+  let actual = await importOriginal()
+  return { corePlugin: { ...actual.corePlugin } }
+})
+
+/**
+ * Core plugin of the unit tests: one mutator that swaps a number for `2` and
+ * skips its swap for `3`.
+ */
+const TEST_PLUGIN: Plugin = {
+  mutators: {
+    'number-swap': {
+      create: () => ({
+        Literal(node) {
+          return [
+            { text: '2', node },
+            {
+              skip: { reason: 'comparison owns it', rule: 'O4' },
+              text: '3',
+              node,
+            },
+          ]
+        },
+      }),
+      meta: { description: 'Swaps a number.' },
+    },
+  },
+  presets: {
+    recommended: {
+      description: 'Every test mutator.',
+      mutators: { 'number-swap': 'on' },
+    },
+  },
+}
+
 describe('listMutants', () => {
+  /**
+   * Fields of the real core plugin, put back after each test.
+   */
+  let realPlugin = { ...corePlugin }
+
   beforeEach(() => {
     vi.resetAllMocks()
+    vi.mocked(loadConfig).mockResolvedValue(null)
+    Object.assign(corePlugin, TEST_PLUGIN)
+  })
+
+  afterEach(() => {
+    vi.resetAllMocks()
+    Object.assign(corePlugin, realPlugin)
   })
 
   it('lists the mutants of every file in path order', async () => {
@@ -264,6 +294,217 @@ describe('listMutants', () => {
     ).rejects.toThrow(
       // spell-checker: disable-next-line
       'Mutant id w7019f5axk5g is shared by a.ts:1:5 and b.ts:1:5. This is a hash collision; please report it.',
+    )
+  })
+})
+
+describe('listMutants with the loggers setting', () => {
+  let directory: string
+
+  beforeEach(async () => {
+    directory = await realpath(
+      await mkdtemp(path.join(tmpdir(), 'mootant-loggers-')),
+    )
+    await writeFile(
+      path.join(directory, 'app.ts'),
+      [
+        "consola.info('x')",
+        "consola.withTag('Build')",
+        "logger.info('y')",
+      ].join('\n'),
+    )
+  })
+
+  afterEach(async () => {
+    await rm(directory, { recursive: true, force: true })
+  })
+
+  /**
+   * Lists the mutants of `app.ts` with a configuration file in the directory.
+   *
+   * @param settings - Settings of the configuration file.
+   * @returns Ids of the mutants, their changes and the changes skipped as log
+   *   messages, as `original -> replacement`.
+   */
+  async function list(
+    settings: object,
+  ): Promise<{ messages: string[]; changes: string[]; ids: string[] }> {
+    await writeFile(
+      path.join(directory, '.mootantrc.json'),
+      JSON.stringify({ settings }),
+    )
+    let { files } = await listMutants({
+      paths: ['app.ts'],
+      cwd: directory,
+      skipped: true,
+    })
+    let { mutants, skipped, source } = files[0]!
+    return {
+      messages: skipped
+        .filter(candidate => candidate.rule === 'log-message')
+        .map(
+          candidate =>
+            `${source!.slice(candidate.start, candidate.end)} -> ${candidate.replacement}`,
+        ),
+      changes: mutants.map(
+        mutant =>
+          `${source!.slice(mutant.start, mutant.end)} -> ${mutant.replacement}`,
+      ),
+      ids: mutants.map(mutant => mutant.id),
+    }
+  }
+
+  it('skips the messages of the default loggers and mutates consola calls as code', async () => {
+    let { messages, changes } = await list({})
+
+    expect(changes).toStrictEqual([
+      "'x' -> ''",
+      "'Build' -> ''",
+      "logger.info('y') -> ;",
+    ])
+    expect(messages).toStrictEqual(["'y' -> ''"])
+  })
+
+  it('skips only the messages of the loggers the setting names and leaves their labels alone', async () => {
+    let { messages, changes } = await list({ loggers: ['consola'] })
+
+    expect(changes).toStrictEqual([
+      "consola.info('x') -> ;",
+      "consola.withTag('Build') -> ;",
+      "'y' -> ''",
+    ])
+    expect(messages).toStrictEqual(["'x' -> ''"])
+  })
+
+  it('mutates every call as code with an empty setting', async () => {
+    let { messages, changes } = await list({ loggers: [] })
+
+    expect(changes).toStrictEqual(["'x' -> ''", "'Build' -> ''", "'y' -> ''"])
+    expect(messages).toStrictEqual([])
+  })
+})
+
+describe('listMutants with --since in a git repository', () => {
+  let repository: GitRepository
+
+  beforeEach(async () => {
+    repository = await createGitRepository()
+    let { write, git } = repository
+    await write(
+      'app/src/price.ts',
+      [
+        'export function total(price: number, count: number): number {',
+        '  let sum = price * count',
+        '  if (count > 10) {',
+        '    sum = sum - 5',
+        '  }',
+        '  return sum',
+        '}',
+        '',
+      ].join('\n'),
+    )
+    await write('app/src/name.ts', "export let name = 'cart'\n")
+    await write('app/src/gone.ts', 'export let gone = 1 + 2\n')
+    git('add', '.')
+    git('commit', '--quiet', '-m', 'base')
+    git('switch', '--quiet', '-c', 'feature')
+  })
+
+  afterEach(async () => {
+    await repository.remove()
+  })
+
+  /**
+   * Lists `src` of the app with `--since main` and gives each mutant as its
+   * file, line of its start and original text.
+   *
+   * @returns Files with their mutants, and the revision of the run.
+   */
+  async function list(): Promise<{
+    since: Awaited<ReturnType<typeof listMutants>>['since']
+    mutants: string[]
+    files: string[]
+  }> {
+    let result = await listMutants({
+      cwd: path.join(repository.root, 'app'),
+      paths: ['src'],
+      since: 'main',
+    })
+    return {
+      mutants: result.files.flatMap(file =>
+        file.mutants.map(mutant => {
+          let line = file.source!.slice(0, mutant.start).split('\n').length
+          return `${file.file}:${line} ${file.source!.slice(mutant.start, mutant.end)}`
+        }),
+      ),
+      files: result.files.map(file => file.file),
+      since: result.since,
+    }
+  }
+
+  it('lists the mutants on committed, staged and unstaged changes and in untracked files', async () => {
+    let { write, root, git } = repository
+    let base = git('rev-parse', 'HEAD').trim()
+    await write(
+      'app/src/price.ts',
+      [
+        'export function total(price: number, count: number): number {',
+        '  let sum = price * count',
+        '  if (count >= 10) {',
+        '    sum = sum - 5',
+        '  }',
+        '  return sum',
+        '}',
+        '',
+      ].join('\n'),
+    )
+    git('commit', '--quiet', '-am', 'feature')
+    await rm(path.join(root, 'app/src/gone.ts'))
+    await write('app/src/fresh.ts', 'export let fresh = 2 * 3\n')
+
+    let listed = await list()
+
+    expect(listed.since).toStrictEqual({ ref: 'main', base })
+    expect(listed.files).toStrictEqual(['src/fresh.ts', 'src/price.ts'])
+    expect(listed.mutants).toStrictEqual(
+      expect.arrayContaining([
+        'src/fresh.ts:1 2 * 3',
+        'src/price.ts:3 count >= 10',
+      ]),
+    )
+    expect(listed.mutants.filter(entry => entry.includes(':2 '))).toStrictEqual(
+      [],
+    )
+    expect(listed.mutants.filter(entry => entry.includes(':4 '))).toStrictEqual(
+      [],
+    )
+  })
+
+  it('lists the mutants around a removed line and none without changes', async () => {
+    let { write } = repository
+
+    await expect(list()).resolves.toMatchObject({ mutants: [], files: [] })
+
+    await write(
+      'app/src/price.ts',
+      [
+        'export function total(price: number, count: number): number {',
+        '  let sum = price * count',
+        '  if (count > 10) {',
+        '  }',
+        '  return sum',
+        '}',
+        '',
+      ].join('\n'),
+    )
+
+    let { mutants } = await list()
+
+    expect(mutants).toStrictEqual(
+      expect.arrayContaining(['src/price.ts:3 count > 10']),
+    )
+    expect(mutants.some(entry => entry.startsWith('src/price.ts:5 '))).toBe(
+      false,
     )
   })
 })

@@ -14,7 +14,8 @@ export interface UnsoundSkips {
   equivalent: string[]
 
   /**
-   * Candidates skipped as duplicates whose outputs no justifying mutant has.
+   * Candidates skipped as duplicates whose outputs neither a justifying mutant
+   * nor a skipped candidate they duplicate has.
    */
   duplicate: string[]
 
@@ -28,6 +29,31 @@ export interface UnsoundSkips {
    * Candidates skipped as owned whose outputs no justifying mutant has.
    */
   owned: string[]
+}
+
+/**
+ * Skipped candidate of a run with its outputs.
+ */
+export interface SkipProbe extends Probe {
+  /**
+   * Mutant that justifies the skip, or null.
+   */
+  by: SkipJustifier | null
+
+  /**
+   * Category the skip claims.
+   */
+  category: SkipCategory
+
+  /**
+   * Id of the mutator.
+   */
+  mutator: string
+
+  /**
+   * Start of the replaced range.
+   */
+  start: number
 }
 
 /**
@@ -51,21 +77,6 @@ export interface MutantProbe extends Probe {
 }
 
 /**
- * Skipped candidate of a run with its outputs.
- */
-export interface SkipProbe extends Probe {
-  /**
-   * Mutant that justifies the skip, or null.
-   */
-  by: SkipJustifier | null
-
-  /**
-   * Category the skip claims.
-   */
-  category: SkipCategory
-}
-
-/**
  * Checks the skipped candidates of a run against its mutants, the way the
  * differential run checks the mutants themselves: an equivalent candidate never
  * differs from the original; a duplicate or an owned candidate has the outputs
@@ -73,7 +84,10 @@ export interface SkipProbe extends Probe {
  * on every input where its justifying mutant does, so a test that kills that
  * mutant kills it too. The justifying mutant is found by its id, or by its
  * mutator and start; a skip that names none is justified by any mutant of the
- * run that passes the check.
+ * run that passes the check. A duplicate whose justifier is skipped as well,
+ * such as the inner `await` of `await await x` while the removal of the outer
+ * one is skipped, may instead have the outputs of that skipped candidate, whose
+ * own skip is checked on its own.
  *
  * @param original - Outputs of the original program, in input order.
  * @param mutants - Mutants of the run with their outputs.
@@ -101,6 +115,14 @@ export function findUnsoundSkips(
           mutant.mutator === by.mutator && mutant.start === by.start
         : mutant.id === by.id),
     )
+    let twins = skipped.filter(
+      other =>
+        category === 'duplicate' &&
+        by?.id === null &&
+        other !== candidate &&
+        other.mutator === by.mutator &&
+        other.start === by.start,
+    )
     switch (category) {
       case 'equivalent':
         if (kills.size > 0) {
@@ -110,8 +132,8 @@ export function findUnsoundSkips(
       case 'duplicate':
       case 'owned':
         if (
-          justifiers.every(mutant =>
-            mutant.outputs.some(
+          [...justifiers, ...twins].every(probe =>
+            probe.outputs.some(
               (output, input) => output !== candidate.outputs[input],
             ),
           )
