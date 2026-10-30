@@ -263,6 +263,10 @@ export let skipRules = {
     category: 'noise',
     heuristic: false,
   },
+  'slice-copy': {
+    category: 'subsumed',
+    heuristic: true,
+  },
   'logging-call': {
     category: 'noise',
     heuristic: true,

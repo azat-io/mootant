@@ -178,6 +178,15 @@ describe('numberLiteral', () => {
       ].join('\n'),
       expected: ['2 -> 3', '-1 -> 0'],
     },
+    {
+      source:
+        'function f(items: string[]) { return (items?.slice(-1).join)() }',
+      expected: ['-1 -> 0'],
+    },
+    {
+      source: 'function f(s: string) { return (s?.slice(-1).at)(0) }',
+      expected: ['-1 -> 0', '0 -> 1'],
+    },
   ])('treats slice(-1) in $source', ({ expected, source }) => {
     expect(mutate(source)).toStrictEqual(expected)
   })
@@ -369,14 +378,39 @@ describe('numberLiteral', () => {
       expected: [],
     },
     {
+      source: 'function f(sku: string) { x = sku.slice(-1) }',
       setup: { mutators: { 'method-call': 'off' } },
-      source: 'x = path.slice(-1)',
       expected: [],
     },
   ])(
     'keeps the static owner of $source with $setup',
     ({ expected, source, setup }) => {
       expect(mutate(source, setup)).toStrictEqual(expected)
+    },
+  )
+
+  it.each<{ setup: MutatorSetup; source: string }>([
+    {
+      setup: { mutators: { 'method-call': 'off' } },
+      source: 'x = path.slice(-1)',
+    },
+    {
+      source: 'function f(items: number[]) { x = items.slice(-1) }',
+      setup: { mutators: { 'method-call': 'off' } },
+    },
+    {
+      source: [
+        'function f(items: number[]) {',
+        '  // mootant-ignore-next-line method-call',
+        '  x = items.slice(-1)',
+        '}',
+      ].join('\n'),
+      setup: {},
+    },
+  ])(
+    'brings back slice(0) of $source when the removal of the call does not run',
+    ({ source, setup }) => {
+      expect(mutate(source, setup)).toStrictEqual(['-1 -> 0'])
     },
   )
 
@@ -392,13 +426,14 @@ describe('numberLiteral', () => {
 
   it.each<[string, string[]]>([
     [
-      'declare let n: number; declare let s: string; a = n === 1; b = void 0; switch (n) { case 2: break }; setTimeout(run, 100); c = s.slice(-1); if (2) run(); d = items.sort((x, y) => (x > y ? 1 : -1)); x = { [1]: 2 }',
+      'declare let n: number; declare let s: string; declare let list: number[]; a = n === 1; b = void 0; switch (n) { case 2: break }; setTimeout(run, 100); c = s.slice(-1); e = list.slice(-1); if (2) run(); d = items.sort((x, y) => (x > y ? 1 : -1)); x = { [1]: 2 }',
       [
         '1 -> 2 (subsumed O4)',
         '0 -> 1 (equivalent void-operand)',
         '2 -> 3 (noise case-label)',
         '100 -> 101 (noise timer-delay)',
         '-1 -> 0 (owned O18)',
+        '-1 -> 0 (subsumed slice-copy)',
         '2 -> 3 (equivalent same-truth)',
         '1 -> 2 (equivalent comparator-sign)',
         '1 -> 2 (noise property-key)',

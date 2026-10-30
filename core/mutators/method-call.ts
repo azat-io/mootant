@@ -9,6 +9,7 @@ import type { Mutator } from '../../types/mutator/mutator'
 import { isGlobalIdentifier } from './shared/is-global-identifier'
 import { isLookupPosition } from './shared/is-lookup-position'
 import { getLiteralValue } from './shared/get-literal-value'
+import { getCallTarget } from './shared/get-call-target'
 import { getTypeView } from './shared/get-type-view'
 import { getCallTop } from './shared/get-call-top'
 
@@ -377,7 +378,7 @@ function getReplacements(
   if (!rule) {
     return []
   }
-  let target = getTarget(call, context)
+  let target = getCallTarget(call, context)
   let wrapped = context.syntax.isValuePosition(target)
   let { property } = call.callee
   let edits =
@@ -499,21 +500,4 @@ function isCaseless(node: Node, lower: boolean): boolean {
     typeof value === 'string' &&
     (lower ? value.toLowerCase() : value.toUpperCase()) === value
   )
-}
-
-/**
- * Finds the node a mutant of the call replaces: the call itself, or the root of
- * its optional chain when an optional link at or below the call can skip it
- * (T10).
- *
- * @param call - Method call.
- * @param context - Mutator context of the file.
- * @returns The replaced node, which may still lie where the mutant switch
- *   cannot wrap it, as for the operand of `delete`.
- */
-function getTarget(call: CallExpression, context: MutatorContext): Node {
-  let { syntax } = context
-  return syntax.isValuePosition(call) ? call : (
-      (syntax.getChainRoot(call) ?? call)
-    )
 }

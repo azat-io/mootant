@@ -10,6 +10,7 @@ import { isComparatorResult } from './shared/is-comparator-result'
 import { createRunContext } from './shared/create-run-context'
 import { getLiteralValue } from './shared/get-literal-value'
 import { getLiteralSkip } from './shared/get-literal-skip'
+import { getCallTarget } from './shared/get-call-target'
 import { getNumberText } from './shared/get-number-text'
 import { getTypeView } from './shared/get-type-view'
 
@@ -102,10 +103,13 @@ function getNumberSkip(
       rule: 'case-label',
     }
   }
+  let runContext = createRunContext(context)
+
   /**
    * Skips a change that keeps the truth value in a boolean context, that keeps
-   * the sign of a sort comparator's result, or that makes `slice(-1)` the
-   * removed call (O18).
+   * the sign of a sort comparator's result, or that makes `slice(-1)` return
+   * its whole receiver: the receiver itself, which is method-call's removal of
+   * the call (O18), or a copy of it while that removal will run (slice-copy).
    *
    * @returns Rule and reason of the skip, or null.
    */
@@ -122,12 +126,25 @@ function getNumberSkip(
         rule: 'comparator-sign',
       }
     }
-    if (next === 0 && isIdentityArgument(node, context)) {
+    let result = next === 0 ? getStartResult(node, context) : null
+    let by = { mutator: 'method-call', node: parent! }
+    if (result === 'receiver') {
       return {
         reason:
           "the call with the argument 0 returns its receiver, which is method-call's removal of the call",
-        by: { mutator: 'method-call', node: parent! },
         rule: 'O18',
+        by,
+      }
+    }
+    if (
+      result === 'copy' &&
+      runContext.runs(by, { mutator: context.id, node })
+    ) {
+      return {
+        reason:
+          'a method-call mutant removes the call, which returns the whole receiver too, just not as a copy',
+        rule: 'slice-copy',
+        by,
       }
     }
     return null
@@ -135,22 +152,27 @@ function getNumberSkip(
   return getLiteralSkip(
     node,
     { change: { value: next }, getOwnSkip },
-    createRunContext(context),
+    runContext,
   )
 }
 
 /**
- * Tells whether a node is the first argument of a `slice` or `substr` call that
- * returns its receiver unchanged once the argument is `0` (catalog 4.11 and
- * 5.2, O18): the only argument, or followed by `undefined`, on a receiver of
- * type `string`, `array` (for `slice`) or unknown. Turning `slice(-1)` into
- * `slice(0)` is method-call's removal of the call.
+ * Tells what a `slice` or `substr` call returns once a numeric constant, its
+ * only argument or followed by `undefined`, becomes `0` (catalog 4.11 and 5.2,
+ * O18): its receiver itself for `substr` or a receiver of type `string`, which
+ * is method-call's removal of the call, and a copy of the whole receiver for
+ * `slice` on an array or a receiver of unknown type, which may be one. A call
+ * that method-call cannot remove where it stands, since the mutant switch
+ * cannot wrap its target (see `getCallTarget`), gives neither.
  *
  * @param node - Numeric constant.
  * @param context - Mutator context of the file.
- * @returns Whether the constant is the start of an identity call.
+ * @returns `receiver` or `copy`, or null when the constant is not such a start.
  */
-function isIdentityArgument(node: Node, context: MutatorContext): boolean {
+function getStartResult(
+  node: Node,
+  context: MutatorContext,
+): 'receiver' | 'copy' | null {
   let { syntax, hints } = context
   let { parent, index } = syntax.getContextSlot(node)
   if (
@@ -162,22 +184,29 @@ function isIdentityArgument(node: Node, context: MutatorContext): boolean {
     parent.callee.property.type !== 'Identifier' ||
     !identityMethods.has(parent.callee.property.name)
   ) {
-    return false
+    return null
   }
   let [, end, ...rest] = parent.arguments
   if (
     rest.length > 0 ||
     (end &&
-      !isGlobalIdentifier(syntax.unwrapParentheses(end), 'undefined', context))
+      !isGlobalIdentifier(
+        syntax.unwrapParentheses(end),
+        'undefined',
+        context,
+      )) ||
+    !syntax.isValuePosition(getCallTarget(parent, context))
   ) {
-    return false
+    return null
   }
   let { type } = getTypeView(hints.getType(parent.callee.object))
-  return (
-    type === 'unknown' ||
-    type === 'string' ||
-    (type === 'array' && parent.callee.property.name === 'slice')
-  )
+  let { name } = parent.callee.property
+  if (type === 'string' || (type === 'unknown' && name === 'substr')) {
+    return 'receiver'
+  }
+  return name === 'slice' && (type === 'unknown' || type === 'array') ?
+      'copy'
+    : null
 }
 
 /**

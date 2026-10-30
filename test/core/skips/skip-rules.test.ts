@@ -12,6 +12,7 @@ describe('skipRules', () => {
     ['O11', { category: 'owned', heuristic: false }],
     ['O4', { category: 'subsumed', heuristic: false }],
     ['shifted-literal', { category: 'owned', heuristic: false }],
+    ['slice-copy', { category: 'subsumed', heuristic: true }],
     ['error-message', { category: 'noise', heuristic: true }],
     ['never-falsy', { category: 'equivalent', heuristic: true }],
     ['named-groups', { category: 'equivalent', heuristic: true }],

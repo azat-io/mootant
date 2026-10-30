@@ -140,6 +140,7 @@ categories.
 | Copies the other branch, as [comparison-operator](/mutators/comparison-operator) does at the boundary | `1` → `2` in `quantity > 6 ? 2 : 1`                       | `R5`, subsumed                |
 | Same sign, and `sort()` reads only the sign                                                           | `1` → `2` in `a.price > b.price ? 1 : -1`                 | `comparator-sign`, equivalent |
 | [method-call](/mutators/method-call) removes the `slice()` call instead                               | `-1` → `0` in `sku.slice(-1)`                             | `O18`, owned                  |
+| [method-call](/mutators/method-call) removes the `slice()` call, which also gives every item          | `-1` → `0` in `items.slice(-1)`                           | `slice-copy`, subsumed        |
 | Operand of `void`, whose value is always `undefined`                                                  | `0` → `1` in `void 0`                                     | `void-operand`, equivalent    |
 | Side of `&&` or `\|\|`, left to [logical-operator](/mutators/logical-operator)                        | `0` → `1` in `filter(product => product.stock \|\| 0)`    | `O3`, owned                   |
 | Key of an object or a class                                                                           | `1` → `2` in `{ [1]: 'Standard' }`                        | `property-key`, noise         |
@@ -152,6 +153,6 @@ categories.
 
 The [`timeouts`](/guide/configuration#timeouts) setting brings back
 `loop-running` and `loop-advance`, and [`caseTests`](#casetests) brings back
-`case-label`; `strict` turns both on. `O4`, `R5` and `R7` come back when the
-other mutant does not run, for example when its mutator is off. The other
-changes stay skipped.
+`case-label`; `strict` turns both on. `O4`, `R5`, `R7` and `slice-copy` come
+back when the other mutant does not run, for example when its mutator is off.
+The other changes stay skipped.
