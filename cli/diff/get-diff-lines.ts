@@ -1,6 +1,7 @@
 import type { ListReportDiff } from '../../types/report/list-report-diff'
 
 import { getSourcePosition } from '../../core/text/get-source-position'
+import { separateReplacement } from './separate-replacement'
 
 /**
  * Line terminator: CRLF, CR, LF, U+2028 or U+2029.
@@ -22,9 +23,10 @@ const MAX_CONTEXT_LENGTH = 80
  * Gets the source lines an edit touches, from the line of its start to the line
  * of its end, as read and with the edit applied, without line breaks. The
  * replacement is written as it is, so its line breaks split the lines after the
- * edit. The unchanged text of the lines keeps at most 80 code units before and
- * after the edit; how many it leaves out is counted, never splitting a
- * surrogate pair.
+ * edit, with a space where it would merge with the text next to it (see
+ * `separateReplacement`). The unchanged text of the lines keeps at most 80 code
+ * units before and after the edit; how many it leaves out is counted, never
+ * splitting a surrogate pair.
  *
  * @param source - Text of the file as read.
  * @param lineStarts - Line start offsets of the text.
@@ -62,7 +64,7 @@ export function getDiffLines(
   return {
     after: [
       lead.slice(cutStart),
-      edit.replacement,
+      separateReplacement(source, edit),
       trail.slice(0, trail.length - cutEnd),
     ]
       .join('')

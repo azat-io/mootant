@@ -43,6 +43,16 @@ describe('needsGrouping', () => {
     { source: 'a as T', expected: true, operator: '&', side: 'left' },
     { source: 'a as T', expected: true, operator: '<', side: 'left' },
     { source: 'a satisfies T', expected: true, operator: '|', side: 'left' },
+    { source: 'a ? b : c', expected: true, operator: '+', side: 'right' },
+    { source: '() => a', expected: true, operator: '<', side: 'left' },
+    { source: 'a = b', expected: true, operator: '??', side: 'left' },
+    { source: 'a, b', expected: true, operator: '||', side: 'right' },
+    {
+      source: 'function* f() { yield a }',
+      operator: '&&',
+      expected: true,
+      side: 'right',
+    },
   ] as const)(
     'returns $expected for $source on the $side of $operator in TypeScript',
     ({ operator, expected, source, side }) => {

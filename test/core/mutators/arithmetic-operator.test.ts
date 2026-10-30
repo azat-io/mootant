@@ -44,7 +44,7 @@ describe('arithmeticOperator', () => {
     {
       expected: [
         { replacement: 'a * b ** 2', original: 'a / b ** 2' },
-        { replacement: 'b * 2', original: 'b ** 2' },
+        { replacement: '(b * 2)', original: 'b ** 2' },
         { replacement: 'a+-b + c+ +d', original: 'a+-b + c-+d' },
         { original: 'a+-b + c', replacement: 'a+-b' },
         { replacement: 'a/ /re/.source', original: 'a*/re/.source' },

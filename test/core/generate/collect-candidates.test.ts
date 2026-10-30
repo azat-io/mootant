@@ -357,7 +357,7 @@ describe('collectCandidates', () => {
       ['first', 'seconds / 1000'],
       ['third', '1'],
       ['fourth', '1n'],
-      ['fourth', '1); f('],
+      ['fourth', '(1); f()'],
       ['second', '1'],
     ])
     expect(

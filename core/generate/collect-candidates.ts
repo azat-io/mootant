@@ -25,6 +25,7 @@ import { findIgnoreRule } from '../ignore/find-ignore-rule'
 import { getReplacementKind } from './get-replacement-kind'
 import { parseExpression } from '../text/parse-expression'
 import { getScopePath } from '../identity/get-scope-path'
+import { groupReplacement } from './group-replacement'
 import { fitTemplateText } from './fit-template-text'
 import { getSlot } from '../tree/get-slot'
 import { pickFocus } from './pick-focus'
@@ -386,7 +387,15 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
         continue
       }
       for (let replacement of replacements) {
-        addReplacement(registered, node, replacement)
+        addReplacement(
+          registered,
+          node,
+          groupReplacement(
+            replacement,
+            { parsed, tree },
+            registered.id.includes('/'),
+          ),
+        )
       }
     }
   }

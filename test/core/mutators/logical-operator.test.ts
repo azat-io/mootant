@@ -344,7 +344,7 @@ describe('logicalOperator', () => {
       file: 'example.js',
     },
     {
-      expected: ['cfg || {} -> {}', 'cfg || {} -> cfg'],
+      expected: ['cfg || {} -> ({})', 'cfg || {} -> cfg'],
       source: 'const f = () => cfg || {}',
       file: 'example.js',
     },

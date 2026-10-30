@@ -35,6 +35,15 @@ describe('getDiffLines', () => {
     })
   })
 
+  it('puts a space where the replacement would merge with the next token', () => {
+    expect(diff('let x = 1..toFixed(2)', '1.', '2')).toStrictEqual({
+      before: ['let x = 1..toFixed(2)'],
+      after: ['let x = 2 .toFixed(2)'],
+      cutStart: 0,
+      cutEnd: 0,
+    })
+  })
+
   it('gives every line a change spans, with any line breaks', () => {
     expect(
       diff('if (a) {\r\n  b()\r\n}\r\nc()', 'if (a) {\r\n  b()\r\n}', ';'),

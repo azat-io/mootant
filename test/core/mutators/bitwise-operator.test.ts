@@ -23,14 +23,14 @@ describe('bitwiseOperator', () => {
     {
       expected: [
         { replacement: 'a & (b & c)', original: 'a | b & c' },
-        { replacement: 'b | c', original: 'b & c' },
+        { replacement: '(b | c)', original: 'b & c' },
       ],
       source: 'x = a | b & c',
     },
     {
       expected: [
         { replacement: 'a | b & c', original: 'a ^ b & c' },
-        { replacement: 'b | c', original: 'b & c' },
+        { replacement: '(b | c)', original: 'b & c' },
       ],
       source: 'x = a ^ b & c',
     },

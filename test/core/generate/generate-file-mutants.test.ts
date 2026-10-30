@@ -117,7 +117,7 @@ const BOUND: Mutator = {
 /**
  * Writes, for every `??`, the name it initializes when that name is only read
  * for its truth and why its left side is never falsy, as the syntax helpers
- * tell it.
+ * tell it, in a string literal, so the text stays one expression.
  */
 const DEFAULTS: Mutator = {
   create: context => ({
@@ -125,7 +125,9 @@ const DEFAULTS: Mutator = {
       let { syntax } = context
       return [
         {
-          text: `${syntax.getTruthOnlyName(node)}: ${syntax.getNeverFalsyFact(node.left)}`,
+          text: JSON.stringify(
+            `${syntax.getTruthOnlyName(node)}: ${syntax.getNeverFalsyFact(node.left)}`,
+          ),
           node,
         },
       ]
@@ -138,7 +140,7 @@ const DEFAULTS: Mutator = {
  * Writes, for every empty array literal, whether it only collects the parts of
  * a string that `join('')` builds, and for every optional chain of a member,
  * why the object of that member is never nullish, as the syntax helpers tell
- * it.
+ * it, in a string literal, so the text stays one expression.
  */
 const SHAPES: Mutator = {
   create: context => ({
@@ -147,8 +149,8 @@ const SHAPES: Mutator = {
       return expression.type === 'MemberExpression' ?
           [
             {
-              text: String(
-                context.syntax.getNamedGroupsFact(expression.object),
+              text: JSON.stringify(
+                String(context.syntax.getNamedGroupsFact(expression.object)),
               ),
               node,
             },
@@ -157,7 +159,12 @@ const SHAPES: Mutator = {
     },
     ArrayExpression(node) {
       return node.elements.length === 0 ?
-          [{ text: String(context.syntax.isJoinedArray(node)), node }]
+          [
+            {
+              text: JSON.stringify(String(context.syntax.isJoinedArray(node))),
+              node,
+            },
+          ]
         : []
     },
   }),
@@ -968,9 +975,9 @@ describe('generateFileMutants', () => {
         activate('defaults', 0, DEFAULTS),
       ])
 
-      expect(result.mutants.map(mutant => mutant.replacement)).toStrictEqual([
-        expected,
-      ])
+      expect(
+        result.mutants.map(mutant => JSON.parse(mutant.replacement) as string),
+      ).toStrictEqual([expected])
     },
   )
 
@@ -1050,9 +1057,9 @@ describe('generateFileMutants', () => {
         activate('shapes', 0, SHAPES),
       ])
 
-      expect(result.mutants.map(mutant => mutant.replacement)).toStrictEqual(
-        expected,
-      )
+      expect(
+        result.mutants.map(mutant => JSON.parse(mutant.replacement) as string),
+      ).toStrictEqual(expected)
     },
   )
 

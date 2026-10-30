@@ -18,6 +18,20 @@ describe('renderDiff', () => {
     )
   })
 
+  it('puts a space where the replacement would merge with the text before it', () => {
+    let source = 'return!flag\n'
+
+    expect(
+      renderDiff(source, getLineStarts(source), {
+        replacement: 'true',
+        start: 6,
+        end: 11,
+      }),
+    ).toBe(
+      '<div class="removed"><span class="sign">-</span> return<span class="changed">!flag</span></div><div class="added"><span class="sign">+</span> return<span class="changed"> true</span></div>',
+    )
+  })
+
   it('takes the indentation of the first line off every row', () => {
     let source = '    call(a,\n      b,\n  c)\n'
 
@@ -58,6 +72,21 @@ describe('renderDiff', () => {
       }),
     ).toBe(
       '<div class="removed"><span class="sign">-</span> let r = /a<span class="changed">b+</span>c/u</div><div class="added"><span class="sign">+</span> let r = /a<span class="changed">b</span>c/u</div>',
+    )
+  })
+
+  it('marks the whole range when the replacement differs from its focus', () => {
+    let source = 'x = a ^ b & c'
+
+    expect(
+      renderDiff(source, getLineStarts(source), {
+        focus: { replacement: '|', start: 10, end: 11 },
+        replacement: '(b | c)',
+        start: 8,
+        end: 13,
+      }),
+    ).toBe(
+      '<div class="removed"><span class="sign">-</span> x = a ^ <span class="changed">b &amp; c</span></div><div class="added"><span class="sign">+</span> x = a ^ <span class="changed">(b | c)</span></div>',
     )
   })
 

@@ -1,6 +1,7 @@
 import type { ShownChange } from '../../../types/html/shown-change'
 
 import { getSourcePosition } from '../../../core/text/get-source-position'
+import { separateReplacement } from '../../diff/separate-replacement'
 import { getLineEnd } from './get-line-end'
 import { escapeHtml } from './escape-html'
 
@@ -48,9 +49,11 @@ const MAX_ROWS = 8
 /**
  * Renders a change as the lines it touches before and after it, as `-` and `+`
  * rows with the changed part marked: the focus of the change when the mutator
- * names one, else the whole range. Every row loses the indentation of the first
- * line, a long line keeps only the text near the change, and a side of many
- * lines keeps its first six and its last one.
+ * names one and the replacement amounts to it, else the whole range, with a
+ * space where its replacement would merge with the text next to it (see
+ * `separateReplacement`). Every row loses the indentation of the first line, a
+ * long line keeps only the text near the change, and a side of many lines keeps
+ * its first six and its last one.
  *
  * @param source - Text of the file.
  * @param lineStarts - Offset where each line of the file starts.
@@ -62,10 +65,16 @@ export function renderDiff(
   lineStarts: readonly number[],
   change: ShownChange,
 ): string {
+  let shown = separateReplacement(source, change)
+  let { focus } = change
   let [start, end, replacement] =
-    change.focus ?
-      [change.focus.start, change.focus.end, change.focus.replacement]
-    : [change.start, change.end, change.replacement]
+    (
+      focus &&
+      shown ===
+        `${source.slice(change.start, focus.start)}${focus.replacement}${source.slice(focus.end, change.end)}`
+    ) ?
+      [focus.start, focus.end, focus.replacement]
+    : [change.start, change.end, shown]
   let lineStart = lineStarts.findLast(offset => offset <= change.start)!
   let lineEnd = getLineEnd(
     source,

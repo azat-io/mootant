@@ -58,6 +58,17 @@ let unaryLikeTypes = new Set([
 ])
 
 /**
+ * Operand types that bind more loosely than any binary or logical operator.
+ */
+let looseTypes = new Set([
+  'ArrowFunctionExpression',
+  'ConditionalExpression',
+  'AssignmentExpression',
+  'SequenceExpression',
+  'YieldExpression',
+])
+
+/**
  * Logical operators that cannot be mixed with `??` without parentheses.
  */
 let andOrOperators = new Set(['&&', '||'])
@@ -70,7 +81,9 @@ const TYPE_OPERATOR_PRECEDENCE = 8
 /**
  * Tells whether an operand must be wrapped in parentheses after the operator
  * between it and the other operand is replaced, so that the grouping of the
- * original expression is kept.
+ * original expression is kept. A conditional, an arrow function, `yield`, an
+ * assignment or a sequence always needs them; in a parsed tree such an operand
+ * is already in parentheses.
  *
  * @param operand - Operand as it is in the tree, possibly parenthesized.
  * @param operator - Binary or logical operator written in place of the old one.
@@ -85,6 +98,9 @@ export function needsGrouping(
   let { language, side } = placement
   if (operand.type === 'ParenthesizedExpression') {
     return false
+  }
+  if (looseTypes.has(operand.type)) {
+    return true
   }
   if (
     operator === '**' &&
