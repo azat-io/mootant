@@ -194,6 +194,12 @@ export interface SyntaxHelpers {
   isResultUnused(node: Node): boolean
 
   /**
+   * Whether an error thrown at the node may be caught without leaving a loop
+   * around it (see `isCaughtInLoop`).
+   */
+  isCaughtInLoop(node: Node): boolean
+
+  /**
    * Strips ParenthesizedExpression wrappers.
    */
   unwrapParentheses(node: Node): Node

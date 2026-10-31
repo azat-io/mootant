@@ -442,7 +442,7 @@ function getOperatorSkips(
   if (running) {
     operatorSkips.set(running.value ? '!=' : '==', {
       reason:
-        'a counter that steps over the bound would keep the loop running, so only a timeout could kill it',
+        'a counter that steps over the bound may keep the loop running forever',
       rule: 'loop-running',
     })
   }

@@ -169,7 +169,7 @@ function getStringSkip(
   }
   if (parent?.type === 'JSXAttribute') {
     return {
-      reason: 'a JSX attribute string is not worth a test',
+      reason: 'it only changes the quoted value of a JSX attribute',
       rule: 'jsx-attribute',
     }
   }
@@ -178,7 +178,7 @@ function getStringSkip(
     isSymbolCall(parent.callee, context)
   ) {
     return {
-      reason: 'the description of a symbol is not worth a test',
+      reason: 'it only changes the description of a symbol',
       rule: 'symbol-description',
     }
   }
@@ -200,7 +200,7 @@ function getStringSkip(
     if (value === '' && isTestedLookupKey(node, context)) {
       return {
         reason:
-          'an empty lookup key only makes a tested lookup constant, which the owner of the test emits',
+          'an empty lookup key only makes a tested lookup constant, as another mutator does',
         rule: 'O8',
       }
     }
@@ -242,7 +242,7 @@ function getRegexArgumentSkip(
     }
     return {
       reason:
-        'an empty RegExp pattern matches everything, which the conditions that test the match cover',
+        'an empty RegExp pattern matches everything, which acts like a test of the match forced to true',
       rule: 'regex-argument',
     }
   }

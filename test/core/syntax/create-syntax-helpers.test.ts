@@ -127,6 +127,11 @@ describe('createSyntaxHelpers', () => {
       true,
     ],
     [
+      'isCaughtInLoop',
+      syntax => syntax.isCaughtInLoop(find('NewExpression')),
+      false,
+    ],
+    [
       'isConditionTest',
       syntax => syntax.isConditionTest(find('LogicalExpression')),
       true,

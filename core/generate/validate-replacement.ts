@@ -60,10 +60,10 @@ export function validateReplacement(
     return `cannot replace a ${node.type} node; replace an expression or a statement.`
   }
   if (kind === 'expression' && !isValuePosition(tree, node)) {
-    return `cannot replace a ${node.type} node in a position the mutant switch cannot wrap.`
+    return `cannot replace a ${node.type} node in a position where Mootant cannot switch a mutant on.`
   }
   if (kind === 'block' && !isStatementPosition(slot)) {
-    return `cannot replace a ${node.type} node in a position the mutant switch cannot wrap.`
+    return `cannot replace a ${node.type} node in a position where Mootant cannot switch a mutant on.`
   }
   if (
     kind === 'block' &&

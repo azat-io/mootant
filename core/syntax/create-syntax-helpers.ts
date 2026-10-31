@@ -25,6 +25,7 @@ import { isForEachResult } from './is-for-each-result'
 import { isConditionTest } from './is-condition-test'
 import { isValuePosition } from './is-value-position'
 import { getLogicalChain } from './get-logical-chain'
+import { isCaughtInLoop } from './is-caught-in-loop'
 import { isErrorMessage } from './is-error-message'
 import { isResultUnused } from './is-result-unused'
 import { getExitedLoops } from './get-exited-loops'
@@ -146,6 +147,7 @@ export function createSyntaxHelpers(
     getContextSlot: node => getContextSlot(tree, node),
     isErrorMessage: node => isErrorMessage(tree, node),
     getExitedLoops: node => getExitedLoops(tree, node),
+    isCaughtInLoop: node => isCaughtInLoop(tree, node),
     isNonThenable: node => isNonThenable(scopes, node),
     isGlobalName: name => isGlobalName(program, name),
     isPropertyKey: node => isPropertyKey(tree, node),

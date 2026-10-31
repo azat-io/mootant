@@ -747,7 +747,7 @@ describe('getComparisonPlan', () => {
     let { skipped } = getComparisonPlan(find('BinaryExpression'), context)
 
     expect(skipped[0]!.skip!.reason).toBe(
-      'a lower bound of an operand makes it the constant true (a length is never negative), and true keeps the loop running forever, so only a timeout could kill it',
+      'a lower bound of an operand makes it the constant true (a length is never negative), and true may keep the loop running forever',
     )
     expect(skipped[0]!.skip).toMatchObject({
       rule: 'loop-running',
@@ -769,7 +769,7 @@ describe('getComparisonPlan', () => {
     ).toStrictEqual([
       [
         'n >= 0',
-        'a lower bound of an operand makes it the constant true (`n` starts at 3 and goes down only right after `n > 0`), and true keeps the loop running forever, so only a timeout could kill it',
+        'a lower bound of an operand makes it the constant true (`n` starts at 3 and goes down only right after `n > 0`), and true may keep the loop running forever',
       ],
       [
         'n != 0',
@@ -789,7 +789,7 @@ describe('getComparisonPlan', () => {
 
     expect(skipped[0]!.skip).toStrictEqual({
       reason:
-        'a lower bound of an operand makes it the constant true (a length is never negative), and logical-operator owns the truth value of a boolean-mode operand',
+        'a lower bound of an operand makes it the constant true (a length is never negative), and the truth value of an operand of && or || is left to logical-operator',
       by: { node: find('LogicalExpression'), mutator: 'logical-operator' },
       heuristic: true,
       rule: 'O3',

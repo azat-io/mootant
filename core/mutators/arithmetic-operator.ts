@@ -136,7 +136,7 @@ function getDropSkip(
   let right = syntax.unwrapExpression(node.right)
   if (syntax.isErrorMessage(node)) {
     return {
-      reason: 'the text of an error message is not worth a test',
+      reason: 'it only changes the text of an error message',
       rule: 'error-message',
     }
   }

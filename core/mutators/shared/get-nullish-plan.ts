@@ -117,7 +117,7 @@ export function getNullishPlan(
   ) {
     let position: SkipNote = {
       reason:
-        "in a truth position with a literal default it forces the position to a constant, which the position's owner emits",
+        'in a truth position with a literal default it forces the position to a constant, as another mutator does',
       rule: 'O15',
     }
     skip(rightText, position)
@@ -143,7 +143,7 @@ export function getNullishPlan(
       let fallback = unwrapParentheses(right)
       skip(leftText, {
         reason:
-          "flipping the default's truth value is the same behavior, which its literal mutator owns",
+          'it acts like flipping the truth value of the default, which is left to its literal mutator',
         by: { mutator: getLiteralMutator(fallback)!, node: fallback },
         rule: 'O15',
       })
@@ -174,7 +174,7 @@ export function getNullishPlan(
     if (plan.swap) {
       skip(rightText, {
         reason:
-          'the swap to || subsumes dropping the left side: every test that kills the swap also kills the drop',
+          'every test that kills the swap to || also kills dropping the left side',
         by: { mutator: 'logical-operator', node },
         rule: 'swap-subsumes-drop',
       })

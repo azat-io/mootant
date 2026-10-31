@@ -99,7 +99,7 @@ export function collectPatternChanges(
         skip = CAPTURING_GROUP_SKIP
       } else if (isLarge) {
         skip = {
-          reason: `the list has more than ${MAX_ALTERNATIVES} alternatives; removing each is noise without the largeAlternations option`,
+          reason: `the list has more than ${MAX_ALTERNATIVES} alternatives, which are removed one by one only with the largeAlternations option`,
           rule: 'large-alternation',
         }
       }

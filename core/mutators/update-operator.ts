@@ -29,7 +29,7 @@ export let updateOperator: Mutator = {
         if (!settings.timeouts && syntax.advancesLoop(node)) {
           swap.skip = {
             reason:
-              'it changes the update that advances a loop, so only a timeout could kill it',
+              'it changes the update that advances a loop, so it may keep the loop running forever',
             rule: 'loop-advance',
           }
         }

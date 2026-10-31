@@ -108,7 +108,7 @@ function getRegexSkip(
   ) {
     return {
       reason:
-        'the new pattern matches the empty string, so a loop over its global matches could never end',
+        'the new pattern matches the empty string, so a loop over its global matches may never end',
       rule: 'empty-match',
     }
   }

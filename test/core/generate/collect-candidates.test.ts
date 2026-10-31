@@ -306,6 +306,27 @@ describe('collectCandidates', () => {
     },
   )
 
+  it.each([
+    { id: 'optional-chaining', count: 1 },
+    { id: 'other', count: 0 },
+  ])(
+    'leaves a loop-advance chain without timeouts to optional-chaining ($id)',
+    ({ count, id }) => {
+      let { candidates } = collect(
+        ['while (cursor) {', '  cursor = page?.next', '}'],
+        [
+          activate(id, 0, () => ({
+            ChainExpression(node) {
+              return [{ text: 'page.next', node }]
+            },
+          })),
+        ],
+      )
+
+      expect(candidates).toHaveLength(count)
+    },
+  )
+
   it('skips only a literal change in a timer delay', () => {
     let { candidates, skipped } = collect(
       [
@@ -371,7 +392,7 @@ describe('collectCandidates', () => {
       ['fourth', 'timer-delay', '(1)'],
       ['second', 'timer-delay', "''"],
     ])
-    expect(skipped[0]!.reason).toBe('a timer delay is not worth a test')
+    expect(skipped[0]!.reason).toBe('it only changes a timer delay')
   })
 
   it('lists a literal change its visitor skipped in a timer delay as a timer delay', () => {
@@ -613,7 +634,7 @@ describe('collectCandidates', () => {
       ],
       [
         'loop-advance',
-        'it changes the value that advances a loop, so only a timeout could kill it',
+        'it changes the value that advances a loop, so it may keep the loop running forever',
       ],
     ])
   })

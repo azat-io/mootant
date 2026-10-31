@@ -81,7 +81,7 @@ function getSkip(
           }
         : {
             reason:
-              'it converts a literal that is not a number, which a test rarely relies on',
+              'it only removes the conversion of a literal that is not a number',
             rule: 'literal-coercion',
           }
     }

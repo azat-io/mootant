@@ -89,8 +89,7 @@ export function getGroupConstant(
   }
   if (skip === null && hasPolarMutant(polar, context)) {
     skip = {
-      reason:
-        'a running mutant inside the group moves it only toward its absorbing value',
+      reason: `a mutant inside the group makes it ${absorbing ? 'truthy' : 'falsy'} on some inputs`,
       rule: 'R2',
     }
   }

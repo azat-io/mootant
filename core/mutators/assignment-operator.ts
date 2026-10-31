@@ -105,7 +105,7 @@ export let assignmentOperator: Mutator<AssignmentOperatorOptions> = {
         return replacements.map(replacement => ({
           skip: replacement.skip ?? {
             reason:
-              'it changes the assignment that advances a loop, so only a timeout could kill it',
+              'it changes the assignment that advances a loop, so it may keep the loop running forever',
             rule: 'loop-advance',
           },
           text: replacement.text,
@@ -162,7 +162,7 @@ function getLogicalVariants(
   }
   let subsumed: SkipNote = {
     reason:
-      'the swap between ??= and ||= replaces this variant: every test that kills the swap also kills it',
+      'every test that kills the swap between ??= and ||= also kills this change',
     by: { mutator: 'assignment-operator', node },
     rule: 'swap-subsumes-drop',
   }

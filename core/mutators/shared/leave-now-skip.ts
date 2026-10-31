@@ -6,6 +6,6 @@ import type { SkipNote } from '../../../types/mutant/skip-note'
  */
 export const LEAVE_NOW_SKIP: SkipNote = {
   reason:
-    "leaving a first exit test's loop at once is the loop's never-run mutant",
+    'leaving the loop at its first exit test is the same as never running the loop',
   rule: 'O13',
 }

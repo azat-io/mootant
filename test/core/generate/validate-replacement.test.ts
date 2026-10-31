@@ -24,7 +24,7 @@ describe('validateReplacement', () => {
     let { find, tree } = createTestFile('a = 1')
 
     expect(validateReplacement(tree, find('Identifier', 'a'))).toBe(
-      'cannot replace a Identifier node in a position the mutant switch cannot wrap.',
+      'cannot replace a Identifier node in a position where Mootant cannot switch a mutant on.',
     )
   })
 
@@ -73,7 +73,7 @@ describe('validateReplacement', () => {
     expect(
       validateReplacement(tree, find('BlockStatement', undefined, nth)),
     ).toBe(
-      'cannot replace a BlockStatement node in a position the mutant switch cannot wrap.',
+      'cannot replace a BlockStatement node in a position where Mootant cannot switch a mutant on.',
     )
   })
 

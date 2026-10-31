@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-candidates'
 
+import { generateCandidates } from '../../helpers/generate-candidates'
 import { generateMutants } from '../../helpers/generate-mutants'
 import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
@@ -229,4 +230,180 @@ describe('optionalChaining', () => {
       ).toStrictEqual(expected)
     },
   )
+
+  it.each<{ skipped: string[]; source: string; kept: string[] }>([
+    {
+      source: 'while (cursor) { cursor = page?.next }',
+      kept: ['page?.next -> page.next'],
+      skipped: [],
+    },
+    {
+      source: 'while (cursor) { try { cursor = page?.next } catch {} }',
+      skipped: ['page?.next -> page.next (timeout loop-advance)'],
+      kept: [],
+    },
+    {
+      skipped: [
+        "eval?.('cursor')?.next -> eval('cursor')?.next (timeout loop-advance)",
+      ],
+      source: "while (cursor) { cursor = eval?.('cursor')?.next }",
+      kept: ["eval?.('cursor')?.next -> eval?.('cursor').next"],
+    },
+    {
+      skipped: [
+        "(eval as any)?.('cursor') -> (eval as any)('cursor') (timeout loop-advance)",
+      ],
+      source: "while (cursor) { cursor = (eval as any)?.('cursor') }",
+      kept: [],
+    },
+    {
+      kept: ["globalThis.eval?.('cursor') -> globalThis.eval('cursor')"],
+      source: "while (cursor) { cursor = globalThis.eval?.('cursor') }",
+      skipped: [],
+    },
+    {
+      source:
+        'async function walk(next) { let cursor = true; while (cursor) { cursor = next?.(await new Promise(() => {})) } }',
+      skipped: [
+        'next?.(await new Promise(() => {})) -> next(await new Promise(() => {})) (timeout loop-advance)',
+      ],
+      kept: [],
+    },
+    {
+      source:
+        'async function walk(map) { let cursor = true; while (cursor) { cursor = map?.[await key()] } }',
+      skipped: [
+        'map?.[await key()] -> map[await key()] (timeout loop-advance)',
+      ],
+      kept: [],
+    },
+    {
+      source:
+        'function* walk(next) { let cursor = true; while (cursor) { cursor = next?.(yield) } }',
+      skipped: ['next?.(yield) -> next(yield) (timeout loop-advance)'],
+      kept: [],
+    },
+    {
+      skipped: ['next?.(...items) -> next(...items) (timeout loop-advance)'],
+      source: 'while (cursor) { cursor = next?.(...items) }',
+      kept: [],
+    },
+    {
+      source: 'while (cursor) { cursor = next?.(() => load()) }',
+      kept: ['next?.(() => load()) -> next(() => load())'],
+      skipped: [],
+    },
+    {
+      source: 'while (cursor) { cursor = queue?.shift(load()) }',
+      kept: ['queue?.shift(load()) -> queue.shift(load())'],
+      skipped: [],
+    },
+    {
+      source: 'while (cursor) { cursor = next?.(cursor) }',
+      kept: ['next?.(cursor) -> next(cursor)'],
+      skipped: [],
+    },
+    {
+      source: 'while (cursor) { cursor = map?.[cursor] }',
+      kept: ['map?.[cursor] -> map[cursor]'],
+      skipped: [],
+    },
+    {
+      skipped: [
+        'next?.(import(resolveName())) -> next(import(resolveName())) (timeout loop-advance)',
+      ],
+      source: 'while (cursor) { cursor = next?.(import(resolveName())) }',
+      kept: [],
+    },
+    {
+      kept: ["next?.(import('./page.js')) -> next(import('./page.js'))"],
+      source: "while (cursor) { cursor = next?.(import('./page.js')) }",
+      skipped: [],
+    },
+    {
+      skipped: [
+        'next?.(class { static { for (;;) {} } }) -> next(class { static { for (;;) {} } }) (timeout loop-advance)',
+      ],
+      source:
+        'while (cursor) { cursor = next?.(class { static { for (;;) {} } }) }',
+      kept: [],
+    },
+    {
+      skipped: [
+        'next?.([cursor] = pages) -> next([cursor] = pages) (timeout loop-advance)',
+      ],
+      source: 'while (cursor) { cursor = next?.([cursor] = pages) }',
+      kept: [],
+    },
+    {
+      source: 'while (cursor) { cursor = next?.(cursor as Page) }',
+      kept: ['next?.(cursor as Page) -> next(cursor as Page)'],
+      skipped: [],
+    },
+  ])(
+    'skips a removed ?. that advances a loop only where it may keep the loop running in $source',
+    ({ skipped, source, kept }) => {
+      expect(
+        runMutator('optional-chaining', source).map(formatMutant),
+      ).toStrictEqual(kept)
+      expect(listSkipped('optional-chaining', source)).toStrictEqual(skipped)
+    },
+  )
+
+  it('skips a removed ?. that advances a loop when its arguments hold JSX', () => {
+    let source = 'while (cursor) { cursor = next?.(<Page />) }'
+    let setup = { file: 'example.tsx' }
+
+    expect(
+      runMutator('optional-chaining', source, setup).map(formatMutant),
+    ).toStrictEqual([])
+    expect(listSkipped('optional-chaining', source, setup)).toStrictEqual([
+      'next?.(<Page />) -> next(<Page />) (timeout loop-advance)',
+    ])
+  })
+
+  it('keeps every removed ?. that advances a loop with the timeouts setting', () => {
+    let source = [
+      'while (cursor) {',
+      "  cursor = eval?.('cursor')",
+      '  try { cursor = page?.next } catch {}',
+      '}',
+    ].join('\n')
+
+    expect(
+      runMutator('optional-chaining', source, {
+        settings: { timeouts: true },
+      }).map(formatMutant),
+    ).toStrictEqual([
+      "eval?.('cursor') -> eval('cursor')",
+      'page?.next -> page.next',
+    ])
+  })
+
+  it.each<[string, string]>([
+    [
+      'while (cursor) { try { cursor = page?.next } catch {} }',
+      'a try inside the loop may catch its TypeError, so it may keep the loop running forever',
+    ],
+    [
+      "while (cursor) { cursor = eval?.('cursor') }",
+      'without ?. the eval call is direct and sees local variables, so it may keep the loop running forever',
+    ],
+    [
+      'async function walk(next) { while (cursor) { cursor = next?.(await load()) } }',
+      'without ?. the arguments are computed even for a nullish callee and may never finish, so it may keep the loop running forever',
+    ],
+    [
+      'while (cursor) { cursor = map?.[key()] }',
+      'without ?. the key is computed even for a nullish object and may never finish, so it may keep the loop running forever',
+    ],
+  ])('explains the skipped removal in %s', (source, reason) => {
+    let { skipped } = generateCandidates(source)
+
+    expect(
+      skipped
+        .filter(candidate => candidate.mutator === 'optional-chaining')
+        .map(candidate => [candidate.rule, candidate.reason]),
+    ).toStrictEqual([['loop-advance', reason]])
+  })
 })

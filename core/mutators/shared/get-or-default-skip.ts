@@ -57,7 +57,7 @@ export function getOrDefaultSkip(
     ) ?
       {
         reason:
-          "it gives the default the only falsy value of the left operand's type that is not nullish, and the running swap to ?? covers it",
+          "it gives the default the only falsy value of the left operand's type that is not nullish, and every test that kills the swap to ?? also kills it",
         rule: 'R7',
         by,
       }

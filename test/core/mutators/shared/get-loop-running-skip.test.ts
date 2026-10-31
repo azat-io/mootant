@@ -4,14 +4,8 @@ import { getLoopRunningSkip } from '../../../../core/mutators/shared/get-loop-ru
 
 describe('getLoopRunningSkip', () => {
   it.each<[boolean, string]>([
-    [
-      true,
-      'true keeps the loop running forever, so only a timeout could kill it',
-    ],
-    [
-      false,
-      'false keeps the loop running forever, so only a timeout could kill it',
-    ],
+    [true, 'true may keep the loop running forever'],
+    [false, 'false may keep the loop running forever'],
   ])('explains the skip of %s', (value, reason) => {
     expect(getLoopRunningSkip(value)).toStrictEqual({
       rule: 'loop-running',

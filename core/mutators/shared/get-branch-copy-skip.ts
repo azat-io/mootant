@@ -56,7 +56,7 @@ export function getBranchCopySkip(
     let owner = getOwnerConstant(test, forced, context)
     if (owner) {
       return {
-        reason: `it copies the other branch, which is the test forced to ${forced}, a constant the test's owner emits`,
+        reason: `it copies the other branch, which is the test forced to ${forced}, as ${owner.mutator} does`,
         rule: 'O19',
         by: owner,
       }
@@ -64,7 +64,7 @@ export function getBranchCopySkip(
     let toward = getTowardMutant(query, context)
     return toward ?
         {
-          reason: `it copies the other branch, which is the test forced to ${forced}, and a running mutant moves the test toward ${forced}`,
+          reason: `it copies the other branch, which is the test forced to ${forced}, as ${toward.mutator} does on some inputs`,
           by: toward,
           rule: 'R5',
         }
@@ -84,7 +84,7 @@ export function getBranchCopySkip(
   let toward = booleanOther ? getTowardMutant(query, context) : null
   return toward ?
       {
-        reason: `next to a boolean-valued branch it acts like the test forced to ${forced}, and a running mutant moves the test toward ${forced}`,
+        reason: `next to a boolean-valued branch it acts like the test forced to ${forced}, as ${toward.mutator} does on some inputs`,
         by: toward,
         rule: 'R5',
       }

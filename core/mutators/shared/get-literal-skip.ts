@@ -70,7 +70,8 @@ export function getLiteralSkip(
         node: getOperandParent(node, context),
         mutator: 'logical-operator',
       },
-      reason: 'logical-operator owns the truth value of an operand of && or ||',
+      reason:
+        'the truth value of an operand of && or || is left to logical-operator',
       rule: 'O3',
     }
   }
@@ -82,7 +83,7 @@ export function getLiteralSkip(
   }
   if (mutator === 'string-literal' && context.syntax.isErrorMessage(node)) {
     return {
-      reason: 'the text of an error message is not worth a test',
+      reason: 'it only changes the text of an error message',
       rule: 'error-message',
     }
   }
@@ -100,8 +101,7 @@ export function getLiteralSkip(
     getRunningValue(node, context)?.value === Boolean(value)
   ) {
     return {
-      reason:
-        'the new value keeps the loop running forever, so only a timeout could kill it',
+      reason: 'the new value may keep the loop running forever',
       rule: 'loop-running',
     }
   }
@@ -142,7 +142,7 @@ function getComparisonOperandSkip(
   let shifted = getShiftedLiteral(by.node)
   if (shifted?.step === 1 && shifted.literal === node) {
     return {
-      reason: 'comparison-operator emits the same shifted literal',
+      reason: 'it shifts the literal by one, as comparison-operator does',
       rule: 'shifted-literal',
       by,
     }

@@ -39,7 +39,7 @@ const TEMPLATE_SCOPE = '<template>'
  * Skip of a replacement in a timer delay.
  */
 const TIMER_DELAY_SKIP: SkipNote = {
-  reason: 'a timer delay is not worth a test',
+  reason: 'it only changes a timer delay',
   rule: 'timer-delay',
 }
 
@@ -178,14 +178,16 @@ interface VisitorEntry {
  * its visitor skipped it for another rule; a replacement there that touches a
  * name, a member read, a call or a guard stays a candidate. Without the
  * `timeouts` setting, a replacement of the value that advances a loop is
- * dropped. A replacement that a visitor marks as skipped is never validated and
- * never becomes a candidate; on request it is collected with its rule, like
- * dropped and invalid replacements, so that skipped replacements never change
- * the candidates. In a template only expressions are replaced: a replacement of
- * a statement, a declaration or a node of the synthetic module around the
- * template code is dropped without a trace, and every candidate has the scope
- * `<template>`. A replacement in a Vue template is fitted into the attribute
- * value or the interpolation around it, or skipped when it cannot be.
+ * dropped, except a removed `?.`: optional-chaining decides that itself, since
+ * only it knows which link it removes. A replacement that a visitor marks as
+ * skipped is never validated and never becomes a candidate; on request it is
+ * collected with its rule, like dropped and invalid replacements, so that
+ * skipped replacements never change the candidates. In a template only
+ * expressions are replaced: a replacement of a statement, a declaration or a
+ * node of the synthetic module around the template code is dropped without a
+ * trace, and every candidate has the scope `<template>`. A replacement in a Vue
+ * template is fitted into the attribute value or the interpolation around it,
+ * or skipped when it cannot be.
  *
  * @param input - Mutators, parsed file, runtime tree, ignore rules and shared
  *   context services.
@@ -335,11 +337,12 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
     }
     if (
       !services.settings.timeouts &&
+      registered.id !== 'optional-chaining' &&
       services.syntax.isLoopAdvanceValue(replacement.node)
     ) {
       skip(registered, replacement, {
         reason:
-          'it changes the value that advances a loop, so only a timeout could kill it',
+          'it changes the value that advances a loop, so it may keep the loop running forever',
         rule: 'loop-advance',
       })
       return

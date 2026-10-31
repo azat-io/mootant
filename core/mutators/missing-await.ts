@@ -117,12 +117,12 @@ function getAwaitSkip(
             mutator: 'logical-operator',
           },
           reason:
-            'it makes the comparison constant, and logical-operator owns the truth value of an operand of && or ||',
+            'it makes the comparison constant, and the truth value of an operand of && or || is left to logical-operator',
           rule: 'O3',
         }
       : {
           reason:
-            "it makes the comparison constant, which comparison-operator's mutants cover",
+            'it makes the comparison constant, which is left to comparison-operator',
           by: { mutator: 'comparison-operator', node: comparison },
           rule: 'R8',
         }

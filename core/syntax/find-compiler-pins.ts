@@ -97,7 +97,7 @@ function getMacroArgumentPins(call: CallExpression): CompilerPin[] {
       createPin(
         value,
         argument,
-        'the Vue compiler reads the model name of defineModel as written, so the mutant switch would rename the model',
+        'the Vue compiler reads the model name of defineModel as written, so the code that switches mutants on would rename the model',
       ),
     )
   }
@@ -106,7 +106,7 @@ function getMacroArgumentPins(call: CallExpression): CompilerPin[] {
     (value.type === 'ArrayExpression' || value.type === 'ObjectExpression')
   ) {
     let reason =
-      'the Vue compiler reads the props that defineProps declares as written, so the mutant switch would hide them from it'
+      'the Vue compiler reads the props that defineProps declares as written, so the code that switches mutants on would hide them from it'
     pins.push(createPin(value, argument, reason))
     if (value.type === 'ArrayExpression') {
       for (let element of value.elements) {

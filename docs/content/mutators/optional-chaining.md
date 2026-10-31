@@ -136,12 +136,12 @@ Mootant leaves out these changes. `mootant list --skipped` shows them with the
 category and the rule; [Skipped changes](/mutators#skipped-changes) explains the
 categories.
 
-| Reason                                           | Example                                                 | Rule                       |
-| ------------------------------------------------ | ------------------------------------------------------- | -------------------------- |
-| Type hints say it can't be `null` or `undefined` | `items?.length` → `items.length`                        | `non-nullable`, equivalent |
-| Changes the value that advances a loop           | `page?.next` → `page.next` in `cursor = page?.next`     | `loop-advance`, timeout    |
-| The regex shows the match has its named groups   | `match?.groups?.size` → `match?.groups.size`            | `named-groups`, equivalent |
-| Mootant can't switch a mutant on here            | `cart?.coupon` → `cart.coupon` in `delete cart?.coupon` | `invalid-target`, invalid  |
+| Reason                                           | Example                                                              | Rule                       |
+| ------------------------------------------------ | -------------------------------------------------------------------- | -------------------------- |
+| Type hints say it can't be `null` or `undefined` | `items?.length` → `items.length`                                     | `non-nullable`, equivalent |
+| May keep a loop running forever                  | `page?.next` → `page.next` in `try { cursor = page?.next } catch {}` | `loop-advance`, timeout    |
+| The regex shows the match has its named groups   | `match?.groups?.size` → `match?.groups.size`                         | `named-groups`, equivalent |
+| Mootant can't switch a mutant on here            | `cart?.coupon` → `cart.coupon` in `delete cart?.coupon`              | `invalid-target`, invalid  |
 
 The [`nonNullable`](#nonnullable) option brings back `non-nullable`, and the
 [`timeouts`](/guide/configuration#timeouts) setting brings back `loop-advance`;

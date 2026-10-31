@@ -142,7 +142,7 @@ function getReplacements(
   if (isLoggingCall(value, context)) {
     return defaults.map(item => ({
       skip: {
-        reason: 'the result of a logging call is not worth a test',
+        reason: 'it only replaces a returned logging call',
         rule: 'logging-call',
       },
       text: item.text,
@@ -207,7 +207,7 @@ function getConstantSkip(
   let owner = getOwnerConstant(target, value, context)
   if (owner) {
     return {
-      reason: `the owner of the result emits the constant ${value}`,
+      reason: `it makes the result ${value}, as ${owner.mutator} does`,
       rule: 'O19',
       by: owner,
     }
@@ -229,7 +229,7 @@ function getConstantSkip(
     )
     if (toward) {
       return {
-        reason: `a running mutant moves the result toward ${value}`,
+        reason: `it makes the result ${value}, as ${toward.mutator} does on some inputs`,
         by: toward,
         rule: 'R6',
       }

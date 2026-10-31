@@ -123,8 +123,7 @@ export function getLogicalDrops(
       hasPolarMutant({ value: identity, decision: left, candidate }, context)
     ) {
       return {
-        reason:
-          'a running mutant inside the left operand moves it only toward the value this drop forces',
+        reason: `a mutant inside the left operand makes it ${identityName} on some inputs`,
         rule: 'R2',
       }
     }
@@ -186,7 +185,7 @@ export function getLogicalDrops(
     ) {
       return {
         reason:
-          'a running mutant inside the expression moves it only toward the value this drop forces',
+          'a mutant inside the expression gives the same result as this drop on some inputs',
         rule: 'R2',
       }
     }
@@ -230,8 +229,7 @@ export function getLogicalDrops(
   if (swap) {
     skipped.push({
       skip: {
-        reason:
-          'the swap to ?? replaces this drop: every test that kills the swap also kills the drop',
+        reason: 'every test that kills the swap to ?? also kills this drop',
         by: { mutator: 'logical-operator', node },
         rule: 'swap-subsumes-drop',
       },

@@ -38,7 +38,7 @@ export function getOwnedConstants(
     for (let value of [true, false]) {
       owned.set(value, {
         reason:
-          'logical-operator owns the truth value of a boolean-mode operand',
+          'the truth value of an operand of && or || is left to logical-operator',
         by: { mutator: 'logical-operator', node: parent },
         rule: 'O3',
       })
@@ -62,14 +62,14 @@ export function getOwnedConstants(
     earlier.every(operand => isBooleanValued(operand, context))
   ) {
     owned.set((parent.operator === '||') !== negated, {
-      reason: `it gives the group its absorbing value, which is logical-operator's constant of the group`,
+      reason: `it makes the whole group ${parent.operator === '||' ? 'truthy' : 'falsy'}, which is logical-operator's constant of the group`,
       by: { mutator: 'logical-operator', node: root },
       rule: 'O3',
     })
   }
   if (key === 'left') {
     owned.set((parent.operator === '&&') !== negated, {
-      reason: `it forces the left operand of ${parent.operator} to its identity, which is logical-operator's drop of that operand`,
+      reason: `it makes the left operand of ${parent.operator} ${parent.operator === '&&' ? 'truthy' : 'falsy'}, which is logical-operator's drop of that operand`,
       by: { mutator: 'logical-operator', node: parent },
       rule: 'O3',
     })

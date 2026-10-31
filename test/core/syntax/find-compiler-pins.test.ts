@@ -119,7 +119,7 @@ describe('findCompilerPins', () => {
       ["'open'", "('open')"],
     ])
     expect(reasons("defineModel('open')", 'Card.vue')[1]).toBe(
-      'the Vue compiler reads the model name of defineModel as written, so the mutant switch would rename the model',
+      'the Vue compiler reads the model name of defineModel as written, so the code that switches mutants on would rename the model',
     )
     expect(pin('defineModel(`open`)', 'Card.vue')).toStrictEqual([
       ['defineModel(`open`)', 'defineModel(`open`)'],
@@ -143,7 +143,7 @@ describe('findCompilerPins', () => {
       ['{ a: Number }', '{ a: Number }'],
     ])
     expect(reasons('defineProps([])', 'Card.vue')[1]).toBe(
-      'the Vue compiler reads the props that defineProps declares as written, so the mutant switch would hide them from it',
+      'the Vue compiler reads the props that defineProps declares as written, so the code that switches mutants on would hide them from it',
     )
   })
 

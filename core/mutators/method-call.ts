@@ -390,7 +390,8 @@ function getReplacements(
     wrapped ?
       getSkip(call, rule, context)
     : {
-        reason: 'the mutant switch cannot wrap the call in this position',
+        reason:
+          'Mootant cannot switch a mutant on for the call in this position',
         rule: 'invalid-target',
       }
   return [skip ? { node: target, text, skip } : { node: target, text }]

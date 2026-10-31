@@ -9,11 +9,13 @@ import { html } from './html'
  * What each category of skips means.
  */
 const MEANINGS: Record<SkipCategory, string> = {
-  subsumed:
-    'A mutant that runs covers it: a test that kills that one kills this one too.',
-  equivalent: 'It cannot change what the code does, so no test could kill it.',
-  noise: 'It only changes details no test should pin, such as message text.',
-  timeout: 'Only a timeout could kill it: a long run that proves little.',
+  equivalent:
+    'It cannot change what the code does, apart from details such as undefined for null.',
+  timeout:
+    'It alters a value that decides whether a loop goes on, so it may loop forever.',
+  noise:
+    'It touches something Mootant leaves untested on purpose, such as a log message.',
+  subsumed: 'Any test that kills another mutant kills this one too.',
   owned: 'Another mutator makes the same change under its own name.',
   invalid: 'The change cannot be switched on in this place.',
   duplicate: 'It produces the same code as another mutant.',

@@ -312,7 +312,7 @@ describe('formatTextReport', () => {
       createSkipped({}),
       createSkipped({
         reason:
-          'logical-operator owns the truth value of a boolean-mode operand',
+          'the truth value of an operand of && or || is left to logical-operator',
         file: 'src/example.ts',
         mutator: 'condition',
         replacement: 'true',
@@ -340,7 +340,7 @@ describe('formatTextReport', () => {
 
       src/example.ts
         12:5  condition  ready → true  owned  O3
-              logical-operator owns the truth value of a boolean-mode operand"
+              the truth value of an operand of && or || is left to logical-operator"
     `)
   })
 

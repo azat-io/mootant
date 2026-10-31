@@ -165,8 +165,7 @@ function getForcedThenSkip(
   let owner = getOwnerConstant(test, false, context)
   if (owner) {
     return {
-      reason:
-        "removing the whole then-branch forces the test to false, a constant the test's owner emits",
+      reason: `removing the whole then-branch forces the test to false, as ${owner.mutator} does`,
       rule: 'O19',
       by: owner,
     }
@@ -181,8 +180,7 @@ function getForcedThenSkip(
   )
   return toward ?
       {
-        reason:
-          'removing the whole then-branch forces the test to false, and a running mutant moves the test toward false',
+        reason: `removing the whole then-branch forces the test to false, as ${toward.mutator} does on some inputs`,
         by: toward,
         rule: 'R4',
       }
@@ -244,7 +242,7 @@ function getRemovalSkip(
 ): SkipNote | null {
   if (parent?.type === 'LabeledStatement') {
     return {
-      reason: 'the mutant switch cannot wrap the body of a label',
+      reason: 'Mootant cannot switch a mutant on in the body of a label',
       rule: 'invalid-target',
     }
   }
@@ -255,7 +253,7 @@ function getRemovalSkip(
   return !context.settings.timeouts && context.syntax.advancesLoop(node) ?
       {
         reason:
-          'it removes the statement that advances a loop, so only a timeout could kill it',
+          'it removes the statement that advances a loop, so it may keep the loop running forever',
         rule: 'loop-advance',
       }
     : null
@@ -349,36 +347,6 @@ function fallsThroughToBreak(
 }
 
 /**
- * Decides whether removing a `return` in tail position is skipped: it changes
- * nothing, or only turns `null` into `undefined` (EQ), or only turns `false`
- * into `undefined` (NOISE): an absent value, `undefined`, `void` of a literal
- * or a name, `null` and `false`.
- *
- * @param value - Returned expression, through wrappers, or null.
- * @param context - Mutator context of the file.
- * @returns Rule and reason of the skip, or null when the removal is emitted.
- */
-function getTailSkip(
-  value: Node | null,
-  context: MutatorContext,
-): SkipNote | null {
-  if (value?.type === 'Literal' && value.value === false) {
-    return {
-      reason:
-        'removing a tail return false only turns false into undefined, which is not worth a test',
-      rule: 'tail-return-false',
-    }
-  }
-  return isTailNoOp(value, context) ?
-      {
-        reason:
-          'removing a tail return of no value, undefined or null changes nothing that matters',
-        rule: 'tail-return',
-      }
-    : null
-}
-
-/**
  * Tells whether a `continue` ends the body of the loop it continues (EQ): it is
  * the body, or the last statement of the block that is the body, and it is
  * unlabeled or names that loop.
@@ -402,6 +370,35 @@ function isLoopEnd(node: ContinueStatement, context: MutatorContext): boolean {
     (labeled?.type === 'LabeledStatement' &&
       labeled.label.name === node.label.name)
   )
+}
+
+/**
+ * Decides whether removing a `return` in tail position is skipped: it changes
+ * nothing, or only turns `null` into `undefined` (EQ), or only turns `false`
+ * into `undefined` (NOISE): an absent value, `undefined`, `void` of a literal
+ * or a name, `null` and `false`.
+ *
+ * @param value - Returned expression, through wrappers, or null.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null when the removal is emitted.
+ */
+function getTailSkip(
+  value: Node | null,
+  context: MutatorContext,
+): SkipNote | null {
+  if (value?.type === 'Literal' && value.value === false) {
+    return {
+      reason: 'removing a tail return false only turns false into undefined',
+      rule: 'tail-return-false',
+    }
+  }
+  return isTailNoOp(value, context) ?
+      {
+        reason:
+          'removing a tail return of no value, undefined or null turns at most null into undefined',
+        rule: 'tail-return',
+      }
+    : null
 }
 
 /**

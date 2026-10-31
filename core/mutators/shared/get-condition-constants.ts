@@ -126,7 +126,7 @@ export function getConditionConstants(
     isComparison(inner) ? getComparisonPlan(inner, context) : null
   if (isAndOr(inner)) {
     let note: SkipNote = {
-      reason: 'logical-operator owns the constants of a && or || group',
+      reason: 'the constants of a && or || group are left to logical-operator',
       by: { mutator: 'logical-operator', node: inner },
       rule: 'O1',
     }
@@ -222,14 +222,14 @@ function getLiteralConstantSkip(
   if (next === null || Boolean(next) !== truth) {
     return {
       reason:
-        'the literal is a constant written on purpose, and no literal mutator changes its truth value',
+        'Mootant takes the literal as written on purpose, and no literal mutator changes its truth value',
       rule: 'constant-test',
     }
   }
   return (
     getLiteralSkip(literal, { change: { value: next } }, context) ?? {
       by: { mutator: getLiteralMutator(literal)!, node: literal },
-      reason: 'a literal belongs to its literal mutator',
+      reason: 'a literal is left to its literal mutator',
       rule: isTest ? 'O7' : 'O1',
     }
   )
@@ -265,7 +265,7 @@ function getComparisonConstantSkip(
     )
   ) {
     return {
-      reason: 'comparison-operator emits the same constant',
+      reason: `it makes the comparison ${truth}, as comparison-operator does`,
       rule: 'O1',
       by,
     }
@@ -309,7 +309,7 @@ function getConstantSkip(
   let direction = facts.subsumed.find(item => item.value === value)
   if (direction) {
     return {
-      reason: `a running mutant of the ?? test moves it toward ${value}`,
+      reason: `it makes the ?? test ${value}, as ${direction.by.mutator} does on some inputs`,
       by: direction.by,
       rule: 'R3',
     }
