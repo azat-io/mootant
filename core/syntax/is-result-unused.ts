@@ -2,7 +2,7 @@ import type { Node } from 'oxc-parser'
 
 import type { TreeIndex } from '../../types/syntax/tree-index'
 
-import { getContextSlot } from '../tree/get-context-slot'
+import { getResultSlot } from './get-result-slot'
 
 /**
  * Tells whether the value of an expression is discarded: it is an expression
@@ -25,15 +25,7 @@ export function isResultUnused(
   node: Node,
   discarded: ReadonlySet<Node> = new Set(),
 ): boolean {
-  let slot = getContextSlot(tree, node)
-  while (
-    slot.parent?.type === 'SequenceExpression' &&
-    slot.index === slot.parent.expressions.length - 1
-  ) {
-    slot = getContextSlot(tree, slot.parent)
-  }
-
-  let { parent, key } = slot
+  let { parent, key } = getResultSlot(tree, node)
   switch (parent?.type) {
     case 'ArrowFunctionExpression':
       return key === 'body' && discarded.has(parent)

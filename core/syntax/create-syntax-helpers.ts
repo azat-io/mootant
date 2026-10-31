@@ -21,6 +21,7 @@ import { isBooleanContext } from './is-boolean-context'
 import { isLogicalOperand } from './is-logical-operand'
 import { getStatementList } from './get-statement-list'
 import { solveValueBounds } from './solve-value-bounds'
+import { isForEachResult } from './is-for-each-result'
 import { isConditionTest } from './is-condition-test'
 import { isValuePosition } from './is-value-position'
 import { getLogicalChain } from './get-logical-chain'
@@ -138,6 +139,7 @@ export function createSyntaxHelpers(
     isInsideTryBlock: node => isInsideTryBlock(tree, node),
     isConditionTest: node => isConditionTest(tree, node),
     isValuePosition: node => isValuePosition(tree, node),
+    isForEachResult: node => isForEachResult(tree, node),
     isJoinedArray: node => isJoinedArray(program, node),
     isLoggingCall: node => isLoggingCall(node, loggers),
     readTimerCall: node => readTimerCall(scopes, node),

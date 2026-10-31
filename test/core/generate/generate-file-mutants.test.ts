@@ -1431,6 +1431,18 @@ const IDIOMS: Idiom[] = [
     file: 'example.ts',
   },
   {
+    lines: [
+      'function f(count: number, items: unknown[]) {',
+      '  items.forEach(() => count++)',
+      '  return count',
+      '}',
+    ],
+    name: 'an update that a forEach callback returns',
+    kept: ['update-operator count++ -> count--'],
+    inputs: combine(NUMBERS, ITEMS),
+    file: 'example.ts',
+  },
+  {
     lines: ['function f(x: string | undefined) {', "  if (x || '') go()", '}'],
     inputs: [[undefined], [''], ['a']],
     name: "an || '' in a test",

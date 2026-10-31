@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-candidates'
 
+import { generateCandidates } from '../../helpers/generate-candidates'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
@@ -58,6 +59,17 @@ describe('updateOperator', () => {
     {
       expected: [{ replacement: 'i--', original: 'i++' }],
       source: '(j, i++)',
+    },
+    {
+      expected: [{ replacement: 'count--', original: 'count++' }],
+      source: 'items.forEach(() => count++)',
+    },
+    {
+      expected: [
+        { replacement: 'nextId--', original: 'nextId++' },
+        { replacement: '++nextId', original: 'nextId++' },
+      ],
+      source: 'ids = items.map(() => nextId++)',
     },
     {
       expected: [
@@ -148,7 +160,43 @@ describe('updateOperator', () => {
         'n++ -> ++n (equivalent unused-result)',
       ],
     ],
+    [
+      'items.forEach(() => (i++, j++)); x = items.map(() => k++)',
+      [
+        'i++ -> ++i (equivalent unused-result)',
+        'j++ -> ++j (equivalent unused-result)',
+      ],
+    ],
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('update-operator', source)).toStrictEqual(expected)
   })
+
+  it.each<[string, boolean]>([
+    ['count++', false],
+    ['items.forEach(() => count++)', true],
+  ])(
+    'explains the skipped prefix and postfix swap in %s',
+    (source, heuristic) => {
+      let { skipped } = generateCandidates(source)
+
+      expect(
+        skipped
+          .filter(candidate => candidate.mutator === 'update-operator')
+          .map(candidate => ({
+            heuristic: candidate.heuristic,
+            reason: candidate.reason,
+            rule: candidate.rule,
+          })),
+      ).toStrictEqual([
+        {
+          reason:
+            heuristic ?
+              'forEach ignores what its callback returns, so prefix and postfix do the same'
+            : 'the value of the update is unused, so prefix and postfix do the same',
+          rule: 'unused-result',
+          heuristic,
+        },
+      ])
+    },
+  )
 })

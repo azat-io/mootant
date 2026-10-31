@@ -178,6 +178,12 @@ export interface SyntaxHelpers {
   isValuePosition(node: Node): boolean
 
   /**
+   * Whether the value of the expression is what a callback of `forEach`
+   * returns, which `forEach` ignores (see `isForEachResult`).
+   */
+  isForEachResult(node: Node): boolean
+
+  /**
    * Whether the node is part of the message of an error.
    */
   isErrorMessage(node: Node): boolean

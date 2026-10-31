@@ -19,8 +19,8 @@ A surviving mutant means that the tests did not detect its change. Before you
 write a test, check that the change matters for the inputs your code can get.
 The page of each mutator shows which inputs tell the two versions apart.
 
-Some changes affect nothing a test can see, such as `count++` → `++count` in
-`items.forEach(() => count++)`. Ignore such a mutant with a
+Some changes affect nothing a test can see, such as `attempts++` → `++attempts`
+in `setTimeout(() => attempts++)`. Ignore such a mutant with a
 [comment](#ignore-mutants).
 
 ## Skipped changes

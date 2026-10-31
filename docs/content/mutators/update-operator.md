@@ -48,9 +48,9 @@ after it. Mootant makes this swap only where the code uses the value:
 | `++lastOrderNumber` in `return ++lastOrderNumber` | `lastOrderNumber++` |
 
 Mootant counts the value as used when the update is the body of an arrow
-function. So `items.forEach(() => count++)` gets `count++` → `++count`, which no
-test can catch: `forEach` ignores the value. With braces, `() => { count++ }`,
-Mootant skips the change.
+function, as in `items.map(() => nextLineId++)`. A `forEach` callback is the
+exception: `forEach` ignores the value, so Mootant skips this swap in
+`items.forEach(() => count++)`.
 
 In `for (let i = 0; i < n; i++)`, `i++` gets no mutant; see
 [Skipped changes](#skipped-changes).

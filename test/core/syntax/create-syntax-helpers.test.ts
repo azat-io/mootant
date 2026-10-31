@@ -44,6 +44,7 @@ let { scopes, find, tree } = createTestFile(
     "parts.push('a')",
     "x = parts.join('')",
     'x = /(?<a>b)/u.exec(s)?.groups?.a',
+    'items.forEach(() => count++)',
   ].join('\n'),
 )
 
@@ -133,6 +134,11 @@ describe('createSyntaxHelpers', () => {
     [
       'isErrorMessage',
       syntax => syntax.isErrorMessage(find('Literal', "'x'")),
+      true,
+    ],
+    [
+      'isForEachResult',
+      syntax => syntax.isForEachResult(find('UpdateExpression', 'count++')),
       true,
     ],
     [

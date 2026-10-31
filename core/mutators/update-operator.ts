@@ -7,7 +7,8 @@ import type { Mutator } from '../../types/mutator/mutator'
  * when the update advances a loop (catalog 2.2 a), emitted only with the
  * `timeouts` setting. When the value of the update is used, the prefix/postfix
  * swap with the same operator follows (`arr[j++]` to `arr[++j]`); it still
- * advances a loop, so it is always kept. Where the value is unused, that swap
+ * advances a loop, so it is always kept. Where the value is unused, or only
+ * returned to `forEach` by its callback (a guess by the method name), that swap
  * changes nothing (EQ) and follows as a skipped replacement, like the timeout
  * `++`/`--` swap.
  */
@@ -44,6 +45,13 @@ export let updateOperator: Mutator = {
             reason:
               'the value of the update is unused, so prefix and postfix do the same',
             rule: 'unused-result',
+          }
+        } else if (syntax.isForEachResult(node)) {
+          position.skip = {
+            reason:
+              'forEach ignores what its callback returns, so prefix and postfix do the same',
+            rule: 'unused-result',
+            heuristic: true,
           }
         }
         return [swap, position]
