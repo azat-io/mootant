@@ -1,11 +1,6 @@
 import type { SafeClock } from '../../shared/types/safe-clock'
 
 /**
- * How a test function settled: null when it resolved, else what it threw.
- */
-type Settled = { error: unknown } | null
-
-/**
  * Runs a test function against mootant's own timer. When the timer fires first,
  * the function keeps running in the background and its later failure is
  * ignored; the worker abandons the rest of its unit.
@@ -21,6 +16,10 @@ export async function raceTryTimeout(
   timeout: number,
   clock: SafeClock,
 ): Promise<boolean> {
+  /**
+   * How a test function settled: null when it resolved, else what it threw.
+   */
+  type Settled = { error: unknown } | null
   let timer: ReturnType<typeof setTimeout> | undefined
   let expired = new Promise<'expired'>(resolve => {
     timer = clock.setTimeout(() => {

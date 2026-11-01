@@ -5,20 +5,19 @@ import { TestRunner } from 'vitest'
 
 import { installTryHook } from '../../../../adapters/vitest/worker/install-try-hook'
 
-/**
- * `aroundEach` hook as Vitest calls it.
- */
-type AroundHook = (
-  runTest: () => Promise<void>,
-  context: { task: RunnerTestCase },
-) => Promise<void>
-
 describe('installTryHook', () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })
 
   it('adds an outermost aroundEach hook without a timeout', async () => {
+    /**
+     * `aroundEach` hook as Vitest calls it.
+     */
+    type AroundHook = (
+      runTest: () => Promise<void>,
+      context: { task: RunnerTestCase },
+    ) => Promise<void>
     let user: AroundHook = runTest => runTest()
     let hooks: { aroundEach: AroundHook[] } = { aroundEach: [user] }
     vi.spyOn(TestRunner, 'getSuiteHooks').mockReturnValue(hooks as never)

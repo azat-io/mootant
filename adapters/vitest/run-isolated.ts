@@ -14,11 +14,6 @@ import { readUnitInputs } from './read-unit-inputs'
 import { runPlan } from './run-plan'
 
 /**
- * End record of a unit.
- */
-type VitestEndRecord = Extract<VitestOutRecord, { kind: 'end' }>
-
-/**
  * Executes isolated units in one Vitest run, each on its whole test file and
  * the worker's teardown. A unit no worker claimed has no facts; a claimed unit
  * gets its facts from what its worker left (`buildIsolatedFacts`), as the unit
@@ -33,6 +28,10 @@ export async function runIsolated(
   handle: VitestHandle,
   plan: IsolatedPlan,
 ): Promise<IsolatedResult> {
+  /**
+   * End record of a unit.
+   */
+  type VitestEndRecord = Extract<VitestOutRecord, { kind: 'end' }>
   let outcome = await runPlan(handle, {
     describe: (unit, ended) => buildIsolatedFacts(handle, unit, ended),
     units: plan.units,

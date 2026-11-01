@@ -6,11 +6,6 @@ import type { TemplateParts } from '../../types/source/template-parts'
 import type { SourceRange } from '../../types/source/source-range'
 
 /**
- * Attribute or directive of an element.
- */
-type ElementAttribute = AST.BaseElement['attributes'][number]
-
-/**
  * Node of a template fragment.
  */
 type FragmentNode = AST.Fragment['nodes'][number]
@@ -45,6 +40,10 @@ let listeningTypes = new Set<FragmentNode['type']>([
  * @returns Expressions to mutate and the HTML comments, in source order.
  */
 export function collectSvelteExpressions(root: AST.Root): TemplateParts {
+  /**
+   * Attribute or directive of an element.
+   */
+  type ElementAttribute = AST.BaseElement['attributes'][number]
   let expressions: TemplateExpression[] = []
   let comments: Comment[] = []
 

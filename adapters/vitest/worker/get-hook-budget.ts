@@ -3,11 +3,6 @@ import type { RunnerTestSuite, RunnerTestCase, RunnerTestFile } from 'vitest'
 import { TestRunner } from 'vitest'
 
 /**
- * Hook lists of a suite as Vitest keeps them.
- */
-type SuiteHooks = ReturnType<typeof TestRunner.getSuiteHooks>
-
-/**
  * Key of the timeout Vitest keeps on `beforeAll` and `beforeEach` hooks for
  * their cleanup.
  */
@@ -70,6 +65,10 @@ export function getHookBudget(
   let kinds = task.type === 'test' ? EACH_HOOKS : ALL_HOOKS
   let budget = 0
   for (let suite of suites) {
+    /**
+     * Hook lists of a suite as Vitest keeps them.
+     */
+    type SuiteHooks = ReturnType<typeof TestRunner.getSuiteHooks>
     let hooks = TestRunner.getSuiteHooks(suite) as SuiteHooks | undefined
     if (hooks === undefined) {
       continue

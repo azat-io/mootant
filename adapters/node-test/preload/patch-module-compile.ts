@@ -1,15 +1,6 @@
 import type { SourceSwitcher } from '../types/source-switcher'
 
 /**
- * `Module.prototype._compile`, which compiles and runs the text of a CommonJS
- * module.
- */
-type Compile = (
-  this: unknown,
-  ...parameters: [content: string, filename: string, ...rest: unknown[]]
-) => unknown
-
-/**
  * Patches `Module.prototype._compile`, through which every CommonJS module
  * runs, so it reports the file and runs the text the switcher gives. Module
  * hooks do not see every such module: `module.register()` hooks never see
@@ -25,6 +16,14 @@ export function patchModuleCompile(
   switcher: SourceSwitcher,
   record: (file: string) => void,
 ): void {
+  /**
+   * `Module.prototype._compile`, which compiles and runs the text of a CommonJS
+   * module.
+   */
+  type Compile = (
+    this: unknown,
+    ...parameters: [content: string, filename: string, ...rest: unknown[]]
+  ) => unknown
   let compile = Reflect.get(prototype, '_compile') as Compile
   /**
    * Compiles a module with the text the switcher gives.
