@@ -25,7 +25,7 @@ let tagNames: Record<Side, string> = { before: 'del', after: 'ins' }
  * inline code joined by an arrow, such as `a + b` → `a - b`, in every row of a
  * table with Code and Mutant columns and in the `-` and `+` lines of a code
  * block. The changed text goes into `del` and `ins`, so only colors separate it
- * from the code around it. A table of skipped changes stays as it is, since
+ * from the code around it. A table of skipped changes stays unmarked, since
  * these changes never become mutants.
  *
  * @returns Transformer that marks the changes of a page.

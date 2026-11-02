@@ -278,7 +278,7 @@ article {
     }
   }
 
-  & .changes {
+  & :is(.changes, .skip-change) {
     & code:not(pre code) {
       padding: 0;
       color: var(--color-code-foreground);
@@ -332,22 +332,84 @@ article {
   }
 
   & .skips {
-    & td {
-      font-size: var(--font-size-xs);
-      line-height: 1.5;
+    table-layout: fixed;
+
+    & th:first-child {
+      inline-size: 40%;
     }
 
-    & code:not(pre code) {
-      font-size: 0.8125rem;
+    & td {
+      padding-block: var(--space-s);
+      line-height: 1.5;
+      vertical-align: baseline;
+      text-wrap: pretty;
+    }
+
+    & a {
+      white-space: nowrap;
+    }
+
+    & .skip-change {
+      display: grid;
+      grid-template-columns: [arrow] auto [code] minmax(0, 1fr);
+      column-gap: 1ch;
+      align-items: baseline;
+
+      & > :not(.skip-arrow) {
+        grid-column: code;
+      }
+
+      & code:not(pre code) {
+        font-size: 0.8125rem;
+        text-wrap: balance;
+        white-space: normal;
+
+        @container (inline-size < 740px) {
+          overflow-wrap: anywhere;
+        }
+      }
+    }
+
+    & .skip-arrow {
+      grid-column: arrow;
+      font: var(--font-size-2xs) / 1.5 var(--font-family-code);
+    }
+
+    & .skip-context {
+      font-size: var(--font-size-2xs);
+
+      & code:not(pre code) {
+        color: inherit;
+      }
+    }
+
+    & .skip-rule {
+      display: flex;
+      flex-flow: row wrap;
+      gap: 0 var(--space-xs);
+      align-items: center;
+      margin-block-start: var(--space-2xs);
+
+      & code:not(pre code) {
+        padding: 0;
+        font: var(--font-size-2xs) / 1.5 var(--font-family-code);
+        color: var(--color-code-ansi-bright-black);
+        background: none;
+      }
     }
 
     @container (inline-size < 600px) {
       & :is(tbody th, td):first-child {
         font-weight: normal;
+        color: inherit;
       }
 
       & :is(tbody th, td)[data-label]::before {
         display: none;
+      }
+
+      & tr {
+        padding-block: var(--space-s);
       }
     }
   }
@@ -388,6 +450,11 @@ article {
     &[data-category='subsumed'] {
       --category-color: var(--color-code-ansi-magenta);
     }
+  }
+
+  & .skip-rule .category {
+    font-size: var(--font-size-2xs);
+    line-height: 1.5;
   }
 
   &

@@ -24,10 +24,11 @@ let roles: Record<string, string> = {
  * Prepares the tables of a page. A table of three or more columns, or with code
  * and its mutant side by side, gets the class that stacks its rows on narrow
  * screens, with each cell labeled by its column. A table of skipped changes,
- * with the columns Reason, Example and Rule, gets the category of each rule,
- * such as `timer-delay`, noise, as an element of its own, and so does the table
- * of categories. A rule cell of another shape stops the build, so a page cannot
- * lose its category unnoticed.
+ * written with the columns Reason, Example and Rule, becomes two columns: the
+ * change, then its reason with the category and the rule under it. The table of
+ * categories gets each category as an element of its own. A row of skipped
+ * changes of another shape stops the build, so a page cannot lose its rule or
+ * category unnoticed.
  *
  * @returns Transformer that changes the tables of a page.
  */
@@ -35,11 +36,13 @@ export let rehypeTables: RehypePlugin = () => (tree, file) => {
   function visit(node: HastNode): void {
     if (node.tagName === 'table') {
       let titles = getTitles(node)
-      if (titles.length >= 3 || titles.some(title => isMutantColumn(title))) {
-        stackTable(node, titles)
-      }
+      let isStacked =
+        titles.length >= 3 || titles.some(title => isMutantColumn(title))
       if (titles.join(',') === 'Reason,Example,Rule') {
         markSkippedChanges(node)
+      }
+      if (isStacked) {
+        stackTable(node, getTitles(node))
       }
       if (titles[0] === 'Category') {
         markCategories(node)
@@ -54,18 +57,23 @@ export let rehypeTables: RehypePlugin = () => (tree, file) => {
 
   function markSkippedChanges(table: HastNode): void {
     addClass(table, 'skips')
-    let [, body] = getElements(table)
+    let [head, body] = getElements(table)
+    let titleRow = getElements(head)[0]!
+    let [reasonTitle, exampleTitle] = getElements(titleRow)
+    exampleTitle!.children = [getTextNode('Change')]
+    titleRow.children = [exampleTitle!, reasonTitle!]
     for (let row of getElements(body)) {
-      let cell = getElements(row).at(-1)!
-      let [rule, separator] = cell.children ?? []
-      let category = /^,\s*(?<name>\w+)$/u.exec(separator?.value ?? '')
-        ?.groups?.['name']
-      if (!category || rule?.tagName !== 'code') {
+      let [reason, example, rule] = getElements(row)
+      let change = getChange(example)
+      let ruleLine = getRuleLine(rule)
+      if (!reason || !example || !change || !ruleLine) {
         throw new Error(
-          `${file.path}: skipped change "${getText(cell)}" needs a rule and a category`,
+          `${file.path}: skipped change "${getText(row)}" needs code, a mutant, a rule and a category`,
         )
       }
-      cell.children = [rule, getCategory(category, [getTextNode(category)])]
+      example.children = [change]
+      reason.children = [...(reason.children ?? []), ruleLine]
+      row.children = [example, reason]
     }
   }
 
@@ -94,6 +102,51 @@ function stackTable(table: HastNode, titles: string[]): void {
       }
     }
   }
+}
+
+/**
+ * Builds the skipped change of a row: the code, the mutant under it after an
+ * arrow, then the case it applies to, such as `for cart: Cart`.
+ *
+ * @param cell - Cell with the code, an arrow, the mutant and maybe the case.
+ * @returns Element of the change, or nothing for a cell of another shape.
+ */
+function getChange(cell: undefined | HastNode): undefined | HastNode {
+  let [before, arrow, after, ...context] = cell?.children ?? []
+  if (
+    before?.tagName !== 'code' ||
+    after?.tagName !== 'code' ||
+    arrow?.value?.trim() !== '→'
+  ) {
+    return undefined
+  }
+  return getPart('skip-change', [
+    before,
+    getPart('skip-arrow', [getTextNode('→')]),
+    after,
+    ...(context.length > 0 ? [getPart('skip-context', context)] : []),
+  ])
+}
+
+/**
+ * Builds the line with the category and the rule of a skipped change. The
+ * category goes first, so the colors of a table form one column.
+ *
+ * @param cell - Cell with the rule in code, a comma and the category.
+ * @returns Element of the line, or nothing for a cell of another shape.
+ */
+function getRuleLine(cell: undefined | HastNode): undefined | HastNode {
+  let [rule, separator] = cell?.children ?? []
+  let category = /^,\s*(?<name>\w+)$/u.exec(separator?.value ?? '')?.groups?.[
+    'name'
+  ]
+  if (!category || rule?.tagName !== 'code') {
+    return undefined
+  }
+  return getPart('skip-rule', [
+    getCategory(category, [getTextNode(category)]),
+    rule,
+  ])
 }
 
 /**
@@ -157,5 +210,21 @@ function addRoles(node: HastNode): void {
     for (let child of getElements(node)) {
       addRoles(child)
     }
+  }
+}
+
+/**
+ * Builds an inline element with a class.
+ *
+ * @param name - Class of the element.
+ * @param children - Content of the element.
+ * @returns Element for the children of a cell.
+ */
+function getPart(name: string, children: HastNode[]): HastNode {
+  return {
+    properties: { className: [name] },
+    type: 'element',
+    tagName: 'span',
+    children,
   }
 }
