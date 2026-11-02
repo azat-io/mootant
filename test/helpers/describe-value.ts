@@ -3,15 +3,16 @@ import { describeObject } from './describe-object.ts'
 /**
  * Writes a value as canonical text, so two results compare as strings: `-0`
  * differs from `0` and `NaN` is written as such, strings are quoted, object
- * keys are sorted and arrays keep their order. Dates, maps, sets, errors and
- * class instances are written with their kind. Properties and array elements
- * are read through their descriptors: an accessor is written as `get`/`set`
- * without being called, so describing a value never runs its getters, and a
- * hole is written as such. Reference identity is part of the text: an object
- * met again is written as `*` and the path where it was first met, so a copy
- * differs from the object itself and a cycle ends; an object that existed
- * before a run is written with `@` and its path at that time, so replacing it
- * with an equal new object is seen too.
+ * keys are sorted and arrays keep their order, with their other own properties
+ * after the elements, sorted too. Dates, maps, sets, errors and class instances
+ * are written with their kind. Properties and array elements are read through
+ * their descriptors: an accessor is written as `get`/`set` without being
+ * called, so describing a value never runs its getters, and a hole is written
+ * as such. Reference identity is part of the text: an object met again is
+ * written as `*` and the path where it was first met, so a copy differs from
+ * the object itself and a cycle ends; an object that existed before a run is
+ * written with `@` and its path at that time, so replacing it with an equal new
+ * object is seen too.
  *
  * @param value - Value to describe.
  * @param before - Objects that existed before the run, with their paths then.

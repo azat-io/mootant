@@ -1,11 +1,15 @@
 import type { AST } from '@eslint-community/regexpp'
 
 import type { RegexPatternOptions } from '../../types/mutator/regex-pattern-options'
+import type { RegexSource } from '../../types/regex/regex-source'
 import type { RegexChange } from '../../types/regex/regex-change'
 import type { SkipNote } from '../../types/mutant/skip-note'
 
+import { findOpenRepeatScope } from './find-open-repeat-scope'
 import { matchesAnyCharacter } from './matches-any-character'
+import { keepsNeighborTokens } from './keeps-neighbor-tokens'
 import { hasCapturingGroup } from './has-capturing-group'
+import { hasBackreference } from './has-backreference'
 import { isEdgeWildcard } from './is-edge-wildcard'
 import { loadRegexpp } from './load-regexpp'
 
@@ -35,6 +39,16 @@ const CAPTURING_GROUP_SKIP: SkipNote = {
 }
 
 /**
+ * Skip of a change of the upper bound of a quantifier that a lookaround does
+ * not see.
+ */
+const LOOKAROUND_REPEAT_SKIP: SkipNote = {
+  reason:
+    'a lookaround only asks whether its pattern matches, and with nothing required beyond the quantifier its upper bound does not change that',
+  rule: 'unused-repeat',
+}
+
+/**
  * Lists the changes regex-pattern considers for a pattern, ordered by start
  * and, for one start, outer first: removing `^` and `$`, `\b` and `\B`,
  * lookaround assertions and alternatives, making an optional element required,
@@ -42,20 +56,25 @@ const CAPTURING_GROUP_SKIP: SkipNote = {
  * narrowing quantifiers and moving their bounds, removing class elements and
  * narrowing ranges, negating classes and escapes, and removing alternatives
  * from long lists. A removal of a part with a capturing group, an anchor next
- * to an edge wildcard, a widening of what already matches any character and,
- * without the option, an alternative of a long list come with their skip.
+ * to an edge wildcard, a widening of what already matches any character, a
+ * change of an upper bound that does not change whether the part of the pattern
+ * around it matches (see `findOpenRepeatScope`) and, without the option, an
+ * alternative of a long list come with their skip.
  *
- * @param pattern - Pattern tree.
- * @param flags - Flags of the literal.
+ * @param source - Pattern tree and flags of the regular expression.
  * @param options - Options of the mutator.
+ * @param testedSkip - Skip of a change of an upper bound at an open edge of the
+ *   pattern, when code only asks whether the pattern matches; null otherwise.
  * @returns Changes with offsets relative to the pattern.
  */
 export function collectPatternChanges(
-  pattern: AST.Pattern,
-  flags: string,
+  source: Pick<RegexSource, 'flags' | 'tree'>,
   options: Readonly<RegexPatternOptions>,
+  testedSkip: SkipNote | null,
 ): RegexChange[] {
+  let { tree: pattern, flags } = source
   let isUnicode = flags.includes('u') || flags.includes('v')
+  let canSkipBounds = options.quantifiers && !hasBackreference(pattern)
   let changes: RegexChange[] = []
 
   /**
@@ -108,6 +127,32 @@ export function collectPatternChanges(
   }
 
   loadRegexpp().visitRegExpAST(pattern, {
+    onQuantifierEnter(node) {
+      let range = { start: node.element.end, end: node.end }
+      let { greedy, min, max } = node
+      if (min === 0 && max > 0) {
+        add(range, max === 1 ? '' : formatQuantifier(1, max, greedy))
+      }
+      if (!options.quantifiers) {
+        return
+      }
+      let boundSkip = canSkipBounds ? getUpperBoundSkip(node, testedSkip) : null
+      let seen = new Set<string>()
+      for (let [newMin, newMax] of getBoundChanges(min, max)) {
+        let text = formatQuantifier(newMin, newMax, greedy)
+        let isBound = boundSkip !== null && newMin === min
+        if (!isBound || !seen.has(text)) {
+          add(
+            range,
+            text,
+            isBound && keepsNeighborTokens(pattern, flags, { ...range, text }) ?
+              boundSkip
+            : null,
+          )
+        }
+        seen.add(text)
+      }
+    },
     onAssertionEnter(node) {
       let target = node.parent.type === 'Quantifier' ? node.parent : node
       switch (node.kind) {
@@ -171,19 +216,6 @@ export function collectPatternChanges(
         add({ start: node.start + 1, end: node.start + 2 }, negated)
       }
     },
-    onQuantifierEnter(node) {
-      let range = { start: node.element.end, end: node.end }
-      let { greedy, min, max } = node
-      if (min === 0 && max > 0) {
-        add(range, max === 1 ? '' : formatQuantifier(1, max, greedy))
-      }
-      if (!options.quantifiers) {
-        return
-      }
-      for (let [newMin, newMax] of getBoundChanges(min, max)) {
-        add(range, formatQuantifier(newMin, newMax, greedy))
-      }
-    },
     onCharacterClassRangeEnter(node) {
       if (!options.classMembers || node.min.value === node.max.value) {
         return
@@ -219,6 +251,38 @@ export function collectPatternChanges(
 }
 
 /**
+ * Lists the quantifier bounds the `quantifiers` option tries: at most once
+ * where more were allowed (`x+` to `x`, `x*` to `x?`, `{2,5}` to `{2}`), and
+ * each bound moved by one where the result stays a valid, different quantifier
+ * (`x+` to `x*` and `x{2,}`, `{2,5}` to `{1,5}`, `{3,5}`, `{2,4}` and `{2,6}`).
+ * A bound too large to be exact, which would print in exponent form, gets
+ * none.
+ *
+ * @param min - Lower bound.
+ * @param max - Upper bound, Infinity when unbounded.
+ * @returns New bounds as `[min, max]` pairs.
+ */
+function getBoundChanges(min: number, max: number): [number, number][] {
+  let bounds: [number, number][] = []
+  if (!Number.isSafeInteger(max === Infinity ? min : max)) {
+    return bounds
+  }
+  if (max > 1 && max > min) {
+    bounds.push(min === 0 ? [0, 1] : [min, min])
+  }
+  if (min >= 1) {
+    bounds.push([min - 1, max], [min + 1, Math.max(max, min + 1)])
+  }
+  if (max !== Infinity && max > 1 && max > min) {
+    bounds.push([min, max - 1])
+  }
+  if (max !== Infinity && max >= 1 && (min !== 0 || max !== 1)) {
+    bounds.push([min, max + 1])
+  }
+  return bounds
+}
+
+/**
  * Prints a quantifier in its shortest form.
  *
  * @param min - Lower bound.
@@ -248,34 +312,6 @@ function formatQuantifier(min: number, max: number, greedy: boolean): string {
 }
 
 /**
- * Lists the quantifier bounds the `quantifiers` option tries: at most once
- * where more were allowed (`x+` to `x`, `x*` to `x?`, `{2,5}` to `{2}`), and
- * each bound moved by one where the result stays a valid, different quantifier
- * (`x+` to `x*` and `x{2,}`, `{2,5}` to `{1,5}`, `{3,5}`, `{2,4}` and
- * `{2,6}`).
- *
- * @param min - Lower bound.
- * @param max - Upper bound, Infinity when unbounded.
- * @returns New bounds as `[min, max]` pairs.
- */
-function getBoundChanges(min: number, max: number): [number, number][] {
-  let bounds: [number, number][] = []
-  if (max > 1 && max > min) {
-    bounds.push(min === 0 ? [0, 1] : [min, min])
-  }
-  if (min >= 1) {
-    bounds.push([min - 1, max], [min + 1, Math.max(max, min + 1)])
-  }
-  if (max !== Infinity && max > 1 && max > min) {
-    bounds.push([min, max - 1])
-  }
-  if (max !== Infinity && max >= 1 && (min !== 0 || max !== 1)) {
-    bounds.push([min, max + 1])
-  }
-  return bounds
-}
-
-/**
  * Prints a character for a class range: a digit or ASCII letter as it is, any
  * other character as a Unicode escape.
  *
@@ -292,6 +328,29 @@ function printCharacter(value: number, isUnicode: boolean): string {
   return isUnicode ?
       String.raw`\u{${hex}}`
     : String.raw`\u${hex.padStart(4, '0')}`
+}
+
+/**
+ * Decides whether a change of the upper bound of a quantifier is skipped, in a
+ * pattern without backreferences. A capturing group in a lookaround shows what
+ * the quantifier took, so that lookaround counts only as the pattern does, when
+ * code only asks whether the pattern matches.
+ *
+ * @param node - Quantifier.
+ * @param testedSkip - Skip of the change where that is all code asks, or null.
+ * @returns Skip of the change, or null.
+ */
+function getUpperBoundSkip(
+  node: AST.Quantifier,
+  testedSkip: SkipNote | null,
+): SkipNote | null {
+  let scope = findOpenRepeatScope(node)
+  if (scope === null) {
+    return null
+  }
+  return scope.type === 'Pattern' || hasCapturingGroup(scope) ?
+      testedSkip
+    : LOOKAROUND_REPEAT_SKIP
 }
 
 /**

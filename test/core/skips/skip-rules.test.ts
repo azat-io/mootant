@@ -17,6 +17,8 @@ describe('skipRules', () => {
     ['never-falsy', { category: 'equivalent', heuristic: true }],
     ['named-groups', { category: 'equivalent', heuristic: true }],
     ['joined-array', { category: 'equivalent', heuristic: false }],
+    ['unused-repeat', { category: 'equivalent', heuristic: false }],
+    ['anchored-global', { category: 'equivalent', heuristic: true }],
   ])('registers %s as %o', (id, expected) => {
     expect(skipRules[id]).toStrictEqual(expected)
   })

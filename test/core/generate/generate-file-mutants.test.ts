@@ -149,6 +149,12 @@ interface RegexIdiom {
   inputs: unknown[][]
 
   /**
+   * Only preset that the idiom runs under, when its skips need an option of
+   * that preset; both presets when not given.
+   */
+  preset?: string
+
+  /**
    * Rules of the skipped regex candidates of `f` whose claims the run checks,
    * in canonical order.
    */
@@ -648,6 +654,34 @@ const REGEX_STRINGS = [
   'acb',
   'bc',
   'b',
+]
+
+/**
+ * Strings that tell the upper bounds of a quantifier over digits apart, around
+ * the percent sign, a letter and the ends of the text.
+ */
+const REPEAT_STRINGS = [
+  '1',
+  '12',
+  '123',
+  '1234',
+  '%',
+  '1%',
+  '12%',
+  'a1%',
+  'a12%',
+  '1%2',
+  '12%34%',
+  '1 2%',
+  '1a',
+  'a1',
+  '\n1',
+  '1\n',
+  '1\n2%',
+  'a%',
+  'b%',
+  '1A',
+  '1B',
 ]
 
 /**
@@ -2176,6 +2210,208 @@ const REGEX_IDIOMS: RegexIdiom[] = [
     inputs: combine([...REGEX_STRINGS, '\u{0}1', '1', '\u{0}', '2']),
     name: 'a RegExp call with a null escape before a digit',
     skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return /\d+(?=%)/.test(s)`,
+      '}',
+    ],
+    name: 'a test of a pattern with a quantifier at its start',
+    inputs: combine([...REGEX_STRINGS, ...REPEAT_STRINGS]),
+    skips: ['unused-repeat'],
+    preset: 'strict',
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return /^\d{2,3}/.test(s)`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, ...REPEAT_STRINGS]),
+    name: 'a test of a pattern with a range at its end',
+    skips: ['unused-repeat', 'unused-repeat'],
+    preset: 'strict',
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return /-?\d+%/.test(s)`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, ...REPEAT_STRINGS, '-1%', '-12%', '-']),
+    name: 'a test of a pattern with an optional part before a quantifier',
+    skips: ['unused-repeat'],
+    preset: 'strict',
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return /(?:\d+|x)%|^a+/.test(s)`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, ...REPEAT_STRINGS, 'x%', 'yx%', 'xx%']),
+    name: 'a test of a group and an alternative with open quantifiers',
+    skips: ['unused-repeat', 'unused-repeat'],
+    preset: 'strict',
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  const pattern = /\d+/`,
+      '  return [pattern.test(s), pattern.exec(s) !== null]',
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, ...REPEAT_STRINGS]),
+    name: 'a name that is only tested',
+    skips: ['unused-repeat'],
+    preset: 'strict',
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return [/\d+a/g.test(s), s.match(/\d+b/g) === null]`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, ...REPEAT_STRINGS, '1a', '12a', '1b']),
+    name: 'a global literal that runs once for each evaluation',
+    skips: ['unused-repeat', 'unused-flag', 'unused-repeat'],
+    preset: 'strict',
+  },
+  {
+    inputs: combine([
+      ...REGEX_STRINGS,
+      ...REPEAT_STRINGS,
+      'a1',
+      'a12',
+      'a',
+      'ab',
+      'A1',
+      'a1a2',
+      '1bc',
+      '12bc',
+      'bc',
+      'xbc',
+      '1BC',
+      '1bc1bc',
+    ]),
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return s.replace(/a(?=\d+)/g, '-').replace(/(?<=\d+b)c/g, '-')`,
+      '}',
+    ],
+    name: 'quantifiers at the far end of a lookahead and a lookbehind',
+    skips: ['unused-repeat', 'unused-repeat'],
+    preset: 'strict',
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return s.match(/\d+/g)?.[0]`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, ...REPEAT_STRINGS, '1 2', 'a1b22']),
+    name: 'the first of the global matches',
+    skips: ['unused-flag'],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  let found = s.match(/(\d)+/g)`,
+      '  return found && found[0]',
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, ...REPEAT_STRINGS, '1 2', 'a1b22']),
+    name: 'the first of the global matches through a name',
+    skips: ['unused-flag'],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      String.raw`  return s.match(/\d/g) === null`,
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, ...REPEAT_STRINGS]),
+    name: 'a global match compared with null',
+    skips: ['unused-flag'],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      '  let [first] = s.match(/(a)+b?/g) ?? []',
+      '  return first',
+      '}',
+    ],
+    name: 'the first of the global matches in an array pattern',
+    inputs: combine([...REGEX_STRINGS, 'b aab', 'ab a']),
+    skips: ['unused-flag'],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      '  return (s.match(/^a/g) || []).length',
+      '}',
+    ],
+    name: 'the length of a match anchored at the start',
+    inputs: combine([...REGEX_STRINGS, 'aab', 'aaa a']),
+    skips: ['anchored-global'],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      '  return s.match(/b$|a$/g)?.length',
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, ...REPEAT_STRINGS, 'b1', '1\n2']),
+    name: 'the length of a match anchored at the end',
+    skips: ['anchored-global'],
+  },
+  {
+    lines: ['function f(s: string) {', '  return s.match(/^a/g)', '}'],
+    name: 'the whole result of a match anchored at the start',
+    inputs: combine(REGEX_STRINGS),
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      '  return s.match(/^(a)/g)?.length',
+      '}',
+    ],
+    name: 'the length of an anchored match with a capturing group',
+    inputs: combine(REGEX_STRINGS),
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      '  let found = s.match(/a/g) ?? []',
+      '  found[0] = function (this: string[]) {',
+      '    return this.length',
+      '  }',
+      '  return found[0]()',
+      '}',
+    ],
+    name: 'a function written to the first match, which sees the whole result',
+    inputs: combine([...REGEX_STRINGS, 'aA']),
+    skips: [],
+  },
+  {
+    lines: [
+      'function f(s: string) {',
+      '  return s.match(/^a|^b/gm)?.length',
+      '}',
+    ],
+    inputs: combine([...REGEX_STRINGS, 'a\nb', 'b\na\nc']),
+    name: 'the length of a match anchored at each line',
+    skips: [],
+  },
+  {
+    lines: ['function f(s: string) {', "  return s.replace(/^a+/, '-')", '}'],
+    name: 'a global flag added to a replace anchored at the start',
+    inputs: combine(REGEX_STRINGS),
+    skips: ['anchored-global'],
+    preset: 'strict',
   },
 ]
 
@@ -4377,10 +4613,11 @@ describe('generateFileMutants', () => {
   )
 
   it.each(
-    REGEX_IDIOMS.flatMap(idiom => [
-      { preset: 'recommended', ...idiom },
-      { preset: 'strict', ...idiom },
-    ]),
+    REGEX_IDIOMS.flatMap(idiom =>
+      (idiom.preset ? [idiom.preset] : ['recommended', 'strict']).map(
+        preset => ({ ...idiom, preset }),
+      ),
+    ),
   )(
     'keeps no equivalent regex mutant and no unsound skip in $name under $preset',
     async ({ file = 'example.ts', settings, inputs, preset, skips, lines }) => {

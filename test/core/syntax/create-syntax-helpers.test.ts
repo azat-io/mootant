@@ -5,10 +5,19 @@ import { describe, expect, it, vi } from 'vitest'
 import type { SyntaxHelpers } from '../../../types/syntax/syntax-helpers'
 
 import { createSyntaxHelpers } from '../../../core/syntax/create-syntax-helpers'
+import { readsRegexStatics } from '../../../core/regex/reads-regex-statics'
 import { findLoggingCalls } from '../../../core/syntax/find-logging-calls'
 import { solveValueBounds } from '../../../core/syntax/solve-value-bounds'
 import { DEFAULT_LOGGERS } from '../../../core/presets/default-loggers'
 import { createTestFile } from '../../helpers/create-test-file'
+
+vi.mock(
+  import('../../../core/regex/reads-regex-statics'),
+  async importOriginal => {
+    let actual = await importOriginal()
+    return { readsRegexStatics: vi.fn(actual.readsRegexStatics) }
+  },
+)
 
 vi.mock(
   import('../../../core/syntax/solve-value-bounds'),
@@ -45,6 +54,9 @@ let { scopes, find, tree } = createTestFile(
     "x = parts.join('')",
     'x = /(?<a>b)/u.exec(s)?.groups?.a',
     'items.forEach(() => count++)',
+    'x = /c/.test(s)',
+    'x = s.match(/d/g)?.[0]',
+    'x = s.match(/e/g) === null',
   ].join('\n'),
 )
 
@@ -152,6 +164,23 @@ describe('createSyntaxHelpers', () => {
       true,
     ],
     [
+      'getMatchResultUse',
+      syntax =>
+        syntax.getMatchResultUse(find('CallExpression', 's.match(/d/g)')),
+      'first',
+    ],
+    [
+      'isPresenceTest',
+      syntax => syntax.isPresenceTest(find('CallExpression', 's.match(/e/g)')),
+      true,
+    ],
+    [
+      'isRegexOnlyTested',
+      syntax => syntax.isRegexOnlyTested(find('Literal', '/c/'), ''),
+      true,
+    ],
+    ['readsRegexStatics', syntax => syntax.readsRegexStatics(), false],
+    [
       'isJoinedArray',
       syntax => syntax.isJoinedArray(find('ArrayExpression', '[]')),
       true,
@@ -247,6 +276,28 @@ describe('createSyntaxHelpers', () => {
 
     expect(call(syntax)).toStrictEqual(expected)
   })
+
+  it.each([
+    ['x = RegExp.$1', true],
+    ['x = 1', false],
+  ])('reads the text of the file for %s once', (fileText, expected) => {
+    let file = createTestFile('a')
+    let syntax = createSyntaxHelpers(file.tree, file.scopes, { fileText })
+    vi.mocked(readsRegexStatics).mockClear()
+
+    expect(syntax.readsRegexStatics()).toBe(expected)
+    expect(syntax.readsRegexStatics()).toBe(expected)
+    expect(readsRegexStatics).toHaveBeenCalledExactlyOnceWith(fileText)
+  })
+
+  it('reads no text of the file by default', () => {
+    let file = createTestFile('x = RegExp.$1')
+
+    expect(
+      createSyntaxHelpers(file.tree, file.scopes).readsRegexStatics(),
+    ).toBe(false)
+  })
+
   it('binds the discarded arrow functions to isResultUnused', () => {
     let file = createTestFile('f(() => a)')
     let syntax = createSyntaxHelpers(file.tree, file.scopes, {

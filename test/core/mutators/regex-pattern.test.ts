@@ -251,6 +251,161 @@ describe('regexPattern', () => {
     expect(listSkipped('regex-pattern', source, setup)).toStrictEqual(expected)
   })
 
+  describe('with an upper bound that does not change whether it matches', () => {
+    /**
+     * Lists the changes of a snippet that the strict preset skips as
+     * unused-repeat.
+     *
+     * @param source - Text of the snippet.
+     * @returns Each as `original -> replacement (equivalent unused-repeat)`.
+     */
+    function listBoundSkips(source: string): string[] {
+      return listSkipped('regex-pattern', source, { preset: 'strict' }).filter(
+        line => line.endsWith('(equivalent unused-repeat)'),
+      )
+    }
+
+    it.each<[string, string[]]>([
+      [
+        String.raw`x = /\d+(?=%)/.test(s)`,
+        [String.raw`/\d+(?=%)/ -> /\d(?=%)/ (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`x = /^\d+/.test(s)`,
+        [String.raw`/^\d+/ -> /^\d/ (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`x = /\d+$/.test(s)`,
+        [String.raw`/\d+$/ -> /\d$/ (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`x = /\d{5}/.test(s)`,
+        [String.raw`/\d{5}/ -> /\d{5,6}/ (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`if (/\d+/.exec(s)) go()`,
+        [String.raw`/\d+/ -> /\d/ (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`const re = /\d+/; x = re.test(s)`,
+        [String.raw`/\d+/ -> /\d/ (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`function f(s: string) { if (s.match(/\d+/)) go() }`,
+        [String.raw`/\d+/ -> /\d/ (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`function f(s?: string) { return s?.match(/\d+/) ? 1 : 2 }`,
+        [String.raw`/\d+/ -> /\d/ (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`function f(s: string) { return s.match(/\d+/g) === null }`,
+        [String.raw`/\d+/g -> /\d/g (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`x = new RegExp('\\d+').test(s)`,
+        [String.raw`'\\d+' -> '\\d' (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`x = s.replace(/a(?=\s+)/, '')`,
+        [String.raw`/a(?=\s+)/ -> /a(?=\s)/ (equivalent unused-repeat)`],
+      ],
+      [
+        String.raw`x = /a(?=(\s+))/.test(s)`,
+        [String.raw`/a(?=(\s+))/ -> /a(?=(\s))/ (equivalent unused-repeat)`],
+      ],
+    ])('lists the skipped mutants of %s', (source, expected) => {
+      expect(listBoundSkips(source)).toStrictEqual(expected)
+    })
+
+    it.each([
+      String.raw`x = /^\d+$/.test(s)`,
+      String.raw`x = /a\d+b/.test(s)`,
+      String.raw`x = /\d+%/.exec(s)?.[0]`,
+      String.raw`if (s.match(/\d+/)) go()`,
+      String.raw`if (stream.match(/^\d+/)) go()`,
+      String.raw`if (this.match(/\d+/)) go()`,
+      String.raw`x = items.filter(item => item.match(/\d+/))`,
+      String.raw`x = items.filter((item: string) => item.match(/\d+/))`,
+      String.raw`x = Boolean(((s: string) => s.match(/\d+/))(y))`,
+      String.raw`function f(s: string) { return s.match(/\d+/, 1) ? 1 : 2 }`,
+      String.raw`x = s.match(/\d+%/)`,
+      String.raw`function f(s: string) { return s.match(/\d+%/y) ? 1 : 2 }`,
+      String.raw`x = /\d+%/y.test(s)`,
+      String.raw`const re = /\d+%/g; x = re.test(s)`,
+      String.raw`const re = /\d+%/; x = re.test(s); y = re.exec(s)`,
+      String.raw`export const re = /\d+%/; x = re.test(s)`,
+      String.raw`x = /(\d+)x\1/.test(s)`,
+      String.raw`x = /\d+%/.test(s); y = RegExp.lastMatch`,
+      String.raw`function f(s: string) { return s.match(/\d+%/) ? RegExp.$1 : '' }`,
+      String.raw`x = /a(?=(\s+))/.test(s); y = RegExp.$1`,
+      'x = /\\d+%/.test(s); y = RegExp\n  .lastMatch',
+      String.raw`x = /\d+%/.test(s); y = RegExp /* c */ .lastMatch`,
+      String.raw`x = /\d+%/.test(s); y = RegExp!.lastMatch`,
+      String.raw`x = /\d+%/.test(s); y = (RegExp as any).lastMatch`,
+      String.raw`x = /\d+%/.test(s); let { lastMatch } = RegExp`,
+      String.raw`x = s.replace(/\d+%/, '')`,
+      String.raw`x = s.replace(/a(?=(\s+))/, '$1')`,
+      `x = new RegExp(\`\${a}\\\\d+\`).test(s)`,
+    ])('keeps every bound of %s', source => {
+      expect(listBoundSkips(source)).toStrictEqual([])
+    })
+
+    it('leaves the option out of recommended', () => {
+      expect(
+        listSkipped('regex-pattern', String.raw`x = /\d+/.test(s)`),
+      ).toStrictEqual([])
+    })
+
+    it('marks a skip as a guess unless a lookaround alone decides it', () => {
+      let source = [
+        'declare let s: string',
+        String.raw`x = /\d+/.test(s)`,
+        String.raw`y = s.match(/\w+/) ? 1 : 2`,
+        String.raw`z = s.replace(/a(?=\s+)/, '')`,
+        String.raw`w = /a(?=(\s+))/.test(s)`,
+      ].join('\n')
+      let { skipped } = generateCandidates(source, { preset: 'strict' })
+
+      expect(
+        skipped
+          .filter(candidate => candidate.rule === 'unused-repeat')
+          .map(candidate => [
+            source.slice(candidate.start, candidate.end),
+            candidate.heuristic,
+          ]),
+      ).toStrictEqual([
+        [String.raw`/\d+/`, true],
+        [String.raw`/\w+/`, true],
+        [String.raw`/a(?=\s+)/`, false],
+        [String.raw`/a(?=(\s+))/`, true],
+      ])
+    })
+
+    it('reads the blocks of a component around the script for the legacy properties', () => {
+      expect(
+        listSkipped(
+          'regex-pattern',
+          [
+            String.raw`<script setup>const ok = /\d+/.test('a12')</script>`,
+            '<template><p>{{ RegExp.lastMatch }}</p></template>',
+          ].join('\n'),
+          { file: 'example.vue', preset: 'strict' },
+        ).filter(line => line.endsWith('(equivalent unused-repeat)')),
+      ).toStrictEqual([])
+      expect(
+        listSkipped(
+          'regex-pattern',
+          [
+            String.raw`<script setup>const ok = /\d+/.test('a12')</script>`,
+            '<template><p>{{ ok }}</p></template>',
+          ].join('\n'),
+          { file: 'example.vue', preset: 'strict' },
+        ).filter(line => line.endsWith('(equivalent unused-repeat)')),
+      ).toHaveLength(1)
+    })
+  })
+
   it('keeps a pattern that starts to match the empty string with timeouts', () => {
     expect(
       mutate('/a+/g', {

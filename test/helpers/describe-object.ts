@@ -21,7 +21,16 @@ export function describeObject(
         : '<hole>',
       )
     }
-    return `[${elements.join(',')}]`
+    let extras = describeEntries(
+      Object.entries(Object.getOwnPropertyDescriptors(item)).filter(
+        ([key]) =>
+          key !== 'length' &&
+          (!/^(?:0|[1-9]\d*)$/u.test(key) || Number(key) >= item.length),
+      ),
+      path,
+      describe,
+    )
+    return `[${[...elements, ...extras].join(',')}]`
   }
   if (item instanceof Date) {
     let time = item.getTime()
@@ -43,13 +52,33 @@ export function describeObject(
     )
     return `Set{${entries.join(',')}}`
   }
-  let entries = Object.entries(Object.getOwnPropertyDescriptors(item))
+  let entries = describeEntries(
+    Object.entries(Object.getOwnPropertyDescriptors(item)),
+    path,
+    describe,
+  )
+  return `${getKind(item)}{${entries.join(',')}}`
+}
+
+/**
+ * Writes own properties of an object in the order of their keys.
+ *
+ * @param entries - Keys and descriptors of the properties.
+ * @param path - Where the object sits, written from the described root.
+ * @param describe - Writes a part of the object met at a path.
+ * @returns Canonical text of each property, as `key:text`.
+ */
+function describeEntries(
+  entries: [string, PropertyDescriptor][],
+  path: string,
+  describe: (part: unknown, partPath: string) => string,
+): string[] {
+  return entries
     .toSorted(([first], [second]) => (first < second ? -1 : 1))
     .map(
       ([key, descriptor]) =>
         `${key}:${describeProperty(descriptor, `${path}.${key}`, describe)}`,
     )
-  return `${getKind(item)}{${entries.join(',')}}`
 }
 
 /**

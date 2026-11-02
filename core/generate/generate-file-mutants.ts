@@ -406,6 +406,17 @@ function collectProgramCandidates(
   let activeIds = new Set(mutators.map(active => active.id))
   return collectCandidates({
     services: {
+      syntax: createSyntaxHelpers(tree, scopes, {
+        sharedScopes: getSharedScopes(
+          input.file,
+          parsed.program,
+          program.expressions,
+        ),
+        loggingCalls: program.loggingCalls,
+        loggers: settings.loggers,
+        fileText: input.source,
+        discarded: handlers,
+      }),
       isActive(id: string, node: Node): boolean {
         return (
           activeIds.has(id) &&
@@ -416,16 +427,6 @@ function collectProgramCandidates(
           }) === null
         )
       },
-      syntax: createSyntaxHelpers(tree, scopes, {
-        sharedScopes: getSharedScopes(
-          input.file,
-          parsed.program,
-          program.expressions,
-        ),
-        loggingCalls: program.loggingCalls,
-        loggers: settings.loggers,
-        discarded: handlers,
-      }),
       hints: createTypeHints(createSyntacticTypeProvider(parsed, tree, scopes)),
       isEnabled(id: string): boolean {
         return activeIds.has(id)

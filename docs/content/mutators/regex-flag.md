@@ -72,15 +72,16 @@ Text that tells the other changes apart:
 
 - `m` removed: the match on a middle line, such as `'Mug\nSKU-123\nCup'`.
 - `s` removed: a line break that `.` must match.
-- `g` removed: two or more matches, and an assertion on the whole result.
+- `g` removed: two or more matches, and an assertion on the whole result. With
+  one match at most, as for `/^#+/g` in `.match()`, the whole result still
+  differs, so assert with `toEqual`.
 - `i` added: text in another letter case that the code must reject, such as
   `'sale-10'` for `/^SALE-\d+$/`.
 - `g` added: two or more matches, of which the code must replace only the first.
 
 If the code lowercases the text before `/^save\d+$/i`, the `i` changes nothing,
 and no test can catch its removal: remove the `i`, or ignore the mutant as
-[Configuration](#configuration) shows. The same holds for a `g` that `additions`
-adds to a pattern that matches at most once, such as `/^#/`: ignore that mutant.
+[Configuration](#configuration) shows.
 
 ## Configuration
 
@@ -135,11 +136,11 @@ Mootant leaves out these changes. `mootant list --skipped` shows them with the
 category and the rule; [Skipped changes](/mutators#skipped-changes) explains the
 categories.
 
-| Reason                                                | Example                                          | Rule                          |
-| ----------------------------------------------------- | ------------------------------------------------ | ----------------------------- |
-| The flag changes nothing, such as `i` with no letters | `/^\d{5}$/i` → `/^\d{5}$/`                       | `unused-flag`, equivalent     |
-| `^` or `$` lets the pattern match only once           | `/\s+$/g` → `/\s+$/` in `.replace()`             | `anchored-global`, equivalent |
-| May keep a loop running forever                       | `/^sale-/i` → `/^sale-/` in `prefix = /^sale-/i` | `loop-advance`, timeout       |
+| Reason                                                                                                                           | Example                                          | Rule                          |
+| -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------- |
+| The flag changes nothing the code reads, such as `i` with no letters or `g` where only the first match of a known string is read | `/^\d{5}$/i` → `/^\d{5}$/`                       | `unused-flag`, equivalent     |
+| `^` or `$` lets the pattern match only once, with or without `g`                                                                 | `/\s+$/g` → `/\s+$/` in `.replace()`             | `anchored-global`, equivalent |
+| May keep a loop running forever                                                                                                  | `/^sale-/i` → `/^sale-/` in `prefix = /^sale-/i` | `loop-advance`, timeout       |
 
 The [`timeouts`](/guide/configuration#timeouts) setting, on in `strict`, brings
 back `loop-advance`. The other changes stay skipped.

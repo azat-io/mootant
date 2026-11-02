@@ -7,11 +7,14 @@ import type { ValueBounds } from '../../types/syntax/value-bounds'
 import type { LoggingCall } from '../../types/syntax/logging-call'
 import type { TreeIndex } from '../../types/syntax/tree-index'
 
+import { readsRegexStatics } from '../regex/reads-regex-statics'
 import { getEnclosingFunction } from './get-enclosing-function'
 import { unwrapParentheses } from '../tree/unwrap-parentheses'
 import { getNamedGroupsFact } from './get-named-groups-fact'
 import { unwrapExpression } from '../tree/unwrap-expression'
 import { isLoopAdvanceValue } from './is-loop-advance-value'
+import { getMatchResultUse } from './get-match-result-use'
+import { isRegexOnlyTested } from './is-regex-only-tested'
 import { getNeverFalsyFact } from './get-never-falsy-fact'
 import { getContextSlot } from '../tree/get-context-slot'
 import { isGlobalTypeName } from './is-global-type-name'
@@ -26,6 +29,7 @@ import { isConditionTest } from './is-condition-test'
 import { isValuePosition } from './is-value-position'
 import { getLogicalChain } from './get-logical-chain'
 import { isCaughtInLoop } from './is-caught-in-loop'
+import { isPresenceTest } from './is-presence-test'
 import { isErrorMessage } from './is-error-message'
 import { isResultUnused } from './is-result-unused'
 import { getExitedLoops } from './get-exited-loops'
@@ -71,6 +75,12 @@ interface SyntaxHelperOptions {
    * omitted.
    */
   loggers?: readonly string[]
+
+  /**
+   * Text of the whole file, of which a program of a component holds only its
+   * script block; empty when omitted.
+   */
+  fileText?: string
 }
 
 /**
@@ -94,10 +104,12 @@ export function createSyntaxHelpers(
     sharedScopes = new Set(),
     discarded = new Set(),
     loggingCalls = [],
+    fileText = '',
     loggers = [],
   } = options
   let program: AnalyzedProgram = { shared: sharedScopes, scopes, tree }
   let bounds: ValueBounds | null = null
+  let statics: boolean | null = null
 
   /**
    * Finds the bounds of the program on the first call. Should the fixed point
@@ -124,12 +136,15 @@ export function createSyntaxHelpers(
   return {
     isLogMessage: node =>
       isLogMessage(loggingCalls, node, node.type === 'ExpressionStatement'),
+    isRegexOnlyTested: (node, flags) => isRegexOnlyTested(program, node, flags),
+    readsRegexStatics: () => (statics ??= readsRegexStatics(fileText)),
     getNeverFalsyFact: node => getNeverFalsyFact(getBounds(), node),
     isBooleanContext: node => isBooleanContext(tree, scopes, node),
     getEnclosingFunction: node => getEnclosingFunction(tree, node),
     isLoopAdvanceValue: node => isLoopAdvanceValue(program, node),
     getNamedGroupsFact: node => getNamedGroupsFact(program, node),
     isResultUnused: node => isResultUnused(tree, node, discarded),
+    getMatchResultUse: node => getMatchResultUse(program, node),
     getTruthOnlyName: node => getTruthOnlyName(program, node),
     isGlobalTypeName: node => isGlobalTypeName(program, node),
     getValueBound: node => getValueBound(getBounds(), node),
@@ -143,6 +158,7 @@ export function createSyntaxHelpers(
     isForEachResult: node => isForEachResult(tree, node),
     isJoinedArray: node => isJoinedArray(program, node),
     isLoggingCall: node => isLoggingCall(node, loggers),
+    isPresenceTest: node => isPresenceTest(tree, node),
     readTimerCall: node => readTimerCall(scopes, node),
     getContextSlot: node => getContextSlot(tree, node),
     isErrorMessage: node => isErrorMessage(tree, node),

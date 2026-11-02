@@ -3,11 +3,26 @@ import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
 import type { RegexSource } from '../../types/regex/regex-source'
 import type { RegexChange } from '../../types/regex/regex-change'
+import type { SkipNote } from '../../types/mutant/skip-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { createRegexReplacement } from '../regex/create-regex-replacement'
 import { collectPatternChanges } from '../regex/collect-pattern-changes'
+import { findStringMatchCall } from '../regex/find-string-match-call'
 import { createRegexVisitors } from '../regex/create-regex-visitors'
+
+/**
+ * Skip of a change of an upper bound at an open edge of a pattern, where code
+ * only asks whether the pattern matches. It rests on a guess: that no other
+ * code reads the last match through `RegExp`, and that the type hints are
+ * right.
+ */
+const TESTED_SKIP: SkipNote = {
+  reason:
+    'only whether the pattern matches is used, and with nothing required before or after the quantifier its upper bound does not change that',
+  rule: 'unused-repeat',
+  heuristic: true,
+}
 
 /**
  * Changes the pattern of a regular expression literal, or of the string,
@@ -22,10 +37,12 @@ import { createRegexVisitors } from '../regex/create-regex-visitors'
  * of the tokens around it. Each mutant replaces the whole literal, written in
  * the same form with the same quotes and escapes; reports show the changed part
  * of the pattern. Removals of capturing groups, anchors next to an edge
- * wildcard, widening of what already matches any character, invalid regular
- * expressions and, without the `timeouts` setting, patterns with `g` or `y`
- * that start to match the empty string are skipped. A regular expression that
- * does not compile is not changed.
+ * wildcard, widening of what already matches any character, changes of an upper
+ * bound that do not change whether the pattern or a lookaround matches (see
+ * `findOpenRepeatScope`), invalid regular expressions and, without the
+ * `timeouts` setting, patterns with `g` or `y` that start to match the empty
+ * string are skipped. A regular expression that does not compile is not
+ * changed.
  */
 export let regexPattern: Mutator<RegexPatternOptions> = {
   meta: {
@@ -67,8 +84,13 @@ function mutatePattern(
   source: RegexSource,
   context: MutatorContext<RegexPatternOptions>,
 ): Replacement[] {
-  let { pattern, flags, tree } = source
-  let changes = collectPatternChanges(tree, flags, context.options)
+  let { pattern, flags } = source
+  let { options } = context
+  let changes = collectPatternChanges(
+    source,
+    options,
+    options.quantifiers ? getTestedSkip(source, context) : null,
+  )
   if (source.dynamic) {
     changes = changes
       .filter(change => isEdgeAnchorRemoval(change, pattern))
@@ -85,6 +107,34 @@ function mutatePattern(
       context.settings,
     ),
   )
+}
+
+/**
+ * Builds the skip of a change of an upper bound at an open edge of a pattern,
+ * when code only asks whether the regular expression matches: through its own
+ * `test` or `exec` (see `isRegexOnlyTested`), or as the argument of the `match`
+ * method of a string without the `y` flag (see `findStringMatchCall`), whose
+ * result only counts as present or not (see `isPresenceTest`). `match` starts
+ * from the beginning of the text with or without `g`, whatever the object held
+ * before. A file that may read the last match through `RegExp` gets no such
+ * skip (see `readsRegexStatics`).
+ *
+ * @param source - The regular expression as read.
+ * @param context - Mutator context of the file.
+ * @returns The skip, or null when code may see what the pattern matched.
+ */
+function getTestedSkip(
+  source: RegexSource,
+  context: MutatorContext<RegexPatternOptions>,
+): SkipNote | null {
+  let { expression, flags } = source
+  let { syntax } = context
+  let isTested = syntax.isRegexOnlyTested(expression, flags)
+  if (!isTested && !flags.includes('y')) {
+    let call = findStringMatchCall(expression, context)
+    isTested = call !== null && syntax.isPresenceTest(call)
+  }
+  return isTested && !syntax.readsRegexStatics() ? TESTED_SKIP : null
 }
 
 /**

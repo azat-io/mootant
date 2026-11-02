@@ -118,8 +118,136 @@ describe('regexFlag', () => {
     ['x = !s.match(/a/g)', ['/a/g -> /a/ (equivalent unused-flag)']],
     ['x = s.match(/a/g) ?? []', []],
     ['x = /a/g', []],
+    ...[
+      'x = s.match(/^a/g)',
+      'x = s.match(/a$/g)',
+      'f(s.match(/^a/g))',
+      'function g(t: string) { return t.match(/^a/g) }',
+      'x = s.match(/^a/g)?.index',
+      'x = s.match(/^a/g)?.[1]',
+      'x = s.match(/a/g)?.length',
+      'x = s.match(/^a/gm)?.length',
+      'x = s.match(/^a|b/g)?.length',
+      'x = s.match(/a*$/g)?.length',
+      'x = s.match(/^(a)/g)?.length',
+      'let m = s.match(/^a/g); x = m',
+      'let m = s.match(/^a/g); x = m ? m[0] : m',
+      'let m = s.match(/a/g); m[0] = f; x = m[0]()',
+      'let m = s.match(/a/g); delete m[0]; x = m[0]',
+      'let m = s.match(/^a/g); m.length = 0; x = m.length',
+      'x = s.match(/a/g, 1)?.[0]',
+      'x = s.match(/a/g)?.[0]; y = RegExp.lastMatch',
+      'if (s.match(/a/g)) y = RegExp.$1',
+      'x = s.match(/^a/g)?.length; y = (RegExp as any).lastMatch',
+    ].map<[string, string[]]>(line => [`declare let s: string; ${line}`, []]),
+    ...[
+      'x = stream.match(/a/g)?.[0]',
+      'x = stream.match(/^a/g)?.length',
+      'x = stream.match(/a/g) === null',
+      'x = this.match(/a/g)[0]',
+      'x = super.match(/a/g)[0]',
+      'let [y] = stream.match(/a/g) ?? []',
+      'x = s.match(/a/g)?.[0]',
+    ].map<[string, string[]]>(line => [line, []]),
+    ...(
+      [
+        ['x = s.match(/a/g)?.[0]', '/a/g -> /a/ (equivalent unused-flag)'],
+        [
+          'x = (s.match(/a/g) || [])[0]',
+          '/a/g -> /a/ (equivalent unused-flag)',
+        ],
+        ['x = s.match(/(a)/g)![0]', '/(a)/g -> /(a)/ (equivalent unused-flag)'],
+        ['x = s.match(/a/g) === null', '/a/g -> /a/ (equivalent unused-flag)'],
+        [
+          'let [y] = s.match(/a/g) ?? []',
+          '/a/g -> /a/ (equivalent unused-flag)',
+        ],
+        [
+          'let m = s.match(/a/g); x = m && m[0]',
+          '/a/g -> /a/ (equivalent unused-flag)',
+        ],
+        [
+          'x = s.match(/^a/g)?.length',
+          '/^a/g -> /^a/ (equivalent anchored-global)',
+        ],
+        [
+          'x = (s.match(/a$|b$/g) ?? []).length',
+          '/a$|b$/g -> /a$|b$/ (equivalent anchored-global)',
+        ],
+        [
+          'let m = s.match(/^a/g); x = m ? m.length : 0',
+          '/^a/g -> /^a/ (equivalent anchored-global)',
+        ],
+        [
+          "x = s.match(RegExp('^a', 'g'))?.length",
+          "'g' -> '' (equivalent anchored-global)",
+        ],
+      ] satisfies [string, string][]
+    ).map<[string, string[]]>(([line, skip]) => [
+      `declare let s: string; ${line}`,
+      [skip],
+    ]),
+    [
+      'function g(s?: string) { if (s?.match(/a/g)) x() }',
+      ['/a/g -> /a/ (equivalent unused-flag)'],
+    ],
+    [
+      "x = s.replace(/^a/g, ''); y = RegExp.lastMatch",
+      ['/^a/g -> /^a/ (equivalent anchored-global)'],
+    ],
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('regex-flag', source)).toStrictEqual(expected)
+  })
+
+  it('marks a skip of g as a guess, since it rests on the name of a method', () => {
+    let { skipped } = generateCandidates(
+      [
+        'declare let s: string',
+        'a = s.match(/b/g)?.[0]',
+        'c = s.match(/^d/g)?.length',
+        'if (s.match(/e/g)) f()',
+        "g = s.replace(/^h/g, '')",
+        'i = /1/i',
+      ].join('\n'),
+    )
+
+    expect(
+      skipped
+        .filter(candidate => candidate.mutator === 'regex-flag')
+        .map(candidate => [candidate.rule, candidate.heuristic]),
+    ).toStrictEqual([
+      ['unused-flag', true],
+      ['anchored-global', true],
+      ['unused-flag', true],
+      ['anchored-global', true],
+      ['unused-flag', false],
+    ])
+  })
+
+  it.each<[string, string[]]>([
+    ["x = s.replace(/^a/, '')", ['/^a/ -> /^a/g (equivalent anchored-global)']],
+    [
+      String.raw`x = s.replace(/\s+$/, '')`,
+      [String.raw`/\s+$/ -> /\s+$/g (equivalent anchored-global)`],
+    ],
+    [
+      "x = s.replace(/^a|^b/i, '')",
+      ['/^a|^b/i -> /^a|^b/ig (equivalent anchored-global)'],
+    ],
+    [
+      "x = s.replace(RegExp('^a'), '')",
+      ["RegExp('^a') -> RegExp('^a', 'g') (equivalent anchored-global)"],
+    ],
+    ["x = s.replace(/a/, '')", []],
+    ["x = s.replace(/^a/m, '')", []],
+    ["x = s.replace(/^a|b/, '')", []],
+    [String.raw`x = s.replace(/\s*$/, '')`, []],
+  ])('lists the skipped additions of %s', (source, expected) => {
+    expect(
+      listSkipped('regex-flag', source, {
+        mutators: { 'regex-flag': ['on', { additions: true }] },
+      }),
+    ).toStrictEqual(expected)
   })
 
   it('names the flags as the focus', () => {

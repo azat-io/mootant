@@ -59,10 +59,6 @@ export let skipRules = {
     category: 'equivalent',
     heuristic: false,
   },
-  'anchored-global': {
-    category: 'equivalent',
-    heuristic: false,
-  },
   'numeric-identity': {
     category: 'equivalent',
     heuristic: true,
@@ -74,6 +70,10 @@ export let skipRules = {
   'comparison-region': {
     category: 'subsumed',
     heuristic: false,
+  },
+  'anchored-global': {
+    category: 'equivalent',
+    heuristic: true,
   },
   'default-option': {
     category: 'equivalent',
@@ -108,6 +108,10 @@ export let skipRules = {
     heuristic: false,
   },
   'literal-truth': {
+    category: 'equivalent',
+    heuristic: false,
+  },
+  'unused-repeat': {
     category: 'equivalent',
     heuristic: false,
   },

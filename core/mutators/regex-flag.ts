@@ -6,7 +6,9 @@ import type { SkipNote } from '../../types/mutant/skip-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { createRegexReplacement } from '../regex/create-regex-replacement'
+import { findStringMatchCall } from '../regex/find-string-match-call'
 import { createRegexVisitors } from '../regex/create-regex-visitors'
+import { hasCapturingGroup } from '../regex/has-capturing-group'
 import { hasCasedCharacter } from '../regex/has-cased-character'
 import { getRegexUsage } from '../regex/get-regex-usage'
 import { canMatchEmpty } from '../regex/can-match-empty'
@@ -18,6 +20,27 @@ import { loadRegexpp } from '../regex/load-regexpp'
 const REMOVABLE_FLAGS = 'ims'
 
 /**
+ * Skip of a change of `g` for a pattern that matches at most once.
+ */
+const ANCHORED_SKIP: SkipNote = {
+  reason:
+    'the pattern is anchored at the start or the end, so it matches at most once with or without g',
+  rule: 'anchored-global',
+}
+
+/**
+ * Skip of the removal of `g` from a `.match` call whose reads see only whether
+ * there is a match and the first match. The call may be recognized by its
+ * name.
+ */
+const FIRST_MATCH_SKIP: SkipNote = {
+  reason:
+    'only whether there is a match and the first match are read, and g changes neither',
+  rule: 'unused-flag',
+  heuristic: true,
+}
+
+/**
  * Removes a flag of a regular expression literal, or of a `RegExp` call whose
  * pattern is a string, a template without expressions or a `String.raw`
  * template and whose flags are absent or a literal: `i`, `m` or `s` anywhere,
@@ -25,13 +48,14 @@ const REMOVABLE_FLAGS = 'ims'
  * picks between the first match and all of them. With the `additions` option it
  * also adds `i` to a pattern with cased characters and `g` to the pattern of a
  * `.replace` call. Removing `i` without cased characters, `m` without anchors
- * or `s` without `.`, `g` from a `.replace` pattern anchored at the start or
- * the end, and `g` from a `.match` call whose result is used only as true or
- * false, are skipped as equivalent. `u`, `v`, `y` and `d` are never changed,
- * and `g` elsewhere is kept: removing it there is equivalent, throws in
- * `matchAll` and `replaceAll`, or never ends a `while (re.exec(s))` loop. New
- * flags of a call are printed as a string; a call without flags gets them as a
- * second argument. A regular expression that does not compile is not changed.
+ * or `s` without `.`, removing or adding `g` in a `.replace` call whose pattern
+ * is anchored at the start or the end, and removing `g` from a `.match` call
+ * whose reads do not show it (see `getMatchSkip`), are skipped as equivalent.
+ * `u`, `v`, `y` and `d` are never changed, and `g` elsewhere is kept: removing
+ * it there is equivalent, throws in `matchAll` and `replaceAll`, or never ends
+ * a `while (re.exec(s))` loop. New flags of a call are printed as a string; a
+ * call without flags gets them as a second argument. A regular expression that
+ * does not compile is not changed.
  */
 export let regexFlag: Mutator<RegexFlagOptions> = {
   meta: {
@@ -91,23 +115,9 @@ function getFlagChanges(
     switch (flag) {
       case 'g':
         if (usage === 'replace' && isAnchored(source)) {
-          return {
-            reason:
-              'the pattern is anchored at the start or the end, so it matches at most once with or without g',
-            rule: 'anchored-global',
-          }
+          return ANCHORED_SKIP
         }
-        if (
-          usage === 'match' &&
-          syntax.isBooleanContext(syntax.getContextSlot(expression).parent!)
-        ) {
-          return {
-            reason:
-              'only the truthiness of the match is used, and g does not change whether there is one',
-            rule: 'unused-flag',
-          }
-        }
-        return null
+        return usage === 'match' ? getMatchSkip(source, context) : null
       case 'i':
         isUsed = cased
         break
@@ -135,10 +145,50 @@ function getFlagChanges(
       add(`${flags}i`, null)
     }
     if (usage === 'replace' && !flags.includes('g')) {
-      add(`${flags}g`, null)
+      add(`${flags}g`, isAnchored(source) ? ANCHORED_SKIP : null)
     }
   }
   return replacements
+}
+
+/**
+ * Decides whether removing `g` from the regular expression of a `.match` call
+ * is skipped. The whole result shows the flag, since without it the result also
+ * has `index`, `input`, `groups` and the capturing groups, so `.match(/^a/g)`
+ * stays a mutant where the result goes on. These reads do not show it: only the
+ * truth of the result, by the name of the method; and, for the `match` method
+ * of a string (see `findStringMatchCall`), whether there is a match and the
+ * whole of the first one (`first`, see `getMatchResultUse`), and also the
+ * `length`, when the pattern matches at most once and has no capturing groups.
+ * A file that may read the last match through `RegExp` gets no skip (see
+ * `readsRegexStatics`), since with `g` the last match is another one.
+ *
+ * @param source - The regular expression as read.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null.
+ */
+function getMatchSkip(
+  source: RegexSource,
+  context: MutatorContext<RegexFlagOptions>,
+): SkipNote | null {
+  let { expression, tree } = source
+  let { syntax } = context
+  let call = findStringMatchCall(expression, context)
+  let use =
+    syntax.isBooleanContext(syntax.getContextSlot(expression).parent!) ? 'first'
+    : call && syntax.getMatchResultUse(call)
+  if (!use || syntax.readsRegexStatics()) {
+    return null
+  }
+  if (use === 'first') {
+    return FIRST_MATCH_SKIP
+  }
+  return isAnchored(source) && !hasCapturingGroup(tree) ?
+      {
+        ...ANCHORED_SKIP,
+        reason: `${ANCHORED_SKIP.reason}, and without capturing groups the length of the result is the same`,
+      }
+    : null
 }
 
 /**

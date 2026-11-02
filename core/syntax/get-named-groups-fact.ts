@@ -10,8 +10,9 @@ import { isMandatoryGroup } from '../regex/is-mandatory-group'
 import { unwrapExpression } from '../tree/unwrap-expression'
 import { getContextSlot } from '../tree/get-context-slot'
 import { hasNamedGroup } from '../regex/has-named-group'
+import { isWrittenMember } from './is-written-member'
 import { getMatchRegex } from './get-match-regex'
-import { isWriteTarget } from './is-write-target'
+import { getChainEnd } from './get-chain-end'
 import { isTruthTest } from './is-truth-test'
 
 /**
@@ -101,7 +102,7 @@ function readsGroups(tree: TreeIndex, reference: Node): boolean {
   }
   let member = getContextSlot(tree, parent)
   if (member.key === 'object' && member.parent?.type === 'MemberExpression') {
-    return !isWritten(tree, member.parent)
+    return !isWrittenMember(tree, member.parent)
   }
   return isTruthTest(tree, getChainEnd(tree, parent))
 }
@@ -152,24 +153,6 @@ function readGroupName(member: MemberExpression): string | null {
 }
 
 /**
- * Tells whether code writes or deletes a member: it is, through parentheses,
- * TypeScript wrappers and the optional chain it ends, a write target (see
- * `isWriteTarget`) or the operand of `delete`.
- *
- * @param tree - Runtime tree of the program.
- * @param node - Member of the runtime tree.
- * @returns Whether the member is written or deleted.
- */
-function isWritten(tree: TreeIndex, node: Node): boolean {
-  let slot = getContextSlot(tree, getChainEnd(tree, node))
-  return (
-    isWriteTarget(tree, slot) ||
-    (slot.parent?.type === 'UnaryExpression' &&
-      slot.parent.operator === 'delete')
-  )
-}
-
-/**
  * Tells whether a member reads `groups` by name, not computed.
  *
  * @param member - Member expression.
@@ -181,17 +164,4 @@ function isGroupsMember(member: MemberExpression): boolean {
     member.property.type === 'Identifier' &&
     member.property.name === 'groups'
   )
-}
-
-/**
- * Finds the optional chain that a node ends, through parentheses and TypeScript
- * wrappers, or the node itself.
- *
- * @param tree - Runtime tree of the program.
- * @param node - Member of the runtime tree.
- * @returns The ChainExpression whose expression the node is, or the node.
- */
-function getChainEnd(tree: TreeIndex, node: Node): Node {
-  let { parent } = getContextSlot(tree, node)
-  return parent?.type === 'ChainExpression' ? parent : node
 }

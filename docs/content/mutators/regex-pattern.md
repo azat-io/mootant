@@ -183,16 +183,17 @@ Mootant leaves out these changes. `mootant list --skipped` shows them with the
 category and the rule; [Skipped changes](/mutators#skipped-changes) explains the
 categories.
 
-| Reason                                                     | Example                                                                                 | Rule                           |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------ |
-| Removes a capturing group, which may renumber later groups | `/(\d+)%\|FREE/` → `/FREE/`                                                             | `regex-capturing-group`, noise |
-| List of more than eight alternatives                       | `/^(?:AT\|BE\|DE\|DK\|ES\|FR\|IT\|NL\|PL)$/` → `/^(?:BE\|DE\|DK\|ES\|FR\|IT\|NL\|PL)$/` | `large-alternation`, noise     |
-| Class already matches any character                        | `/<!--[\s\S]*?-->/g` → `/<!--[^]*?-->/g`                                                | `any-character`, equivalent    |
-| Wildcard next to the anchor already runs to the edge       | `/\n[\s\S]*$/` → `/\n[\s\S]*/`                                                          | `edge-wildcard`, equivalent    |
-| With `g` or `y`, may loop forever on an empty match        | `/\d+/g` → `/\d*/g` with `quantifiers`                                                  | `empty-match`, timeout         |
-| Same code as another mutant                                | `/\d{1,2}%/` → `/\d%/` with `quantifiers`                                               | `duplicate`, duplicate         |
-| Would not compile or would merge two tokens                | `/(\d)\1?0/` → `/(\d)\10/`                                                              | `invalid-regex`, invalid       |
-| May keep a loop running forever                            | `/^sale-/i` → `/sale-/i` in `prefix = /^sale-/i`                                        | `loop-advance`, timeout        |
+| Reason                                                                | Example                                                                                 | Rule                           |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------ |
+| Removes a capturing group, which may renumber later groups            | `/(\d+)%\|FREE/` → `/FREE/`                                                             | `regex-capturing-group`, noise |
+| List of more than eight alternatives                                  | `/^(?:AT\|BE\|DE\|DK\|ES\|FR\|IT\|NL\|PL)$/` → `/^(?:BE\|DE\|DK\|ES\|FR\|IT\|NL\|PL)$/` | `large-alternation`, noise     |
+| Class already matches any character                                   | `/<!--[\s\S]*?-->/g` → `/<!--[^]*?-->/g`                                                | `any-character`, equivalent    |
+| Wildcard next to the anchor already runs to the edge                  | `/\n[\s\S]*$/` → `/\n[\s\S]*/`                                                          | `edge-wildcard`, equivalent    |
+| With `g` or `y`, may loop forever on an empty match                   | `/\d+/g` → `/\d*/g` with `quantifiers`                                                  | `empty-match`, timeout         |
+| Same code as another mutant                                           | `/\d{1,2}%/` → `/\d%/` with `quantifiers`                                               | `duplicate`, duplicate         |
+| Would not compile or would merge two tokens                           | `/(\d)\1?0/` → `/(\d)\10/`                                                              | `invalid-regex`, invalid       |
+| May keep a loop running forever                                       | `/^sale-/i` → `/sale-/i` in `prefix = /^sale-/i`                                        | `loop-advance`, timeout        |
+| Only whether it matches counts, and the upper bound can't change that | `/\d+(?=%)/.test(s)` → `/\d(?=%)/.test(s)` with `quantifiers`                           | `unused-repeat`, equivalent    |
 
 The [`timeouts`](/guide/configuration#timeouts) setting brings back
 `empty-match` and `loop-advance`, and the

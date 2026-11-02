@@ -40,12 +40,31 @@ export interface SyntaxHelpers {
   ): ArrowFunctionExpression | FunctionNode | null
 
   /**
+   * What code reads of the result of a `match` call whose regular expression
+   * has the `g` flag, when the flag does not show in it (see
+   * `getMatchResultUse`): `first` for whether there is a match and the whole of
+   * the first one, `length` for these and the `length`; null for anything else.
+   * The result is followed through a `const` or a never-written `let` that this
+   * program alone reads.
+   */
+  getMatchResultUse(node: Node): 'length' | 'first' | null
+
+  /**
    * Known timer call with the index of its delay argument and whether awaiting
    * it only waits, or null: `setTimeout` and `setInterval` (global, imported
    * from `node:timers` or a method), or the promise timers of
    * `node:timers/promises` and `scheduler.wait`.
    */
   readTimerCall(node: CallExpression): TimerCall | null
+
+  /**
+   * Whether code asks the regular expression, a literal or a `RegExp` call with
+   * these flags, only whether it matches (see `isRegexOnlyTested`), as the
+   * receiver of `test`, or of `exec` whose result only counts as present or
+   * not. It is followed through a `const` or a never-written `let` that this
+   * program alone reads.
+   */
+  isRegexOnlyTested(node: Node, flags: string): boolean
 
   /**
    * Whether the name of a type reference surely refers to a type from outside
@@ -184,6 +203,13 @@ export interface SyntaxHelpers {
   isForEachResult(node: Node): boolean
 
   /**
+   * Whether the code around the node only tells null or undefined from an
+   * object (see `isPresenceTest`): a test of its truth, a comparison with
+   * `null` or the left operand of `&&`.
+   */
+  isPresenceTest(node: Node): boolean
+
+  /**
    * Whether the node is part of the message of an error.
    */
   isErrorMessage(node: Node): boolean
@@ -270,4 +296,11 @@ export interface SyntaxHelpers {
    * Whether the node is the test of a `for`, `while` or `do...while` loop.
    */
   isLoopTest(node: Node): boolean
+
+  /**
+   * Whether the text of the file, every block of a component included, may read
+   * what the last match took through the legacy properties of `RegExp` (see
+   * `readsRegexStatics`). The text is read once per program.
+   */
+  readsRegexStatics(): boolean
 }
