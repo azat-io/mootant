@@ -1,0 +1,122 @@
+---
+title: HTML report
+description:
+  Write the results of a run to one HTML file and browse the score, the files
+  with their mutants in place, the mutators and the tests.
+keywords:
+  - mutation testing
+  - html report
+  - mutation score
+  - survived mutants
+  - test quality
+---
+
+import ReportPreview from '../../components/ReportPreview.astro'
+import IconReport from '../../icons/report-analytics.svg'
+import IconSearch from '../../icons/list-search.svg'
+import IconFile from '../../icons/file-code.svg'
+import IconTest from '../../icons/test-pipe.svg'
+import Cards from '../../components/Cards.astro'
+import Card from '../../components/Card.astro'
+import IconDna from '../../icons/dna.svg'
+
+The terminal report lists what to fix. **The HTML report shows the whole run:**
+the score of every file, every mutant in its code, the changes Mootant left out
+on purpose and what each test reaches. It is one file that opens offline, so it
+also works as a build artifact.
+
+<ReportPreview />
+
+## Write the report
+
+Add `--html` to a run:
+
+```sh
+npx mootant run src --html
+```
+
+The report goes to `.mootant/report.html` in the root of the project, and the
+run prints its path after the terminal report. Add `.mootant` to `.gitignore`.
+
+To write the report on every run, or to another path, set `html` in the run
+settings of the [configuration](/guide/configuration#html):
+
+```ts
+export default defineConfig({
+  run: {
+    html: 'reports/mutation.html',
+  },
+})
+```
+
+`--no-html` skips it for one run. A re-check of single mutants with `--mutant`
+writes no report unless it has `--html`, so the report of the whole run stays.
+
+## What it shows
+
+Each card opens that page in the report of a sample shop.
+
+<Cards>
+  <Card
+    href="/report/demo#/"
+    icon={IconReport}
+    title="Overview"
+  >
+    The score, the weakest mutators and the mutants to look at first.
+  </Card>
+  <Card
+    href="/report/demo#/files"
+    icon={IconFile}
+    title="Files"
+  >
+    The code of a file with its mutants in place. A mutant opens a panel with
+    the change, the test that killed it or the test file to extend.
+  </Card>
+  <Card
+    href="/report/demo#/mutants"
+    icon={IconSearch}
+    title="Mutants"
+  >
+    Every mutant, filtered by status or by an id, a mutator, a file or a piece
+    of code.
+  </Card>
+  <Card
+    href="/report/demo#/mutators"
+    icon={IconDna}
+    title="Mutators"
+  >
+    The score of each mutator. One that keeps surviving points to a kind of
+    change the tests do not check.
+  </Card>
+  <Card
+    href="/report/demo#/tests"
+    icon={IconTest}
+    title="Tests"
+  >
+    What each test reaches, the survivors it runs without noticing them and the
+    slowest tests.
+  </Card>
+</Cards>
+
+Turn on Skipped in a file to see why some code has no mutant. Each skipped
+change comes with its category, the rule that skipped it and the reason.
+
+The download button in the header saves the run as JSON: the report that
+`mootant run --json --verbose --all` prints, plus the skipped changes. Scripts
+and agents can read it without opening the HTML.
+
+## Keys
+
+- <kbd>/</kbd>, <kbd>Ctrl K</kbd> or <kbd>Cmd K</kbd>: search mutants, files and
+  tests
+- <kbd>j</kbd> and <kbd>k</kbd>: next and previous mutant to fix, from the open
+  mutant or from the start of the open file
+- <kbd>Esc</kbd>: close the mutant or the skipped change
+
+Every page and mutant has its own address, such as `report.html#/mutant/q31p`,
+to share or bookmark.
+
+## Before you share it
+
+The report holds the source code of every mutated file and the names of the
+tests. Share it only where that code may go.

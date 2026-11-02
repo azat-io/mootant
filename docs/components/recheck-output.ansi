@@ -1,0 +1,11 @@
+[92m●[39m [1mmootant run src --mutant q31p[22m                   [90mvitest 5.0.5[39m
+
+[90mdry run         [39m10 tests in 0.2s
+[90mmutants         [39m1 in 1 file
+[90mtime            [39m0.5s (start 0.2s, dry run 0.2s, isolated 0.1s)
+
+[90mkilled          [39m1
+[90msurvived        [39m[92m0[39m
+[90mtimeout         [39m0
+[90mno coverage     [39m0
+[90mscore           [39m[1m100%[22m

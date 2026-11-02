@@ -132,6 +132,29 @@ export function reportDemo(): AstroIntegration {
 }
 
 /**
+ * Builds the CLI from the current code and runs it on the sample project. The
+ * report keeps its theme under its own key, because it lives on any site. The
+ * demo lives on the site of the docs, so it takes their key and shares their
+ * theme in both directions.
+ *
+ * @returns HTML of the report.
+ */
+async function createReport(): Promise<string> {
+  await runNode(
+    path.join(root, 'node_modules', 'vite', 'bin', 'vite.js'),
+    ['build'],
+    root,
+  )
+  await runNode(
+    path.join(root, 'bin', 'mootant.js'),
+    ['run', '--html'],
+    project,
+  )
+  let report = await readFile(path.join(output, 'report.html'), 'utf8')
+  return report.replaceAll('mootant-report-theme', 'theme')
+}
+
+/**
  * Runs a script with the current Node.js.
  *
  * @param script - Path of the script.
@@ -154,25 +177,6 @@ function runNode(
       }
     })
   })
-}
-
-/**
- * Builds the CLI from the current code and runs it on the sample project.
- *
- * @returns HTML of the report.
- */
-async function createReport(): Promise<string> {
-  await runNode(
-    path.join(root, 'node_modules', 'vite', 'bin', 'vite.js'),
-    ['build'],
-    root,
-  )
-  await runNode(
-    path.join(root, 'bin', 'mootant.js'),
-    ['run', '--html'],
-    project,
-  )
-  return readFile(path.join(output, 'report.html'), 'utf8')
 }
 
 /**

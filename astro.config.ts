@@ -1,15 +1,23 @@
+import {
+  transformerNotationHighlight,
+  transformerNotationDiff,
+} from '@shikijs/transformers'
 import { rehypeHeadingIds, unified } from '@astrojs/markdown-remark'
-import { transformerNotationDiff } from '@shikijs/transformers'
 import { svgoOptimizer, defineConfig } from 'astro/config'
 import rehypeExternalLinks from 'rehype-external-links'
 import { browserslistToTargets } from 'lightningcss'
 import remarkSectionize from 'remark-sectionize'
 import browserslist from 'browserslist'
 import sitemap from '@astrojs/sitemap'
+import mdx from '@astrojs/mdx'
 
 import { rehypeSearchSections } from './docs/plugins/rehype-search-sections'
 import { rehypeHeadingAnchors } from './docs/plugins/rehype-heading-anchors'
+import { rehypeMutantChanges } from './docs/plugins/rehype-mutant-changes'
 import { rehypeCopyButtons } from './docs/plugins/rehype-copy-buttons'
+import { remarkKillSection } from './docs/plugins/remark-kill-section'
+import { remarkPageLead } from './docs/plugins/remark-page-lead'
+import { rehypeTables } from './docs/plugins/rehype-tables'
 import { reportDemo } from './docs/plugins/report-demo'
 import { colorTheme } from './docs/utils/shiki-theme'
 
@@ -30,12 +38,17 @@ export default defineConfig({
         rehypeSearchSections,
         rehypeHeadingAnchors,
         rehypeCopyButtons,
+        rehypeMutantChanges,
+        rehypeTables,
       ],
-      remarkPlugins: [remarkSectionize],
+      remarkPlugins: [remarkPageLead, remarkKillSection, remarkSectionize],
     }),
     shikiConfig: {
       transformers: [
         transformerNotationDiff({
+          matchAlgorithm: 'v3',
+        }),
+        transformerNotationHighlight({
           matchAlgorithm: 'v3',
         }),
       ],
@@ -62,6 +75,7 @@ export default defineConfig({
     inlineStylesheets: 'always',
     format: 'file',
   },
+  integrations: [sitemap(), reportDemo(), mdx()],
   prefetch: {
     defaultStrategy: 'hover',
   },
@@ -69,7 +83,6 @@ export default defineConfig({
     port: 3000,
     host: true,
   },
-  integrations: [sitemap(), reportDemo()],
   publicDir: './docs/public',
   compressHTML: true,
   srcDir: './docs',

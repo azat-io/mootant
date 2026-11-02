@@ -3,6 +3,7 @@ import type { MarkdownHeading } from 'astro'
 
 import ContentAdditionalPages from '../components/Content/ContentAdditionalPages.astro'
 import ContentEditLink from '../components/Content/ContentEditLink.astro'
+import ContentOutline from '../components/Content/ContentOutline.astro'
 import ContentFooter from '../components/Content/ContentFooter.astro'
 import TableOfContents from '../components/TableOfContents.astro'
 import Sidebar from '../components/Sidebar/Sidebar.astro'
@@ -13,6 +14,7 @@ import Footer from '../components/Footer.astro'
 import Head from '../components/Head.astro'
 import Html from '../components/Html.astro'
 import Body from '../components/Body.astro'
+import '../styles/article.css'
 
 interface Props {
   keywords?: undefined | string[]
@@ -43,6 +45,7 @@ let { keywords = [], headings = [], description, editLink, title } = Astro.props
       <Sidebar />
       <main class="main">
         <Breadcrumbs />
+        <ContentOutline {headings} />
         <article>
           <slot />
         </article>
@@ -64,12 +67,14 @@ let { keywords = [], headings = [], description, editLink, title } = Astro.props
   >()
 
   /* The copy buttons of code blocks come from a Markdown plugin, so a single
-     listener on the document serves them on every page. */
+     listener on the document serves them on every page. The `+` line of a mutant
+     is not part of the code. */
   document.addEventListener('click', async event => {
     let button = (event.target as Element).closest<HTMLButtonElement>(
       '.code-block > .copy-button',
     )
-    let code = button?.parentElement?.querySelector('pre')?.textContent
+    let lines = button?.parentElement?.querySelectorAll('.line:not(.add)')
+    let code = [...(lines ?? [])].map(line => line.textContent).join('\n')
     if (!button || !code) {
       return
     }

@@ -1,0 +1,88 @@
+---
+import type { SvgComponent } from 'astro/types'
+
+interface Props {
+  icon?: SvgComponent
+  title: string
+  href: string
+}
+
+let { icon: Icon, title, href } = Astro.props
+
+/**
+ * The demo report opens in a new tab, and hovering its link must not make the
+ * dev server build it.
+ */
+let demoProps =
+  href.startsWith('/report/demo') ?
+    { 'data-astro-prefetch': 'false', target: '_blank' }
+  : {}
+---
+
+<li class="item">
+  <a
+    class="card card-link"
+    {href}
+    {...demoProps}
+  >
+    <span class="header">
+      <span class="title">{title}</span>
+      {
+        Icon && (
+          <Icon
+            aria-hidden="true"
+            class="icon"
+          />
+        )
+      }
+    </span>
+    <div class="text"><slot /></div>
+  </a>
+</li>
+
+<style>
+  .item {
+    display: grid;
+    margin-block: 0;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: var(--space-m);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .header {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-s);
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .icon {
+    flex-shrink: 0;
+    inline-size: var(--size-icon-m);
+    block-size: var(--size-icon-m);
+    color: var(--color-content-primary);
+  }
+
+  .title {
+    font: 600 var(--font-size-m) / 1.3 var(--font-family-title);
+    color: var(--color-content-primary);
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    font: var(--font-xs);
+
+    & :global(p) {
+      margin-block: 0;
+    }
+  }
+</style>

@@ -50,7 +50,8 @@ const INLINE_ELEMENTS = new Set([
  * Splits a page into the sections that the docs search finds: the text before
  * the first heading, then every second and third level heading with the text up
  * to the next one. The sections go to the `searchSections` field of the
- * frontmatter that `render()` returns. Raw HTML is left out. Needs the ids that
+ * frontmatter that `render()` returns. A component of an MDX page adds the text
+ * of its props and children, and raw HTML is left out. Needs the ids that
  * `rehypeHeadingIds` gives headings.
  *
  * @returns Transformer that collects the sections of a page.
@@ -89,11 +90,16 @@ export let rehypeSearchSections: RehypePlugin = () => (tree, file) => {
       current.text += node.value
       return
     }
+    let isComponent = node.type === 'mdxJsxFlowElement'
     let isBlock =
-      node.tagName !== undefined && !INLINE_ELEMENTS.has(node.tagName)
+      isComponent ||
+      (node.tagName !== undefined && !INLINE_ELEMENTS.has(node.tagName))
     let children = node.children ?? []
     if (isBlock) {
       current.text += ' '
+    }
+    if (isComponent) {
+      current.text += getPropsText(node)
     }
     for (let child of children) {
       collect(child)
@@ -113,4 +119,18 @@ export let rehypeSearchSections: RehypePlugin = () => (tree, file) => {
       text: section.text.replaceAll(/\s+/gu, ' ').trim(),
     })),
   }
+}
+
+/**
+ * Returns the text in the props of a component of an MDX page.
+ *
+ * @param node - Node of the component.
+ * @returns Values of its string props except links, each followed by a space.
+ */
+function getPropsText(node: HastNode): string {
+  return (node.attributes ?? [])
+    .map(({ value, name }) =>
+      typeof value === 'string' && name !== 'href' ? `${value} ` : '',
+    )
+    .join('')
 }

@@ -1,0 +1,90 @@
+---
+import DemoLink from './DemoLink.astro'
+
+/**
+ * Mutants of the sample shop in `docs/demo`, from `mootant list src` with each
+ * preset.
+ */
+let presets = [
+  { command: 'mootant list src', name: 'recommended', mutants: 99 },
+  { command: 'mootant list src --preset strict', name: 'strict', mutants: 141 },
+]
+---
+
+<figure class="stats">
+  <div class="grid">
+    {
+      presets.map(({ command, mutants, name }) => (
+        <div class="stat">
+          <span class="name">{name}</span>
+          <span class="value">
+            {mutants} <span class="unit">mutants</span>
+          </span>
+          <span class="source">{command}</span>
+        </div>
+      ))
+    }
+  </div>
+  <figcaption class="caption">
+    Mutants of the same <DemoLink route="#/">sample shop</DemoLink> in each preset.
+  </figcaption>
+</figure>
+
+<style>
+  .stats {
+    margin: var(--space-m) 0;
+  }
+
+  .grid {
+    display: grid;
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: calc(var(--border-radius) * 1.5);
+
+    @container (inline-size >= 600px) {
+      grid-template-columns: repeat(2, [preset] minmax(0, 1fr));
+    }
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    min-inline-size: 0;
+    padding: var(--space-m);
+
+    & + & {
+      border-block-start: 1px solid var(--color-border-primary);
+
+      @container (inline-size >= 600px) {
+        border-block-start: none;
+        border-inline-start: 1px solid var(--color-border-primary);
+      }
+    }
+  }
+
+  .name {
+    font: var(--font-s);
+  }
+
+  .value {
+    font: 600 var(--font-size-3xl) / 1.2 var(--font-family-title);
+    color: var(--color-content-primary);
+  }
+
+  .unit {
+    font: var(--font-m);
+    color: var(--color-content-secondary);
+  }
+
+  .source {
+    font: 600 var(--font-size-2xs) / 1.5 var(--font-family-code);
+    font-variant-ligatures: none;
+    overflow-wrap: anywhere;
+  }
+
+  .caption {
+    margin-block-start: var(--space-xs);
+    font: var(--font-xs);
+  }
+</style>

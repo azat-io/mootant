@@ -32,7 +32,7 @@ export let rehypeHeadingAnchors: RehypePlugin = () => (tree, file) => {
               className: ['heading-anchor'],
               href: `#${id}`,
             },
-            children: [{ type: 'raw', value: icon }],
+            children: [structuredClone(icon)],
             type: 'element',
             tagName: 'a',
           },

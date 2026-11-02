@@ -1,0 +1,82 @@
+---
+import { getChangedRange } from '../utils/get-changed-range'
+
+interface Props {
+  size?: 'm' | 'l'
+  before: string
+  after: string
+}
+
+let { size = 'm', before, after } = Astro.props
+
+let range = getChangedRange(before, after)
+---
+
+<div class:list={['mutant-diff', `size-${size}`]}>
+  <code class="line removed"
+    >{range.prefix}<del>{range.before}</del>{range.suffix}</code
+  >
+  <code class="line added"
+    >{range.prefix}<ins>{range.after}</ins>{range.suffix}</code
+  >
+</div>
+
+<style>
+  .mutant-diff {
+    display: grid;
+    padding-block: var(--space-2xs);
+    overflow: clip;
+    background: var(--color-code-background);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius);
+  }
+
+  .line {
+    padding: var(--space-4xs) var(--space-s);
+    font: normal var(--font-size-code) / 1.5 var(--font-family-code);
+    font-variant-ligatures: none;
+    color: var(--color-code-foreground);
+    white-space: pre-wrap;
+    border: none;
+    border-radius: 0;
+  }
+
+  .removed {
+    background: var(--color-code-line-removed);
+
+    &::before {
+      color: var(--color-code-ansi-red);
+      content: '- ';
+    }
+  }
+
+  .added {
+    background: var(--color-code-line-added);
+
+    &::before {
+      color: var(--color-code-ansi-green);
+      content: '+ ';
+    }
+  }
+
+  del {
+    color: var(--color-code-ansi-red);
+    text-decoration: none;
+  }
+
+  ins {
+    color: var(--color-code-ansi-green);
+    text-decoration: none;
+  }
+
+  .size-l {
+    padding-block: var(--space-xs);
+    margin-block-end: var(--space-l);
+    border-radius: calc(var(--border-radius) * 1.5);
+
+    & .line {
+      padding: var(--space-2xs) var(--space-m);
+      font-size: var(--font-size-s);
+    }
+  }
+</style>

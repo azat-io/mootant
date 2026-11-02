@@ -1,0 +1,21 @@
+---
+
+---
+
+<ul class="cards">
+  <slot />
+</ul>
+
+<style>
+  .cards {
+    display: grid;
+    gap: var(--space-s);
+    padding-inline-start: 0;
+    margin-block: var(--space-l) 0;
+    list-style-type: '';
+
+    @container (inline-size >= 600px) {
+      grid-template-columns: repeat(2, [card] minmax(0, 1fr));
+    }
+  }
+</style>

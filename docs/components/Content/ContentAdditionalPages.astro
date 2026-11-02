@@ -24,6 +24,7 @@ let nextPage = index === -1 ? undefined : links[index + 1]
       {previousPage && (
         <ContentFooterLink
           url={previousPage.url}
+          class="page card-link"
           title="Previous page"
           rel="prev"
         >
@@ -33,9 +34,9 @@ let nextPage = index === -1 ? undefined : links[index + 1]
       )}
       {nextPage && (
         <ContentFooterLink
+          class="page card-link next"
           url={nextPage.url}
           title="Next page"
-          class="next"
           rel="next"
         >
           <IconArrowRight slot="icon" />
@@ -48,23 +49,25 @@ let nextPage = index === -1 ? undefined : links[index + 1]
 
 <style>
   .pages {
-    display: flex;
-    flex-flow: column nowrap;
-    gap: var(--space-l);
-    align-items: start;
+    display: grid;
+    gap: var(--space-s);
     inline-size: 100%;
 
     @container (inline-size >= 600px) {
-      flex-direction: row;
-      justify-content: space-between;
+      grid-template-columns: repeat(2, [page] minmax(0, 1fr));
     }
-  }
 
-  .next {
-    @container (inline-size >= 600px) {
-      flex-direction: row-reverse;
-      margin-inline-start: auto;
-      text-align: end;
+    & .page {
+      padding: var(--space-m);
+    }
+
+    & .next {
+      grid-column: -2;
+
+      @container (inline-size >= 600px) {
+        flex-direction: row-reverse;
+        text-align: end;
+      }
     }
   }
 </style>

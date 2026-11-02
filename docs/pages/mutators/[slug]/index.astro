@@ -3,6 +3,7 @@ import type { CollectionEntry } from 'astro:content'
 
 import { getCollection, render } from 'astro:content'
 
+import MutantDiff from '../../../components/MutantDiff.astro'
 import ContentLayout from '../../../layouts/Content.astro'
 
 type Props = CollectionEntry<'mutators'>
@@ -30,5 +31,9 @@ export async function getStaticPaths() {
   {headings}
 >
   <h1>{mutator.data.title}</h1>
+  <MutantDiff
+    {...mutator.data.example}
+    size="l"
+  />
   <Content />
 </ContentLayout>

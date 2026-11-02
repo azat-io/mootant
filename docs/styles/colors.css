@@ -38,6 +38,16 @@
   --color-code-ansi-bright-magenta: var(--color-code-ansi-magenta);
   --color-code-ansi-bright-cyan: var(--color-code-ansi-cyan);
   --color-code-ansi-bright-white: oklch(55% 0.008 95deg);
+  --color-code-line-removed: color-mix(
+    in oklch,
+    var(--color-code-ansi-red) 10%,
+    transparent
+  );
+  --color-code-line-added: color-mix(
+    in oklch,
+    var(--color-code-ansi-green) 10%,
+    transparent
+  );
   --color-code-token-keyword: var(--color-code-ansi-blue);
   --color-code-token-function: var(--color-code-ansi-green);
   --color-code-token-string: var(--color-code-ansi-yellow);
@@ -83,5 +93,15 @@
     --color-code-ansi-bright-black: oklch(62% 0.0083 91.48deg);
     --color-code-ansi-bright-white: oklch(98.5% 0.0083 91.48deg);
     --color-code-token-punctuation: oklch(75% 0.0083 91.48deg);
+    --color-code-line-removed: color-mix(
+      in oklch,
+      var(--color-code-ansi-red) 16%,
+      transparent
+    );
+    --color-code-line-added: color-mix(
+      in oklch,
+      var(--color-code-ansi-green) 16%,
+      transparent
+    );
   }
 }

@@ -2,7 +2,10 @@
 import { getCollection } from 'astro:content'
 
 import { getHeadings, frontmatter, Content } from '../../content/mutators.md'
+import MutantDiff from '../../components/MutantDiff.astro'
 import ContentLayout from '../../layouts/Content.astro'
+import Cards from '../../components/Cards.astro'
+import Card from '../../components/Card.astro'
 
 interface Frontmatter {
   description: string
@@ -25,11 +28,13 @@ let mutators = (await getCollection('mutators')).toSorted(
   {title}
 >
   <h1>{title}</h1>
-  <p>
+  <p class="lead">
     A mutator makes one kind of change to your code, such as <code>+</code> to
-    <code>-</code>. Each mutant in a report names the mutator that made it. The
-    page of a mutator shows its changes, a test that catches them and the
-    changes it skips.
+    <code>-</code>. <strong
+      >Each mutant in a report names the mutator that made it.</strong
+    >
+    The page of a mutator shows its changes, a test that catches them and the changes
+    it skips.
   </p>
   <p>
     Mootant has 20 built-in mutators, and both
@@ -39,46 +44,18 @@ let mutators = (await getCollection('mutators')).toSorted(
     <a href="/guide/configuration#coarsemutants">coarse mutants</a> that
     <code>recommended</code> drops.
   </p>
-  <table class="mutators">
-    <thead>
-      <tr>
-        <th scope="col">Mutator</th>
-        <th scope="col">Changes</th>
-      </tr>
-    </thead>
-    <tbody>
-      {
-        mutators.map(({ data, id }) => (
-          <tr>
-            <th scope="row">
-              <a href={`/mutators/${id}`}>{data.title}</a>
-            </th>
-            <td>
-              {data.shortDescription}
-              <span class="example">
-                <code>{data.example.before}</code> →{' '}
-                <code>{data.example.after}</code>
-              </span>
-            </td>
-          </tr>
-        ))
-      }
-    </tbody>
-  </table>
+  <Cards>
+    {
+      mutators.map(({ data, id }) => (
+        <Card
+          href={`/mutators/${id}`}
+          title={data.title}
+        >
+          <MutantDiff {...data.example} />
+          <p>{data.shortDescription}</p>
+        </Card>
+      ))
+    }
+  </Cards>
   <Content />
 </ContentLayout>
-
-<style>
-  .mutators {
-    margin-block: var(--space-l);
-
-    & th[scope='row'] {
-      font: inherit;
-    }
-  }
-
-  .example {
-    display: block;
-    margin-block-start: var(--space-2xs);
-  }
-</style>

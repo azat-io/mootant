@@ -1,0 +1,163 @@
+---
+title: Getting started
+description:
+  Install Mootant, run it against your tests and turn the mutants that survive
+  into better tests.
+keywords:
+  - mutation testing
+  - getting started
+  - installation
+  - vitest
+  - node test runner
+  - test quality
+---
+
+import recheckOutput from '../../components/recheck-output.ansi?raw'
+import IconAdjustments from '../../icons/adjustments-horizontal.svg'
+import skillSession from '../../components/skill-session.ansi?raw'
+import IconReport from '../../icons/report-analytics.svg'
+import heroOutput from '../../components/hero-output.ansi?raw'
+import DiscountProbe from '../../components/DiscountProbe.astro'
+import DemoLink from '../../components/DemoLink.astro'
+import Terminal from '../../components/Terminal.astro'
+import Badge from '../../components/Badge.astro'
+import Cards from '../../components/Cards.astro'
+import IconHexagon from '../../icons/hexagon.svg'
+import IconNodejs from '../../icons/nodejs.svg'
+import IconVitest from '../../icons/vitest.svg'
+import Card from '../../components/Card.astro'
+import IconDna from '../../icons/dna.svg'
+
+Mootant makes small changes to your code, called mutants, and runs the tests
+that should notice them. **A mutant that survives points to a test that is
+missing or too weak.**
+
+## Requirements
+
+Mootant needs Node.js and tests on [Vitest](https://vitest.dev) or the
+[Node.js test runner](https://nodejs.org/api/test.html). The tests have to pass
+as they are: Mootant runs them without mutants first.
+
+<div class="badges">
+  <Badge
+    icon={IconHexagon}
+    title="Node.js"
+    text="20.19, 22.12 or later"
+  />
+  <Badge
+    icon={IconVitest}
+    title="Vitest"
+    text="Version 5"
+  />
+  <Badge
+    icon={IconNodejs}
+    title="Node.js test runner"
+    text="Built into Node.js"
+  />
+</div>
+
+## Installation
+
+Add Mootant to the development dependencies of your project:
+
+```sh
+npm install -D mootant
+```
+
+## First run
+
+Point Mootant at your source code:
+
+```sh
+npx mootant run src
+```
+
+Mootant finds Vitest or `node:test` and uses your existing configuration. The
+mutants are compiled into your code in memory, so your files stay untouched, and
+each mutant runs only the test files that reach it.
+
+<Terminal output={heroOutput} />
+
+The report lists the mutants that survived, the ones no test reached and the
+ones that caused an error, file by file. Each mutant comes with:
+
+- `comparison-operator`: the [mutator](/mutators/comparison-operator) that made
+  it
+- <DemoLink route="#/mutant/q31p">`q31p`</DemoLink>: its short id
+- The `-` and `+` lines: the change
+- `test:`: the test file to extend
+
+`re-check one:` at the end of the report is the command that runs the first
+survivor again.
+
+## Fix a surviving mutant
+
+This mutant is `total >= 100` → `total > 100`. The two versions differ only for
+an order of exactly 100, and no test uses one. Move the slider to find it:
+
+<DiscountProbe />
+
+Write a test with that value:
+
+```ts
+it('gives orders of exactly 100 10% off', () => {
+  expect(getDiscount(100, false)).toBe(10)
+})
+```
+
+Then run the mutant again by its id:
+
+```sh
+npx mootant run src --mutant q31p
+```
+
+<Terminal output={recheckOutput} />
+
+Verdicts are cached, so the next full run reuses them for mutants whose file and
+tests did not change.
+
+## Run in CI
+
+Check only the lines a pull request changed, and fail the build when the
+mutation score drops below a threshold:
+
+```sh
+npx mootant run src --since origin/main --threshold 80
+```
+
+## Let an agent fix them
+
+Mootant ships with an agent skill. It reads the report, writes the missing tests
+and asks Mootant to confirm each kill:
+
+```sh
+npx skills add azat-io/mootant
+```
+
+<Terminal output={skillSession} />
+
+## Next steps
+
+<Cards>
+  <Card
+    href="/guide/configuration"
+    icon={IconAdjustments}
+    title="Configuration"
+  >
+    Choose a preset, turn mutators off and set the defaults of a run.
+  </Card>
+  <Card
+    href="/mutators"
+    icon={IconDna}
+    title="Mutators"
+  >
+    See what each mutator changes and which test catches it.
+  </Card>
+  <Card
+    href="/guide/report"
+    icon={IconReport}
+    title="HTML report"
+  >
+    Browse every mutant of a run in its code.
+  </Card>
+</Cards>

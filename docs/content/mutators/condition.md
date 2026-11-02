@@ -65,8 +65,8 @@ export function cartTotal(subtotal: number, coupon?: string): number {
 }
 ```
 
-Tests that always pass a coupon do not catch `coupon` → `true`: with a coupon,
-the condition is already true. A test without a coupon catches it:
+Tests that always pass a coupon do not catch `if (coupon)` → `if (true)`: with a
+coupon, the condition is already true. A test without a coupon catches it:
 
 ```ts
 it('charges the full subtotal without a coupon', () => {

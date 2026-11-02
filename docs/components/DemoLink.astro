@@ -1,0 +1,14 @@
+---
+interface Props {
+  route: string
+}
+
+let { route } = Astro.props
+---
+
+<a
+  href={`/report/demo${route}`}
+  data-astro-prefetch="false"
+  target="_blank"
+  ><slot /></a
+>

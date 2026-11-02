@@ -3,6 +3,7 @@
  * the `hast` types, so it lists only the fields the plugins use.
  */
 export interface HastNode {
+  attributes?: { value?: unknown; name?: string }[]
   properties?: Record<string, unknown>
   children?: HastNode[]
   tagName?: string

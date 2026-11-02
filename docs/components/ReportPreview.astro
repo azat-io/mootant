@@ -1,0 +1,89 @@
+---
+import IconExternalLink from '../icons/external-link.svg'
+
+let description =
+  'Overview page of the report of a sample shop: mutation score 67.35%, 99 mutants in 8 files, 21 of them survived.'
+---
+
+<a
+  data-astro-prefetch="false"
+  class="preview card-link"
+  href="/report/demo"
+  target="_blank"
+>
+  <img
+    src="/report-overview-dark.webp"
+    alt={description}
+    decoding="async"
+    loading="lazy"
+    height="1520"
+    class="dark"
+    width="2400"
+  />
+  <img
+    src="/report-overview-light.webp"
+    alt={description}
+    decoding="async"
+    loading="lazy"
+    class="light"
+    height="1520"
+    width="2400"
+  />
+  <span class="action">
+    View the demo report
+    <IconExternalLink
+      aria-hidden="true"
+      class="icon"
+    />
+  </span>
+</a>
+
+<style>
+  .preview {
+    position: relative;
+    display: block;
+    margin-block: var(--space-l) 0;
+    overflow: clip;
+    text-decoration: none;
+  }
+
+  img {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  .dark {
+    display: none;
+
+    :global([data-theme='dark']) & {
+      display: block;
+    }
+  }
+
+  .light {
+    :global([data-theme='dark']) & {
+      display: none;
+    }
+  }
+
+  .action {
+    position: absolute;
+    inset-block-end: var(--space-s);
+    inset-inline-end: var(--space-s);
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-2xs);
+    align-items: center;
+    padding: var(--space-2xs) var(--space-s);
+    font: var(--font-xs);
+    color: var(--color-content-selection);
+    background: var(--color-background-brand);
+    border-radius: var(--border-radius);
+  }
+
+  .icon {
+    inline-size: var(--size-icon-xs);
+    block-size: var(--size-icon-xs);
+  }
+</style>

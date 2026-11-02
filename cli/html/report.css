@@ -2,12 +2,12 @@
  * Styles of the HTML report, on top of the tokens and base styles of the docs,
  * following the home page of the docs:
  * - Type: Sora for text, JetBrains Mono for code, data and uppercase labels.
- *   Weight 600 is for headings (score 4xl, sections 2xl, cards l), the version
- *   badge and the labels; text, numbers and controls stay regular and stand out
- *   by color: primary, secondary, or the brand color of survivors.
- * - Room: a section head has m between the title and the lead and xl before
- *   its content, sections are 2xl apart, cards have l inside and between them,
- *   and the parts of a card stack m apart.
+ *   Weight 600 is for headings (score 4xl, pages 3xl, sections xl, cards l), the
+ *   version badge and the labels; text, numbers and controls stay regular and
+ *   stand out by color: primary, secondary, or the brand color of survivors.
+ * - Room: a section head has m between the title and the lead and m before its
+ *   content, sections are xl apart, cards have l inside and between them, and
+ *   the parts of a card stack m apart.
  * - Shapes: cards take 1.5 of the border radius, code labels 1 / 1.5, keys
  *   1 / 2, and only status pills are round.
  * - Focus: the brand ring of the docs, with a transparent outline for forced
@@ -115,6 +115,12 @@ li {
       background 200ms ease-in-out,
       box-shadow 200ms ease-in-out;
   }
+}
+
+code:not(pre code) {
+  color: var(--color-content-primary);
+  background: var(--color-background-secondary-hover);
+  border: none;
 }
 
 kbd {
@@ -423,11 +429,11 @@ kbd {
 /* Shared parts */
 
 .page {
-  padding-block: var(--space-xl) var(--space-2xl);
+  padding-block: var(--space-l) var(--space-2xl);
 }
 
 .section + .section {
-  margin-block-start: var(--space-2xl);
+  margin-block-start: var(--space-xl);
 }
 
 .section-head {
@@ -436,18 +442,21 @@ kbd {
   gap: var(--space-s) var(--space-l);
   align-items: end;
   justify-content: space-between;
-  margin-block-end: var(--space-xl);
+  margin-block-end: var(--space-m);
 }
 
 .title {
-  font: var(--font-2xl);
-  line-height: 1.2;
+  font: 600 var(--font-size-xl) / 1.2 var(--font-family-title);
+
+  &:is(h1) {
+    font-size: var(--font-size-3xl);
+  }
 }
 
 .lead {
   max-inline-size: 48rem;
   margin-block-start: var(--space-m);
-  font: var(--font-m);
+  font: var(--font-s);
   color: var(--color-content-secondary);
 }
 
@@ -455,6 +464,10 @@ kbd {
   font: var(--font-size-2xs) / 1.5 var(--font-family-code);
   color: var(--color-content-secondary);
   white-space: nowrap;
+
+  &:is(a) {
+    color: var(--color-content-brand);
+  }
 }
 
 .label {
@@ -625,8 +638,7 @@ kbd {
   text-overflow: ellipsis;
   font: var(--font-size-2xs) / 1.6 var(--font-family-code);
   white-space: nowrap;
-  background: var(--color-background-primary);
-  border: 1px solid var(--color-border-primary);
+  background: var(--color-background-secondary-hover);
   border-radius: calc(var(--border-radius) / 1.5);
 }
 
@@ -1056,8 +1068,6 @@ kbd {
 .open {
   margin-inline-start: auto;
   font-size: var(--font-size-xs);
-  color: var(--color-content-primary);
-  text-decoration: none;
 }
 
 .row {
@@ -1071,6 +1081,13 @@ kbd {
   color: inherit;
   text-decoration: none;
   border-block-start: 1px solid var(--color-border-primary);
+  border-radius: 0;
+
+  &:nth-child(odd) {
+    background: oklch(
+      from var(--color-background-secondary) calc(l - 0.02) c h
+    );
+  }
 
   @media (width < 900px) {
     grid-template-columns: [status] 14px [place] 4.5rem [change] minmax(0, 1fr);
@@ -1085,7 +1102,7 @@ kbd {
   @media (hover: hover) {
     &:hover {
       color: inherit;
-      background: var(--report-hover);
+      background: var(--color-background-secondary-hover);
     }
   }
 
@@ -1117,13 +1134,11 @@ kbd {
   display: block;
   padding: var(--space-s) var(--space-l);
   font-size: var(--font-size-xs);
-  color: var(--color-content-secondary);
-  text-decoration: none;
   border-block-start: 1px solid var(--color-border-primary);
+  border-radius: 0;
 }
 
 .group-more {
-  color: var(--color-content-primary);
   background: var(--color-background-secondary-hover);
 }
 
@@ -1280,12 +1295,8 @@ kbd {
   }
 
   & thead th {
-    font: var(--font-size-xs) / 1.5 var(--font-family-base);
+    font: 600 var(--font-size-2xs) / 1.5 var(--font-family-code);
     color: var(--color-content-secondary);
-  }
-
-  & tbody tr {
-    background: none;
   }
 
   & tbody tr:last-child > * {
@@ -1302,7 +1313,7 @@ kbd {
 
     @media (hover: hover) {
       &:hover {
-        background: var(--report-hover);
+        background: var(--color-background-secondary-hover);
       }
     }
   }
@@ -1960,18 +1971,22 @@ html:has(.panel .is-detail) {
   border-radius: var(--border-radius);
 
   & .diff-lines {
-    padding: var(--space-xs) var(--space-s);
+    padding-block: var(--space-xs);
     overflow-wrap: anywhere;
   }
 
   & .removed,
   & .added {
+    padding-inline: var(--space-s);
     white-space: pre-wrap;
   }
 
-  & .changed {
-    text-decoration: underline 1px;
-    text-underline-offset: 3px;
+  & .removed {
+    background: var(--color-code-line-removed);
+  }
+
+  & .added {
+    background: var(--color-code-line-added);
   }
 
   & .removed .sign,

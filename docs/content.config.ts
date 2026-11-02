@@ -11,7 +11,7 @@ let guide = defineCollection({
   }),
   loader: glob({
     base: path.join(import.meta.dirname, 'content', 'guide'),
-    pattern: '**/*.md',
+    pattern: '**/*.mdx',
   }),
 })
 

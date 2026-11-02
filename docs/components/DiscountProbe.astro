@@ -1,0 +1,203 @@
+---
+
+---
+
+<figure
+  class="probe"
+  data-probe
+  hidden
+>
+  <div class="control">
+    <label
+      for="probe-total"
+      class="label"
+    >
+      <code>getDiscount(total, false)</code>
+    </label>
+    <div class="range">
+      <input
+        id="probe-total"
+        class="input"
+        type="range"
+        value="99"
+        max="110"
+        min="90"
+      />
+      <output
+        for="probe-total"
+        aria-live="off"
+        class="total"
+        data-total
+      >
+        99
+      </output>
+    </div>
+  </div>
+  <table class="results">
+    <tbody>
+      <tr>
+        <th scope="row"><code>total &gt;= 100</code></th>
+        <td data-original>0</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>total &gt; 100</code></th>
+        <td data-mutant>0</td>
+      </tr>
+    </tbody>
+  </table>
+  <figcaption
+    aria-live="polite"
+    class="result"
+  >
+    <span class="status">survived</span>
+    <span data-text
+      >Same result, so a test with this total can't tell them apart.</span
+    >
+  </figcaption>
+</figure>
+
+<script>
+  /* The two versions of `getDiscount` from the sample shop, for a non-member. */
+  let getOriginal = (total: number): number => (total >= 100 ? total * 0.1 : 0)
+  let getMutant = (total: number): number => (total > 100 ? total * 0.1 : 0)
+
+  /* `101 * 0.1` is 10.100000000000001, which only the display rounds. */
+  let formatAmount = (amount: number): string =>
+    String(Number(amount.toFixed(2)))
+
+  let update = (probe: HTMLElement, total: number): void => {
+    let original = getOriginal(total)
+    let mutant = getMutant(total)
+    let isKilled = original !== mutant
+    probe.querySelector('[data-total]')!.textContent = String(total)
+    probe.querySelector('[data-original]')!.textContent = formatAmount(original)
+    probe.querySelector('[data-mutant]')!.textContent = formatAmount(mutant)
+    if (probe.hasAttribute('data-killed') !== isKilled) {
+      probe.toggleAttribute('data-killed', isKilled)
+      probe.querySelector('.status')!.textContent =
+        isKilled ? 'killed' : 'survived'
+      probe.querySelector('[data-text]')!.textContent =
+        isKilled ?
+          'Different results, so a test with this total catches the mutant.'
+        : "Same result, so a test with this total can't tell them apart."
+    }
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    for (let probe of document.querySelectorAll<HTMLElement>('[data-probe]')) {
+      probe.hidden = false
+      let input = probe.querySelector('input')!
+      input.addEventListener('input', () => {
+        update(probe, input.valueAsNumber)
+      })
+      update(probe, input.valueAsNumber)
+    }
+  })
+</script>
+
+<style>
+  .probe {
+    display: grid;
+    gap: var(--space-s);
+    padding: var(--space-m);
+    margin: var(--space-m) 0;
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: calc(var(--border-radius) * 1.5);
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  .control {
+    display: grid;
+    gap: var(--space-xs);
+  }
+
+  .range {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-s);
+    align-items: center;
+  }
+
+  .input {
+    flex-grow: 1;
+    min-inline-size: 0;
+    block-size: 6px;
+    appearance: none;
+    cursor: pointer;
+    background: var(--color-background-secondary-hover);
+    border-radius: 3px;
+
+    &::-webkit-slider-thumb {
+      inline-size: 22px;
+      block-size: 22px;
+      appearance: none;
+      background: var(--color-background-brand);
+      border: 2px solid var(--color-background-secondary);
+      border-radius: 50%;
+    }
+
+    &::-moz-range-thumb {
+      inline-size: 22px;
+      block-size: 22px;
+      background: var(--color-background-brand);
+      border: 2px solid var(--color-background-secondary);
+      border-radius: 50%;
+    }
+
+    &:focus-visible {
+      outline: 2px solid transparent;
+      box-shadow: 0 0 0 3px var(--color-border-brand);
+    }
+  }
+
+  .total {
+    min-inline-size: 3ch;
+    font: 600 var(--font-size-xl) / 1.2 var(--font-family-code);
+    color: var(--color-content-primary);
+    text-align: end;
+  }
+
+  .results {
+    margin-block: 0;
+    font: var(--font-code);
+
+    & th,
+    & td {
+      font: inherit;
+    }
+
+    & td {
+      font-weight: 600;
+      color: var(--color-code-foreground);
+      text-align: end;
+    }
+
+    & tbody tr:nth-child(n) {
+      background: var(--color-code-background);
+    }
+
+    & code:not(pre code) {
+      padding: 0;
+      color: var(--color-code-foreground);
+      background: none;
+    }
+  }
+
+  .result {
+    font: var(--font-xs);
+  }
+
+  .status {
+    display: block;
+    font: 600 var(--font-size-m) / 1.3 var(--font-family-code);
+    color: var(--color-content-brand);
+
+    [data-killed] & {
+      color: var(--color-content-primary);
+    }
+  }
+</style>

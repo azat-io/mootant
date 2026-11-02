@@ -13,9 +13,64 @@ keywords:
   - test runner
 ---
 
+import IconAdjustments from '../../icons/adjustments-horizontal.svg'
+import PresetStats from '../../components/PresetStats.astro'
+import IconPlay from '../../icons/player-play.svg'
+import IconFile from '../../icons/file-code.svg'
+import Cards from '../../components/Cards.astro'
+import IconPuzzle from '../../icons/puzzle.svg'
+import IconStack from '../../icons/stack-2.svg'
+import Card from '../../components/Card.astro'
+import IconDna from '../../icons/dna.svg'
+
 Mootant works without a configuration: it applies the `recommended` preset and
-finds your test runner itself. Add a configuration file to change the mutators,
-set the paths to mutate or tune `mootant run`.
+finds your test runner itself. **Add a configuration file to change the
+mutators, set the paths to mutate or tune `mootant run`.**
+
+<Cards>
+  <Card
+    href="#configuration-file"
+    icon={IconFile}
+    title="Configuration file"
+  >
+    Where Mootant looks for it and which formats it reads.
+  </Card>
+  <Card
+    href="#presets"
+    icon={IconStack}
+    title="Presets"
+  >
+    Ready sets of mutators and settings.
+  </Card>
+  <Card
+    href="#mutators"
+    icon={IconDna}
+    title="Mutators"
+  >
+    Turn mutators on and off and set their options.
+  </Card>
+  <Card
+    href="#settings"
+    icon={IconAdjustments}
+    title="Settings"
+  >
+    Settings that all mutators share.
+  </Card>
+  <Card
+    href="#plugins"
+    icon={IconPuzzle}
+    title="Plugins"
+  >
+    Mutators and presets from other packages.
+  </Card>
+  <Card
+    href="#run-settings"
+    icon={IconPlay}
+    title="Run settings"
+  >
+    Defaults of `mootant run`.
+  </Card>
+</Cards>
 
 ## Configuration file
 
@@ -85,10 +140,14 @@ export default defineConfig({
 })
 ```
 
-- `recommended`, the default: every built-in mutator, without noisy variants and
-  without mutants that may cause timeouts
-- `strict`: `recommended` with the noisier options of the mutators, the mutants
-  that may cause timeouts and the coarse mutants that `recommended` drops
+<PresetStats />
+
+|                                     | `recommended`, the default | `strict` |
+| ----------------------------------- | -------------------------- | -------- |
+| Built-in mutators                   | All 20                     | All 20   |
+| [Mutator options](#mutator-options) | Defaults                   | All on   |
+| Mutants that may cause timeouts     | Left out                   | Added    |
+| Coarse mutants                      | Dropped                    | Kept     |
 
 `--preset` replaces `extends` for one run, while the `mutators` and `settings`
 of the configuration still apply:
@@ -126,38 +185,21 @@ The options are `false` by default, and `strict` turns all of them on.
 `nullishSwap` is `'distinguishing'` by default, and `strict` sets it to
 `'always'`.
 
-- [`assignment-operator`](/mutators/assignment-operator)
-  - `nullishSwap`: with `'always'`, `??=` and `||=` are also swapped for a
-    number with the default `0`, such as `count ??= 0`, and for a left side of
-    unknown type
-- [`logical-operator`](/mutators/logical-operator)
-  - `nullishSwap`: the same for `??` and `||`
-  - `nullishNormalization`: drops a `null`, `undefined` or `void 0` default of
-    `??`, so `value ?? null` becomes `value`
-- [`method-call`](/mutators/method-call)
-  - `anyReceiver`: mutates methods also on receivers of another known type, such
-    as `filter()` on an instance of your own class
-- [`number-literal`](/mutators/number-literal)
-  - `caseTests`: mutates numbers in `case` labels
-- [`optional-chaining`](/mutators/optional-chaining)
-  - `nonNullable`: replaces `?.` also where type hints say that the value cannot
-    be nullish, since annotations can be wrong at runtime
-- [`regex-flag`](/mutators/regex-flag)
-  - `additions`: adds `i` to a pattern with cased letters and `g` to the pattern
-    of a `.replace()` call
-- [`regex-pattern`](/mutators/regex-pattern)
-  - `classMembers`: removes an element of a character class and narrows a range
-    by one character at each end
-  - `largeAlternations`: removes an alternative also from a list of more than
-    eight
-  - `negations`: negates classes and escapes, such as `[a]` and `[^a]` or `\d`
-    and `\D`, and turns `\.` into `.`
-  - `quantifiers`: narrows a quantifier, such as `x+` to `x` or `x*` to `x?`,
-    and moves its bounds by one
-- [`statement-removal`](/mutators/statement-removal)
-  - `jumps`: removes `continue`, `yield` and the `break` of a loop or a label
-- [`string-literal`](/mutators/string-literal)
-  - `caseTests`: mutates strings in `case` labels
+| Mutator                                                | Option                 | What it does                                                                                                                                |
+| ------------------------------------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`assignment-operator`](/mutators/assignment-operator) | `nullishSwap`          | With `'always'`, also swaps `??=` and `\|\|=` for a number with the default `0`, such as `count ??= 0`, and for a left side of unknown type |
+| [`logical-operator`](/mutators/logical-operator)       | `nullishSwap`          | The same for `??` and `\|\|`                                                                                                                |
+| [`logical-operator`](/mutators/logical-operator)       | `nullishNormalization` | Drops a `null`, `undefined` or `void 0` default of `??`, so `value ?? null` becomes `value`                                                 |
+| [`method-call`](/mutators/method-call)                 | `anyReceiver`          | Mutates methods also on receivers of another known type, such as `filter()` on an instance of your own class                                |
+| [`number-literal`](/mutators/number-literal)           | `caseTests`            | Mutates numbers in `case` labels                                                                                                            |
+| [`optional-chaining`](/mutators/optional-chaining)     | `nonNullable`          | Replaces `?.` also where type hints say that the value cannot be nullish, since annotations can be wrong at runtime                         |
+| [`regex-flag`](/mutators/regex-flag)                   | `additions`            | Adds `i` to a pattern with cased letters and `g` to the pattern of a `.replace()` call                                                      |
+| [`regex-pattern`](/mutators/regex-pattern)             | `classMembers`         | Removes an element of a character class and narrows a range by one character at each end                                                    |
+| [`regex-pattern`](/mutators/regex-pattern)             | `largeAlternations`    | Removes an alternative also from a list of more than eight                                                                                  |
+| [`regex-pattern`](/mutators/regex-pattern)             | `negations`            | Negates classes and escapes, such as `[a]` and `[^a]` or `\d` and `\D`, and turns `\.` into `.`                                             |
+| [`regex-pattern`](/mutators/regex-pattern)             | `quantifiers`          | Narrows a quantifier, such as `x+` to `x` or `x*` to `x?`, and moves its bounds by one                                                      |
+| [`statement-removal`](/mutators/statement-removal)     | `jumps`                | Removes `continue`, `yield` and the `break` of a loop or a label                                                                            |
+| [`string-literal`](/mutators/string-literal)           | `caseTests`            | Mutates strings in `case` labels                                                                                                            |
 
 ## Settings
 
@@ -172,7 +214,14 @@ export default defineConfig({
 })
 ```
 
-### loggers
+| Setting                           | `recommended`                                      | `strict` |
+| --------------------------------- | -------------------------------------------------- | -------- |
+| [`loggers`](#loggers)             | `['console', 'log', 'logger', '*Logger', 'debug']` | The same |
+| [`templates`](#templates)         | `true`                                             | The same |
+| [`timeouts`](#timeouts)           | `false`                                            | `true`   |
+| [`coarseMutants`](#coarsemutants) | `false`                                            | `true`   |
+
+### `loggers`
 
 Loggers whose message text is not mutated. Mootant skips changes to the text of
 their calls, such as `'Saved'` → `''` in `logger.info('Saved')`. The text is a
@@ -181,7 +230,8 @@ string or a template with only variable names in `${}`, alone or joined with
 such as `console.log('Saved')`. It leaves alone the labels of child loggers,
 such as `'db'` in `logger.child('db')`.
 
-Mootant still makes these changes in log calls:
+<details>
+<summary>Changes Mootant still makes in log calls</summary>
 
 - Changes to the code that builds the message, such as `name.trim()` → `name` or
   `'Total: ' + total` → `'Total: '`.
@@ -191,6 +241,8 @@ Mootant still makes these changes in log calls:
 - The removal of other calls, such as `logger.info('Saved')` or
   `console.log('Saved', order.id)`: `logger` may be `undefined`, and `order.id`
   throws when `order` is `null`.
+
+</details>
 
 A name is a receiver whose log methods write entries, such as `logger` in
 `logger.info('Saved')`, or a function called with a text first, such as
@@ -208,17 +260,17 @@ export default defineConfig({
 })
 ```
 
-### templates
+### `templates`
 
 Whether expressions in Svelte and Vue templates are mutated, when Svelte 5 or
 `@vue/compiler-dom` 3.5 or later is installed. `true` by default.
 
-### timeouts
+### `timeouts`
 
 Whether to add the mutants that may cause timeouts, such as a loop condition
 forced to `true`. `false` by default, `strict` turns it on.
 
-### coarseMutants
+### `coarseMutants`
 
 Whether to keep a coarse mutant, such as a removed statement, when a finer
 mutant lies inside it. `recommended` drops such a mutant, since a test that
@@ -258,38 +310,51 @@ export default defineConfig({
 })
 ```
 
-### paths
+| Setting                       | Default                                                     | For one run                         |
+| ----------------------------- | ----------------------------------------------------------- | ----------------------------------- |
+| [`paths`](#paths)             | None                                                        | The paths after `mootant run`       |
+| [`threshold`](#threshold)     | None                                                        | `--threshold`                       |
+| [`concurrency`](#concurrency) | `maxWorkers` of Vitest, CPU cores minus one for `node:test` | `--concurrency`                     |
+| [`fast`](#fast)               | `false`                                                     | `--fast`, `--no-fast`               |
+| [`cache`](#cache)             | `true`                                                      | `--cache`, `--no-cache`             |
+| [`incremental`](#incremental) | `false`                                                     | `--incremental`, `--no-incremental` |
+| [`html`](#html)               | No report                                                   | `--html`, `--no-html`               |
+| [`runner`](#runner)           | Detected                                                    | None                                |
+| [`timeout`](#timeout)         | `{ factor: 3, constant: 250 }`                              | None                                |
+| [`hitLimit`](#hitlimit)       | `{ factor: 100, floor: 100000 }`                            | None                                |
+
+### `paths`
 
 Files and directories to mutate when the command line gives none, relative to
 the root of the project. With them, `mootant run` needs no arguments.
 `mootant list` always takes its paths from the command line.
 
-### threshold
+### `threshold`
 
 The lowest mutation score, from 0 to 100, that passes. Below it, the exit code
 is 1. No threshold by default. The `--threshold` option sets it for one run.
 
-### concurrency
+### `concurrency`
 
 The most test files to run at once. By default, the `maxWorkers` of Vitest, or
 the number of CPU cores minus one for `node:test`. The `--concurrency` option
 sets it for one run.
 
-### fast
+### `fast`
 
 Fast mode tries many mutants in one test run and trusts their kills. It is
 faster, but a kill may be false, and tests that run concurrently run one at a
 time. It works with Vitest and changes nothing with `node:test`. `false` by
 default. `--fast` and `--no-fast` set it for one run.
 
-### cache
+### `cache`
 
 Whether to reuse the verdicts of earlier runs. They are kept in
 `node_modules/.cache/mootant` in the root of the project and reused while the
 mutated file and the files and environment variables its tests read stay the
 same. `true` by default. `--no-cache` and `--cache` set it for one run.
 
-### incremental
+### `incremental`
 
 Whether a verdict outlives changes elsewhere. A cached verdict is reused while
 the declaration of its mutant, what that uses in its file and what its tests
@@ -298,7 +363,7 @@ change of a caller or of another mutated file may leave a verdict stale. It
 needs the cache. `false` by default. `--incremental` and `--no-incremental` set
 it for one run.
 
-### html
+### `html`
 
 Whether to write the [HTML report](/guide/report) after the run: `true` writes
 it to `.mootant/report.html` in the root of the project, a path writes it there,
@@ -306,7 +371,7 @@ relative to the root. No report by default. `--html` asks for it for one run,
 and `--no-html` skips it. A run of single mutants with `--mutant` writes a
 report only with `--html`, so a re-check keeps the report of the whole run.
 
-### runner
+### `runner`
 
 The test runner: `'vitest'`, `'node-test'` or an adapter object. By default,
 Mootant detects it, and a runner that the test scripts of `package.json` call
@@ -342,7 +407,8 @@ export default defineConfig({
 })
 ```
 
-`nodeTestAdapter` takes these options:
+<details>
+<summary>Options of `nodeTestAdapter`</summary>
 
 - `command`: the test command as a script of `package.json` has it, such as
   `bnt` or `node --test --import tsx`. Mootant reads its flags and files and
@@ -354,14 +420,16 @@ export default defineConfig({
 - `node`: the Node.js binary that runs the tests, by default the one that runs
   Mootant
 
-### timeout
+</details>
+
+### `timeout`
 
 The time limit of each test with a mutant: `factor × duration + constant`
 milliseconds, where the duration is how long the test took without mutants. A
 mutant that goes over it counts as a timeout. `{ factor: 3, constant: 250 }` by
 default.
 
-### hitLimit
+### `hitLimit`
 
 The most evaluations of mutated code in each test: `max(floor, factor × hits)`,
 where the hits are how many evaluations the test made without mutants. A mutant
