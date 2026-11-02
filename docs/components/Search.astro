@@ -427,7 +427,7 @@ import IconCross from '../icons/cross.svg'
     outline-offset: 2px;
     background: var(--color-background-secondary);
     border: none;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-m);
     box-shadow: 0 0 0 1px var(--color-border-primary);
 
     @media (prefers-reduced-motion: no-preference) {
@@ -491,7 +491,6 @@ import IconCross from '../icons/cross.svg'
     text-align: center;
     background: none;
     border-block-end-width: 1px;
-    border-radius: calc(var(--border-radius) / 2);
   }
 
   .dialog {
@@ -505,7 +504,7 @@ import IconCross from '../icons/cross.svg'
     color: var(--color-content-primary);
     background: var(--color-background-primary);
     border: 1px solid var(--color-border-primary);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-m);
     box-shadow: 0 var(--space-s) var(--space-xl) oklch(0% 0 0deg / 25%);
 
     @media (width >= 800px) {
@@ -582,7 +581,7 @@ import IconCross from '../icons/cross.svg'
     outline: none;
     background: none;
     border: none;
-    border-radius: calc(var(--border-radius) - 4px);
+    border-radius: var(--border-radius-s);
 
     @media (prefers-reduced-motion: no-preference) {
       transition: all 200ms ease-in-out;
@@ -642,7 +641,7 @@ import IconCross from '../icons/cross.svg'
     padding: var(--space-xs) var(--space-s);
     color: inherit;
     text-decoration: none;
-    border-radius: calc(var(--border-radius) - 4px);
+    border-radius: var(--border-radius-s);
   }
 
   .results :global([aria-selected='true'] > .link) {

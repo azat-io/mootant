@@ -27,7 +27,7 @@ let range = getChangedRange(before, after)
     overflow: clip;
     background: var(--color-code-background);
     border: 1px solid var(--color-border-primary);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-m);
   }
 
   .line {
@@ -70,7 +70,6 @@ let range = getChangedRange(before, after)
 
   .size-l {
     margin-block-end: var(--space-l);
-    border-radius: calc(var(--border-radius) * 1.5);
 
     & .line {
       padding: var(--space-2xs) var(--space-m);

@@ -92,10 +92,6 @@ article {
     margin-block-start: var(--space-m);
   }
 
-  & kbd {
-    border-radius: calc(var(--border-radius) / 2);
-  }
-
   & blockquote {
     padding-inline-start: var(--space-m);
     margin: var(--space-m) 0;
@@ -115,7 +111,7 @@ article {
     background:
       linear-gradient(to right, var(--color-border-brand) 8px, transparent 8px),
       color-mix(in oklch, var(--color-border-brand) 10%, transparent);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-m);
 
     &:not(:has(strong)) {
       color: var(--color-content-primary);
@@ -138,7 +134,7 @@ article {
         transparent 8px
       ),
       var(--color-background-secondary);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-m);
 
     &::before {
       display: block;
@@ -171,7 +167,7 @@ article {
     margin-block: var(--space-m);
     background: var(--color-background-secondary);
     border: 1px solid var(--color-border-primary);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-m);
 
     & summary {
       font-weight: 600;
@@ -419,7 +415,7 @@ article {
 .card-link {
   background: var(--color-background-secondary);
   border: 1px solid var(--color-border-primary);
-  border-radius: calc(var(--border-radius) * 1.5);
+  border-radius: var(--border-radius-m);
 
   @media (prefers-reduced-motion: no-preference) {
     transition:

@@ -120,7 +120,7 @@ let survivedFile = 'discount.ts'
     display: grid;
     background: var(--color-background-secondary);
     border: 1px solid var(--color-border-primary);
-    border-radius: calc(var(--border-radius) * 1.5);
+    border-radius: var(--border-radius-m);
 
     @media (width >= 1024px) {
       grid-template-columns: [coverage] 1fr [mutation] 1fr;
@@ -238,7 +238,7 @@ let survivedFile = 'discount.ts'
     color: var(--color-code-foreground);
     background: var(--color-code-background);
     border: 1px solid var(--color-border-primary);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-m);
   }
 
   .file {

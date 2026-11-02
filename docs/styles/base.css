@@ -94,7 +94,7 @@ a {
   text-decoration: underline;
   text-underline-offset: 0.25em;
   outline: none;
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-m);
 
   @media (prefers-reduced-motion: no-preference) {
     transition: box-shadow 200ms;
@@ -145,7 +145,7 @@ code {
 }
 
 code {
-  border-radius: calc(var(--border-radius) / 1.5);
+  border-radius: var(--border-radius-s);
 
   &:not(pre code) {
     padding-inline: var(--space-2xs);
@@ -177,7 +177,7 @@ pre {
   overflow-block: scroll;
   outline: none;
   scrollbar-width: none;
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-m);
 
   &:focus-visible {
     z-index: 1;
@@ -201,7 +201,7 @@ table {
   font: var(--font-s);
   border-collapse: collapse;
   border-style: hidden;
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-m);
   box-shadow: 0 0 0 1px var(--color-border-primary);
 }
 
@@ -241,7 +241,7 @@ kbd {
   background: var(--color-code-background);
   border: 1px solid var(--color-border-primary);
   border-block-end-width: 3px;
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-s);
 }
 
 .heading {
@@ -271,7 +271,7 @@ kbd {
   }
 
   &:focus-visible {
-    border-radius: 8px;
+    border-radius: var(--border-radius-s);
     opacity: 100%;
   }
 
@@ -298,7 +298,7 @@ kbd {
   outline: none;
   background: var(--color-background-primary);
   border: none;
-  border-radius: calc(var(--border-radius) - 4px);
+  border-radius: var(--border-radius-s);
 
   @media (prefers-reduced-motion: no-preference) {
     transition: all 200ms ease-in-out;
