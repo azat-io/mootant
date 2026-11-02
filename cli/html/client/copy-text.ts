@@ -4,6 +4,21 @@
 const COPIED_TIME = 2000
 
 /**
+ * The part of a document that copies a selection. The DOM types mark
+ * `execCommand` as deprecated, yet nothing replaces it where the clipboard API
+ * is missing, so it is called through this type on purpose.
+ */
+interface SelectionCopier {
+  /**
+   * Runs a document command.
+   *
+   * @param command - Command to run.
+   * @returns Whether the browser ran it.
+   */
+  execCommand(command: 'copy'): boolean
+}
+
+/**
  * Copies text and marks the button that asked for it with `data-copied` for a
  * while, as the copy buttons of the docs do. A browser without the clipboard
  * API, or one that refuses it for a file, copies through a selected text area.
@@ -23,7 +38,8 @@ export async function copyText(
     area.value = text
     document.body.append(area)
     area.select()
-    document.execCommand('copy')
+    let copier: SelectionCopier = document
+    copier.execCommand('copy')
     area.remove()
   }
   button.dataset['copied'] = ''

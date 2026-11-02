@@ -1,4 +1,4 @@
-import type { ExecFileException } from 'node:child_process'
+import type { ExecException } from 'node:child_process'
 
 import {
   afterEach,
@@ -82,14 +82,14 @@ describe('runGit', () => {
     )
     /* Cspell:disable-next-line */
     vi.unstubAllEnvs()
-    let error: ExecFileException = Object.assign(
+    let error: ExecException = Object.assign(
       new Error('stdout maxBuffer length exceeded'),
       { code: 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER', cmd: 'git status' },
     )
     vi.mocked(execFile).mockImplementationOnce(((
       _file: string,
       _arguments: string[],
-      ...rest: [object, (error: ExecFileException) => void]
+      ...rest: [object, (error: ExecException) => void]
     ) => {
       rest[1](error)
     }) as never)
