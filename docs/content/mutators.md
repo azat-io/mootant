@@ -46,7 +46,8 @@ Each skipped change comes with its rule, a reason and one of these categories:
 A category is Mootant's decision, not a proof about your code:
 
 - Some rules rest on a guess, such as a type hint or a method name.
-  `mootant list --skipped --json` marks their changes with `"heuristic": true`.
+  `npx mootant list src --skipped --json` marks their changes with
+  `"heuristic": true`.
 - For a coarse mutant, rule `solitary`, Mootant assumes that a test that catches
   a finer mutant inside also catches the removal. That is likely, not certain.
 - Mootant builds all mutants into one copy of your code and turns them on one at
@@ -90,7 +91,8 @@ name above the line, and the reason after a colon:
 emitter.emit('change', value)
 ```
 
-Reports keep ignored mutants with the reason, and the score leaves them out.
+`list`, `run --json --all` and the HTML report keep ignored mutants with the
+reason, and the score leaves them out.
 
 Ignoring the finer mutants of a line can bring back a coarse one. Here the line
 gets `emitter.emit('change', value)` → `;` from

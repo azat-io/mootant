@@ -26,8 +26,16 @@ export let pages: Section[] = [
         title: 'Getting started',
       },
       {
+        title: 'CLI reference',
+        url: '/guide/cli',
+      },
+      {
         url: '/guide/configuration',
         title: 'Configuration',
+      },
+      {
+        url: '/guide/compatibility',
+        title: 'Compatibility',
       },
       {
         url: '/guide/report',

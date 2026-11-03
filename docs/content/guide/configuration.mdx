@@ -354,6 +354,10 @@ Whether to reuse the verdicts of earlier runs. They are kept in
 mutated file and the files and environment variables its tests read stay the
 same. `true` by default. `--no-cache` and `--cache` set it for one run.
 
+After changes that only child processes, workers or the network see, delete that
+directory: `--no-cache` runs every mutant again but does not update the saved
+verdicts.
+
 ### `incremental`
 
 Whether a verdict outlives changes elsewhere. A cached verdict is reused while

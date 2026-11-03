@@ -1,0 +1,107 @@
+---
+title: Compatibility
+description:
+  Supported Node.js versions, test runners and source files, with the limits of
+  Vitest, node:test, Vue, Svelte and Astro support.
+keywords:
+  - mutation testing
+  - compatibility
+  - node
+  - vitest
+  - vue
+  - svelte
+  - astro
+---
+
+Mootant runs with **Vitest 5 or the Node.js test runner (`node:test`)**. It uses
+your existing tests and configuration, and checks that the tests pass without
+mutants before testing any changes.
+
+## Node.js
+
+Mootant supports Node.js 20 from 20.19.0, and Node.js 22.12.0 or later:
+`^20.19.0 || >=22.12.0`. Vitest 5 itself needs Node.js
+`^22.12.0 || ^24.0.0 || >=26.0.0`, so Node.js 20 works only with `node:test`.
+
+TypeScript configuration files need Node.js 22.18 or later, or the
+[`jiti`](https://github.com/unjs/jiti) package. See
+[configuration file](/guide/configuration#configuration-file).
+
+## Source files
+
+| Source     | Extensions                    | Support                                                                        |
+| ---------- | ----------------------------- | ------------------------------------------------------------------------------ |
+| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | List and run mutants.                                                          |
+| TypeScript | `.ts`, `.tsx`, `.mts`, `.cts` | List and run mutants. Types are not mutated.                                   |
+| Vue        | `.vue`                        | Script blocks and template expressions; see [Vue and Svelte](#vue-and-svelte). |
+| Svelte     | `.svelte`                     | Script blocks and template expressions; see [Vue and Svelte](#vue-and-svelte). |
+| Astro      | `.astro`                      | List mutants in frontmatter and script blocks; see [Astro](#astro).            |
+
+## Vitest
+
+Mootant uses the project's installation of **Vitest 5**, its configuration and
+Vite plugins. Other Vitest major versions are not supported.
+
+Projects on the `forks` and `threads` pools can run. Mootant always runs tests
+in its own forks pool with `isolate: true`, and warns when that differs from
+your configuration. It does not support:
+
+- Browser mode
+- Custom Vitest test runners
+- Other pools
+- `experimental.viteModuleRunner: false`, which bypasses Vite transforms
+
+Any of these in one project stops the whole run with an error.
+
+Tests that load a mutated file only through a computed `import()` may not be
+selected. Child processes and workers started by a test run the original code.
+For a custom Vitest configuration path, use
+[`vitestAdapter`](/guide/configuration#runner).
+
+## node:test
+
+Mootant detects the Node.js test runner when test scripts use `node --test`,
+`tsx --test`, `bnt` or `borp`, or test files import `node:test`. If both runners
+are equally likely, such as tests that import `node:test` in a project with
+Vitest installed, Mootant uses Vitest and prints a note; set
+[`run.runner`](/guide/configuration#runner) to choose. Each mutant runs a test
+file in its own process. `--fast` has no effect with this runner.
+
+TypeScript needs Node.js type stripping or tsx. Other loaders, such as ts-node,
+and tsx with `.cts` files or with `.ts` files whose nearest `package.json` lacks
+`"type": "module"`, stop the run with an error.
+
+Child processes and workers started by a test run the original code. Tests
+slower than 60 seconds need the `--test-timeout` flag of Node.js in a
+`node --test` or `tsx --test` command or in the adapter's `execArgv`, or
+`--timeout` in a `borp` command. These are not Mootant CLI options.
+
+Use [`nodeTestAdapter`](/guide/configuration#runner) to set another test
+command, test files, Node.js flags or environment variables.
+
+## Vue and Svelte
+
+Mootant reads JavaScript and TypeScript in `<script>` blocks. It also mutates
+template expressions when the project has:
+
+- Svelte 5 or later for Svelte templates
+- `@vue/compiler-dom` 3.5 or later for Vue templates
+
+Running the mutants of a component requires the framework's Vite plugin in the
+project's Vitest configuration. Under `node:test`, these mutants stay in the run
+as uncovered. Calls the compiler needs as written, such as Vue's `defineProps()`
+or a Svelte rune, stay in place; code inside them can still be mutated.
+
+A Svelte component or Vue template that does not compile with its mutants gives
+them an `Error` verdict with the compiler's message. Vue templates reach mutants
+through `Math[Symbol.for('mootant')]`, so tests that replace `Math` hide them.
+
+To leave template expressions unchanged, set
+[`settings.templates`](/guide/configuration#templates) to `false`. Scripts can
+still be mutated.
+
+## Astro
+
+`mootant list` reads code between the leading `---` lines of an Astro file and
+in its `<script>` blocks. Astro templates are not mutated. `mootant run` skips
+Astro components with a warning and runs the other files.

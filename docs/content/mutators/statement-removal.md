@@ -195,9 +195,9 @@ export default defineConfig({
 
 ## Skipped changes
 
-Mootant leaves out these changes. `mootant list --skipped` shows them with the
-category and the rule; [Skipped changes](/mutators#skipped-changes) explains the
-categories.
+Mootant leaves out these changes. `npx mootant list src --skipped` shows them
+with the category and the rule; [Skipped changes](/mutators#skipped-changes)
+explains the categories.
 
 | Reason                                                    | Example                                               | Rule                             |
 | --------------------------------------------------------- | ----------------------------------------------------- | -------------------------------- |

@@ -1,0 +1,141 @@
+---
+title: CLI reference
+description:
+  List mutants, run your tests against them and choose the scope, output and
+  passing score with Mootant's command line options.
+keywords:
+  - mutation testing
+  - cli
+  - commands
+  - json
+  - continuous integration
+---
+
+Use **`mootant run` to check your tests** or `mootant list` to inspect mutants
+without running them. Command line options override the
+[configuration](/guide/configuration).
+
+## Run tests against mutants
+
+```sh
+npx mootant run src
+```
+
+Pass files or directories, relative to the current directory. Without paths,
+`run` uses [`run.paths`](/guide/configuration#paths). Mootant detects the test
+runner and uses its existing configuration; see
+[compatibility](/guide/compatibility) for supported runners and frameworks.
+
+Mootant selects test files related to the mutated code, and they must pass
+without mutants first. It then reports surviving mutants, uncovered mutants and
+errors in separate sections, grouped by file. Each finding shows the source
+lines before and after the change and a short id, then the reason of an error
+or, when Mootant finds one, a test file to extend.
+
+In a terminal, the report also lists the five files with the lowest scores below
+100%. Piped output and JSON leave this list out. Test output is hidden unless
+you use `--verbose` or the tests fail without mutants. Snapshots are never
+written.
+
+### Run options
+
+| Option                | What it does                                                                                                                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--threshold <score>` | Sets the lowest mutation score, from 0 to 100, that passes. No threshold by default.                                                                                                                   |
+| `--concurrency <n>`   | Limits how many test files run at once. Defaults to Vitest's `maxWorkers`, or CPU cores minus one for `node:test`.                                                                                     |
+| `--mutant <id>`       | Runs only this mutant. Accepts a full id or a unique prefix of at least four characters. Repeat the option for more mutants.                                                                           |
+| `--no-cache`          | Runs every selected mutant again instead of reusing earlier verdicts, and saves no new ones. `--cache` enables caching.                                                                                |
+| `--incremental`       | Reuses a cached verdict while the code of its mutant and its tests stay the same, even after changes elsewhere. A verdict may be stale. Requires caching; `--no-incremental` disables it.              |
+| `--fast`              | Tries many mutants in one test run. A kill may be false, and concurrent tests run one at a time. Applies to Vitest; it changes nothing with `node:test`. `--no-fast` disables it.                      |
+| `--html`              | Writes an [HTML report](/guide/report) to `.mootant/report.html` in the project root, or to the path set by `run.html`. `--no-html` skips it for this run.                                             |
+| `--verbose`           | Shows test output, the covering test of each survivor and the runs of the test runner. With `--json`, prints the full report with offsets, original and replacement texts, covering tests and timings. |
+| `--all`               | Lists every mutant, including killed, timed-out and ignored mutants. Requires `--json`.                                                                                                                |
+
+The [run settings](/guide/configuration#run-settings) describe caching,
+incremental runs, fast mode and timeouts in detail. A re-check with `--mutant`
+writes no HTML report unless you also pass `--html`, so it keeps the report of
+the whole run.
+
+### Mutation score and exit code
+
+The mutation score is the percentage of scored mutants that were killed or timed
+out. Surviving and uncovered mutants count against the score; `Ignored` and
+`Error` are excluded from it. The report also shows a `covered` score, which
+leaves out uncovered mutants; the threshold applies to the full score.
+
+The exit code is 1 when a run has errors or its score falls below the threshold.
+Surviving or uncovered mutants alone do not fail a run without a threshold.
+Without mutants to score, any threshold passes.
+
+## List mutants
+
+```sh
+npx mootant list src
+```
+
+`list` requires at least one file or directory. It shows the mutants of these
+files without running the tests. `run` leaves out test and setup files. Use
+[ignore comments](/mutators#ignore-mutants) to keep selected mutants, regions or
+files out of runs and the score; `list` marks them as ignored.
+
+| Option      | What it does                                                                                                      |
+| ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| `--skipped` | Also lists the changes Mootant considered and skipped, with their category, rule and reason.                      |
+| `--verbose` | With `--json`, prints offsets, kinds, original and replacement texts and mutator descriptions. Requires `--json`. |
+
+See [skipped changes](/mutators#skipped-changes) for the categories and the
+limits of heuristic rules. Code that is never mutated, such as types, decorators
+and enums, does not appear in the skipped list.
+
+## Shared options
+
+These options work with both `run` and `list`:
+
+| Option            | What it does                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--config <path>` | Uses this configuration file instead of the one Mootant finds. See [configuration file](/guide/configuration#configuration-file).                       |
+| `--preset <name>` | Selects `recommended`, `strict` or a plugin preset, replacing the configuration's presets. `recommended` is the default; `strict` adds noisier mutants. |
+| `--since <ref>`   | Selects mutants on lines changed since the merge base of `<ref>` and `HEAD`, including uncommitted changes and untracked files.                         |
+| `--json`          | Prints the report as JSON for scripts and agents. See [JSON output](#json-output).                                                                      |
+| `--no-color`      | Disables colors. `NO_COLOR=1` does the same; `--color` turns colors on unless `NO_COLOR` is set.                                                        |
+| `-h`, `--help`    | Prints the command line help.                                                                                                                           |
+| `-v`, `--version` | Prints the version.                                                                                                                                     |
+
+For example, to check the lines a pull request changed and require a score of at
+least 80:
+
+```sh
+npx mootant run src --since origin/main --threshold 80
+```
+
+The comparison ref must exist in the local Git repository. In CI, fetch the base
+branch and enough history to find its merge base with `HEAD`.
+
+## JSON output
+
+```sh
+npx mootant run src --json
+```
+
+The default JSON report lists surviving mutants, uncovered mutants and errors.
+Each finding includes its full id, source lines and the command to re-check it,
+plus suggested test files and one covering test when available. Long source
+lines are cut around the change.
+
+Progress goes to stderr. A run that stops early, such as on failing tests,
+prints its error to stderr and no JSON.
+
+Add `--all` to include every mutant; a killed mutant includes the test file that
+killed it. Add `--verbose` for the full report, including offsets, original and
+replacement texts, timings and, for a mutant not killed or timed out, every
+covering test. Use both options for the full report on every mutant:
+
+```sh
+npx mootant run src --json --verbose --all
+```
+
+With `list --json`, every listed mutant includes its source lines before and
+after the change, with long lines cut the same way. `--verbose` adds the full
+details and mutator descriptions. `--skipped` adds a `skipped` array; its
+`heuristic` flag marks rules based on a guess, such as a method name or a type
+hint, rather than a proof.

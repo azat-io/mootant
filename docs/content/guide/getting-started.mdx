@@ -20,6 +20,7 @@ import heroOutput from '../../components/hero-output.ansi?raw'
 import DiscountProbe from '../../components/DiscountProbe.astro'
 import DemoLink from '../../components/DemoLink.astro'
 import Terminal from '../../components/Terminal.astro'
+import IconPlay from '../../icons/player-play.svg'
 import Badge from '../../components/Badge.astro'
 import Cards from '../../components/Cards.astro'
 import IconHexagon from '../../icons/hexagon.svg'
@@ -55,6 +56,9 @@ as they are: Mootant runs them without mutants first.
     text="Built into Node.js"
   />
 </div>
+
+See [compatibility](/guide/compatibility) for test runner and framework limits.
+Vitest 5 does not support Node.js 20.
 
 ## Installation
 
@@ -125,6 +129,10 @@ mutation score drops below a threshold:
 npx mootant run src --since origin/main --threshold 80
 ```
 
+The ref must exist locally: in CI, fetch the base branch with enough history to
+find its merge base. The [CLI reference](/guide/cli#shared-options) lists the
+other options.
+
 ## Let an agent fix them
 
 Mootant ships with an agent skill. It reads the report, writes the missing tests
@@ -139,6 +147,13 @@ npx skills add azat-io/mootant
 ## Next steps
 
 <Cards>
+  <Card
+    href="/guide/cli"
+    icon={IconPlay}
+    title="CLI reference"
+  >
+    Look up every option, the exit code and the JSON output.
+  </Card>
   <Card
     href="/guide/configuration"
     icon={IconAdjustments}
