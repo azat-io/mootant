@@ -1,0 +1,84 @@
+{
+ "note": "Независимая перепроверка README после применения замечаний final-report-check.json (workflow edit-final-report, 2026-11-04). Поле resolution заполнено координатором после сверки каждого пункта с источниками.",
+ "editor": {
+  "applied": [
+   "F1/R11 (must-fix): числа коротких точек взяты по GNU elapsed. Тёплый кэш 5,4–80,4 с (×9,1–59 к холодному); P3 0,5–0,7 с (×10,1 и ×9,3); --mutant 1,7–6,9 с; --since 3,2–39,3 с; --incremental ×3,4–8,4; тест-сьюты 46,7/0,64/2,08/4,91 ± σ; dry run ×1,0–1,2 к тест-сьюту (на 4–25% дороже). В «Методику» §5 добавлено смещение обвязки hyperfine (+0,2–1,0 с) со ссылкой на bench/README.md п. 11. Колонка --fast по GNU: 953,1 / 24,8 / 65,7; к Stryker ×3,1 и ×2,4.",
+   "R1 (must-fix): §1 сокращён с 551 до 250 слов (237 без отдельно стоящих знаков). Осталось: общее состояние, ядро, доверие, принятие, скорость против Stryker с цифрами, архитектура одной фразой. CPU и память перенесены в §5, сильные стороны — в абзац в конце §2, детали архитектуры — в §4.",
+   "R2 (must-fix): у всех 10 пунктов §3 вложенные строки *Проблема:*, *Доказательство:*, *Польза:*, *Риск:*, *Проверка:* (у пп. 1 и 5 ещё *Что сделать:*), трудоёмкость в скобках. Дописаны недостающие поля в пп. 2, 6, 7, 8, 9: BUG-515, BUG-652, fetch-depth, замер токенов для --format agent. В вводной сказано, какие пункты повторяют проблемы §2.",
+   "R3/F8 (must-fix): «перепроверка выживших без барьеров» перенесена на ранг 7. Прогноз: без P1 −80…−140 с (≈×1,1–1,2), после P1 около 5%; трудоёмкость S (пакеты) / L (поток).",
+   "R4/F13: «Ранжированные ускорения» §5 перестроены по рангам 1–8 из 04 §4.4 с теми же трудоёмкостями. Добавлен префорк (ранг 4). includeTaskLocation — S–M, кэш компиляции V8 — S. У каждого пункта строка *Риск / проверка:*; для P3 указаны хэш всего дерева и правило «кэшировать только hit-limit, не time-limit» (BUG-204). Ранги 9–12 даны одной строкой.",
+   "F5/R7: §2 п. 9 оставлен high по решению координатора, обоснование повышения вписано в пункт; в вводной §2 отмечено, что серьёзность как у критика, кроме п. 9.",
+   "F3/R8: в §1 названы исключения: BUG-106, BUG-102, BUG-103.",
+   "F7/R9: «время уходит не на тесты» исправлено. На path-to-regexp и cheerio тесты — 18–24% стоимости юнита, на perfectionist — около 70%; отставание от Stryker объяснено расписанием.",
+   "F6/R10: в §5 «из 135 выживших у Stryker с двойником в Mootant 133 выжили и у Mootant», с причиной двух ложных Survived у Stryker.",
+   "F9: колонка переименована в «Полезных (Survived + NoCoverage) M/S».",
+   "F10: в §3 п. 7 сказано, что workflow не запускался на GitHub; добавлен пункт в §7.",
+   "F11/R5: BUG-701 со ссылкой на новый промпт в §3 п. 3 и §4. В §6 и §7 перечислены баги без независимой перепроверки: BUG-510, 701, 800, 820, 850, 851. Для BUG-800 указано, что его воспроизвёл координатор; описано, чем подтверждены 701, 510 и 820.",
+   "F12/R10: в §7 — 135 общих выживших вручную не разбирались; выборка была только среди выживших «только у Mootant» (74 из 111).",
+   "F14/R20 (в README): §6 — 51 промпт (48 на уникальные баги и 3 на дубли), 43 находки (42 уникальных бага и дубль BUG-602); то же в §8.",
+   "F15/R16/R22: «медленнее на 6,5 и 7,8%» в §1 и §5. P1 больше не называется режимом по умолчанию. В §3 п. 10: 92,9 с — пара off/on, ×1,74; к точке стенда 93,9 с — ×1,75.",
+   "F16: в §5 оговорён мутант cheerio, у которого в --fast вердикт расходится с обычным режимом; из §1 --fast убран.",
+   "F17: «пиковая память всего дерева процессов (PSS)» плюс оговорка про %M на fast-json-stringify (324 против 314 МБ).",
+   "F18: CPU cheerio — 363 против 481.",
+   "F19: в §1 «(BUG-507, BUG-903)».",
+   "F20/R13: в §2 п. 4 снято противоречие с BUG-820.",
+   "F21: «Каждое, кроме Vitest 4 (L), чинится за день».",
+   "F22: I2 выполнен на ufo и defu и на фикстурах Vue и Svelte.",
+   "F23/R17: в §2 п. 10 — dry run полный в тёплом прогоне, а в --mutant только по тестам файла мутанта. Добавлены P3 (×10,1 и ×9,3) и оговорка, что на perfectionist он не помог бы; ссылка create-run-cache.ts:313-319.",
+   "R12 и п. 4 задания: в §7 добавлены P3 на perfectionist (ошибка стенда, прогноз ≈80,4 с), профили только на perfectionist и path-to-regexp, отсутствие трасс node:test, запуск CI-workflow только через actionlint и локально, BUG-701 и BUG-800 без перепроверки, смещение hyperfine и его исправление в обвязке. Формулировка про core/text: остановлен внешним лимитом времени задачи на 42-й минуте, шёл раунд 5.",
+   "F2: «Шум облака» с σ/mean по GNU elapsed по числам координатора: длинные точки 0,2–6,6% (P1 1,4–3,7%), короткие 2,2–10,4%, P3 8,8 и 17,4%.",
+   "R14 и п. 5 задания: в «2 месяца» добавлены BUG-510, BUG-106, BUG-104, BUG-851 (S–M), BUG-800 (S, шаг 2 плана миграции), BUG-701 и дубли 503/504; в «До 1.0» — Plugin.skipRules (BUG-800) и 62 .d.ts вместо 822. Правило группировки 653 → 535 перенесено в §4.",
+   "R15 и п. 6 задания: в §8 добавлены TASK.md, 01-architecture-adapters.md (заглушка), experiments/prototypes.md, каждый experiments/*.diff, data/bench/, data/verification/decisions.md, architecture/README.md и все 13 bugs/*.md по областям. В §4 дана ссылка на diff быстрого пути ширины ASCII.",
+   "R19: ссылки на промпты BUG-602, BUG-201, BUG-903, BUG-650 в §2.",
+   "R18: причина остановки core/text уточнена (внешний лимит, неверный таймаут; раунд 5).",
+   "R21: формулировка о BUG-651 исправлена (частично воспроизвёл независимый верификатор; исходный запуск CLI — ux/skills-add-output.txt); «реестр skills» убран из списка закрытых хостов.",
+   "П. 7 задания: список §6 перегенерирован командой `node analysis/tools/list-bug-prompts.mjs` и вставлен как есть (51 строка, включая BUG-701); после всех правок ещё раз сверен с выводом команды."
+  ],
+  "skipped": [
+   "F1, часть про bench/README.md и measure-one.sh: менять можно было только README. Пункт 11 «Известных ограничений» и исправление обвязки там уже есть.",
+   "F4/R6: правка шапки bug-prompts/BUG-653.md — это другой файл. Шапка уже исправлена на critical, в README critical оставлен.",
+   "F5/R7, вариант «вернуть medium»: по решению координатора п. 9 оставлен high с явным обоснованием.",
+   "F11, часть про 02-bugs.md:24-26/37-39: другой файл. Координатор уже обновил 02-bugs.md, перечислив баги без перепроверки.",
+   "F14/R20, часть про build-bugs-report.mjs и перегенерацию 02-bugs.md: другие файлы. Счётчики 02-bugs.md уже обновлены (42 + 1 дубль, 48 + 3) и сходятся с README.",
+   "F18, часть «и в 04-performance.md»: другой файл, там уже стоит 481.",
+   "F2, диапазоны CV по hyperfine (0,02–21%): по приоритету чисел координатора взяты σ/mean по GNU elapsed.",
+   "R4: ранги 9–12 из 04 §4.4 сведены в одну строку без отдельных строк «риск / проверка», так как их выигрыш мал или не оценён."
+  ],
+  "summary_words": 250
+ },
+ "recheck": {
+  "verdict": "The report is ready to publish after small edits; nothing blocks publication. The five remaining items are wording and consistency fixes, about 20–30 minutes of work. I changed nothing; the working tree is clean.\n\n(a) All six required parts of the «Итог» section are present. The summary in §1 is 253 words, about half a page. There are 10 problems and 10 improvements, and the roadmap covers 2 weeks, 2 months and up to 1.0. The list in §6 has 51 lines for the 51 BUG-*.md files, one each, with no gaps or duplicates. It matches the output of `node analysis/tools/list-bug-prompts.mjs` byte for byte. Severities match `data/verification/decisions.md` (43 decisions: 1 critical, 4 high, 20 medium, 18 low) and the stated severities of the other 8 prompts (2 duplicates and 6 not re-checked). The totals hold: 51 = 48 unique + 3 duplicates. §7 says what was not done and why. §8 links every file and folder in `analysis/`, including all 13 files in `bugs/`. Severities and effort for the top 10 match `data/synthesis/synthesis.json`: 38 rejected candidates, and item 9 raised from medium to high with the reason stated.\n\n(b) Principle 10 is followed in §3: all 10 items have problem, evidence, benefit, risk and verification. It is followed in condensed form for ranks 1–8 in §5. Roadmap items outside those lists have no justification and no link to one (remaining item 5).\n\n(c) 20 numbers were drawn at random with seed 20261104 from 289 numeric claims, and all 20 match their sources: 43; 268; 404 (twice); 20.19; 44%; 2.5 s; 93.9 s; 661.1; 380; 0.9; 324; 3.8×; 5.4–80.4 s; 1–5%; 31%; 0.54 s; 23%; 8–9%; 1.33 s. I also checked about 60 more numbers against the hyperfine JSON and the raw GNU `run-k.time` files. All match, including:\n- the §5 table and the ratios 1.04–1.62, 1.34–1.75, 6.5% / 7.8%, 3.8 / 2.5 / 3.1 / 2.4;\n- PSS and CPU figures;\n- mutant counts from `run-1-summaries.json`;\n- P3: 5.400 / 0.537 = 10.06×, shown as 10.1×, and 6.830 / 0.733 = 9.31×, shown as 9.3×; dividing the displayed rounded values gives 10.0×, but the raw data confirms 10.1×.\n\n(d) 94 of 94 relative Markdown links resolve. The 16 paths written in backticks exist. The 6 references to code lines (`core/run-mutants.ts:411/444/489`, `create-run-cache.ts:313-319`, `start-vitest-session.ts:102`, `run-dry.ts:160`, `getting-started.mdx:132-134`) point to the right lines. Outside `analysis/`, the branch matches `170ec52`, and the branch `experiment/bug-repros` exists.\n\n(e) I found four minor contradictions or inaccuracies (remaining items 1–4). The repeated numbers (×1.34–1.75, 1.04–1.62, 357/268, 5.4–80.4 s, 1.7–6.9 s, 43, 51, 0 of 67 and others) agree across all sections.",
+  "remaining": [
+   {
+    "location": "README.md:100-101 (§2, item 9) and README.md:134-136 (intro to §3)",
+    "problem": "Improvement 10 (P1) is called a \"fix\" (исправление) for problem 9 and is said to close it, but P1 is opt-in. The default mode stays slower than Stryker on all 4 projects. Even with P1, Mootant is still slower on fast-json-stringify and perfectionist (6.5% and 7.8%). P1 also does not touch the round barriers for survivors (71% of unit time on perfectionist), which are part of problem 9 itself; rank 7 in §5 covers them. This contradicts §3 item 10 (\"только opt-in\") and §5.",
+    "fix": "In §2 item 9, replace «исправление (прототип P1)» with «главное средство — прототип P1, opt-in». In the intro to §3, write that item 10 only partly closes problem 9: the default behaviour does not change, and the survivor round barriers are rank 7 in §5.",
+    "resolution": "Исправлено: §2 п. 9 — «главное средство — прототип P1 (opt-in)… режим по умолчанию не трогает, а барьеры раундов выживших оставляет (ранг 7 в §5)»; во вводной §3 — пункт 10 закрывает проблему 9 лишь частично."
+   },
+   {
+    "location": "README.md:126-127 (§2, «Что проверено и проблемой не оказалось») versus README.md:436-441, 446-447 and 495 (§5)",
+    "problem": "«Детерминизм вердиктов, кроме зависящих от времени» is listed as \"checked, not a problem\" with no caveat. Yet §5 reports a non-deterministic `--fast` verdict on cheerio: Timeout by `hit-limit` in the default mode, Killed in 2 of 3 `--fast` runs, cause not analysed. The README itself calls `hit-limit` independent of machine load (line 495), so this case does not fall under the \"time-dependent\" exception.",
+    "fix": "Narrow the claim, for example: «детерминизм вердиктов в режиме по умолчанию, кроме зависящих от времени (BUG-204); в `--fast` один мутант cheerio недетерминирован, причина не разобрана (§5)».",
+    "resolution": "Исправлено: в §2 «Что проверено…» детерминизм сужен — за 3 прогона вердикты не менялись ни в одном снятом режиме, кроме одного мутанта cheerio в `--fast` (причина не разобрана, §5); `time-limit`-тайм-ауты у границы бюджета недетерминированы (BUG-204)."
+   },
+   {
+    "location": "README.md:171-190 (§3, item 3) versus README.md:317 and 341-343 (§4)",
+    "problem": "Improvement 3 is rated S (up to an hour) as a whole and covers both BUG-407 and BUG-701. The roadmap puts BUG-407 in the 2-week horizon and BUG-701 («CI-переменные вне `*`») in the 2-month horizon, with no explanation of the split.",
+    "fix": "Either move BUG-701 into the «Кэш в CI» bullet of the 2-week plan, or mark §3 item 3 as «(S; вторая часть — позже, §4)» and give the reason (for example, that BUG-701 was not independently re-checked).",
+    "resolution": "Исправлено: BUG-701 перенесён в пункт «Кэш в CI (улучшение 3)» плана на 2 недели и убран из «2 месяца»."
+   },
+   {
+    "location": "README.md:224-225 (§3, item 6, «Проблема»)",
+    "problem": "«на Node ниже 20.19 вместо сообщения о версии — стек `toSorted is not a function`» generalises a reproduction done only on Node 18.20.8 (line 228; BUG-515 in 02-bugs.md). `Array.prototype.toSorted` exists from Node 20.0, so on 20.0–20.18 the symptom is different. According to BUG-515 it is, for example, «Unknown option» on `--no-*`. The wording is factually inaccurate.",
+    "fix": "Rewrite as: «на Node 18 (проверено на 18.20.8) — стек `toSorted is not a function`; ниже 20.19 CLI не сообщает о требуемой версии».",
+    "resolution": "Исправлено: «на Node 18 (проверено на 18.20.8) — стек `toSorted is not a function`, а ниже 20.19 CLI вообще не сообщает о требуемой версии (BUG-515)»."
+   },
+   {
+    "location": "README.md:307-391 (§4, roadmap: «До 1.0» on lines 367-391; «2 месяца» bullets without a BUG ID on lines 350 and 355-359)",
+    "problem": "Principle 10 is met in full for all 10 items of §3 and in condensed form for ranks 1–8 of §5. The large roadmap recommendations outside those lists have neither a principle-10 explanation in the README nor links to where one exists. These are: the public API split and `.d.ts` 62 vs 822, the semver policy, the release jobs, the adapter-contract version, capabilities, `AbortSignal` and `adapter-kit`, the Vitest 4 adapter, partial dry run (XL), Windows/macOS smoke, type-checking survivors and SARIF, skip counters and `heuristic` flags, and ignore by id. Principle-10 cards for most of them exist in the detailed reports.",
+    "fix": "Add a line at the start of §4 saying that the principle-10 justification for items outside §3 and §5 is in the report cards. Give each bullet a link to its section: `01-architecture.md` §3.1 (R1–R7) and «12. Существенные рекомендации» in the adapters subsection; `07-compat-and-release.md` §7.1.6, §7.4.1 and §7.4.3–7.4.4; `03-competitors.md` §6.1 and §6.3; `06-ux-and-agents.md` §6.2 and §6.4; `04-performance.md` §4.4.",
+    "resolution": "Исправлено: в начале §4 сказано, где обоснование по принципу 10 у каждого вида пунктов; у пунктов без номера бага — «→» на карточки подробных отчётов (разделы проверены по заголовкам и содержимому). Заодно уточнена трудоёмкость Jest: L при целевом контракте, XL через текущий."
+   }
+  ]
+ }
+}
