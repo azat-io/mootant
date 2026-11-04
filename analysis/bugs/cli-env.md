@@ -7,8 +7,9 @@
 > 2–36 во время замеров), процесс от root, `TERM=linux`, `CI` не задан.
 >
 > Фикстуры — `/home/user/projects/cli/*`, их создают скрипты
-> `analysis/tools/cli/make-fixture.sh` и `make-hang-fixtures.sh` (node_modules
-> базовой фикстуры `base-vt` копируются жёсткими ссылками). Сырые данные —
+> `analysis/tools/cli/make-env-fixtures.sh` (вызывает `make-fixture.sh` и
+> `make-hang-fixtures.sh`; node_modules базовой фикстуры `base-vt` копируются
+> жёсткими ссылками; Vue/Svelte/алиасы/TS — командами из этого файла). Сырые данные —
 > `analysis/data/cli/`. Воспроизведения — ветка `experiment/bug-repros`,
 > `test/repros/BUG-5xx*` (тесты Vitest или фикстура с `run.sh`; `run.sh`
 > собирает `dist`, если его нет).

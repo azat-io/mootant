@@ -29,3 +29,11 @@ Auto-merging src/lines.ts
   [merged] --since main exit=0
     "src/lines.ts": lines 2
 === shallow_clone (05:13:07)
+  EXPECT: a hint that the clone is shallow
+  [head1] --since HEAD~1 exit=1
+    (not JSON) 
+    stderr: Error: --since: unknown git revision "HEAD~1".
+  [originmain] --since origin/main exit=0
+    (no mutants selected)
+  EXPECT: an error with the 'git fetch --deepen' hint
+  [pr-depth1] --since origin/main exit=1
