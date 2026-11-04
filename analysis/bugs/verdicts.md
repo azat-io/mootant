@@ -7,7 +7,39 @@
 
 ## Коротко
 
-(заполняется в конце)
+- Эталон (физическая мутация + обычный `vitest run` / `node --test` всего
+  набора) прогнан на 18 стресс-фикстурах (Vitest и эквивалентные node:test) и на
+  реальном коде самого Mootant (`core/text`, 127 мутантов, 528 тестов): 531
+  физических прогонов, плюс 9 режимов на 7 пар мутантов (изоляция) и
+  3–5 повторов на 7 конфигураций (детерминизм).
+- **Режиму по умолчанию в целом можно доверять**: реальный код — 127 из 127
+  совпадений (и в `--fast`); изоляция isolated-единиц настоящая (свежий процесс
+  на единицу в обоих адаптерах), вердикт не зависит от соседних мутантов, их
+  порядка и `--concurrency`; вердикты детерминированы, кроме временных.
+- Найдено 7 проблем (BUG-200…206, все подтверждены, 5 medium, 2 low), каждая —
+  детерминированный механизм, а не шум:
+  - ложный `Timeout` вместо `Survived`: лимит срабатываний сайтов ловит
+    «горячий», но конечный код (BUG-200, оба адаптера), в `--fast` — ещё и по
+    лимиту одной попытки без перепроверки (BUG-202); бюджет `3× + 250 мс`
+    превращает замедленный, но проходящий тест в `Timeout`, к тому же
+    недетерминированно (BUG-204, оба адаптера);
+  - ложный `Killed`: необработанная ошибка, которую конфигурация Vitest
+    велит игнорировать (BUG-203);
+  - ложный `NoCoverage`/`Survived`: в Vitest набор тест-файлов зависит от
+    *других* файлов прогона — полный прогон `Killed`, а `--mutant <id>`,
+    узкий путь и `--since` — `NoCoverage` (BUG-201, нарушен инвариант из
+    `core/run-mutants.ts:340-342`); `createRequire` без точной диагностики
+    (BUG-205); «покрыт в dry run, но не достигнут» молча становится
+    `NoCoverage` (BUG-206).
+- `--fast` даёт документированные ложные `Killed` (мутант не сбрасывает
+  состояние, оставленное контрольной попыткой): на фикстурах 2 из 40 в
+  `vt/state`; на реальном коде — 0.
+- Документированные ограничения подтверждены эталоном: дочерние процессы и
+  worker_threads (`NoCoverage`), `globalSetup` (`Error`), вычисляемый `import()`
+  в Vitest (`Survived`/`NoCoverage`), снапшоты не пишутся (семантика CI).
+- Внешние реальные проекты запустить не удалось: исполнение кода из
+  склонированных репозиториев запрещено системой разрешений; использован код
+  Mootant.
 
 ## Методика
 
@@ -109,46 +141,54 @@ BUG-901; отдельно не воспроизводил (**гипотеза**:
 | бросок при загрузке модуля | `crash`, `1q7p1tzs` `JSON.parse('')` | Killed (load-error) [static] / killed | Killed (load-error) [static] / killed |
 | unhandled rejection, uncaught exception в микрозадаче | `crash`, `d2dn1btq`, `6cm2bm5g` | Killed (stray-error) / killed | Killed (stray-error) / killed |
 | то же при `dangerouslyIgnoreUnhandledErrors: true` | `unhandled`, `knkyemhs`, `7mkvyn7b` | **Killed (stray-error)** / survived (BUG-203) | — |
-| бесконечный синхронный цикл (strict) | `crash`, `mqzeg79s` `index++` → `index--`, `s4b8m9bv` | Timeout (hit-limit) / timeout | см. ниже (nt strict) |
+| бесконечный синхронный цикл (strict) | `crash`, `mqzeg79s` `index++` → `index--`, `s4b8m9bv` | Timeout (hit-limit) / timeout | Timeout (hit-limit) / timeout |
 | бесконечная рекурсия | `crash`, `vge39vdq` `count - 1` → `count + 1` | Killed (RangeError) / killed | Killed / killed |
 | бесконечный асинхронный цикл на таймерах (strict) | `slow`, `6nb7t7bq`, `05ztzkkx` | Timeout (time-limit) / killed-timeout | Timeout (hang) / timeout (у node:test нет таймаута теста по умолчанию) |
 | неразрешающийся промис | `slow`, `c54q4t9c`, `ytg8ja3g` | Timeout (time-limit) / killed-timeout | Killed (assertion) / killed (node:test: «Promise resolution is still pending…») |
 | конечное замедление теста до ~2 с | `slow`, `9trb33kh` `Math.min` → `Math.max` | **Timeout (time-limit)** / survived (BUG-204; 4 из 5 повторов) | Survived в первом прогоне, **Timeout (hang)** в 4 следующих / survived |
-| огромное выделение памяти (OOM при `--max-old-space-size=512`, strict) | `crash`, `gt34y7x6` `block++` → `block--` | Killed (crash) / killed | см. ниже (nt strict) |
+| огромное выделение памяти (OOM при `--max-old-space-size=512`, strict) | `crash`, `gt34y7x6` `block++` → `block--` | Killed (crash) / killed | Killed (crash) / killed |
 | массовый вывод (20 000 строк по 210 символов) | `crash`, `eb0ye9vm` `verbose` → `true` | Survived / survived; **`--fast`: Timeout (hit-limit)** (BUG-202) | Survived / survived |
+| исключение в `beforeAll`/`before` и `afterAll`/`after` из-за мутанта | `hooks`, `86e7wwdj`, `0ap8zdz3`, `g733625x`, `z8vzgrgv` | Killed (hook-error) [static] / killed | Killed (hook-error) [static] / killed |
+| мутант убивает собственный процесс (`process.kill(process.pid, 'SIGKILL')`) | `hooks`, `bw6hqbwf` | Killed (crash) / killed; `--fast`: batch-юнит потерян → recovery → isolated → Killed | Killed (crash) / killed |
+| тест кэширует результат на диске между запусками | `fscache`, 4 мутанта | **NoCoverage** ×3 и **Survived** ×1 / killed (BUG-206) | — |
 
 ## Матрицы согласия
 
 Полностью — `analysis/data/oracle/matrices.md` (по фикстурам и суммы),
 по-мутантно — `analysis/data/oracle/{vitest,node-test,real}/*.verdicts.md`.
 Строки — вердикт Mootant, столбцы — исход эталона; «согласие» — совпадение
-«обнаружен / не обнаружен».
+«обнаружен / не обнаружен». Фикстуры нарочно собраны из трудных случаев,
+поэтому их проценты — не оценка для обычных проектов, а счётчик механизмов.
 
-**Стресс-фикстуры Vitest, режим по умолчанию** (8 фикстур, 216 мутантов, из
+**Стресс-фикстуры Vitest, режим по умолчанию** (10 фикстур, 236 мутантов, из
 них 2 `Error`):
 
 | Mootant \ эталон | killed | killed-timeout | timeout | survived |
 |---|---:|---:|---:|---:|
-| Killed | 111 | 0 | 0 | 3 |
+| Killed | 119 | 0 | 0 | 3 |
 | Timeout | 0 | 5 | 2 | 3 |
-| Survived | 1 | 0 | 0 | 63 |
-| NoCoverage | 8 | 1 | 0 | 17 |
+| Survived | 2 | 0 | 0 | 67 |
+| NoCoverage | 11 | 1 | 0 | 21 |
 | Error | 2 | 0 | 0 | 0 |
 
-Согласие 198 из 214 (92,5 %), 16 расхождений.
+Согласие 214 из 234 (91,5 %), 20 расхождений.
 
-**Те же фикстуры, `--fast`**: согласие 195 из 214 (91,1 %), 19 расхождений —
-те же 16 плюс 2 ложных Killed (H4) и 1 ложный Timeout (BUG-202).
+**Те же фикстуры, `--fast`** (без `fscache`): согласие 206 из 225 (91,6 %),
+19 расхождений — те же, что в режиме по умолчанию для этих 9 фикстур (16), плюс
+2 ложных Killed (H4) и 1 ложный Timeout (BUG-202).
 
-**Стресс-фикстуры node:test** (6 фикстур, 179 мутантов): согласие 172 из 179
-(96,1 %), 7 расхождений.
+**Стресс-фикстуры node:test** (7 фикстур, 209 мутантов): согласие 202 из 209
+(96,7 %), 7 расхождений.
 
 | Mootant \ эталон | killed | killed-timeout | timeout | survived |
 |---|---:|---:|---:|---:|
-| Killed | 105 | 0 | 0 | 0 |
-| Timeout | 0 | 0 | 2 | 2 |
-| Survived | 0 | 0 | 0 | 51 |
-| NoCoverage | 5 | 0 | 0 | 14 |
+| Killed | 119 | 0 | 0 | 0 |
+| Timeout | 0 | 0 | 4 | 2 |
+| Survived | 0 | 0 | 0 | 61 |
+| NoCoverage | 5 | 0 | 0 | 18 |
+
+(`nt/slow` в матрице — первый прогон, где `9trb33kh` `Survived`; в 4 повторах
+из 5 он `Timeout(hang)`, то есть расхождений по node:test обычно 8.)
 
 **Реальный код** (см. ниже), Vitest, 127 мутантов: согласие 127 из 127
 (100 %) и в режиме по умолчанию, и в `--fast`.
@@ -185,7 +225,7 @@ Vitest не останавливается после падения, и сле�
 Для node:test реального проекта нет (те же ограничения на внешний код; в
 репозитории Mootant кода на node:test нет) — его заменяют шесть фикстур `nt/*`.
 
-## Разбор расхождений (все 16 + 3 + 7 + 0)
+## Разбор расхождений (Vitest 20 + 3 в `--fast`, node:test 7–8, реальный код 0)
 
 | Класс | Сколько | Мутанты | Корневая причина | Статус |
 |---|---:|---|---|---|
@@ -198,10 +238,10 @@ Vitest не останавливается после падения, и сле�
 | ложный Survived | 1 | `y1rmnxcp` | тест с `import(переменная)` не выбран статическим анализом Vitest | документировано («may not be selected»), без диагностики |
 | ложный NoCoverage | Vitest 9, node:test 5 | `cli.js` ×3, `scale`, `worker.js`; `legacy.cjs` ×4 | дочерний процесс / worker_threads исполняют исходник; `createRequire` в Vitest обходит Vite | документировано; `createRequire` — BUG-205 |
 | `Error` вместо killed | 2 | `vjx704xe`, `b8yr2n0p` | `globalSetup` в главном процессе, переключить нельзя | документировано |
+| NoCoverage/Survived вместо killed | 4 | `43bfzptb`, `ch4kze59`, `3hbdt5q6`, `7dtdwjsz` | dry run пишет кэш на диск, единицы читают его и до мутанта не доходят; эталон на чистой копии | BUG-206 |
 
-Отдельно (вне матриц, своя фикстура): `vt/fscache` — 4 расхождения из-за
-кэша на диске между запусками (BUG-206), `vt/mocks` при `--mutant`/`--since`
-(BUG-201).
+Вне матриц (другие режимы запуска): `vt/mocks` при `--mutant`/узком пути/
+`--since` — 2 мутанта `NoCoverage` против killed (BUG-201).
 
 Каждое расхождение перепроверено: детерминированные (hit-limit, stray,
 выбор файлов, fs-кэш) — повторами в «Детерминизме» и в `test/repros`;
@@ -232,7 +272,7 @@ Vitest не останавливается после падения, и сле�
 |---|---|---|
 | процесс умер (OOM от мутанта, `SIGKILL` из кода) | `Killed(crash)` | `Killed(crash)` |
 | ошибка при загрузке модуля | `Killed(load-error)` [static] | `Killed(load-error)` [static] |
-| исключение в `beforeAll`/`before` или `afterAll`/`after` | см. «hooks» ниже | см. «hooks» ниже |
+| исключение в `beforeAll`/`before` или `afterAll`/`after` | `Killed(hook-error)` [static: сайты в suite-хуках считаются вне попыток] | `Killed(hook-error)` [static] |
 | бесконечный синхронный цикл | `Timeout(hit-limit)` | `Timeout(hit-limit)` |
 | бесконечный асинхронный цикл / зависший промис | `Timeout(time-limit)` (свой таймер, подтверждение ×2) | `Timeout(hang)` (сторож процесса) или `Killed` (node:test сам роняет тест с «Promise resolution is still pending») |
 | `process.exit(0)` | `Killed` (Vitest бросает) | `Survived` (как `node --test`) |
@@ -242,6 +282,30 @@ end-записи и по `reached`; сбой раннера после того,
 (`claim`), неотличим от краха из-за мутанта и даёт `Killed` (BUG-901).
 Единица, которую не взял ни один воркер, повторяется и затем даёт `Error`
 (`core/run/apply-isolated-result.ts:93-112`) — это правильная сторона.
+
+## Детерминизм
+
+Один и тот же прогон 3 раза с `--no-cache` плюс один с `--concurrency 1`
+(`analysis/tools/oracle/determinism.sh`, сравнение —
+`determinism-compare.mjs`, по статусу и причине), под нагрузкой load average
+25–32:
+
+| Фикстура | Режим | Прогонов | Мутантов | Разошлись |
+|---|---|---:|---:|---|
+| `vt/modes` (concurrent, таймеры, retry, снапшоты) | по умолчанию | 5 | 21 | 0 |
+| `vt/state` | `--fast` | 5 | 40 | 0 (ложные Killed batch воспроизводятся каждый раз) |
+| `vt/crash` (stray, OOM, циклы, вывод 4 МБ) | `strict` | 5 | 81 | 0 |
+| `nt/crash` | `strict` | 4 | 81 | 0 |
+| `vt/slow` (таймеры, бэкофф) | `strict` | 5 | 27 | 1: `9trb33kh` — Timeout ×4, Survived ×1 |
+| `nt/slow` | `strict` | 5 | 27 | 1: `9trb33kh` — Survived ×1, Timeout(hang) ×4 |
+| реальный код `core/text` | по умолчанию | 3 (в т. ч. `--concurrency 1`) | 127 | 0 |
+
+Вывод: вердикты детерминированы везде, кроме мутантов, чей исход зависит от
+времени около границы бюджета (BUG-204). `--concurrency 1` против
+`maxWorkers`/«ядра − 1» ни на одной фикстуре вердикт не изменил (кроме того же
+временного мутанта). Hit-limit, stray-ошибки, отбор тест-файлов и ложные
+batch-убийства воспроизводятся стабильно — это детерминированные дефекты, а не
+шум.
 
 ## Проверено без находок
 
@@ -317,7 +381,7 @@ end-записи и по `reached`; сбой раннера после того,
 8. **«Файловая система между единицами чиста»**. Процессы единиц свежие, но
    диск общий: dry run и единицы одного сеанса видят файлы, которые писали
    предыдущие запуски тестов (кэши, записи HTTP, выходные файлы). Эталон с
-   чистой копией на каждого мутанта видит другое (`vt/fscache`, см. ниже).
+   чистой копией на каждого мутанта видит другое (`vt/fscache`, BUG-206).
    Обычный `vitest run` с тем же кэшем вёл бы себя как Mootant, поэтому это
    не баг, а условие корректности: тесты не должны зависеть от следов
    предыдущих запусков.

@@ -522,6 +522,31 @@ mutants; fix them first (2 tests)»: `cli/index.test.ts:211` и
 | `/tmp` | `test/fixtures/equivalence/shared/test/render.test.ts:14` и `test/fixtures/node-test/shared/test/render.test.js:16` оставляют `mootant-render-<sha1(url)>.txt` — по файлу на каждую копию фикстуры (эталон копирует проект во временный каталог со случайным именем). Сейчас на машине их 95 | в `finally` добавить `await rm(output, { force: true })` рядом с `rm(lock)` | S |
 | глобальный git-конфиг | `test/helpers/create-git-repository.ts:53-65` фиксирует только `user.*` и `commit.gpgSign`. **Подтверждено** (BUG-863): с глобальным `core.hooksPath`, где `pre-commit` делает `exit 1`, падают 8 из 38 тестов `test/core/git/*` и `test/core/list-mutants.test.ts`; без хука — 38/38 | `-c core.hooksPath=/dev/null` в хелпере или `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1` в env `execFileSync`, как уже сделано в `find-git-root.test.ts:59-61`. Тесты `read-changed-lines`, которые проверяют устойчивость к конфигу, задают его локально через `git config` и не пострадают | S |
 
+### 5.4.2. Матрица окружений (отрицательный результат, кроме `TERM=linux`)
+
+`analysis/tools/tests/env-matrix.sh` гоняет 110 файлов, в которых чаще всего
+встречается зависимость от окружения: все `test/cli/**` без медленного
+`cli/index.test.ts`, плюс `score-node-test`, `start-node-test-session` и
+`load-typescript-config`. Всего 622 теста; `--testTimeout=30000`, чтобы
+отделить окружение от нагрузки; `CI`, `NO_COLOR`, `FORCE_COLOR`,
+`NODE_OPTIONS` сняты, кроме проверяемой переменной.
+
+| Окружение | Упало | Что |
+| --- | ---: | --- |
+| `TERM=xterm-256color` (база) | 1 | только root-тест (BUG-854) |
+| `TERM=linux` | 5 | 4 теста CLI (BUG-853) + root |
+| `TERM=dumb` | 1 | root |
+| `TERM` не задан | 1 | root |
+| `CI=true` | 1 | root |
+| `FORCE_COLOR=1` | 1 | root |
+| `NO_COLOR=1` | 1 | root |
+| `LC_ALL=tr_TR.UTF-8` (проверено: `Intl.Collator().resolvedOptions().locale` = `tr-TR`) | 1 | root |
+
+Вывод: кроме `TERM=linux`, тесты CLI к терминалу и локали устойчивы. Это
+заслуга явных `vi.stubEnv` в `test/cli/terminal/*.test.ts` и того, что
+`isColorSupported` принимает окружение аргументом
+(`cli/terminal/colors.ts:110-128`). Данные: `analysis/data/tests/env-matrix/`.
+
 ## 5.5. Пробелы покрытия: догфудинг мутантами
 
 Порог покрытия — 100 % по строкам, ветвям, функциям и инструкциям
@@ -692,7 +717,7 @@ Timeout 2 (бесконечные циклы в `fit-parts.ts:21,26` пойма�
 `cli/terminal/create-spinner.ts:184` (`rows = countTerminalRows(frame, …)`
 в `print()`). Без этой строки следующий кадр после напечатанной строки не
 стирает предыдущий, и в терминале остаётся «хвост» спиннера. Тест
-`create-spinner.test.ts:138-148` проверяет сам `print`, но не следующий кадр
+`create-spinner.test.ts:137-148` проверяет сам `print`, но не следующий кадр
 после него.
 
 Эквивалентные мутанты `cli/terminal` — материал для эвристик:
@@ -756,17 +781,17 @@ Timeout 2 (бесконечные циклы в `fit-parts.ts:21,26` пойма�
 
 ## 5.6. Что в тестах сделано хорошо
 
-Без оговорок: тест-сьют Mootant — сильная сторона проекта, лучше, чем у
-большинства инструментов этого класса.
+Без оговорок: тест-сьют — сильная сторона проекта.
 
 1. **Оракулы, не зависящие от реализации.**
    - Эквивалентность вердиктов с физически применёнными мутантами:
      `test/adapters/vitest/index.test.ts:801-855` («agrees with mutants applied
      by hand in the default and fast modes») и такой же блок у node:test. Хелпер
      `test/helpers/run-reference-mutants.ts` копирует проект, применяет
-     каждого мутанта текстом и запускает обычный Vitest. Расхождения
-     перечислены поимённо и объяснены комментариями (`:830-846`). Это ровно
-     та проверка, которую раздел 2 строил отдельно.
+     каждого мутанта текстом и запускает обычный Vitest. Особые случаи
+     (состояние, оставленное мутантом, ретраи, `afterAll`) перечислены
+     поимённо и объяснены комментариями (`:830-846`). Это ровно та проверка,
+     которую раздел 2 строил отдельно.
    - Инструментирование против применения по одному:
      `test/core/instrument/instrument-file.test.ts:404-432` выполняет программу
      с переключаемым кодом под каждым мутантом и с физически применённым
@@ -797,9 +822,11 @@ Timeout 2 (бесконечные циклы в `fit-parts.ts:21,26` пойма�
 5. **Типизированные моки** `vi.mock(import('…'))` — 83 из 84. Опечатка в
    пути или переименование ловятся `tsc`.
 6. **Настоящие процессы и git, а не моки.** Группы процессов, сигналы, git с
-   изоляцией пользовательского конфига (`test/helpers/create-git-repository.ts:53-65`:
-   `user.name`, `user.email`, `commit.gpgSign=false`; для теста владения —
-   `GIT_CONFIG_GLOBAL=/dev/null`, `test/core/git/find-git-root.test.ts:59-61`).
+   изоляцией основных настроек пользователя
+   (`test/helpers/create-git-repository.ts:53-65`: `user.name`, `user.email`,
+   `commit.gpgSign=false`; для теста владения — `GIT_CONFIG_GLOBAL=/dev/null`,
+   `test/core/git/find-git-root.test.ts:59-61`). Глобальные хуки изоляция не
+   отсекает (BUG-863).
 7. **Регрессии на масштаб**: 300 000 строк в заголовке
    (`test/cli/report/format-header.test.ts:21-29`), 200 000 текстов
    (`test/cli/terminal/get-max-display-width.test.ts:17-22`), 300 000 id
@@ -807,11 +834,11 @@ Timeout 2 (бесконечные циклы в `fit-parts.ts:21,26` пойма�
    при spread большого массива. Намерение правильное, но цена под нагрузкой
    высокая (§5.4).
 8. **Порог 100 % по четырём метрикам действительно соблюдается**, и мутанты
-   это подтверждают: `core/git` — 84 % «сырого» score, а без эквивалентных и
-   шумовых мутантов — 92 %; семейство логирования — 94 % на 10 тестах.
-   Найденные дыры тонкие: граничные форматы git и один тест, который не
-   проверяет то, что заявляет. Слабых тестов, которые просто «проходят по
-   коду» ради покрытия, я не встретил.
+   это подтверждают. «Сырой» score `core/git` — 84 %, без эквивалентных и
+   шумовых мутантов — 92 %; у `cli/terminal` — 88,7 % и 94,7 %; семейство
+   логирования — 94 % на своих 10 тестах. Найденные дыры тонкие: граничные
+   форматы git и терминала. Тест, который не проверяет заявленное, нашёлся
+   один (BUG-856), тестов «ради покрытия» я не встретил.
 
 ## 5.7. Рекомендации
 
@@ -820,7 +847,7 @@ L — несколько дней, XL — больше недели.
 
 | # | Что сделать | Трудоёмкость | Польза |
 | ---: | --- | --- | --- |
-| T1 | Сделать сьют независимым от машины: `NODE_OPTIONS` в `start-node-test-session.test.ts` (BUG-850), `TERM`/`CI` в тестах CLI (BUG-853), без `chmod` для root (BUG-854), общий setup-файл, нормализующий `TERM`, `CI`, `NO_COLOR`, `FORCE_COLOR`, `NODE_OPTIONS` | S | `pnpm test` и `release:check` зелёные в Docker, в консоли, с отладчиком VS Code, за прокси |
+| T1 | Сделать сьют независимым от машины: `NODE_OPTIONS` в `start-node-test-session.test.ts` (BUG-850), `TERM`/`CI` в тестах CLI (BUG-853), без `chmod` для root (BUG-854), `core.hooksPath=/dev/null` в git-хелпере (BUG-863), общий setup-файл, нормализующий `TERM`, `CI`, `NO_COLOR`, `FORCE_COLOR`, `NODE_OPTIONS` | S | `pnpm test` и `release:check` зелёные в Docker, в консоли, с отладчиком VS Code, за прокси |
 | T2 | Устойчивость к нагрузке (BUG-851, BUG-852): лимиты по стене в оракулах ×5, «тесты масштаба» до 140–150 тыс. элементов или явные таймауты, `testTimeout` 15–20 с, округление в `runner.test.ts:693` | S–M | исчезают 20 из 22 падений под нагрузкой, догфудинг перестаёт обрываться в dry run |
 | T3 | Добавить тесты-находки: `analysis/experiments/tests-git-gaps.diff` (BUG-856) и `tests-terminal-gaps.diff` (BUG-862) | S | закрыта регрессия «`--since` теряет строки ханка» и ещё 20+ непроверенных поведений |
 | T4 | Разрезать `test/adapters/vitest/index.test.ts` на 3–4 файла | S | wall `test:unit` упирается в самый долгий кусок, а не в 1 файл (71,6 % суммарного времени под нагрузкой) |
@@ -834,7 +861,8 @@ L — несколько дней, XL — больше недели.
 
 **T1. Сьют, независимый от окружения.**
 - *Проблема*: `pnpm test` красный при `TERM=linux` (4 теста), от root (1 тест),
-  с любым `NODE_OPTIONS` (порог coverage) — при исправном коде.
+  с любым `NODE_OPTIONS` (порог coverage), с глобальным git-хуком (8 тестов) —
+  при исправном коде.
 - *Чем подтверждено*: этап 0 (`00-baseline.md`), load-1 («ERROR: Coverage for
   branches (99.98%)»), прогоны `start-node-test-session.test.ts` с
   `NODE_OPTIONS` и без него (94,11 % / 100 %).
@@ -845,8 +873,9 @@ L — несколько дней, XL — больше недели.
 - *Риски*: глобальная нормализация окружения может скрыть тест, которому
   нужна реальная переменная. Поэтому тесты `cli/terminal/*` должны и дальше
   стабить переменные сами.
-- *Как проверить*: `TERM=linux`, `NODE_OPTIONS=--max-old-space-size=4096` и
-  `sudo` (root) — три прогона `pnpm test:unit`, все зелёные.
+- *Как проверить*: прогоны `pnpm test:unit` с `TERM=linux`, с
+  `NODE_OPTIONS=--max-old-space-size=4096`, от root (Docker) и с глобальным
+  `core.hooksPath` на хук `exit 1` — все зелёные.
   `analysis/tools/tests/env-matrix.sh` гоняет матрицу `TERM`, `CI`,
   `FORCE_COLOR`, `NO_COLOR` и локали по тестам CLI.
 
@@ -926,8 +955,6 @@ L — несколько дней, XL — больше недели.
 - Тихий прогон с длительностями по файлам и тестам (quiet-2 координатора)
   и второй прогон под нагрузкой (load-2) к моменту написания не появились.
   Ранжирование времени — по load-1, тихий wall — по этапу 0.
-- Матрица окружений (`analysis/tools/tests/env-matrix.sh`: `TERM`, `CI`,
-  `FORCE_COLOR`, `NO_COLOR`, локаль `tr_TR`) — см. §5.4.2, если успела.
 - macOS/Windows: регистронезависимая ФС, пути с `\`. Тесты гонялись только на
   Linux.
 - Догфудинг больших модулей (`core/regex`, `core/run`) — раздел 4 /

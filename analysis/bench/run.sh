@@ -31,53 +31,56 @@ done
 # The plan: tier, project, point. Tier 1 is the headline comparison, so it
 # runs first; later tiers add the modes, then the extras (README, "Plan").
 PLAN=$(cat <<'EOF'
+1 perfectionist test
+1 perfectionist m-cold
+1 perfectionist s-cold
 1 path-to-regexp test
 1 path-to-regexp m-cold
 1 path-to-regexp s-cold
 1 cheerio test
 1 cheerio m-cold
 1 cheerio s-cold
-1 perfectionist test
-1 perfectionist m-cold
-1 perfectionist s-cold
 1 fast-json-stringify test
 1 fast-json-stringify m-cold
 1 fast-json-stringify s-cold
+2 perfectionist m-one
 2 path-to-regexp m-one
 2 cheerio m-one
-2 perfectionist m-one
 2 fast-json-stringify m-one
+2 perfectionist m-warm
 2 path-to-regexp m-warm
 2 cheerio m-warm
-2 perfectionist m-warm
 2 fast-json-stringify m-warm
+2 perfectionist m-fast
 2 path-to-regexp m-fast
 2 cheerio m-fast
-2 perfectionist m-fast
-3 path-to-regexp m-edit-inc
-3 path-to-regexp m-edit
-3 path-to-regexp m-since
-3 cheerio m-edit-inc
-3 cheerio m-edit
-3 cheerio m-since
 3 perfectionist m-edit-inc
-3 perfectionist m-edit
-3 perfectionist m-since
+3 path-to-regexp m-edit-inc
+3 cheerio m-edit-inc
 3 fast-json-stringify m-edit-inc
+3 perfectionist m-since
+3 path-to-regexp m-since
+3 cheerio m-since
 3 fast-json-stringify m-since
+4 perfectionist m-edit
+4 path-to-regexp m-edit
+4 cheerio m-edit
+4 fast-json-stringify m-edit
+4 perfectionist m-list-text
+4 perfectionist m-list-json
 4 path-to-regexp m-list-text
 4 path-to-regexp m-list-json
 4 cheerio m-list-text
 4 cheerio m-list-json
-4 perfectionist m-list-text
-4 perfectionist m-list-json
-4 cheerio s-tsc
-4 perfectionist s-tsc
-5 path-to-regexp m-nocache
-5 cheerio m-nocache
+4 fast-json-stringify m-list-text
+4 fast-json-stringify m-list-json
+5 cheerio s-tsc
+5 perfectionist s-tsc
 5 path-to-regexp s-edit-inc
 5 cheerio s-edit-inc
-5 fast-json-stringify s-command
+5 path-to-regexp m-nocache
+5 cheerio m-nocache
+6 fast-json-stringify s-command
 6 mootant-self m-one
 6 mootant-self m-cold
 6 mootant-self m-warm
@@ -93,8 +96,9 @@ mootant_run() {
 # (it hosts every mutant of the files, core/run-mutants.ts:340-342) and one
 # mutant, so the point measures the floor of a run: startup + dry run.
 first_mutant() {
+  [ -d "$PROJECT_DIR" ] || return 0
   (cd "$PROJECT_DIR" && node "$MOOTANT_BIN" list "${MUTATE[@]}" --json 2>/dev/null) |
-    node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let r=JSON.parse(s);console.log(r.mutants[0]?.id??"")})'
+    node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).mutants[0]?.id??"")}catch{console.log("")}})'
 }
 
 stryker_run() {
