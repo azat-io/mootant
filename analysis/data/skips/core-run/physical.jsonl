@@ -2,3 +2,4 @@
 {"id": "2fpf4qmtckzt", "rule": "tail-return", "file": "core/hints/find-this-class.ts", "status": "timeout", "tests": [], "seconds": 120.2, "tail": ""}
 {"id": "8cm5b9fjq4mf", "rule": "loop-running", "file": "core/hints/infer-this-type.ts", "status": "timeout", "tests": [], "seconds": 120.1, "tail": ""}
 {"id": "9mjh9znavqwx", "rule": "loop-running", "file": "core/hints/infer-this-type.ts", "status": "timeout", "tests": [], "seconds": 120.1, "tail": ""}
+{"id": "b81dvyjxtny8", "rule": "nullish-swap", "file": "core/hints/union-inferred-types.ts", "status": "survived", "tests": ["test/core/hints/union-inferred-types.test.ts", "test/core/instrument/instrument-file.test.ts"], "seconds": 8.4, "tail": ""}
