@@ -17,5 +17,10 @@ new=$(node -p "require('$TMP/package/package.json').version")
 [ "$old" = "$new" ] || echo "warning: version $old -> $new; dependencies may differ" >&2
 find "$TARGET" -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} +
 cp -a "$TMP/package/." "$TARGET/"
+# npm pack stores every file with the mtime 1985-10-26, and mootant keys its
+# cache on the mtime of its own build (core/cache/prepare-run-cache.ts:164):
+# give the files the time of this install, as npm install does, so that two
+# builds of one version never share cached verdicts.
+find "$TARGET" -path "$TARGET/node_modules" -prune -o -type f -exec touch {} +
 rm -rf "$TMP" "$PROJECT/node_modules/.cache/mootant"
 echo "$PROJECT: mootant <- $TGZ"
