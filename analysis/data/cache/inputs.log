@@ -631,3 +631,12 @@
   wnz4qe9kj0e3 Survived   cached=true src/math.js:2 comparison-operator "age >= 18" -> "age >= 17"
   y1rmnxcp1zgc Killed     cached=true src/math.js:6 arithmetic-operator "a + b" -> "a"
   summary: total=4 killed=2 survived=2 cached=4 score=50
+[nt-load-env-file/r3] exit=0 args=src --no-cache
+  kkdjmf7aa2n0 Killed     cached=false src/math.js:2 comparison-operator "age >= 18" -> "age > 18"
+  wmgd2bwwp6r1 Survived   cached=false src/math.js:2 comparison-operator "age >= 18" -> "age == 18"
+  wnz4qe9kj0e3 Survived   cached=false src/math.js:2 comparison-operator "age >= 18" -> "age >= 17"
+  y1rmnxcp1zgc Killed     cached=false src/math.js:6 arithmetic-operator "a + b" -> "a"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+  STALE kkdjmf7aa2n0 cached-run=Survived (cached=true) fresh-run=Killed src/math.js:2
+  STALE wmgd2bwwp6r1 cached-run=Killed (cached=true) fresh-run=Survived src/math.js:2
+  => 2 verdict(s) differ between the cached run and the fresh run
