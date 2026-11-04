@@ -394,7 +394,7 @@ index 0000000..347ce1c
 +}
 diff --git a/mootant.config.ts b/mootant.config.ts
 new file mode 100644
-index 0000000..89be7d0
+index 0000000..3da8032
 --- /dev/null
 +++ b/mootant.config.ts
 @@ -0,0 +1,9 @@
@@ -403,7 +403,7 @@ index 0000000..89be7d0
 +
 +export default defineConfig({
 +  run: {
-+    runner: vitestAdapter({ config: 'vitest.skips.config.ts' }),
++    runner: vitestAdapter({ config: 'vitest.skips2.config.ts' }),
 +    concurrency: 2,
 +  },
 +})
@@ -428,6 +428,25 @@ index 0000000..694d981
 +      ],
 +      include: ['test/core/**/*.test.ts'],
 +      css: { include: [/\.css\?raw$/u] },
++    },
++  }),
++)
+diff --git a/vitest.skips2.config.ts b/vitest.skips2.config.ts
+new file mode 100644
+index 0000000..33bb9fc
+--- /dev/null
++++ b/vitest.skips2.config.ts
+@@ -0,0 +1,13 @@
++import { configDefaults, defineConfig, mergeConfig } from 'vitest/config'
++
++import viteConfig from './vite.config.ts'
++
++export default defineConfig(
++  mergeConfig(viteConfig, {
++    test: {
++      exclude: [...configDefaults.exclude, 'test/fixtures/**', 'docs/demo/**'],
++      css: { include: [/\.css\?raw$/u] },
++      include: ['test/core/text/edit-text.test.ts', 'test/core/mutators/shared/get-nullish-swap-skip.test.ts', 'test/core/mutators/shared/get-callback-result.test.ts', 'test/core/mutators/shared/is-boolean-result-source.test.ts', 'test/core/syntax/get-closed-initializer.test.ts', 'test/core/mutators/shared/get-typeof-name.test.ts', 'test/core/syntax/is-non-thenable.test.ts', 'test/core/syntax/is-vue-macro-call.test.ts', 'test/core/mutators/shared/is-truth-flipping-literal.test.ts', 'test/core/regex/has-named-group.test.ts', 'test/core/syntax/is-global-name.test.ts', 'test/core/mutators/shared/is-boolean-mode.test.ts', 'test/core/syntax/get-checked-name.test.ts', 'test/core/syntax/is-format-free.test.ts', 'test/core/mutators/shared/get-callback-owner.test.ts', 'test/core/syntax/read-literal-type.test.ts', 'test/core/tree/get-slot.test.ts', 'test/core/hints/find-this-class.test.ts', 'test/core/text/find-last-start.test.ts', 'test/core/hints/infer-this-type.test.ts', 'test/core/mutators/shared/get-literal-value.test.ts', 'test/core/parser/load-svelte-compiler.test.ts', 'test/core/instrument/instrument-file.test.ts', 'test/core/git/parse-binary-paths.test.ts', 'test/core/hints/union-inferred-types.test.ts'],
 +    },
 +  }),
 +)

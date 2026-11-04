@@ -1,52 +1,64 @@
 # Ложные пропуски: эвристики эквивалентности, шума, subsumed/owned, timeout и дубли
 
 > Раздел 2 («Ложные пропуски») анализа Mootant, коммит 170ec52. Диапазон ID —
-> BUG-300…BUG-399. Статус: **промежуточный** — эмпирическая выборка на core
-> ещё считается, таблица «по правилам» будет дополнена; всё остальное готово.
+> BUG-300…BUG-399. Падающие тесты — ветка `experiment/bug-repros`,
+> `test/repros/BUG-300…312.test.ts`; промпты для medium+ —
+> `analysis/bug-prompts/BUG-3xx.md`; данные — `analysis/data/skips/`;
+> скрипты — `analysis/tools/skips/`; патч эксперимента —
+> `analysis/experiments/skips-unskip.diff`.
 
 ## Резюме
 
-Найдено **11 классов ложных пропусков**, все подтверждены воспроизведением:
-фикстура с тестами, на которой `mootant run` даёт 100 %, а физически
+Найдено **13 дефектов** правил пропуска (1 high, 8 medium, 4 low), все
+подтверждены: фикстура, на которой `mootant run` даёт 100 %, а физически
 применённый пропущенный мутант проходит те же тесты обычным `vitest --run`, и
-падающий тест в ветке `experiment/bug-repros` (`test/repros/BUG-300…310`).
+падающий тест в `experiment/bug-repros`.
 
 - **high — BUG-305**: `--since` отбирает мутантов по изменённым строкам
   *после* правил пропуска. Если «владелец» пропуска стоит на неизменённой
   строке, изменённая строка остаётся без мутантов (`mutants 0`,
-  `score none`). Это основной CI-сценарий из readme; в core 357 строк, в
-  perfectionist 268 строк, где правка одной строки даёт ноль мутантов при
-  наличии кандидатов.
+  `score none`). Это CI-сценарий из readme; строк, где правка одной строки даёт
+  ноль мутантов при наличии кандидатов, — 357 в core и 268 в perfectionist.
 - **`solitary`** (34 % всех пропусков core, 47 % perfectionist, помечен как
-  эвристика) ломается на двух частых шаблонах: опустошённая строка в элементе
-  множества/списка, которую убивает любой тест с `''` на входе (BUG-300), и
-  возвращаемая локальная переменная, которую функция читает ещё где-то
-  (BUG-301).
-- **Правила, заявленные доказательными** (`heuristic: false`), ошибаются:
-  `O19` — удаление then-ветки «тот же мутант», что `if (false)`, даже при
-  условии с эффектом (`if (map.delete(key)) onRemove(key)`, BUG-302); `R6` — тот
-  же изъян, что BUG-301, для `return ok` (BUG-304); `loop-advance` считает
-  продвижением цикла `items[i].render()` (BUG-303); `loop-running` — один из
-  нескольких выходов `for (;;)` (BUG-310, 30 из 131 в core).
-- **Эквивалентность нарушается на `NaN`**: `done / total || 0` → `done / total`
-  помечен `equivalent` (BUG-307); `value + 0` → `value - 0` при неизвестном
-  типе (BUG-308, low).
-- **Шум, который не шум**: все строки JSX-атрибутов, включая `type="password"`,
-  `aria-label`, `href` (BUG-309); коды ошибок в `new AppError('NOT_FOUND', …)`
-  (BUG-306, low).
+  эвристика): тонкий мутант, который делает значение *недопустимым* (`''` в
+  элементе множества или в поле-перечислении, пропавший обязательный
+  аргумент), «убивается» падением, и грубый мутант пропадает (BUG-300);
+  локальная переменная, которую функция читает не только в `return`, прячет
+  `return x → 0` (BUG-301). Эмпирика: на тестах Mootant 0 скрытых из 90, на
+  perfectionist **13 из 81 выжили при убитом владельце (16 %), из них 3
+  полезных (3.7 %)** — все 13 владельцев убиты исключением.
+- **Правила, заявленные доказательными** (`heuristic: false`), ошибаются в
+  частных, но реальных шаблонах: `O19` — удаление then-ветки «тот же мутант»,
+  что `if (false)`, хотя условие с эффектом (`if (map.delete(key))`, BUG-302);
+  `R6` — `return ok`, когда `ok` читается ещё где-то (BUG-304); `loop-advance`
+  — `items[i].render()` (BUG-303); `loop-running` — один из нескольких выходов
+  `for (;;)` (BUG-310: в выборке core 5 из 7 таких мутантов завершились);
+  `tail-return` («equivalent») — `return null` → `undefined` убит тестами в 5
+  из 5 случаев (BUG-312).
+- **Эквивалентность на `NaN`**: `done / total || 0` → `done / total` помечен
+  `equivalent` (BUG-307); `value + 0` → `value - 0` при неизвестном типе
+  (BUG-308, low).
+- **Шум, который не шум**: все строки JSX-атрибутов, включая
+  `type="password"`, `aria-label`, `href` (BUG-309); коды ошибок
+  `new AppError('NOT_FOUND', …)` (BUG-306, low); операторы обработчиков в
+  шаблонах Vue/Svelte отбрасываются без следа (BUG-311, low).
 - `strict` возвращает только `solitary` и `timeout`: BUG-302, 304, 305, 306,
-  307, 308, 309 воспроизводятся и с `--preset strict` (проверено).
-- **Выдержали проверку**: логика сравнений и полярности (`R2`,
-  `comparison-region`, `O4`, `shifted-literal`, `O3` в булевом режиме),
-  нижние границы, `duplicate`, эквивалентности регулярных выражений и
-  `await`; 2 394 из 16 195 пропусков core дают буквально тот же файл, что
-  выдаваемый мутант.
+  307, 308, 309 воспроизводятся и с `--preset strict`.
+- **Баланс.** На собственных тестах Mootant (точные проверки, 100 % покрытия)
+  правила `owned`/`subsumed` не спрятали ни одного выжившего мутанта:
+  **0 из 360** (95 % верхняя граница 1.1 %). Логика сравнений и полярности
+  (`O3`, `O1`, `O4`, `R2`, `comparison-region`, `shifted-literal`) выдержала и
+  разбор, и данные; 2 394 из 16 195 пропусков core дают буквально тот же
+  файл, что выдаваемый мутант. Дефекты выше — про допущения на стыке (эффекты,
+  повторное чтение, падения, `NaN`, отбор `--since`), и они проявляются на
+  тестах «скелетного» вида; оценивать их долю на пользовательских проектах
+  лучше режимом аудита (предложение 2), прототип которого здесь использован.
 
 ## Баги
 
 | ID | Описание | Серьёзность | Статус | Где в коде | Как воспроизвести |
 | --- | --- | --- | --- | --- | --- |
-| BUG-300 | `solitary`: опустошение строки внутри элемента массива/свойства (`'else'` → `''`) считается «тонким» мутантом и прячет удаление элемента, хотя `''`-мутант убивает любой тест с пустой строкой на входе | medium | подтверждён | `core/generate/apply-solitary-rule.ts:124-136`, `core/mutators/array-element.ts:55-59`, `core/mutators/string-literal.ts:92-103` | `test/repros/BUG-300.test.ts`; `analysis/data/skips/fx1` (`keywords.js`): `mootant run` 100 %, удаление `'else'` физически выживает |
+| BUG-300 | `solitary`: тонкий мутант, который делает значение недопустимым (`''` в элементе множества, в поле-перечислении, в схеме; пропавший обязательный аргумент), убивается падением или тестом с `''`, а не наблюдением удаляемого кода, — и прячет удаление элемента/свойства/вызова. В perfectionist 13 из 81 пропуска `solitary` выжили при убитом владельце (все владельцы убиты падением), 3 полезны | medium | подтверждён | `core/generate/apply-solitary-rule.ts:124-136`, `core/mutators/array-element.ts:55-59`, `core/mutators/string-literal.ts:92-103` | `test/repros/BUG-300.test.ts`; `analysis/data/skips/fx1` (`keywords.js`): `mootant run` 100 %, удаление `'else'` физически выживает |
 | BUG-301 | `solitary` для `return x`: диапазоны включают инициализатор и записи `x`, даже если `x` читается не только в `return`; мутант `return x → 0` пропадает, когда тонкий мутант инициализатора убит через другое чтение | medium | подтверждён | `core/mutators/return-value.ts:170-171, 349-365` | `test/repros/BUG-301.test.ts`; `fx1/process.js`: 100 %, `return 0` выживает |
 | BUG-302 | `O19` (и `R4`/`R5` с владельцем-константой): удаление then-ветки считается тем же мутантом, что `if (false)`, хотя у условия есть эффект (`if (map.delete(key)) onRemove(key)`); вернуть нельзя ни `strict`, ни отключением владельца | medium | подтверждён | `core/mutators/statement-removal.ts:152-188`, `core/mutators/shared/get-owner-constant.ts:35-41` | `test/repros/BUG-302.test.ts`; `fx1/remove.js`: 100 %, удаление `onRemove(key)` выживает |
 | BUG-303 | `loop-advance`: любой вызов метода, у которого корень объекта — имя из условия цикла, считается продвижением; `items[i].render()` и `bytes.push(…text.slice(…))` не удаляются | medium | подтверждён | `core/syntax/advances-loop.ts:67-75, 222-233` | `test/repros/BUG-303.test.ts`; `fx1/render.js`: 100 %, удаление завершается за 0.8 с и выживает; `core/git/unquote-git-path.ts:39` |
@@ -57,6 +69,8 @@
 | BUG-308 | `numeric-identity`: `value + 0` → `value - 0` пропущен при неизвестном типе `value` (строка даёт `'70'` против `7`); JSDoc обещает проверку типа для `+` и `-`, код проверяет только `-` | low | подтверждён | `core/mutators/arithmetic-operator.ts:79-80, 98` | `test/repros/BUG-308.test.ts` |
 | BUG-309 | `jsx-attribute`: все строки JSX-атрибутов — шум, включая `type="password"`, `aria-label`, `href`; опции нет | medium | подтверждён | `core/mutators/string-literal.ts:170-175` | `test/repros/BUG-309.test.ts`; `analysis/data/skips/fx3/src/Login.jsx` |
 | BUG-310 | `loop-running`: `false` для одного из нескольких выходов `for (;;)` пропущен как timeout, хотя остальные выходы завершают цикл (30 из 131 в core) | medium | подтверждён | `core/mutators/shared/get-running-value.ts:56-59`, `core/syntax/get-exited-loops.ts:33-87` | `test/repros/BUG-310.test.ts`; `fx1/root.js`: 100 %, оба `false` завершаются и выживают |
+| BUG-311 | В шаблоне Vue/Svelte замена оператора (удаление вызова в `@click="save()"`, `count += step`) отбрасывается «without a trace»: нет ни мутанта, ни записи в `--skipped`; поведение кнопки не проверяется ни одним мутантом, и пользователь об этом не узнаёт | low | подтверждён | `core/generate/collect-candidates.ts:271-277` | `test/repros/BUG-311.test.ts`; `analysis/data/skips/fxvue/Save.vue` |
+| BUG-312 | `tail-return` помечает удаление хвостового `return null` как `equivalent`, хотя `null` → `undefined` наблюдаемо (`toBeNull()`, `=== null`): в выборке core 5 из 5 таких мутантов убиты тестами Mootant (подтверждено и физически); того же рода `tail-return-false` — `noise` | low | подтверждён | `core/mutators/statement-removal.ts:385-428`, `core/skips/skip-rules.ts:170-173` | `test/repros/BUG-312.test.ts`; `analysis/data/skips/core-run/physical.jsonl` |
 
 ## Методика
 
@@ -100,20 +114,126 @@
    копии репозитория (`analysis/tools/skips/verify_physical.py`).
 4. **Выборки.** Кластерная по файлам (все кандидаты выбранного файла), файлы
    выбраны случайно (seed 20261104) с квотами по крупным правилам
-   (`analysis/tools/skips/pick_files.py`): core — 47 файлов
-   (`analysis/data/skips/core-sample-files.txt`), тесты — `test/core/**`;
-   perfectionist — 17 файлов пяти правил (`sort-heritage-clauses`,
-   `sort-switch-case`, `sort-enums`, `sort-export-attributes`, `sort-sets`) и
-   их тестовые файлы (`analysis/data/skips/perf-sample-files.txt`).
-   Доверительные интервалы — Уилсона 95 % в предположении независимости
-   кандидатов; из-за кластеризации по файлам реальный разброс шире.
-5. **Машина.** 4 vCPU, общая с ~6 агентами (load average 20–35 во время
-   прогонов), Node 22.23.4, Vitest 5.0.5, Mootant 0.1.0 (170ec52), `nice -n 10`,
-   `--concurrency 2`.
+   (`analysis/tools/skips/pick_files.py`). Первый прогон core (47 файлов, весь
+   `test/core/**`) не успел до окна замеров производительности и был
+   остановлен; итоговый core — 25 файлов, у которых есть свой тестовый файл
+   `test/core/<путь>.test.ts`, и только эти 25 тестовых файлов
+   (`analysis/data/skips/core-run/`). Perfectionist — правила
+   `sort-heritage-clauses` и `sort-export-attributes` целиком с их тестовыми
+   файлами (`analysis/data/skips/perf-run/`). Распределение пропусков по
+   правилам посчитано по полным листингам: core (16 195), perfectionist
+   (4 966), fast-json-stringify (1 076) — `analysis/data/skips/skip-counts.csv`.
+   Доверительные интервалы — Уилсона 95 % и бутстрэп по файлам (выборка
+   кластерная).
+5. **Машина.** 4 vCPU, общая с ~6 агентами (load average 11–44 во время
+   прогонов), Node 22.23.4, Vitest 5.0.5, Mootant 0.1.0 (170ec52),
+   `--concurrency 2` (первый прогон — `nice -n 10`, итоговые — обычный
+   приоритет).
 
 ## Эмпирическая выборка по правилам
 
-_Считается — будет добавлено._
+### Mootant `core/`
+
+Первый прогон (47 файлов, весь `test/core/**`, 1 239 возвращённых
+кандидатов + 1 450 выдаваемых мутантов) за 1 ч 35 мин при load average 25–44
+не успел закончиться до окна замеров производительности и был остановлен —
+данных нет (`analysis/data/skips/core-sample-files.txt`). Второй прогон —
+25 файлов из того же списка, у которых есть «свой» тестовый файл
+`test/core/<путь>.test.ts`; набор тестов — только эти 25 файлов
+(`analysis/data/skips/core-run/files.txt`, `tests.txt`). 835 мутантов
+(395 выдаваемых + 440 возвращённых), 12 мин, dry run 399 тестов за 15.7 с;
+Mootant дополнительно перепроверил выживших на остальных включённых тестовых
+файлах («testing 68 survivors with more test files»).
+
+| Правило | Категория | n (файлов) | убит/таймаут | выжил вместе с владельцем/соседом | HIDDEN (без выживших внутри) | доля HIDDEN (95 % ДИ) |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| O3 | owned | 115 (15) | 94 | 21 | 0 (0) | 0 % (Уилсон 0–3.2 %) |
+| solitary | subsumed | 90 (19) | 84 | 6 | 0 (0) | 0 % (0–4.1 %) |
+| O4 | subsumed | 61 (18) | 60 | 1 | 0 (0) | 0 % (0–5.9 %) |
+| case-label | noise | 37 (7) | 37 | 0 | 0 (0) | 0 % (0–9.4 %) |
+| O1 | owned | 29 (14) | 28 | 1 | 0 (0) | 0 % (0–11.7 %) |
+| R6 | subsumed | 15 (9) | 15 | 0 | 0 (0) | 0 % (0–20.4 %) |
+| O19 | owned | 14 (9) | 13 | 1 | 0 (0) | 0 % (0–21.5 %) |
+| R2 | subsumed | 14 (11) | 14 | 0 | 0 (0) | 0 % (0–21.5 %) |
+| loop-advance | timeout | 11 (5) | 11 (9 таймаутов, 2 завершились и убиты) | 0 | 0 (0) | 0 % (0–25.9 %) |
+| comparison-region | subsumed | 8 (6) | 8 | 0 | 0 (0) | 0 % (0–32.4 %) |
+| R4 | subsumed | 8 (7) | 8 | 0 | 0 (0) | 0 % (0–32.4 %) |
+| loop-running | timeout | 7 (5) | 6 (1 таймаут, **5 завершились** и убиты) | 1 | 0 (0) | 0 % (0–35.4 %) |
+| tail-return | equivalent | 5 (5) | **5 убиты** | 0 | — | «эквивалентность» неверна в 5 из 5 (Уилсон 56.6–100 %) |
+| lower-bound | equivalent | 5 (5) | 0 | 5 | — | эквивалентны (разбор) |
+| nullish-swap | noise | 4 (4) | 2 | 1 | 1 (1) | разбор: эквивалентен |
+| non-numeric-plus | noise | 4 (2) | 4 | 0 | 0 | — |
+| shifted-literal | owned | 3 (3) | 3 | 0 | 0 | — |
+| fall-through-break | equivalent | 2 (2) | 0 | 2 | — | эквивалентны |
+| tail-return-false | noise | 2 (2) | 1 | 0 | 1 (1) | разбор: политика (`false` → `undefined`) |
+| O8 | owned | 2 (1) | 2 | 0 | 0 | — |
+| nullish-normalization | noise | 1 (1) | 0 | 0 | 1 (1) | разбор: эквивалентен |
+| R5, awaited-by-caller, error-message | — | по 1 | — | — | 0 | — |
+
+Итог по `core`: **0 ложных пропусков из 360 кандидатов `owned`/`subsumed`**
+(95 % верхняя граница Уилсона — 1.1 %; бутстрэп по файлам тоже 0), 0 из 49
+`noise` после ручного разбора трёх `HIDDEN` (`type.knownKinds ?? []` → `||`:
+массив не бывает ложным; `cooked ?? null` → `cooked`: у шаблона без выражений
+`cooked` всегда строка; хвостовой `return false` → `undefined` — политика
+шума), 0 скрытых среди 18 `timeout`. Но два утверждения правил опровергнуты
+данными: `tail-return` («equivalent») — 5 из 5 мутантов убиты тестами
+(`toBeNull()`), и у `loop-running` 5 из 7 мутантов завершаются (Уилсон
+35.9–91.8 %; BUG-312, BUG-310).
+
+Независимая проверка: все 13 «интересных» вердиктов (3 `HIDDEN`, 5
+`tail-return`, 5 завершившихся `loop-running`) повторены физическим
+применением мутации в отдельной копии репозитория и обычным `vitest --run` на
+тех же тестовых файлах (`analysis/data/skips/core-run/physical.jsonl`): все 13
+совпали с вердиктом Mootant, ни один `loop-running` не завис (1.9–3.9 с).
+
+**Как это согласуется с BUG-300…312.** Механизмы ложных пропусков реальны
+(фикстуры), но срабатывают только при определённой форме тестов: тест с
+пустой строкой, проверка только колбэка, проверка только эффекта условия.
+Тесты самого Mootant (100 % покрытия, точные `toStrictEqual`) почти всегда
+наблюдают и владельца, и пропущенного; поэтому на `core` доля скрытых
+пропусков ≈ 0. На проектах со «скелетными» тестами доля будет выше — оценить
+её стоит режимом аудита (предложение 2) на 2–3 пользовательских проектах.
+
+### eslint-plugin-perfectionist
+
+Клон `azat-io/eslint-plugin-perfectionist` (`486c3c8`), Vitest 5.0.5, Mootant
+из `experiment/skips` (упакован в tgz). Время позволило взять только два правила
+целиком: `sort-heritage-clauses` (4 файла) и `sort-export-attributes`
+(1 файл), тесты — их два тестовых файла
+(`analysis/data/skips/perf-run/`). 246 мутантов (155 выдаваемых +
+91 возвращённый), 14 мин.
+
+| Правило | Категория | n (файлов) | убит/таймаут | выжил с владельцем/соседом | HIDDEN (без выживших внутри) | после разбора: полезных |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| solitary | subsumed | 81 (4) | 44 | 24 | 13 (3) | **3** — 3.7 % (Уилсон 1.3–10.3 %) |
+| error-message | noise | 3 (1) | 0 | 0 | 3 | 0 (текст недостижимой ошибки под `v8 ignore`) |
+| O19 | owned | 3 (1) | 1 | 2 | 0 | 0 |
+| loop-running | timeout | 2 (1) | 2 (оба **завершились** и убиты) | 0 | 0 | 0 |
+| O4, loop-advance | — | по 1 | 1 | 0 | 0 | 0 |
+
+Все 16 `HIDDEN` физически перепроверены (`physical.jsonl`): выжили. У всех 13
+`solitary`-`HIDDEN` владелец убит **падением**, а не наблюдением удаляемого
+кода (сообщения из отчёта): `'array'` → `''` — «Schema for rule
+sort-heritage-clauses is invalid»; `'unsorted'` → `''` — «Unreachable case»;
+`'en-US'` → `''` — «Incorrect locale information provided»; удаление
+`options` из аргумента — «Cannot read properties of undefined (reading
+'customGroups')». Разбор:
+
+- **полезны (3)**: удаление вызова `validateGroupsConfig({ … options })` в
+  `rules/sort-heritage-clauses/sort-heritage-clause.ts:98` (ни один тест правила
+  не проверяет, что неверные `groups` отвергаются); удаление `type: 'array'` и
+  `type: 'object'` из JSON-схемы правила (`rules/sort-heritage-clauses.ts:50, 53`)
+  — ни один тест не подаёт опции неверного типа;
+- **эквивалентны в тестовом окружении (10)**: удаление значений по умолчанию,
+  совпадающих с отсутствием значения (`partitionByComment: false`,
+  `partitionByNewLine: false`, `fallbackSort: { type: 'unsorted' }`), и
+  `locales: 'en-US'` (без него берётся локаль окружения, в CI та же).
+
+Это тот же механизм, что BUG-300, в общем виде: тонкий мутант заменяет
+значение недопустимым (`''` в поле-перечислении, пропавший обязательный
+аргумент), код падает, и «убийство» ничего не говорит о том, наблюдает ли
+тест удаляемый код. Доля скрытых `solitary` в perfectionist — 16 % (13/81),
+полезных среди них — 3 из 81.
 
 ## Конкретные примеры: полезный мутант молча пропадает
 
@@ -285,10 +405,10 @@ for (;;) {
 | `comparison-region` (186) | Перестановка сравнения даёт константе её значение на части входов | Верно (`>=` при `x > 0` меняет только область `eq` на `true`, константа `true` там тоже `true`; `NaN` оба оставляют) | `core/mutators/shared/get-condition-constants.ts:256-284` |
 | `case-label` (489, шум) | Метки `case` не мутируются без `caseTests` | Политика. 125 из 489 меток в core — пустые «алиасы» (`case 'a': case 'b': …`): мутант метки — единственная проверка, что алиас покрыт тестом; тело убивается любой меткой группы | `core/mutators/string-literal.ts:158-163`, `number-literal.ts:100-105` |
 | `loop-advance` (165, timeout) | Изменение значения/оператора, продвигающего цикл, может зациклить | Для `index++`, `current = current.parent` верно; **неверно** для вызова метода у элемента/члена корневого имени (BUG-303) | `core/syntax/advances-loop.ts:47-75, 222-233` |
-| `loop-running` (131, timeout) | Значение, держащее цикл, может зациклить | Для теста цикла верно; для одного из нескольких выходов из `for (;;)` — «может», но не обязан (другие выходы завершают, напр. `getLead` в `core/generate/group-replacement.ts:356-372`) | `core/mutators/shared/get-running-value.ts:45-66` |
+| `loop-running` (131, timeout) | Значение, держащее цикл, может зациклить | Для теста цикла с единственным выходом верно; для одного из нескольких выходов из `for (;;)` — нет (BUG-310, 30 из 131 в core); в выборке core 5 из 7 таких мутантов завершились и были убиты (физически 1.9–3.9 с) | `core/mutators/shared/get-running-value.ts:45-66` |
 | `nullish-swap` (161, шум, эвр.) | `??` и `\|\|` различаются только на значениях, которые режим не считает | Политика с опцией `nullishSwap: 'always'`; для `??` с неизвестным типом перестановка выдаётся (проверено) | `core/mutators/shared/get-nullish-swap-skip.ts:20-41` |
 | `lower-bound` (111, эвр.) | Нижняя граница (`length ≥ 0`, счётчик) делает область невозможной | Держится: счётчик — неподвижная точка по всем записям, `size` только у доказанных Map/Set, `byteLength` исключён | `core/syntax/get-value-bound.ts` |
-| `tail-return` (59, equivalent) | Удаление хвостового `return null` меняет только `null` на `undefined` | Наблюдаемо (`toBeNull()`, `=== null` у вызывающего); категория «equivalent» с оговоркой в документации, но `tail-return-false` того же рода — `noise` | `core/mutators/statement-removal.ts:385-428` |
+| `tail-return` (59, equivalent) | Удаление хвостового `return null` меняет только `null` на `undefined` | **Неверно**: в выборке core 5 из 5 таких мутантов убиты (`toBeNull()`), физически тоже (BUG-312); `tail-return-false` того же рода — `noise` | `core/mutators/statement-removal.ts:385-428` |
 | `canonical-falsy-default` (эвр.) | Правый операнд `\|\|` — единственное ложное значение типа | Для строк/булевых/BigInt верно, для чисел — нет из-за `NaN` (BUG-307) | `core/mutators/shared/get-logical-drops.ts:81-84` |
 | `numeric-identity` (эвр.) | `x + 0` и `x - 0` равны | Только для чисел; для `+` тип не проверяется (BUG-308) | `core/mutators/arithmetic-operator.ts:88-115` |
 | `error-message` (эвр.) | Строки в аргументах `*Error` — только текст сообщения | Коды ошибок — не текст (BUG-306) | `core/syntax/is-error-message.ts` |
@@ -307,13 +427,14 @@ skipped changes с той же категорией) и вручную по ут
 | `docs/content/mutators.md:42` | `subsumed` — «Is caught by any test that catches another mutant» | `R6` (не эвристика) нарушает для локальной переменной (BUG-304); `solitary` — для строк в множествах и локальных переменных (BUG-300/301); `O4`, опирающийся на `loop-running`-константу, не имеет работающего поглотителя (8 в core) | Утверждение сильнее реализации |
 | `docs/content/mutators.md:41` | `owned` — «Has the same effect as a mutant that Mootant makes instead» | `O1` для констант `&&`/`\|\|`-групп (728 в core, 159 в perfectionist) — не тот же эффект, а поглощение drop'ами; `O19` для удаления then-ветки при условии с эффектом — не тот же эффект (BUG-302) | Категория неточна; для `O19` — ложный пропуск без способа вернуть |
 | `docs/content/mutators.md:40` | `timeout` — «Alters a value that decides whether a loop goes on» | `loop-advance` срабатывает на `items[i].render()`, `bytes.push(…text.slice(…))` (BUG-303); `loop-running` — на одном из нескольких выходов (BUG-310) | Утверждение не выполняется |
-| `docs/content/mutators.md:38` | `equivalent` — «Can't alter what the code does, apart from details such as `undefined` for `null`» | `canonical-falsy-default` для чисел меняет результат на `NaN` (BUG-307; в таблице logical-operator — «`NaN` aside»); `numeric-identity` для `+` со строкой (BUG-308); `tail-return` для `return null` наблюдаем через `toBeNull()`, а того же рода `tail-return-false` — `noise` | `NaN` — не «деталь» для кода `x / y \|\| 0` |
+| `docs/content/mutators.md:38` | `equivalent` — «Can't alter what the code does, apart from details such as `undefined` for `null`» | `canonical-falsy-default` для чисел меняет результат на `NaN` (BUG-307; в таблице logical-operator — «`NaN` aside»); `numeric-identity` для `+` со строкой (BUG-308); `tail-return` для `return null` наблюдаем через `toBeNull()` — в выборке core 5 из 5 убиты (BUG-312), а того же рода `tail-return-false` — `noise` | `NaN` — не «деталь» для кода `x / y \|\| 0` |
 | `docs/content/mutators.md:63-64`, `statement-removal.md:222`, `return-value.md:182`, `array-element.md:146` | `subsumed`/`solitary`/`R4`/`R6` возвращаются, «when the other mutant doesn't run» | С `--since` владелец на неизменённой строке не запускается, а пропуск не возвращается (BUG-305) | Обещание нарушено в CI-режиме |
 | `docs/content/mutators.md:48-52` | Эвристические правила помечены `"heuristic": true`; `solitary` — «likely, not certain» | `O19`, `R4`, `R6`, `loop-advance`, `loop-running`, `tail-return` помечены `heuristic: false`, но опираются на допущения (нет эффекта в условии, переменная читается один раз, вызов метода = продвижение, один выход из цикла, `null` ≈ `undefined`) | Флаг занижает долю догадок: в core у этих шести правил 1 833 пропуска с `heuristic: false` (`O19` 925, `R6` 362, `R4` 191, `loop-advance` 165, `loop-running` 131, `tail-return` 59) |
 | `docs/content/mutators/string-literal.md:35-37` | Пропуск строк JSX-атрибутов показан на `className="badge"` | Пропускаются все атрибуты, включая `type`, `href`, `aria-*` (BUG-309) | Документация описывает безобидную часть правила |
 | `docs/content/mutators/return-value.md:84-94` | Пропуск возвращаемой локальной переменной — догадка; пример отказа — пустой список | Более частый отказ — переменная читается не только в `return` (BUG-301, BUG-304) — не описан | Дополнить |
 | Комментарии кода | Правила ссылаются на «catalog 2.6», «catalog 4.6, rule 3», «5.2 O19» | Каталога в репозитории нет | Обоснования правил нельзя проверить по первоисточнику |
 | `docs/content/guide/configuration.mdx:268-278` | `strict` возвращает `timeout` и coarse-мутантов | Остальные пропуски (`owned`, большинство `subsumed`, `equivalent`, `noise`) не возвращает ничто; опции для отдельного правила нет | Нет режима «без пропусков» для аудита |
+| `docs/content/mutators.md:66-67`, `guide/compatibility.mdx:83-88` | «Code that Mootant never mutates … doesn't appear in the list at all» перечисляет типы, enum, декораторы, пути модулей; в шаблонах мутируются «template expressions» | Удаление вызова и инкремент в обработчике шаблона (`@click="save()"`) отбрасываются без следа — ни мутанта, ни записи в `--skipped` (BUG-311) | Не описано; пользователь не узнает, что поведение кнопок не проверяется |
 | `mootant run` (текст и `--json`) | — | В отчёте `run` нет числа пропущенных кандидатов (`summary` без `skippedByCategory`, есть только у `list`) | Пользователь не видит, сколько решили эвристики |
 
 ## Что выдержало проверку
@@ -347,6 +468,61 @@ skipped changes с той же категорией) и вручную по ут
 - **Опции, возвращающие спорные пропуски**: `timeouts`, `coarseMutants`,
   `loggers`, `caseTests`, `nullishSwap`, `nullishNormalization`; `strict`
   включает первые две.
+
+## Отрицательные результаты (проверено, проблем нет)
+
+- **`reference-equality`** для `Date`: `expires < now` → `expires != now`
+  пропущен как шум; казалось, что так теряется единственная проверка области
+  «больше». Нет: для разных объектов `!=` истинно и на равенстве, поэтому его
+  убивает любой тест на равенство, как и выдаваемый `<=` — потери нет
+  (`analysis/data/skips/fx3/ts/expiry.ts`).
+- **`O3` с эффектом в левом операнде** (`if (queue.shift() && ready)`):
+  константы операндов-идентификаторов не порождаются, пропуска `O3` нет;
+  потеря здесь только через `O19` (учтено в BUG-302).
+- **`nullish-swap`** при неизвестном типе: для `??` перестановка на `||`
+  выдаётся (`config.retries ?? 3` → `|| 3` — мутант есть), под шум уходит
+  только обратная перестановка при «неотличимых» ложных значениях — политика с
+  опцией.
+- **Подсказки типов не доверяют значениям по умолчанию параметров**
+  (`function norm(x = '')` — `typeof x === 'string'` не считается доказанным),
+  `typed-constant` консервативен (на `text.split(',')` не срабатывает).
+- **`anchored-global`** учитывает флаг `m` и альтернативы
+  (`/^\s+/gm`, `/^a|b/g` — `g` не пропускается).
+- **`O19`/`R4` с эффектом в условии на реальных кодовых базах**: 0 из 604
+  (core) и 0 из 345 (perfectionist) пропусков удаления then-ветки имеют в
+  условии вызов метода с эффектом, присваивание или инкремент; единственный
+  `await` (`core/cache/find-changed-files.ts:27-28`) — под `R4` с владельцем-
+  перестановкой, который `await` сохраняет. BUG-302 реален, но в этих двух
+  проектах не встречается.
+- **Коды ошибок** (BUG-306): в core и perfectionist нет ни одной строки вида
+  кода среди 78 пропусков `error-message`.
+
+## Что не удалось проверить
+
+- Эмпирика ограничена окном до 07:00 UTC (дальше — замеры
+  производительности): первый прогон core (47 файлов, весь `test/core/**`,
+  2 689 мутантов) за 1 ч 35 мин при load average 25–44 не закончился и был
+  остановлен; итоговый core — 25 файлов только со «своими» тестовыми файлами;
+  perfectionist — два правила (5 файлов) из 49. Для повторения на полном
+  наборе: `MOOTANT_UNSKIP=all MOOTANT_UNSKIP_LOG=out.jsonl node
+  analysis/tools/skips/mootant-unskip.mjs <checkout>/bin/mootant.js run
+  $(cat analysis/data/skips/core-sample-files.txt) --no-cache --json --all
+  --verbose --concurrency 2 > run.json` в checkout ветки `experiment/skips`
+  (нужен `mootant.config.ts` с `vitest.skips.config.ts`, оба в патче), затем
+  `analysis/tools/skips/analyze_run.sh`. Ожидаемая длительность на свободной
+  машине — 1–2 ч.
+- `node:test`-адаптер: эксперимент шёл только на Vitest; решения о пропусках
+  от раннера не зависят (генерация общая), но вердикты владельцев могли бы.
+- Физическая перепроверка `HIDDEN`-мутантов шла на тестовых файлах, которые
+  Mootant выбрал по покрытию (`testFiles` отчёта), а не на всём наборе
+  тестов: мутант, убиваемый тестом без покрытия этой строки, теоретически
+  возможен (импорт по побочному эффекту).
+- Правила для шаблонов Vue/Svelte (`template-text`, `compiler-macro`) и
+  правила регулярных выражений (`empty-match`, `unused-repeat`,
+  `edge-wildcard`, `any-character`) проверены только чтением кода; в выборках
+  их почти нет.
+- Правила плагинов (свои `skip`-правила в сторонних мутаторах) — не
+  рассматривались.
 
 ## Предложения
 
@@ -404,4 +580,32 @@ skipped changes с той же категорией) и вручную по ут
 7. **Положить каталог правил в репозиторий** (на него ссылаются JSDoc:
    «catalog 2.6», «4.6 rule 3», «5.2 O19»): без него обоснование правила не
    проверить, а добавление правила требует знания, которого нет в коде.
+
+## Файлы
+
+- Отчёт: `analysis/bugs/skips.md` (этот файл).
+- Промпты (medium и выше): `analysis/bug-prompts/BUG-300.md`, `BUG-301.md`,
+  `BUG-302.md`, `BUG-303.md`, `BUG-304.md`, `BUG-305.md`, `BUG-307.md`,
+  `BUG-309.md`, `BUG-310.md`.
+- Падающие тесты: ветка `experiment/bug-repros`, `test/repros/BUG-300.test.ts`
+  … `BUG-312.test.ts` (коммиты `98b82e4`, `aae7312`, `2838249`, `8345e33`,
+  `3f0a106`, `a000be1`, `d81d35d`, `f97c2ea`, `38b91a7`, `7ad90ca`,
+  `20db8ac`).
+- Фикстуры: `analysis/data/skips/fx1/` (тесты + исходники для `mootant run`
+  и физической проверки), `fx-since/` (BUG-305), `fx2/`, `fx3/`, `fxvue/`
+  (пробы листинга), `fx1-audit/` (режим аудита на фикстуре).
+- Эксперимент «unskip»: патч `analysis/experiments/skips-unskip.diff` (ветка
+  `experiment/skips`), запуск `analysis/tools/skips/mootant-unskip.mjs`,
+  `run_unskip.sh`, разбор `join_verdicts.py`, `summarize.py`,
+  `show_hidden.py`, `analyze_run.sh`, физическая проверка
+  `verify_physical.py`, `apply_mutant.py`.
+- Данные: `analysis/data/skips/core-run/` и `perf-run/` (`joined.jsonl`,
+  `summary.md`, `hidden.txt`, `physical.jsonl`, `run.json.gz`,
+  `unskip.jsonl`), листинги `list-core-verbose.json.gz`,
+  `list-perf-verbose.json.gz`, сводка `skip-counts.csv`
+  (core / perfectionist / fast-json-stringify), выборки
+  `core-sample-files.txt` (остановленный прогон), `core-sample2-files.txt`.
+- Прочие скрипты: `classify_owners.py` (пропуск = тот же файл?),
+  `pick_files.py`, `since_exposure.py` (BUG-305), `o19-side-effects.mjs`
+  (BUG-302), `loop-running-exits.mjs` (BUG-310), `show.py`.
 
