@@ -64,22 +64,24 @@ def main():
         records.append(r)
     order = sorted(rows, key=lambda k: -sum(rows[k].values()))
     if markdown:
-        print('| Правило | Категория | n (файлов) | убит/таймаут | выжил вместе с владельцем/соседом | HIDDEN | доля HIDDEN (95% ДИ) |')
+        print('| Правило | Категория | n (файлов) | убит/таймаут | выжил вместе с владельцем/соседом | HIDDEN (без выживших внутри) | доля HIDDEN (95% ДИ) |')
         print('| --- | --- | ---: | ---: | ---: | ---: | --- |')
     for rule in order:
         c = rows[rule]
         n = sum(c.values())
         hidden = c['HIDDEN']
+        strict = sum(1 for r in records if r['rule'] == rule and r['class'] == 'HIDDEN'
+                     and not any(k in ('Survived', 'NoCoverage') for k in r['insideStatuses']))
         killed = c['revealed'] + c['timeout-confirmed'] + c['terminates-killed'] + c['not-equivalent']
         alive_with = c['owner-survives'] + c['neighbor-survives'] + c['consistent']
         lo, hi = wilson(hidden, n)
         blo, bhi = bootstrap(records, rule, {'HIDDEN'})
         files = len({r['file'] for r in records if r['rule'] == rule})
         if markdown:
-            print(f"| {rule} | {category[rule]} | {n} ({files}) | {killed} | {alive_with} | {hidden} | {hidden / n:.1%} (Уилсон {lo:.1%}–{hi:.1%}; бутстрэп по файлам {blo:.1%}–{bhi:.1%}) |")
+            print(f"| {rule} | {category[rule]} | {n} ({files}) | {killed} | {alive_with} | {hidden} ({strict}) | {hidden / n:.1%} (Уилсон {lo:.1%}–{hi:.1%}; бутстрэп по файлам {blo:.1%}–{bhi:.1%}) |")
         else:
             extra = ' '.join(f'{k}={v}' for k, v in sorted(c.items()))
-            print(f"{rule:22s} {category[rule]:10s} n={n:4d} files={files:3d} hidden={hidden:3d} {hidden / n:6.1%} W[{lo:.1%},{hi:.1%}] B[{blo:.1%},{bhi:.1%}]  {extra}")
+            print(f"{rule:22s} {category[rule]:10s} n={n:4d} files={files:3d} hidden={hidden:3d} strict={strict:3d} {hidden / n:6.1%} W[{lo:.1%},{hi:.1%}] B[{blo:.1%},{bhi:.1%}]  {extra}")
 
 
 if __name__ == '__main__':
