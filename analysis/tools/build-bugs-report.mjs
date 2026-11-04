@@ -163,6 +163,12 @@ if (process.argv.includes('--stats')) {
         verified: unique.filter(row => row.decision !== null).length,
         hypotheses: unique.filter(row => /гипотез/iu.test(row.status)).length,
         prompts: unique.filter(row => row.prompt).length,
+        duplicatePrompts: rows
+          .filter(row => row.duplicate !== null && row.prompt)
+          .map(row => row.id),
+        duplicateVerified: rows
+          .filter(row => row.duplicate !== null && row.decision !== null)
+          .map(row => row.id),
       },
       null,
       2,

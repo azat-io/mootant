@@ -15,15 +15,20 @@ let table = run()
 let head = readFileSync(path.join(tools, 'bugs-report-head.md'), 'utf8')
 let tail = readFileSync(path.join(tools, 'bugs-report-tail.md'), 'utf8')
 let final = stats.finalSeverity
+let extra = ids =>
+  ids.length === 0
+    ? ''
+    : ` (и ещё ${ids.length} у дублей: ${ids.join(', ')})`
 let counts = [
   '## Счётчики',
   '',
   `- Строк в таблицах областей: ${stats.total}, из них уникальных багов ${stats.unique}, дублей ${stats.duplicates}.`,
-  `- Итоговая серьёзность уникальных: high — ${final.high ?? 0}, medium — ${final.medium ?? 0}, low — ${final.low ?? 0}${final.critical ? `, critical — ${final.critical}` : ''}.`,
+  `- Итоговая серьёзность уникальных: critical — ${final.critical ?? 0}, high — ${final.high ?? 0}, medium — ${final.medium ?? 0}, low — ${final.low ?? 0}.`,
   `- Заявленная агентами: ${Object.entries(stats.claimedSeverity)
     .map(([key, value]) => `${key} — ${value}`)
     .join(', ')}.`,
-  `- Перепроверено независимыми агентами: ${stats.verified}; гипотез: ${stats.hypotheses}; самодостаточных промптов: ${stats.prompts}.`,
+  `- Перепроверено независимыми агентами: ${stats.verified} уникальных${extra(stats.duplicateVerified)}; гипотез: ${stats.hypotheses}.`,
+  `- Самодостаточных промптов у уникальных багов: ${stats.prompts}${extra(stats.duplicatePrompts)}.`,
   '',
   '## Таблица',
   '',
