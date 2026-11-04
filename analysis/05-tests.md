@@ -247,6 +247,87 @@ run-dry/run-batch/run-isolated) относятся к файлам, которы
 - **Тесты производительности** из §5.1 (счётчики `slots.get`,
   `bindings.values`) — только если меняется способ кэширования.
 
+### Эксперимент: сколько поведения держат только тесты-двойники
+
+Вопрос для шага «сузить экспорт»: если влить семейство логирования в
+`core/syntax/logging.ts` и сделать приватные хелперы неэкспортируемыми, хватит
+ли тестов поверхности семейства, чтобы удержать их поведение? Измерение —
+мутантами. Mootant прогнан на пяти приватных хелперах семейства
+(`is-logger-name`, `is-console-path`, `find-message-texts`, `is-format-free`,
+`is-plain-message`; 68 мутантов) с двумя конфигами Vitest
+(`analysis/tools/tests/configs/vitest.family-*.config.ts`):
+
+- **public** — только тесты функций, которые семейство показывает наружу:
+  `find-logging-calls`, `is-logging-call`, `is-logger-factory-call`,
+  `is-logger-label`, `is-log-message`;
+- **full** — те же плюс пять тестов-двойников приватных хелперов.
+
+| Конфиг | Killed | Survived | Score |
+| --- | ---: | ---: | ---: |
+| public (тесты поверхности) | 55 | 13 | 80,9 % |
+| full (+ тесты-двойники) | 64 | 4 | 94,1 % |
+
+**9 мутантов из 68 (13 %) убивают только тесты-двойники.** Если при
+сужении экспорта удалить двойники, эти случаи потеряются, хотя 100 %
+покрытия по строкам и ветвям, скорее всего, останутся: строки исполняются и
+через публичные функции. Покрытие этой потери не покажет. Примеры (данные:
+`analysis/data/tests/mutants/run-family-{public,full}.json`):
+
+| Мутант | Кто убивает в full |
+| --- | --- |
+| `core/syntax/is-logger-name.ts:17` `entry.slice(1)` → `slice(2)` | `is-logger-name.test.ts:21` «rejects blogger with the default loggers» |
+| `core/syntax/is-console-path.ts:17` `path.length === 2` → `<= 2` | `is-console-path.test.ts` «rejects console» |
+| `core/syntax/is-console-path.ts:21` убрано `&& path[1] === 'console'` | `is-console-path.test.ts` «rejects globalThis.logger.log» |
+| `core/syntax/is-format-free.ts:22` `expressions.length > 0` → `>= 0` | `is-format-free.test.ts` «accepts \`a\`» |
+| `core/syntax/is-format-free.ts:26` убрано `typeof cooked === 'string' &&` | `is-format-free.test.ts` «rejects a template whose value is unknown» |
+| `core/syntax/find-message-texts.ts:20` убрано `&& argument.operator === '+'` | `find-message-texts.test.ts` «finds the texts of 'a' - 'b'» |
+| `core/syntax/is-plain-message.ts:21` убрано `argument.operator === '+' &&` | `is-plain-message.test.ts` «rejects 'a' - 1» |
+
+Четыре выживших в **full** — кандидаты в дыры самого семейства. Их ещё нужно
+проверить на полном сьюте: их может убить, например,
+`generate-file-mutants.test.ts`.
+
+- `core/syntax/is-plain-message.ts:21` убрано `&& isPlainMessage(argument.left)`.
+  Нет случая, где у `+` непростой **левый** операнд (`f() + 'a'`). Реальная
+  дыра.
+- `core/syntax/find-message-texts.ts:20` убрано `argument.type === 'BinaryExpression' &&`.
+  Унарный `+x` тоже имеет `operator: '+'`, а `console.log(+x)` нигде не
+  проверяется. Реальная, но мелкая дыра.
+- `core/syntax/find-message-texts.ts:27` убрано `argument.type === 'Literal' &&`.
+  Среди выражений строковое `value` есть только у `Literal`, так что мутант
+  эквивалентен. Это сигнал для эвристик (избыточный type guard).
+- `core/syntax/is-console-path.ts:21` `path.length === 3` → `<= 3`. Пути длины
+  2 уже вернулись на `:17`, у путей длины 0–1 `path[1] !== 'console'`. Мутант
+  эквивалентен.
+
 ### Стратегия рефакторинга с сохранением 100 % coverage
 
-(Будет дополнено результатами эксперимента.)
+Для каждого семейства или папки, по одному PR на шаг:
+
+1. **Замер до переноса (мутантами, не покрытием).** Прогнать
+   `mootant run <файлы семейства>` с конфигом Vitest, где оставлены только
+   тесты поверхности семейства (как `vitest.family-public.config.ts`), и с
+   полным. Разница — список случаев, которые держат только тесты-двойники.
+   Для семейства логирования прогон занял около 1 минуты при load average 30.
+   Трудоёмкость шага S.
+2. **Дописать недостающие публичные тесты.** Перенести эти случаи в тест
+   публичной функции, например `findLoggingCalls` для «blogger». Повторить
+   замер: public должен сравняться с full.
+3. **Механический перенос.** Кодмодом перенести функции в целевой модуль, не
+   меняя экспорта. Тест-файлы слить, каждый бывший файл обернуть в свой
+   `describe` вместе с его хуками и модульными `let`. `pnpm test:types`
+   ловит устаревшие пути `vi.mock(import())`. 100 % coverage сохраняется
+   автоматически: исполняемые строки те же.
+4. **Сужение экспорта отдельным PR.** Удалять `describe` двойника можно,
+   только если шаг 1 для него дал ноль уникальных убийств. Покрытие проверит
+   `vitest --coverage`, а сохранение поведения — повторный `mootant run` по
+   модулю: score не должен упасть. Мутанты сравнивать по
+   `(mutator, original, replacement, scope)`, а не по id: id включает путь
+   файла и при переносе меняется.
+5. Тесты, которые сломаются по смыслу, а не по пути: две позиции из таблицы
+   выше. Плюс любые `vi.mock` соседа, если карта слияния изменится. Найти их —
+   `analysis/tools/tests/grouping-impact.mjs <checkout> <карта>`.
+
+Риск: на шаге 4 в coverage могут всплыть ветви, достижимые только прямым
+вызовом (защитный код). Раздел 1 (§6.4) это уже отмечает. Мутанты из шага 1
+заранее показывают, какие это ветви.

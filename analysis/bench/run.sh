@@ -128,7 +128,7 @@ define_point() {
       KIND=plain
       POINT_RUNS=${BENCH_TEST_RUNS:-5}
       CMD="node node_modules/mootant/bin/mootant.js list ${MUTATE[*]}"
-      [ "$point" = m-list-json ] && CMD="$CMD --json"
+      if [ "$point" = m-list-json ]; then CMD="$CMD --json"; fi
       ;;
     s-cold)
       KIND=stryker

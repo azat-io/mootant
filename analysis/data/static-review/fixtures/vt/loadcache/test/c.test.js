@@ -1,9 +1,13 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { test } from 'vitest'
 
 import { add } from '../src/math.js'
 
-let counter = '/tmp/claude-0/static-loadcache-runs'
+// Outside the project, as a service the test file connects to would be: the
+// cache does not track it.
+let counter = path.join(tmpdir(), 'mootant-static-loadcache-runs')
 let runs = existsSync(counter) ? Number(readFileSync(counter, 'utf8')) : 0
 writeFileSync(counter, String(runs + 1))
 
