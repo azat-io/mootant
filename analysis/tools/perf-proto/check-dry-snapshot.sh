@@ -76,28 +76,32 @@ if [ "$RUNNER" = vitest ]; then
   scenario s4c-helper-imports-src "${ARGS[@]}"
   # S5: a test reads an environment variable; then the variable changes.
   printf "import { expect, test } from 'vitest'\nimport { countWords } from '../src/text.js'\ntest('env', () => { expect(countWords(process.env.FIXTURE_WORDS ?? 'a b')).toBeGreaterThan(0) })\n" >test/env.test.js
-  FIXTURE_WORDS='one two' scenario s5a-env-test "${ARGS[@]}"
-  FIXTURE_WORDS='one two' scenario s5b-unchanged "${ARGS[@]}"
-  FIXTURE_WORDS='three' scenario s5c-env-changed "${ARGS[@]}"
+  export FIXTURE_WORDS='one two'
+  scenario s5a-env-test "${ARGS[@]}"
+  scenario s5b-unchanged "${ARGS[@]}"
+  export FIXTURE_WORDS='three'
+  scenario s5c-env-changed "${ARGS[@]}"
   # S6: a Vitest configuration appears, then changes.
   printf "export default { test: { testTimeout: 5000 } }\n" >vitest.config.js
-  FIXTURE_WORDS='three' scenario s6a-config-added "${ARGS[@]}"
+  scenario s6a-config-added "${ARGS[@]}"
   printf "export default { test: { testTimeout: 6000 } }\n" >vitest.config.js
-  FIXTURE_WORDS='three' scenario s6b-config-changed "${ARGS[@]}"
+  scenario s6b-config-changed "${ARGS[@]}"
   # S7: a mutated source changes.
   sed -i 's/return value \* 3/return value * 4/' src/math.js
-  FIXTURE_WORDS='three' scenario s7-source-changed "${ARGS[@]}"
+  scenario s7-source-changed "${ARGS[@]}"
   # S8: one mutant only (--mutant), nothing changed since S7.
   id=$(node -p "require('$OUT/s7-source-changed-A.json').mutants.find(m => m.status === 'Survived').id")
-  FIXTURE_WORDS='three' scenario s8-one-mutant src --concurrency 2 --mutant "$id"
-  FIXTURE_WORDS='three' scenario s8b-all-again "${ARGS[@]}"
+  scenario s8-one-mutant src --concurrency 2 --mutant "$id"
+  scenario s8b-all-again "${ARGS[@]}"
 else
   sed -i "s/assert.ok(joinList(\['a', 'b'\]).includes('a'))/assert.equal(joinList(['a', 'b']), 'a and b')/" test/text.test.js
   scenario s2-edit-test "${ARGS[@]}"
   scenario s2b-unchanged "${ARGS[@]}"
   printf "import { test } from 'node:test'\nimport assert from 'node:assert/strict'\nimport { pad } from '../src/text.js'\ntest('pads to width', () => { assert.equal(pad(7, 3), '  7') })\n" >test/new.test.js
   scenario s3-new-test "${ARGS[@]}"
-  NODE_OPTIONS=--no-warnings scenario s5-node-options "${ARGS[@]}"
+  export NODE_OPTIONS=--no-warnings
+  scenario s5-node-options "${ARGS[@]}"
+  unset NODE_OPTIONS
 fi
 git checkout -q -- . && git clean -q -fdx -e node_modules
 echo "summary: $summary"

@@ -245,7 +245,7 @@ switched-файлы. Затем `recoverFromFailures` (`:275-296`) удаляе�
   12/12 `Error`. Повторный запуск без сбоя: 9 Killed, 3 Survived.
 
 Последствие для пользователя: весь прогон (на больших проектах — часы)
-заканчивается `Error` у всех мутантов, exit 1, кэш не сохраняется, а
+заканчивается `Error` у всех мутантов и exit 1, а
 диагностика ложно обвиняет конкретные файлы. Насколько часто: требуется
 провал, не дошедший до кода мутантов, — падение `beforeAll` (БД, порт,
 сеть), ошибка загрузки тест-файла, ошибка трансформации switched-модуля
@@ -266,7 +266,7 @@ switched-файлы. Затем `recoverFromFailures` (`:275-296`) удаляе�
 `const globalThis = typeof window !== 'undefined' ? window : {…}` → switched
 без runtime падает при загрузке `ReferenceError: Cannot access 'globalThis'
 before initialization` (оригинал работает). Аудит корпусов: 0 привязок
-`globalThis` в 1 300 файлах — редкость (встречается в полифил-коде, напр.
+`globalThis` в 1 466 файлах — редкость (встречается в полифил-коде, напр.
 README пакета `globalthis` предлагает `var globalThis = require('globalthis')()`).
 Исправление: вставка в начало файла не поможет — модульная `const
 globalThis` всплывает, и любое обращение к ней до объявления даёт TDZ.
@@ -303,9 +303,10 @@ instrumented dry run → `instrumentation-break`, все мутанты файл
 активном мутанте, чей replacement — анонимная функция/класс/стрелка в
 позиции именования (инициализатор, `=`/`||=`/`&&=`/`??=`, значение свойства,
 поле класса, дефолт параметра), имя теряется. Мутатор — `logical-operator`
-(выбрасывание левого операнда). Встречаемость: 1 в Mootant
-(`core/run/create-run-state.ts:97`, `input.report ?? (() => {})`), 1 в express
-(`lib/response.js:914`), 0 в остальных корпусах. Влияет только на тесты,
+(выбрасывание левого операнда). Встречаемость: 5 мест в 1 466 файлах корпуса —
+Mootant (`core/run/create-run-state.ts:97`, `input.report ?? (() => {})`),
+express (`lib/response.js:914`), Vue (`runtime-core/src/hydrationStrategies.ts:7,9`),
+Svelte (`compiler/state.js:150`). Влияет только на тесты,
 читающие `.name` (снимки компонентов без displayName, DI по имени).
 Исправление: для таких слотов рендерить ветку как `({ [name]: r })[name]` или
 не создавать такие мутанты; без активного мутанта поведение не меняется
@@ -331,8 +332,10 @@ instrumented dry run → `instrumentation-break`, все мутанты файл
 
 Switched-текст всегда берёт replacement и original в скобки
 (`core/instrument/render-mutant-range.ts:91-95`). oxc в режиме
-`sourceType: 'unambiguous'` (так модули разбирают Vite 8 и rolldown, и так же
-`core/parser/parse-file.ts:77`) в файле с `import`/`export` читает скобку,
+`sourceType: 'unambiguous'` (так ведёт себя `parseAst` rolldown без явного
+`sourceType`, которым Vite 8 разбирает модули, — проверено напрямую; так же
+разбирает и сам Mootant, `core/parser/parse-file.ts:77`) в файле с
+`import`/`export` читает скобку,
 за которой сразу идёт литерал `/<!--…/`, как HTML-комментарий и сообщает
 «HTML comments are not allowed in modules». Минимальные случаи
 (oxc-parser 0.156.0 и 0.157.0): `const a = (/<!--x/g)\nexport {}` — ошибка;
@@ -441,10 +444,17 @@ switched … and pass without it» (фикстура `BUG-106/run.sh`: 9/9 `Erro
   все мутанты компилируются V8.
 - Инвалидация кэша трансформаций при переключении instrumented/plain dry run
   (`adapters/vitest/run-dry.ts:54-63,107-109`).
+- Сквозные вердикты `mootant run` на ufo совпали с физическим применением у
+  157 из 157 сравнимых мутантов.
+- Ни одного случая, где switched-код без активного мутанта менял бы
+  поведение, кроме затенения `globalThis` (BUG-101) и номеров строк
+  (BUG-102); `hit()` без runtime — `undefined`, с `active=null` — `false`.
 
 ## Что не проверено
 
-- `using`/`await using` (Node 22 их не поддерживает, без транспиляции не
-  исполнить); Vitest с esbuild (Vite 6/7) вместо oxc; Windows-пути.
+- Нативный `using`/`await using` (V8 в Node 22 их не поддерживает; проверено
+  только после понижения oxc до ES2022 — ловушка t21, 30 мутантов без
+  расхождений); Vitest 5 на Vite 6/7 (esbuild/Rollup вместо oxc/rolldown —
+  BUG-106 там, вероятно, не проявляется); Windows-пути.
 - Полный I2 на собственном тест-сьюте Mootant и на perfectionist (машина была
   перегружена соседними агентами, load average 25–33).
