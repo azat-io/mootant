@@ -5,10 +5,11 @@
 в `$BENCH_RESULTS` (по умолчанию `/home/user/projects/bench/results`), сводка —
 `summarize.mjs`.
 
-> **Статус на 2026-11-04 04:30 UTC:** стенд собран и отлажен смоук-прогонами
-> на подмножествах при занятой машине. Цифры в разделе «Оценка длительности» —
-> оценки для планирования (один прогон, load average 3–6 от чужих задач), а не
-> результаты. Полный план запускает координатор в эксклюзивном окне.
+> **Статус на 2026-11-04 06:15 UTC:** стенд собран и отлажен смоук-прогонами
+> на подмножествах при занятой машине (load average 13–41 от чужих задач).
+> Цифры смоука (`smoke/*.md`) и оценки длительности ниже — для проверки стенда
+> и планирования, а не результаты. Полный план запускает координатор в
+> эксклюзивном окне.
 
 ## Быстрый старт
 
@@ -198,7 +199,7 @@ Mootant.
 
 | ярус | точки | зачем | оценка одного прогона | всего (×3, тест-сьюты и `list` ×5) |
 |---|---|---|---|---|
-| 1 | perfectionist `test`, `m-cold`, `s-cold` | главное сравнение на обязательном и самом большом проекте | test ~1,2 мин; m-cold 8–12 мин (dry run ≈ весь сьют ~1 мин + цепочка ~208 юнитов правила одного тест-файла); s-cold 5–10 мин | ~60 мин |
+| 1 | perfectionist `test`, `m-cold`, `s-cold` | главное сравнение на обязательном и самом большом проекте | test ~1,2 мин; m-cold 8–14 мин (dry run ≈ весь сьют 1,5–2 мин + цепочка ~230 юнитов правила по ~1,5–1,9 с на одном тест-файле); s-cold 5–10 мин | ~60 мин |
 | 1 | path-to-regexp `test`, `m-cold`, `s-cold` | маленький проект с одним тест-файлом — крайний случай сериализации юнитов Mootant | test ~2 с; m-cold 2,5–4 мин (339 юнитов подряд); s-cold 1–2 мин | ~15 мин |
 | 1 | cheerio `test`, `m-cold`, `s-cold` | средний проект | test ~6 с; m-cold 3–6 мин; s-cold 3–6 мин | ~30 мин |
 | 1 | fast-json-stringify `test`, `m-cold`, `s-cold` | node:test (процесс на юнит) против tap-runner Stryker | test ~10 с; m-cold 3–6 мин; s-cold 3–6 мин | ~30 мин |
@@ -221,8 +222,9 @@ Mootant.
 `profile.sh path-to-regexp`.
 
 Перед стартом: `setup.sh` (если стенд ещё не собран; ~10 мин), затем
-`uptime` (load average должен быть < 0,5), `df -h /` (нужно ≥ 5 ГБ: отчёты
-`--verbose` и снимки кэша). Команда полного плана:
+`uptime` (load average должен быть < 0,5), `df -h /` (нужно ≥ 3 ГБ: отчёты
+`--verbose` по 1–5 МБ на прогон, снимки кэша, профили — до ~100 МБ на прогон
+node:test; на 2026-11-04 06:10 свободно было 5 ГБ). Команда полного плана:
 
 ```sh
 cd /home/user/mootant && export PATH=/home/user/tools/bin:$PATH
@@ -278,6 +280,28 @@ Vitest, сами модули проекта, `node_modules`.
 последовательная цепочка; пример — `node lib/units-report.mjs run-1.units.json
 --workers 3`.
 
+
+## Смоук-проверка (что проверено, 2026-11-04)
+
+Под нагрузкой, `--concurrency 2`, один прогон, подмножества `PROFILE_MUTATE`
+(path-to-regexp — целиком). Таблицы — `smoke/smoke*.md`, профили —
+`smoke/profile-*.md`.
+
+| что | как проверено | итог |
+|---|---|---|
+| `setup.sh` с нуля | все пять проектов (четыре + mootant-self) | клон, установка, патчи, ветки `bench/base`/`bench/since`; тест-сьюты зелёные (path-to-regexp, cheerio, perfectionist, fast-json-stringify) после правок копий из «Известных ограничений» |
+| точки `run.sh` | cheerio — все точки ярусов 1–5 (`test`, `m-cold`, `s-cold`, `m-one`, `m-warm`, `m-fast`, `m-edit-inc`, `m-edit`, `m-since`, `m-list-text`, `m-list-json`, `s-tsc`, `m-nocache`, `s-edit-inc`); perfectionist — `test`, `m-cold`, `s-cold`, `m-warm`, `m-one`; fast-json-stringify — `test`, `m-cold`, `s-cold`, `m-one`, `m-warm`, `m-edit-inc`, `m-since`, `s-command`; path-to-regexp — `m-cold` и `s-cold` через `lib/measure-one.sh` напрямую | hyperfine, `--prepare`, снимки кэша, правка, ветка `--since`, incremental-файл Stryker, typescript-checker работают; найден и исправлен баг стенда (переменная hyperfine в окружении ломала кэш Mootant — BUG-701) |
+| Stryker + Vitest 5 | path-to-regexp, cheerio, perfectionist | `@stryker-mutator/vitest-runner@10.1.1` работает с Vitest 5.0.x без обходных путей; на TypeScript 7 нужен `tsconfigFile`-обход (path-to-regexp) |
+| Stryker + node:test | fast-json-stringify | tap-runner работает после удаления `test/property-names.test.js` (без этого Stryker считает его упавшим в начальном прогоне); command runner работает |
+| отчёты | все прогоны | Mootant `--json --all --verbose` и JSON Stryker сохраняются по прогону; у Stryker нет поля `performance` — фазы из журнала |
+| трасса юнитов | path-to-regexp, cheerio, perfectionist | раунды, занятость, ожидание, хвост, цепочки; CPU трассировщика ~0,1–0,8 % ядра |
+| CPU-профили | `profile.sh cheerio`, `profile.sh fast-json-stringify run`, `mootant list core` | профили главного процесса, 36 форков Vitest, 297 процессов node:test; сводки по функциям, пакетам, модулям |
+| `summarize.mjs` | все каталоги смоука | таблицы собираются |
+
+Чего смоук **не** проверил: прогоны на полных `MUTATE` у cheerio,
+perfectionist и fast-json-stringify (только счётчики мутантов и подмножества),
+точки `m-fast`/`m-edit*`/`m-since` на полных `MUTATE`, ярус 6 (`mootant-self`
+только собран и проверен `mootant list core/text`).
 
 ## Известные ограничения стенда
 

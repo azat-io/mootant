@@ -17,7 +17,7 @@
 |---|---|---|---|---|---|
 | P1 | параллельные юниты одного тест-файла (`experiment/perf-parallel-units`, `eb5e261`) | `MOOTANT_PARALLEL_UNITS=1` | **совпадают** на трёх фикстурах без общих ресурсов (Vitest ×2 прогона, node:test), `--strict`; на стресс-фикстуре с общим файлом и портом — 4 и 6 расхождений из 13 (ложные Killed), база детерминирована | годится как **opt-in**; по умолчанию — нет | M |
 | P2 | префиксная обрезка isolated-юнита (`experiment/perf-trim-units`, `6033fc0`), вариант P2' «только покрывающие» | `MOOTANT_TRIM_UNITS=prefix` / `covering` | на фикстуре с независимыми тестами совпадают; на граничной фикстуре **P2: 3 ложных Survived из 12, P2': 3 ложных Survived + 1 ложный Killed + 1 Killed→NoCoverage** | **отрицательный результат**: выигрыш P2 есть только у выживших и ровно там, где он может скрыть убийство; принцип 7 не выполнен | — (не рекомендуется) |
-| P3 | полный кэш без запуска раннера (`experiment/perf-dry-snapshot`) | `MOOTANT_REUSE_DRY_RUN=1` | см. раздел P3 | см. раздел P3 | L |
+| P3 | полный кэш без запуска раннера (`experiment/perf-dry-snapshot`, `96ec389`) + кэширование тайм-аутов по лимиту срабатываний | `MOOTANT_REUSE_DRY_RUN=1` | **совпадают** во всех 22 сценариях (16 Vitest, 6 node:test), `--strict`; раннер не стартует ровно в «ничего не изменилось» (6 из 22), в остальных — обычный путь с правильной причиной; отрицательный контроль (без проверки дерева) даёт 2 устаревших вердикта из 76 | годится; применимость — только «ничего не изменилось» (повторный прогон, CI с восстановленным кэшем, агент перепроверяет без правок) | L |
 
 Общее для всех прототипов:
 
@@ -509,7 +509,13 @@ the project was added, removed or changed». Значит, проверка вс
 Грубое время повтора на мини-фикстуре: 0,44–0,68 с против 2,0–4,0 с обычного
 тёплого прогона (не замер).
 
-Фикстура `node-units` (node:test): РЕЗУЛЬТАТЫ_NODE
+Фикстура `node-units` (node:test): 6 сценариев
+(`/home/user/projects/perf-proto/results/p3/node-units/summary.txt`): s0-cold,
+s1-unchanged (**повтор, раннер не стартовал**), s2-edit-test (правка
+`test/text.test.js` → обычный путь), s2b-unchanged (**повтор**), s3-new-test
+(новый файл → дерево), s5-node-options (`NODE_OPTIONS=--no-warnings` → «an
+environment variable changed»). **Во всех 6 вердикты A и B совпадают**
+(`--strict`).
 
 Команды:
 
@@ -601,3 +607,128 @@ grep -h 'cannot be reused\|was not saved' /home/user/projects/bench/results-prot
 `state.expected`/`state.todo`, а у Vitest — хэши окружения воркеров для
 `cacheInputs`; Vitest уже умеет отдавать переключаемые файлы без dry run —
 `adapters/vitest/create-mootant-plugin.ts:38`).
+
+---
+
+## P4. Что ещё рассматривалось (без прототипа)
+
+Время ушло на проверку P1–P3 (в частности, на найденную по ходу
+неприменимость P3 без кэширования тайм-аутов), поэтому P4 не реализован. Две
+идеи с нулевым риском для вердиктов, которые стоит прототипировать следующими —
+обе меняют только расписание, а вердикт по построению не зависит от него
+(первый по рангу файл с уликой, `core/run/decide-evidence.ts:5-16`):
+
+1. **Крупнее пакеты файлов у выживших.** Сейчас мутант берёт 1, 1, 2, 4, 8…
+   файлов за раунд (`core/run/run-isolated-rounds.ts:69`), так что выживший с
+   24 покрывающими файлами (утилиты perfectionist, их тянет каждый тест-файл
+   правила) проходит 6 раундов, и каждый раунд ждёт свой самый долгий юнит.
+   Вариант: после двух раундов только с «прошёл» брать все оставшиеся файлы →
+   3 раунда. Цена — лишние юниты у мутантов, которых убил бы поздний файл.
+   Мерить: число запусков `summary.runs.isolated` и wall на perfectionist и
+   cheerio; трудоёмкость S. С P1 эффект сильнее (раунды перестают быть
+   цепочками, остаются только «хвосты»).
+2. **Быстрее dry run** (идея 11 в `analysis/04-performance.md`): на догфудинге
+   dry run 8 393 тестов дольше всего `test:unit`; P3 убирает его только при
+   неизменных входах, а здесь выигрыш был бы в каждом прогоне. Нужен профиль
+   воркера dry run (`analysis/bench/profile.sh <p> workers`) до прототипа.
+
+Отброшено после анализа кода: сортировка юнитов раунда по ожидаемой стоимости
+(LPT). Базовый секвенсор Vitest без результатов прошлых прогонов (Mootant
+запускает Vitest с `cache: false`, `adapters/vitest/start-vitest-session.ts:106`)
+уже ставит большие тест-файлы первыми
+(`node_modules/vitest/dist/chunks/index.1TqnEahn.js:7781-7810`, «run larger files
+first»), а Mootant лишь перемежает юниты одного файла поверх этого порядка
+(`adapters/vitest/create-interleaved-sequencer.ts:43-62`); без P1 узкое место —
+цепочка одного файла, которую порядок не сокращает.
+
+---
+
+## Команды для координатора (эксклюзивное окно)
+
+Предпосылки: стенд `analysis/bench` уже собран (`analysis/bench/setup.sh`),
+tarball'ы на месте; скрипт `analysis/tools/perf-proto/bench-proto.sh` сам
+ставит tarball прототипа в проект стенда (`use-mootant.sh`: распаковка поверх
+`node_modules/mootant`, через симлинк для pnpm; lockfile и Vitest не меняются;
+кэш Mootant сбрасывается, так как в его ключе штамп сборки) и по завершении
+(в том числе по ошибке, `trap`) возвращает `MOOTANT_TGZ` базы
+(`/home/user/artifacts/mootant-0.1.0-170ec52.tgz`).
+
+| прототип | tarball | переменная (ставит скрипт в режиме «on») |
+|---|---|---|
+| P1 `parallel-units` | `/home/user/artifacts/proto-parallel-units/mootant-0.1.0.tgz` | `MOOTANT_PARALLEL_UNITS=1` |
+| P2 `trim-units` / `trim-units-covering` | `/home/user/artifacts/proto-trim-units/mootant-0.1.0.tgz` | `MOOTANT_TRIM_UNITS=prefix` / `covering` |
+| P3 `dry-snapshot` | `/home/user/artifacts/proto-dry-snapshot/mootant-0.1.0.tgz` | `MOOTANT_REUSE_DRY_RUN=1` |
+
+Результаты: `/home/user/projects/bench/results-proto/<прототип>/{off,on}/<проект>/<точка>/`
+(как у `run.sh`: `hyperfine.json`, `run-k.{json,err,time,mem.json,units.json}`),
+сравнение вердиктов каждого прогона «on» с прогоном 1 «off» —
+`.../<прототип>/compare-<проект>-<точка>.md`. Точка, у которой уже есть
+`hyperfine.json`, пропускается (`run.sh`), для повтора удалить каталог точки.
+`BENCH_RUNS` (по умолчанию 3) — число прогонов на точку;
+`BENCH_PROTO_MODES=on` — без прогонов «off» (сравнение вердиктов тогда с
+прогоном 1 основного стенда `$BENCH_RESULTS/<проект>/<точка>/run-1.json`, если он
+есть); `BENCH_DRY=1` — только показать, что будет запущено.
+
+По приоритету (самое информативное — первым):
+
+```sh
+cd /home/user/mootant
+T=analysis/tools/perf-proto/bench-proto.sh
+# 1. P3: тёплый прогон без раннера (m-cold нужен, чтобы в этом же режиме
+#    появился снимок; m-edit — цена проверки, когда снимок устарел)
+$T dry-snapshot cheerio m-cold m-warm m-edit
+# 2. P1: проект, где один тест-файл покрывает всё
+$T parallel-units path-to-regexp m-cold
+# 3. P1 и P3 на большом проекте
+$T parallel-units perfectionist m-cold
+$T dry-snapshot perfectionist m-cold m-warm m-edit
+# 4. node:test
+$T parallel-units fast-json-stringify m-cold
+$T dry-snapshot fast-json-stringify m-cold m-warm
+# 5. контроль: P1 там, где цепочек почти нет (ожидание — без выигрыша)
+$T parallel-units cheerio m-cold
+# 6. по желанию: сколько вердиктов меняет P2 и сколько времени он экономит
+$T trim-units perfectionist m-cold
+# сводки
+for p in parallel-units dry-snapshot trim-units; do
+  for m in off on; do
+    node analysis/bench/summarize.mjs /home/user/projects/bench/results-proto/$p/$m \
+      > /home/user/projects/bench/results-proto/$p/summary-$m.md
+  done
+done
+grep -h 'Эквивалентны\|НЕ эквивалентны' /home/user/projects/bench/results-proto/*/compare-*.md
+```
+
+Минимальный вариант, если окна мало: `BENCH_RUNS=1 BENCH_PROTO_MODES=on` для
+пунктов 1–2 (сравнение времени — с базовыми точками `m-cold`/`m-warm`
+основного стенда того же окна).
+
+Что считать результатом по каждому прототипу:
+
+- **P1**: медиана wall и `summary.duration.isolated` on/off; из трассы
+  (`lib/units-report.mjs` по `run-k.units.json`) — самая длинная цепочка
+  одного файла и занятость слотов (в «on» цепочка должна исчезнуть); Σ
+  стоимостей юнитов (`summary.staticCost[].duration`) — рост из-за конкуренции
+  за CPU; `compare-*.md` — расхождений нет. Любое расхождение = у проекта есть
+  общий ресурс между тестами (тоже результат: такой проект нельзя в P1).
+- **P3**: `m-warm` on против off (в `run-k.err` «on» должна быть строка
+  «Reused the dry run of an earlier run…», `summary.runs` = `{}`); `m-cold` on
+  против off — цена записи снимка; `m-edit` on против off — цена проверки
+  устаревшего снимка (строка «The saved dry run cannot be reused: …»);
+  `compare-*.md` — расхождений нет.
+- **P2**: число расхождений в `compare-*.md` (каждое — ложный вердикт) и
+  разница `summary.duration.isolated`.
+
+## Артефакты
+
+| | ветка / коммит | worktree | diff | tarball |
+|---|---|---|---|---|
+| P1 | `experiment/perf-parallel-units` / `eb5e261` | `/home/user/wt/perf-parallel-units` | `analysis/experiments/perf-parallel-units.diff` | `/home/user/artifacts/proto-parallel-units/mootant-0.1.0.tgz` |
+| P2 | `experiment/perf-trim-units` / `6033fc0` | `/home/user/wt/perf-trim-units` | `analysis/experiments/perf-trim-units.diff` | `/home/user/artifacts/proto-trim-units/mootant-0.1.0.tgz` |
+| P3 | `experiment/perf-dry-snapshot` / `96ec389` | `/home/user/wt/perf-dry-snapshot` | `analysis/experiments/perf-dry-snapshot.diff` | `/home/user/artifacts/proto-dry-snapshot/mootant-0.1.0.tgz` |
+
+Инструменты: `analysis/tools/compare-verdicts.mjs`,
+`analysis/tools/perf-proto/{setup-fixture,use-mootant,run-mootant,check-dry-snapshot,p3-negative-control,bench-proto}.sh`;
+фикстуры — `analysis/experiments/perf-fixtures/`; отчёты проверок —
+`/home/user/projects/perf-proto/results/{p1,p2,p3}/`. Баги, найденные по ходу, —
+`analysis/bugs/perf-proto.md` (BUG-750…BUG-754).
