@@ -2,9 +2,10 @@
 // Builds the Markdown tables of the benchmark from what run.sh saved:
 //   node analysis/bench/summarize.mjs [results-dir] > summary.md
 // Results dir: $BENCH_RESULTS or /home/user/projects/bench/results. For every
-// <project>/<point>/ it reads hyperfine.json (wall time of every run) and per
-// run run-k.json (report), run-k.time (GNU time), run-k.mem.json (process
-// tree) and run-k.units.json (Vitest units). Definitions: README, "Metrics".
+// <project>/<point>/ it reads per run run-k.json (report), run-k.time (GNU
+// time: wall = elapsed of the command), run-k.mem.json (process tree) and
+// run-k.units.json (Vitest units); hyperfine.json only when a run has no
+// elapsed. Definitions: README, "Metrics".
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs'
 import path from 'node:path'
 
@@ -180,18 +181,29 @@ function describePoint(project, point) {
     .map(name => Number(/\d+/u.exec(name)[0]))
     .sort((left, right) => left - right)
     .map(k => describeRun(dir, k, kind))
-  let times = hyperfine?.results?.[0]?.times?.map(value => value * 1000) ?? runs.map(run => (run.time?.elapsed ?? NaN) * 1000)
+  // Wall is GNU time's elapsed of the command itself. hyperfine times all of
+  // lib/measure-one.sh, which until 2026-11-04 also waited for the next poll
+  // of its helpers: up to 1 s more per run (README, "Known limitations").
+  let elapsed = runs.map(run => (run.time?.elapsed ?? NaN) * 1000)
+  let times =
+    elapsed.length > 0 && elapsed.every(Number.isFinite) ? elapsed
+    : (hyperfine?.results?.[0]?.times?.map(value => value * 1000) ?? elapsed)
   return { project, point, kind, dir, hyperfine: hyperfine?.results?.[0] ?? null, times, runs }
 }
 
 function wallStats(point) {
   let times = point.times.filter(Number.isFinite)
   if (times.length === 0) return null
+  let mean = times.reduce((sum, value) => sum + value, 0) / times.length
   return {
     median: median(times),
     min: Math.min(...times),
     max: Math.max(...times),
-    stddev: point.hyperfine?.stddev !== undefined && point.hyperfine.stddev !== null ? point.hyperfine.stddev * 1000 : null,
+    // Sample standard deviation, as hyperfine reports it.
+    stddev:
+      times.length > 1 ?
+        Math.sqrt(times.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (times.length - 1))
+      : null,
     n: times.length,
   }
 }
@@ -218,7 +230,7 @@ for (let project of projects.sort()) {
     .sort()
     .map(point => describePoint(project, point))
   out.push(`## ${project}`, '')
-  out.push('| точка | прогонов | wall, с: медиана [min–max] | σ, с | CPU, с | RSS max проц., МБ | PSS дерева, МБ | мутантов: всего / с вердиктом / запущено | Killed | Survived | NoCov | Timeout | Error | Ignored | из кэша | полезных | с/мутант | с/запущ. | с/полезный | одинаковые счётчики |')
+  out.push('| точка | прогонов | wall (GNU elapsed), с: медиана [min–max] | σ, с | CPU, с | RSS max проц., МБ | PSS дерева, МБ | мутантов: всего / с вердиктом / запущено | Killed | Survived | NoCov | Timeout | Error | Ignored | из кэша | полезных | с/мутант | с/запущ. | с/полезный | одинаковые счётчики |')
   out.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
   for (let point of points) {
     let wall = wallStats(point)

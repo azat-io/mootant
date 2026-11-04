@@ -156,7 +156,9 @@ squirrelchat/smol-toml `bba6a4bb` (Vitest 5).
 
 Для каждой точки (`summarize.mjs`):
 
-- **wall** — время hyperfine каждого прогона: медиана, min–max, σ.
+- **wall** — elapsed GNU time самой команды (`run-k.time`): медиана, min–max,
+  выборочное σ. `hyperfine.json` — запасной источник: hyperfine мерит всю
+  обвязку `lib/measure-one.sh` («Известные ограничения», п. 11).
 - **CPU** — user + sys из GNU time; включает всех дочерних, кого дождались
   (воркеры Vitest, процессы node:test, test runner-ы Stryker).
 - **Память**: `RSS max проц.` — `%M` GNU time, это пик *одного самого большого
@@ -398,3 +400,22 @@ perfectionist и fast-json-stringify (только счётчики мутант
    минуты, а не часы; на целых проектах соотношения могут быть другими (у
    Mootant время сильно зависит от числа тест-файлов, покрывающих мутанты, —
    см. сериализацию юнитов одного файла).
+11. **Wall hyperfine в окне 2026-11-04 завышен на 0,2–1,0 с на прогон.**
+   hyperfine мерил не команду, а всю обвязку: `run.sh` запускает
+   `bash lib/measure-one.sh … -- CMD`. Обвязка ждала своих хелперов
+   (`wait "$helper"`), а `lib/memtree.mjs` опрашивает дерево процессов раз в
+   1000 мс и замечает конец команды только на следующем тике. Поэтому wall
+   hyperfine ≈ ceil(elapsed) + 0,05 с:
+   - у точек короче ~30 с — до +97 %: P3 cheerio `m-warm` 1,06 с по hyperfine
+     против 0,54 с по GNU elapsed, тест-сьют path-to-regexp 1,05 против
+     0,64 с;
+   - у холодных прогонов, P1 и Stryker — меньше 1 %;
+   - σ коротких точек квантование тоже искажает: cheerio `m-one` 4,08 ± 0,00
+     по hyperfine против 3,60 ± 0,21 по GNU elapsed.
+
+   В `analysis/04-performance.md` короткие точки и все коэффициенты с ними
+   пересчитаны по GNU elapsed (`run-k.time`), счётчик указан у каждой
+   таблицы. Обвязка исправлена после окна: `measure-one.sh` сразу после конца
+   команды посылает хелперам SIGTERM, а `memtree.mjs` и `trace-units.mjs` в
+   обработчике дописывают свой файл и выходят. На `sleep 1.3` обвязка теперь
+   занимает 1,33 с. `summarize.mjs` берёт wall из `run-k.time`.

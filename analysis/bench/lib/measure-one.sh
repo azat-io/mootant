@@ -64,6 +64,15 @@ fi
 wait "$pid"
 code=$?
 end=$(date +%s.%N)
+# hyperfine times this whole script, so the helpers must stop at once. Left to
+# themselves they notice the end only on their next poll (memtree.mjs once a
+# second), and the wait for it added 0.2-1 s to every run of the window of
+# 2026-11-04 (README, "Known limitations"). On SIGTERM both write their file
+# and exit; a helper killed before its handler is set (a run shorter than
+# node's start) leaves no file.
+for helper in "${helpers[@]}"; do
+  kill -TERM "$helper" 2>/dev/null
+done
 for helper in "${helpers[@]}"; do
   wait "$helper"
 done
