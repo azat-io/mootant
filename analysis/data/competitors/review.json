@@ -1,0 +1,416 @@
+{
+ "about": "Manual review (section 3, Эмпирическая проверка). Keys: <project>:stryker:<Stryker id> for Stryker's Survived/NoCoverage that Mootant skipped (class b) or does not generate (class c); <project>:mootant:<Mootant id> for Mootant-only Survived/NoCoverage. Verdicts for Stryker items: equivalent (no test can kill it), same-gap (a Mootant survivor of the same code fails under the same tests: the same gap is in Mootant's report), noise (killable, but not worth a test: message text, metadata, guard that the authors excluded from coverage), lost (a useful mutant with no Mootant survivor pointing at the gap). Verdicts for Mootant-only items: useful (a real gap worth a test), equivalent, noise. 'test' is a short test that kills the mutant, when there is one.",
+ "items": {
+  "perfectionist:stryker:10": {
+   "verdict": "same-gap",
+   "why": "Ветка `if (b === lastBlockToKeepInPlace) { return -1 }` не исполняется ни одним тестом и помечена авторами `/* v8 ignore if */`. Mootant показывает это двумя NoCoverage-мутантами `-1` внутри блока; удаление `return -1` у него `owned` (O19) мутантом `if (false)`."
+  },
+  "perfectionist:stryker:22": {
+   "verdict": "same-gap",
+   "why": "Опустошённый `case UnaryExpression:` проваливается в `case Literal:` и для `!x` даёт `false` — то же поведение, что у выжившего Mootant `node.operator === '!'` → `false`.",
+   "test": "switch (!a) { case b: f(); break; case a: g() } не сортируется (нет ошибки)"
+  },
+  "perfectionist:stryker:26": {
+   "verdict": "same-gap",
+   "why": "`node.operator === ''` всегда ложно, то есть совпадает с выжившим владельцем `node.operator === '!'` → `false` (правило O4)."
+  },
+  "perfectionist:stryker:27": {
+   "verdict": "same-gap",
+   "why": "Опустошённый `case Literal:` проваливается в `default: return false` — то же, что выживший Mootant `typeof node.value === 'boolean'` → `false`.",
+   "test": "switch (true) { case b: f(); break; case a: g() } не сортируется"
+  },
+  "perfectionist:stryker:31": {
+   "verdict": "same-gap",
+   "why": "`typeof node.value === ''` всегда ложно — совпадает с выжившим владельцем `… === 'boolean'` → `false` (O4)."
+  },
+  "perfectionist:stryker:32": {
+   "verdict": "equivalent",
+   "why": "Без `return false` функция возвращает `undefined`. Оба вызова (`rules/sort-switch-case.ts:67,70`) используют результат только в `||`/`&&`, поэтому для правила мутант эквивалентен. Убить его может только юнит-тест хелпера с `toBe(false)`, которого в проекте нет. Mootant: `noise/tail-return-false`."
+  },
+  "perfectionist:stryker:36": {
+   "verdict": "equivalent",
+   "why": "`computeComparators` строит запасной компаратор из `{ ...options, ...options.fallbackSort }` (`utils/compare/compute-comparators.ts:34-37`). С `fallbackSort: {}` это тот же компаратор, что основной: он возвращает 0 там же, где основной. Mootant пропустил по `solitary` (владелец `'unsorted'` → `''` убит падением «Unreachable case»): итог верный, причина в отчёте — нет."
+  },
+  "perfectionist:stryker:82": {
+   "verdict": "equivalent",
+   "why": "`index` в `reduce` не больше `cases.length - 1`. С `true` после последнего `case` добавляется пустая группа, на которой `sortNodes`, `some` и `pairwise` ничего не делают. Эквивалентны и три выживших Mootant на этом условии (`!==` → `<`, `- 1` → `+ 1`, отбрасывание правого операнда): здесь шум у обоих инструментов."
+  },
+  "perfectionist:stryker:94": {
+   "verdict": "same-gap",
+   "why": "`&&=` от начального `false` никогда не ставит флаг — то же, что выживший Mootant «никогда не присваивать» (`hasUnsortedNodes ||= …` → `hasUnsortedNodes`). Рядом выживают `||=` → `=` и `hasUnsortedNodes` → `false` в `fix` (стр. 262).",
+   "test": "switch, где неотсортированы и имена внутри группы, и сами блоки: на первом проходе исправление блоков не выдаётся (`output` первого прохода)"
+  },
+  "perfectionist:stryker:96": {
+   "verdict": "same-gap",
+   "why": "`some(() => undefined)` всегда `false`, флаг не ставится. Внутри стрелки выживает Mootant `node !== caseNodesSortingNodeGroup[index]` → `false` с тем же поведением."
+  },
+  "perfectionist:stryker:178": {
+   "verdict": "noise",
+   "why": "`meta.docs` правила (`url`, `description`, `recommended`) — метаданные для документации; ни код плагина, ни тесты их не читают. Mootant выдаёт здесь тот же шум тремя выжившими (`string-literal` ×2, `boolean-literal`)."
+  },
+  "perfectionist:stryker:242": {
+   "verdict": "equivalent",
+   "why": "`replaceAll(/[^a-z…]+/giu, '')` с флагом `g`: удалять подряд идущие символы по одному или сразу серией — один и тот же результат. Удаление квантификатора у Mootant есть только в `strict` (`regex-pattern`, `quantifiers`)."
+  },
+  "perfectionist:stryker:263": {
+   "verdict": "equivalent",
+   "why": "`!A && !B || A !== B` ≡ `!A || !B || A !== B`: если `null` ровно один из двух, неравенство даёт тот же `return 0`. Эквивалентны и два выживших Mootant, отбрасывающих `!A` или `!B`: шум у обоих инструментов."
+  },
+  "perfectionist:stryker:266": {
+   "verdict": "equivalent",
+   "why": "`A !== B` → `false`. Компаратор `subgroup-order` вызывается только внутри одной группы (`utils/sort-nodes-by-groups.ts:119-160`: узлы раскладываются по индексу группы), а повторы групп запрещены `validate-no-duplicated-groups`; поэтому две ненулевые подгруппы — всегда один и тот же массив. Эквивалентен и выживший Mootant без третьего операнда (`!A || !B`, владелец по O3)."
+  },
+  "perfectionist:stryker:296": {
+   "verdict": "same-gap",
+   "why": "`typeof subgroup === ''` всегда ложно — совпадает с выжившим владельцем `typeof subgroup === 'string'` → `false` (O4)."
+  },
+  "perfectionist:stryker:297": {
+   "verdict": "same-gap",
+   "why": "Удаление then-ветки `{ return false }` ≡ `if (false)`; этот мутант Mootant (`typeof subgroup === 'string'` → `false`) выжил (O19)."
+  },
+  "path-to-regexp:stryker:161": {
+   "verdict": "noise",
+   "why": "Разделитель в тексте ошибки `Missing parameters: ${missing.join(\", \")}`; Mootant: `noise/error-message` (эвристика). Тест проекта проверяет сообщение только с одним пропущенным параметром. Граничный случай: формат сообщения с несколькими параметрами — часть поведения, но не логики.",
+   "test": "expect(() => compile('/:a/:b')({})).toThrow('Missing parameters: a, b')"
+  },
+  "path-to-regexp:stryker:201": {
+   "verdict": "same-gap",
+   "why": "Без блока `{ missing.push(...); return \"\" }` пустой wildcard падает дальше на `!Array.isArray(value)` с другим TypeError — то же поведение, что у выжившего Mootant `value == null` → `false` (стр. 333).",
+   "test": "expect(() => compile('/*path')({})).toThrow(new TypeError('Missing parameters: path'))"
+  },
+  "path-to-regexp:stryker:208": {
+   "verdict": "equivalent",
+   "why": "Пустой массив без проверки `value.length === 0` доходит до `if (!result) throw new TypeError(`Expected \"…\" to be a non-empty array`)` (стр. 353-355) — та же ошибка с тем же текстом. Эквивалентен и выживший Mootant с отброшенным `value.length === 0`."
+  },
+  "path-to-regexp:stryker:248": {
+   "verdict": "same-gap",
+   "why": "`typeof value !== \"string\"` → `false` ≡ отбрасывание левого операнда; этот мутант Mootant (`value.length === 0`) выжил (O3). Нестроковое значение параметра проходит и кодируется.",
+   "test": "expect(() => compile('/:id')({ id: 123 })).toThrow(TypeError)"
+  },
+  "path-to-regexp:stryker:435": {
+   "verdict": "noise",
+   "why": "Текст ошибки в недостижимой защитной ветке `throw new TypeError(`Unknown token type: …`)` (NoCoverage у обоих); Mootant: `noise/error-message`."
+  },
+  "path-to-regexp:stryker:455": {
+   "verdict": "same-gap",
+   "why": "`b.length > 1` → `false` в `negate`: на той же границе выживают мутанты Mootant `>= 1` и `> 2`, а строка 616 у обоих инструментов NoCoverage (`comparison-region`)."
+  },
+  "path-to-regexp:stryker:458": {
+   "verdict": "same-gap",
+   "why": "Шаблон на строке 616 не исполняется ни одним тестом; Mootant показывает это своим NoCoverage-мутантом того же шаблона (`solitary`, владелец NoCoverage)."
+  },
+  "path-to-regexp:stryker:459": {
+   "verdict": "same-gap",
+   "why": "`a.length > 1` → `true`: на той же границе выживают три мутанта Mootant (`>= 1`, `!= 1`, `> 2`)."
+  },
+  "cheerio:stryker:128": {
+   "verdict": "same-gap",
+   "why": "Удаление `{ throw new TypeError(…) }` ≡ `if (false)`; этот мутант Mootant (`typeof name !== 'string'` → `false`, O19) выжил. Stryker видит ветку как NoCoverage, Mootant — как Survived условия; оба показывают, что `attr()` с нестроковым именем не проверен.",
+   "test": "expect(() => $('<div>').attr(1, 'x')).toThrow(TypeError)"
+  },
+  "cheerio:stryker:130": {
+   "verdict": "noise",
+   "why": "Текст ошибки `'Bad combination of arguments.'` (NoCoverage); Mootant: `noise/error-message`. Сам пробел (нет теста на неверные аргументы) виден через выжившего владельца соседнего `{ throw … }`."
+  },
+  "cheerio:stryker:51": {
+   "verdict": "same-gap",
+   "why": "`name === 'value'` → `true` ≡ отбрасывание правого операнда; этот мутант Mootant (`elem.name === 'option'`) выжил (O3). У `<option>` без запрошенного атрибута `attr(любое имя)` вернёт текст.",
+   "test": "expect($('<option>a</option>').attr('id')).toBeUndefined()"
+  },
+  "cheerio:stryker:60": {
+   "verdict": "same-gap",
+   "why": "`elem.name === 'input'` → `true` ≡ отбрасывание левого операнда; этот мутант Mootant выжил (O3). Не-`input` с `type=\"checkbox\"` без `value` получит `'on'`.",
+   "test": "expect($('<div type=\"checkbox\">').attr('value')).toBeUndefined()"
+  },
+  "cheerio:stryker:230": {
+   "verdict": "same-gap",
+   "why": "Первые три операнда условия `prop()` → `true`: ссылка разрешается для любого тега и для отсутствующего атрибута. Тот же тест убивает выжившего Mootant без `.has(el.tagName)` (`4bb49tq0f2t9`).",
+   "test": "с baseURI: expect($('<div href=\"x\">').prop('href')).toBe('x')"
+  },
+  "cheerio:stryker:231": {
+   "verdict": "same-gap",
+   "why": "`(A && B) || C`: при `A && B = false` и заданном атрибуте ссылка разрешается для любого тега — убивается тем же тестом, что выживший Mootant `4bb49tq0f2t9`."
+  },
+  "cheerio:stryker:232": {
+   "verdict": "same-gap",
+   "why": "`typeof URL !== 'undefined' && hrefTags.has(…)` → `true` ≡ отбрасыванию проверки тега (`URL` в Node всегда определён); выживший Mootant `4bb49tq0f2t9` — то же поведение."
+  },
+  "cheerio:stryker:233": {
+   "verdict": "same-gap",
+   "why": "`typeof URL !== 'undefined' || …` всегда `true` (`URL` определён) — то же поведение, что у выжившего Mootant `4bb49tq0f2t9` (отброшена проверка тега).",
+   "test": "с baseURI: expect($('<div href=\"x\">').prop('href')).toBe('x')"
+  },
+  "cheerio:stryker:234": {
+   "verdict": "equivalent",
+   "why": "`typeof URL !== 'undefined'` → `true`: в Node ≥ 18 (минимум cheerio) и в браузерах `URL` всегда определён. Эквивалентен и выживший Mootant, отбрасывающий эту проверку (`syg8c7jv9jm8`) — шум у обоих."
+  },
+  "cheerio:stryker:236": {
+   "verdict": "equivalent",
+   "why": "`typeof URL !== ''` всегда истинно, как и оригинал в любой поддерживаемой среде (см. S#234)."
+  },
+  "cheerio:stryker:241": {
+   "verdict": "same-gap",
+   "why": "`prop !== undefined` → `true` ≡ отбрасывание этого операнда; этот мутант Mootant (`tg34490qbrb0`) выжил. `<a>` без `href` при заданном baseURI вернёт `…/undefined`.",
+   "test": "с baseURI: expect($('<a>').prop('href')).toBeUndefined()"
+  },
+  "cheerio:stryker:310": {
+   "verdict": "equivalent",
+   "why": "`setData` вызывается только из `data()` (`attributes.ts:724-725`), где строковое имя проходит лишь при `value !== undefined` (стр. 721), поэтому условие на стр. 551 всегда истинно. Эквивалентны и два выживших Mootant (отбрасывание любого операнда) — шум у обоих."
+  },
+  "cheerio:stryker:312": {
+   "verdict": "equivalent",
+   "why": "`||` вместо `&&` при обоих истинных операндах (см. S#310)."
+  },
+  "cheerio:stryker:313": {
+   "verdict": "equivalent",
+   "why": "`typeof name === 'string'` → `true` в достижимых состояниях ничего не меняет (см. S#310)."
+  },
+  "cheerio:stryker:316": {
+   "verdict": "equivalent",
+   "why": "`value !== undefined` → `true` в достижимых состояниях ничего не меняет (см. S#310)."
+  },
+  "cheerio:stryker:354": {
+   "verdict": "same-gap",
+   "why": "`value === ''` вместо `'false'`: строка `'false'` больше не превращается в `false` — так же, как у выжившего владельца `value === 'false'` → `false` (O4); любой тест, убивающий владельца, убивает и этого мутанта.",
+   "test": "expect($('<div data-x=\"false\">').data('x')).toBe(false)"
+  },
+  "cheerio:stryker:367": {
+   "verdict": "same-gap",
+   "why": "`name != null` → `true` ≡ отбрасывание левого операнда; этот мутант Mootant (`jphnqknmm8gt`) выжил (O3). `data(null)` начинает возвращать объект Cheerio."
+  },
+  "cheerio:stryker:384": {
+   "verdict": "equivalent",
+   "why": "`typeof name === ''` → всегда ветка `setData(el, name, value)`; но `setData` сам обрабатывает объектное имя через `Object.assign` (стр. 550), результат тот же. Эквивалентен и выживший владелец Mootant (`typeof name === 'object'` → `false`) — шум у обоих."
+  },
+  "cheerio:stryker:426": {
+   "verdict": "same-gap",
+   "why": "`typeof value === ''` → условие `… && false` ≡ `false`; этот мутант Mootant (`7m8ehjrsrqdr`, вся группа → `false`) выжил: для `<select>` без `multiple` массив значений не игнорируется.",
+   "test": "expect($('<select><option selected>a</option><option>b</option></select>').val(['b']).val()).toBe('a')"
+  },
+  "cheerio:stryker:427": {
+   "verdict": "same-gap",
+   "why": "Удаление `{ return this }` ≡ `if (false)`; выживший мутант Mootant `7m8ehjrsrqdr` (O19) — то же поведение."
+  },
+  "cheerio:stryker:458": {
+   "verdict": "equivalent",
+   "why": "`removeAttribute` вызывается только для тегов, у которых `attribs` всегда есть, а `delete` несуществующего собственного свойства ничего не делает: проверка — защитная. Эквивалентны и два выживших Mootant на этой строке — шум у обоих."
+  },
+  "cheerio:stryker:459": {
+   "verdict": "equivalent",
+   "why": "То же условие → `true`: без раннего выхода `delete` несуществующего свойства ничего не меняет (см. S#458)."
+  },
+  "cheerio:stryker:461": {
+   "verdict": "equivalent",
+   "why": "`elem.attribs || …` всегда истинно — то же, что S#459."
+  },
+  "cheerio:stryker:496": {
+   "verdict": "same-gap",
+   "why": "Левая граница класса → `true`: `hasClass('bar')` у `class=\"foobar\"` даёт `true`. Выживший Mootant `idx === 0` → `idx >= 0` (`5dakq55vmfpd`) тождественен: в цикле `idx > -1`.",
+   "test": "expect($('<div class=\"foobar\">').hasClass('bar')).toBe(false)"
+  },
+  "cheerio:stryker:528": {
+   "verdict": "same-gap",
+   "why": "`!value && typeof value !== 'string'`: `addClass('')` выставляет пустой `class`, `addClass(5)` падает. Тот же тест убивает выживших Mootant на этом условии (`x1q75nzva8f6`, `ccx0hra92x47`).",
+   "test": "expect($('<div>').addClass('').attr('class')).toBeUndefined()"
+  },
+  "cheerio:stryker:530": {
+   "verdict": "same-gap",
+   "why": "`typeof value !== 'string'` → `false` ≡ отбрасывание правого операнда; этот мутант Mootant (`!value`) выжил (O3).",
+   "test": "expect(() => $('<div>').addClass(5)).not.toThrow()"
+  },
+  "cheerio:stryker:624": {
+   "verdict": "same-gap",
+   "why": "Колбэк `toggleClass` получает `true` вместо текущего класса; на этом же выражении выживают четыре мутанта Mootant (оба отбрасывания операнда `||` и строка), их убивает тот же тест второго аргумента колбэка.",
+   "test": "$('<div class=\"a\">').toggleClass(function (i, cls) { seen = cls; return 'b' }); expect(seen).toBe('a')"
+  },
+  "cheerio:stryker:625": {
+   "verdict": "same-gap",
+   "why": "Колбэк получает `false` вместо класса — см. S#624."
+  },
+  "cheerio:stryker:626": {
+   "verdict": "same-gap",
+   "why": "`el.attribs['class'] && ''` даёт `''` для элемента с классом — то же поведение, что выживший Mootant с отброшенным левым операндом (`ksptv7sy6vcf`)."
+  },
+  "cheerio:stryker:0": {
+   "verdict": "lost",
+   "why": "`rspace = /\\s+/` → `/\\s/`: `addClass('a  b')` даёт `class=\"a  b\"` (пустое имя между пробелами), то же в `toggleClass`. Ни один выживший Mootant на это не указывает: удаление квантификатора есть только в `strict` (`regex-pattern`, опция `quantifiers`), а в `recommended` единственный мутант этой регулярки (`\\s` → `[^]`) убит.",
+   "test": "expect($('<div>').addClass('a  b').attr('class')).toBe('a b')"
+  },
+  "cheerio:stryker:685": {
+   "verdict": "same-gap",
+   "why": "`prop != null` → `true` ≡ отбрасывание левого операнда; этот мутант Mootant (`val != null`) выжил (O3): `css(undefined, 'red')` пишет свойство `undefined`."
+  },
+  "cheerio:stryker:704": {
+   "verdict": "equivalent",
+   "why": "Без `return` при `this.length === 0` вызывается `getCss(undefined, prop)`, который сам возвращает `undefined` (`css.ts:155`). Эквивалентен и выживший владелец Mootant (`this.length === 0` → `false`) — шум у обоих."
+  },
+  "cheerio:stryker:739": {
+   "verdict": "same-gap",
+   "why": "Без защиты `getCss` падает на текстовом узле (`el.attribs` нет). Тот же тест убивает выжившего Mootant `el && isTag(el)` → `el` (`r6t822ynnrzq`).",
+   "test": "expect($('<div>text</div>').contents().css('color')).toBeUndefined()"
+  },
+  "cheerio:stryker:740": {
+   "verdict": "same-gap",
+   "why": "`el && isTag(el)` → `true` — то же поведение, что S#739, и тот же выживший Mootant."
+  },
+  "cheerio:stryker:742": {
+   "verdict": "same-gap",
+   "why": "`el || isTag(el)` ≡ `el` для определённого `el` — тождественен выжившему Mootant `r6t822ynnrzq`."
+  },
+  "perfectionist:mootant:pdtn05kh9wws": {
+   "verdict": "equivalent",
+   "why": "Удалено `isEslintDisabled: false` из узла сортировки: поле читается только как истинность (`utils/sort-nodes.ts:55`, `utils/sort-nodes-by-groups.ts:122`, `utils/report-all-errors.ts:287`), `undefined` ведёт себя как `false`. Заодно мутант не проходит `tsc` (обязательное поле)."
+  },
+  "perfectionist:mootant:w924a15ve2rr": {
+   "verdict": "equivalent",
+   "why": "Отброшен `index !== cases.length - 1`: после последнего `case` добавляется пустая группа, которая ничего не меняет (см. Stryker S#82)."
+  },
+  "perfectionist:mootant:rsgqayjvncsp": {
+   "verdict": "equivalent",
+   "why": "`index !== cases.length - 1` → `index < cases.length - 1`: индекс `reduce` никогда не больше `length - 1`."
+  },
+  "perfectionist:mootant:mdeyj0c5wz1j": {
+   "verdict": "useful",
+   "why": "`hasUnsortedNodes ||= …` → `=`: флаг перезаписывается последней группой имён. Тот же пробел (флаг «сначала имена, потом блоки» не проверен) у Stryker виден через выжившего `&&=` (S#94).",
+   "test": "две группы case: в первой имена не отсортированы, последняя отсортирована, блоки тоже не отсортированы; на первом проходе исправления блоков нет"
+  },
+  "perfectionist:mootant:n78nxgevbk5v": {
+   "verdict": "useful",
+   "why": "«Никогда не присваивать» флаг; тождественен выжившему Stryker `&&=` (S#94: от `false` флаг не меняется) — синтаксически другая запись того же мутанта."
+  },
+  "perfectionist:mootant:gspe8h2f67bj": {
+   "verdict": "equivalent",
+   "why": "`partitionId: 0` → `1` у всех узлов-блоков сразу: поле только сравнивается между узлами (`utils/get-newlines-between-errors.ts:143`, `utils/make-newlines-between-fixes.ts:113`)."
+  },
+  "perfectionist:mootant:9pwery890wgd": {
+   "verdict": "useful",
+   "why": "`lastBlock.cases.at(-1)` → `at(0)`: для последнего блока из нескольких `case` проверяется первый (пустой) `case`, и блок, который заканчивается `return`, ошибочно остаётся на месте. У Stryker здесь только `+1` (убит падением).",
+   "test": "switch (x) { case 'c': return 3; case 'b': case 'a': return 1 } — ожидается ошибка порядка блоков"
+  },
+  "perfectionist:mootant:5msw2gjq1hv7": {
+   "verdict": "useful",
+   "why": "`hasUnsortedNodes ? [] : fix` → `false`: исправление блоков выдаётся, даже когда имена внутри группы не отсортированы. Тот же пробел, что у S#94; у Stryker в этом месте выживших нет (его `[\"Stryker was here\"]` убит падением ESLint)."
+  },
+  "perfectionist:mootant:bb448mxxk0pc": {
+   "verdict": "equivalent",
+   "why": "`index !== caseNodes.length - 1` → `<` в `reduce` (стр. 320): индекс не больше `length - 1`."
+  },
+  "perfectionist:mootant:7sh5twa1whxg": {
+   "verdict": "equivalent",
+   "why": "`return 1` → `2` в компараторе: `sortNodes` смотрит только на знак и ноль результата (`utils/sort-nodes.ts:66-68`)."
+  },
+  "perfectionist:mootant:8mzp2eaq90em": {
+   "verdict": "noise",
+   "why": "NoCoverage в ветке, которую авторы исключили из покрытия (`/* v8 ignore if -- last element might never be b */`). Stryker показывает её так же (S#10, S#11 NoCoverage)."
+  },
+  "perfectionist:mootant:vjx5rcd8hs14": {
+   "verdict": "equivalent",
+   "why": "`return 1` → `2` в компараторе — важен только знак."
+  },
+  "perfectionist:mootant:percx8mr1qg8": {
+   "verdict": "equivalent",
+   "why": "Удаление `break` в `case 'remove'`: проваливание в `case 'trim'` применяет `/^[^a-z…]+/` к строке, из которой уже удалены все такие символы, — результат тот же. Правило `fall-through-break` ловит только пустой следующий `case`."
+  },
+  "perfectionist:mootant:2ps3pn9v0vsk": {
+   "verdict": "equivalent",
+   "why": "Отброшен `subgroupContainingA !== subgroupContainingB`: внутри одной группы обе подгруппы — один массив (см. S#266)."
+  },
+  "perfectionist:mootant:re1fgf2zvqdx": {
+   "verdict": "equivalent",
+   "why": "Отброшен `!subgroupContainingA`: случай «ровно один `null`» покрывает `A !== B` (см. S#263)."
+  },
+  "perfectionist:mootant:ymc46qfeety7": {
+   "verdict": "equivalent",
+   "why": "Отброшен `!subgroupContainingB` — то же, что предыдущий."
+  },
+  "perfectionist:mootant:cjrmmc9pnwhv": {
+   "verdict": "useful",
+   "why": "`indexOfB ??= Infinity` → не присваивать: если символа нет в алфавите у обеих строк, сравнение останавливается на нём (`Infinity !== undefined`), а не идёт к следующему символу. Симметричный мутант для `indexOfA` убит, у Stryker здесь `&&=` (убит).",
+   "test": "alphabet 'ab': ['xb', 'xa'] должны сортироваться в ['xa', 'xb']"
+  },
+  "perfectionist:mootant:452n4m50s18n": {
+   "verdict": "useful",
+   "why": "Из форматтера `compareNaturally` удалён `ignoreCase`: натуральная сортировка становится чувствительной к регистру для строк, которые отличаются только регистром. Ни один тест `natural` + `ignoreCase` это не проверяет; у Stryker здесь только `{}` (убит падением).",
+   "test": "type: 'natural', ignoreCase: true: switch (x) { case 'A': …; case 'a': … } — без ошибки"
+  },
+  "perfectionist:mootant:dxhh2ww1rav8": {
+   "verdict": "equivalent",
+   "why": "`{ ...options, groups: options.groups }` → `{ ...options }`: `groups` уже скопирован spread-ом."
+  },
+  "path-to-regexp:mootant:75chm6nm1d4t": {
+   "verdict": "useful",
+   "why": "`ID` с `*` → `+`: однобуквенное имя параметра перестаёт быть идентификатором, и `stringify` берёт его в кавычки. Регулярка `ID` используется только в `stringifyName` (стр. 677); у Stryker все её мутанты убиты.",
+   "test": "expect(stringify(parse('/:a'))).toBe('/:a')"
+  },
+  "path-to-regexp:mootant:h5n79q512er0": {
+   "verdict": "equivalent",
+   "why": "`index === chars.length` → `>=`: после `chars[index++]` под `while (index < chars.length)` индекс не больше длины."
+  },
+  "path-to-regexp:mootant:n1sg1m37vs36": {
+   "verdict": "equivalent",
+   "why": "`missing.length === len` → `<=`: `missing` внутри группы только растёт."
+  },
+  "path-to-regexp:mootant:d5f838z3yxdp": {
+   "verdict": "equivalent",
+   "why": "Отброшен `value.length === 0`: пустой массив всё равно даёт ту же ошибку на стр. 353-355 (см. Stryker S#208, тоже выжил)."
+  },
+  "path-to-regexp:mootant:m5k5nn2r46c2": {
+   "verdict": "useful",
+   "why": "Отброшен `typeof value !== \"string\"`: нестроковое значение параметра проходит и кодируется. Тождественен выжившему Stryker S#248 (`typeof … → false`).",
+   "test": "expect(() => compile('/:id')({ id: 123 })).toThrow(TypeError)"
+  },
+  "path-to-regexp:mootant:324b6wpfqahq": {
+   "verdict": "equivalent",
+   "why": "`combinations >= 256` → `== 256`: счётчик растёт на 1 (стр. 472), и при 256 бросается ошибка, так что больше 256 он не бывает."
+  },
+  "path-to-regexp:mootant:mccscd1cm3nq": {
+   "verdict": "useful",
+   "why": "`>= 256` → `>= 255`: граница лимита не проверена — путь ровно с 256 комбинациями должен проходить.",
+   "test": "expect(() => pathToRegexp('/{a}{b}{c}{d}{e}{f}{g}{h}')).not.toThrow()"
+  },
+  "path-to-regexp:mootant:9e66rza6jm0f": {
+   "verdict": "useful",
+   "why": "`b.length > 1` → `> 2` в `negate`: ни один тест не доходит до случая, когда обе строки длиннее одного символа (шаблон на этой строке NoCoverage у обоих инструментов)."
+  },
+  "path-to-regexp:mootant:p6b0qr6f7bvm": {
+   "verdict": "useful",
+   "why": "NoCoverage: ветка `negate` для двух многосимвольных строк не исполняется ни одним тестом. Stryker показывает её своим NoCoverage-мутантом (S#458)."
+  },
+  "path-to-regexp:mootant:eww9yj29y4m1": {
+   "verdict": "noise",
+   "why": "`a.length > 1` → `!= 1` отличается только при `a === ''`, то есть при `delimiter: ''` и пустом префиксе — вырожденная конфигурация."
+  },
+  "path-to-regexp:mootant:mg83y5fdqvt6": {
+   "verdict": "useful",
+   "why": "`a.length > 1` → `> 2`: двухсимвольный разделитель или префикс получает класс символов вместо отрицательного просмотра. Редкий, но реальный случай; у Stryker на этой строке выжил `a.length > 1` → `true` (S#459)."
+  },
+  "path-to-regexp:mootant:2q2nxzgypmdc": {
+   "verdict": "useful",
+   "why": "Флаг `g` в `quoteName`: экранируется только первая кавычка или обратная косая черта в имени.",
+   "test": "expect(stringify({ tokens: [{ type: 'param', name: 'a\"b\"c' }] })).toBe(':\"a\\\\\"b\\\\\"c\"')"
+  },
+  "cheerio:mootant:g8pb75cf6ak6": {
+   "verdict": "useful",
+   "why": "`rbrace` `^\\[[\\s\\S]*]$` → `+`: строка `\"[]\"` в `data-*` перестаёт разбираться как JSON-массив. У Stryker в этой регулярке тоже есть выжившие (S#5, S#6).",
+   "test": "expect($('<div data-x=\"[]\">').data('x')).toEqual([])"
+  },
+  "cheerio:mootant:3m2n0gr37ycv": {
+   "verdict": "equivalent",
+   "why": "`stateVal ? 1 : -1` → `2`: `state` сравнивается только с нулём (`state >= 0`, `state <= 0`, стр. 1153, 1155)."
+  },
+  "cheerio:mootant:p22bgnt7ym99": {
+   "verdict": "useful",
+   "why": "`trimmed.length > 0` → `> 1` в разборе `style`: односимвольный хвост после `;` без `:` (например, `font-family: a;b`) теряется вместо того, чтобы дописаться к значению. Граничный случай разбора, тестов на него нет.",
+   "test": "expect($('<div style=\"font-family: a;b\">').css('font-family')).toBe('a;b')"
+  },
+  "cheerio:mootant:ptgwp2x7436n": {
+   "verdict": "equivalent",
+   "why": "`dataEl.data ??= {}` в `data()` избыточен: `readData` и `readAllData` сами делают `el.data ??= {}` (стр. 566, 594)."
+  },
+  "cheerio:mootant:dv8q6bcfwn5n": {
+   "verdict": "useful",
+   "why": "Отброшен `elem.name === 'input'`: не-`input` с `type=\"checkbox\"` без `value` получает `'on'`. Тождественен выжившему Stryker S#60.",
+   "test": "expect($('<div type=\"checkbox\">').attr('value')).toBeUndefined()"
+  }
+ }
+}

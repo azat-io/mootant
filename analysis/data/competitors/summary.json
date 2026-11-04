@@ -1,0 +1,1797 @@
+{
+ "generated": "2026-11-04T10:35:59.465Z",
+ "oxcParser": {
+  "version": "0.156.0",
+  "from": "/home/user/projects/bench/cheerio/node_modules/oxc-parser"
+ },
+ "seed": 20261104,
+ "projects": [
+  {
+   "project": "perfectionist",
+   "runs": {
+    "mootant": 3,
+    "stryker": 3
+   },
+   "offsetMismatch": 0,
+   "listVsRun": {
+    "listMutants": 314,
+    "runMutants": 314,
+    "missingInList": 0,
+    "differentEdit": 0
+   },
+   "notes": [],
+   "counts": {
+    "mootant": {
+     "total": 314,
+     "statuses": [
+      {
+       "run": 1,
+       "Killed": 259,
+       "Survived": 47,
+       "NoCoverage": 6,
+       "Timeout": 2
+      },
+      {
+       "run": 2,
+       "Killed": 259,
+       "Survived": 47,
+       "NoCoverage": 6,
+       "Timeout": 2
+      },
+      {
+       "run": 3,
+       "Killed": 259,
+       "Survived": 47,
+       "NoCoverage": 6,
+       "Timeout": 2
+      }
+     ],
+     "byMutator": {
+      "string-literal": 20,
+      "boolean-literal": 12,
+      "condition": 36,
+      "object-property": 55,
+      "number-literal": 25,
+      "statement-removal": 13,
+      "logical-operator": 21,
+      "method-call": 8,
+      "unary-operator": 10,
+      "comparison-operator": 47,
+      "arithmetic-operator": 4,
+      "array-element": 12,
+      "return-value": 37,
+      "assignment-operator": 6,
+      "optional-chaining": 2,
+      "regex-flag": 2,
+      "regex-pattern": 4
+     },
+     "usefulByMutator": {
+      "boolean-literal": 7,
+      "string-literal": 8,
+      "statement-removal": 6,
+      "object-property": 3,
+      "logical-operator": 4,
+      "comparison-operator": 11,
+      "arithmetic-operator": 1,
+      "assignment-operator": 3,
+      "number-literal": 5,
+      "condition": 2,
+      "array-element": 2,
+      "unary-operator": 1
+     }
+    },
+    "stryker": {
+     "total": 380,
+     "statuses": [
+      {
+       "run": 1,
+       "NoCoverage": 10,
+       "Killed": 324,
+       "Survived": 43,
+       "RuntimeError": 1,
+       "Timeout": 2
+      },
+      {
+       "run": 2,
+       "NoCoverage": 10,
+       "Killed": 324,
+       "Survived": 43,
+       "RuntimeError": 1,
+       "Timeout": 2
+      },
+      {
+       "run": 3,
+       "NoCoverage": 10,
+       "Killed": 323,
+       "Survived": 43,
+       "RuntimeError": 1,
+       "Timeout": 3
+      }
+     ],
+     "byMutator": {
+      "BlockStatement": 62,
+      "UnaryOperator": 10,
+      "ArrowFunction": 20,
+      "ConditionalExpression": 109,
+      "EqualityOperator": 33,
+      "CallExpression": 9,
+      "StringLiteral": 37,
+      "Regex": 6,
+      "MethodExpression": 8,
+      "BooleanLiteral": 22,
+      "ObjectLiteral": 31,
+      "LogicalOperator": 9,
+      "ArithmeticOperator": 4,
+      "ArrayDeclaration": 14,
+      "AssignmentOperator": 3,
+      "OptionalChaining": 2,
+      "UpdateOperator": 1
+     },
+     "usefulByMutator": {
+      "BlockStatement": 2,
+      "UnaryOperator": 1,
+      "ConditionalExpression": 15,
+      "CallExpression": 5,
+      "Regex": 1,
+      "StringLiteral": 11,
+      "BooleanLiteral": 7,
+      "ArithmeticOperator": 1,
+      "AssignmentOperator": 1,
+      "ArrowFunction": 1,
+      "EqualityOperator": 4,
+      "ObjectLiteral": 2,
+      "ArrayDeclaration": 1,
+      "LogicalOperator": 1
+     },
+     "static": 30
+    },
+    "skipped": {
+     "total": 198,
+     "byCategory": {
+      "subsumed": 104,
+      "owned": 73,
+      "equivalent": 5,
+      "noise": 14,
+      "timeout": 2
+     },
+     "byRule": {
+      "solitary*": 82,
+      "O19": 23,
+      "swap-subsumes-drop": 3,
+      "R6": 4,
+      "O3": 18,
+      "O1": 30,
+      "R2": 3,
+      "lower-bound*": 2,
+      "shifted-literal": 2,
+      "R4": 3,
+      "comparison-region": 4,
+      "O4": 4,
+      "tail-return-false": 1,
+      "case-label": 13,
+      "fall-through-break": 1,
+      "tail-return": 1,
+      "R5": 1,
+      "loop-running": 1,
+      "loop-advance": 1,
+      "unused-result": 1
+     }
+    }
+   },
+   "determinism": {
+    "mootantDiffering": [],
+    "strykerDiffering": [
+     {
+      "key": "utils/compare/compare-by-custom-sort.ts|38:7-38:25|ConditionalExpression|true",
+      "statuses": [
+       "Killed",
+       "Killed",
+       "Timeout"
+      ]
+     }
+    ]
+   },
+   "parse": {
+    "errors": 0,
+    "strykerIdentity": [],
+    "mootantIdentity": []
+   },
+   "matching": {
+    "strykerMatchedToMootant": {
+     "exact": 130,
+     "approx": 27
+    },
+    "strykerMatchedToSkippedOnly": {
+     "exact": 75,
+     "approx": 4
+    },
+    "strykerUnmatched": 144,
+    "approxRules": {
+     "unary-plus": 10,
+     "filler-string": 4,
+     "empty-body-undefined": 1,
+     "arrow-undefined": 10,
+     "filler-array": 6
+    },
+    "mootantMatched": 152,
+    "mootantMatchedApproxOnly": 27,
+    "pairsByMutators": {
+     "UnaryOperator -> unary-operator": 10,
+     "ConditionalExpression -> comparison-operator": 28,
+     "ConditionalExpression -> condition": 28,
+     "ConditionalExpression -> statement-removal": 5,
+     "CallExpression -> statement-removal": 8,
+     "StringLiteral -> string-literal": 20,
+     "Regex -> regex-pattern": 1,
+     "MethodExpression -> method-call": 8,
+     "BlockStatement -> return-value": 1,
+     "ArrowFunction -> return-value": 6,
+     "BooleanLiteral -> boolean-literal": 12,
+     "ConditionalExpression -> logical-operator": 5,
+     "EqualityOperator -> comparison-operator": 7,
+     "ArithmeticOperator -> arithmetic-operator": 4,
+     "ArrayDeclaration -> array-element": 9,
+     "OptionalChaining -> optional-chaining": 2,
+     "ObjectLiteral -> object-property": 2,
+     "BlockStatement -> statement-removal": 1
+    },
+    "strykerUnmatchedByMutator": {
+     "BlockStatement": 38,
+     "ArrowFunction": 10,
+     "EqualityOperator": 26,
+     "ConditionalExpression": 17,
+     "Regex": 5,
+     "BooleanLiteral": 9,
+     "ObjectLiteral": 27,
+     "LogicalOperator": 9,
+     "AssignmentOperator": 3
+    },
+    "strykerSkippedByRule": {
+     "owned/O19": 15,
+     "subsumed/solitary": 20,
+     "noise/case-label": 13,
+     "subsumed/O4": 4,
+     "noise/tail-return-false": 1,
+     "subsumed/R6": 4,
+     "owned/O3": 7,
+     "owned/O1": 7,
+     "subsumed/R4": 3,
+     "subsumed/comparison-region": 3,
+     "subsumed/R5": 1,
+     "timeout/loop-advance": 1
+    },
+    "strykerMultiMatch": 0
+   },
+   "strykerUseful": {
+    "total": 53,
+    "byClass": {
+     "b": 9,
+     "a": 37,
+     "c": 7
+    },
+    "a": {
+     "mootantUseful": 37,
+     "mootantKilled": 0,
+     "approx": 2,
+     "mootantStatuses": {
+      "NoCoverage": 9,
+      "Survived": 28
+     }
+    },
+    "b": {
+     "byCategory": {
+      "owned": 4,
+      "subsumed": 4,
+      "noise": 1
+     },
+     "byRule": {
+      "O19": 2,
+      "O4": 3,
+      "tail-return-false": 1,
+      "O3": 2,
+      "solitary*": 1
+     },
+     "ownerStatus": {
+      "useful": 7,
+      "none": 1,
+      "killed": 1
+     },
+     "gapVisible": 7,
+     "approx": 0
+    },
+    "c": {
+     "byMutator": {
+      "Regex": 1,
+      "ConditionalExpression": 2,
+      "AssignmentOperator": 1,
+      "ArrowFunction": 1,
+      "ObjectLiteral": 1,
+      "LogicalOperator": 1
+     },
+     "gapVisible": 6,
+     "gapVisibleByMutator": {
+      "ConditionalExpression": 2,
+      "AssignmentOperator": 1,
+      "ArrowFunction": 1,
+      "ObjectLiteral": 1,
+      "LogicalOperator": 1
+     }
+    }
+   },
+   "mootantUseful": {
+    "total": 53,
+    "matched": 34,
+    "only": 19,
+    "onlyByMutator": {
+     "object-property": 3,
+     "logical-operator": 4,
+     "comparison-operator": 2,
+     "assignment-operator": 3,
+     "number-literal": 5,
+     "condition": 1,
+     "statement-removal": 1
+    },
+    "onlyStrykerSeesRegion": 6,
+    "matchedStrykerStatuses": {
+     "Survived": 28,
+     "Killed": 1,
+     "NoCoverage": 1,
+     "NoCoverage+NoCoverage": 4
+    }
+   },
+   "skipAudit": {
+    "owned/O19": {
+     "twins": 23,
+     "alsoEmitted": 8,
+     "strykerStatuses": {
+      "NoCoverage": 1,
+      "Killed": 13,
+      "Survived": 1
+     }
+    },
+    "owned/O1": {
+     "twins": 30,
+     "alsoEmitted": 23,
+     "strykerStatuses": {
+      "Killed": 7
+     }
+    },
+    "subsumed/solitary*": {
+     "twins": 20,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 19,
+      "Survived": 1
+     }
+    },
+    "noise/case-label": {
+     "twins": 13,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 13
+     }
+    },
+    "subsumed/O4": {
+     "twins": 4,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Survived": 3,
+      "Killed": 1
+     }
+    },
+    "noise/tail-return-false": {
+     "twins": 1,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Survived": 1
+     }
+    },
+    "subsumed/R6": {
+     "twins": 4,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 4
+     }
+    },
+    "owned/O3": {
+     "twins": 7,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 5,
+      "Survived": 2
+     }
+    },
+    "subsumed/R2": {
+     "twins": 2,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 2
+     }
+    },
+    "subsumed/R4": {
+     "twins": 3,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 3
+     }
+    },
+    "subsumed/comparison-region": {
+     "twins": 3,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 3
+     }
+    },
+    "subsumed/R5": {
+     "twins": 1,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 1
+     }
+    },
+    "timeout/loop-advance": {
+     "twins": 1,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Timeout": 1
+     }
+    }
+   },
+   "disagreements": {
+    "total": 1,
+    "strykerUsefulMootantNot": 0,
+    "mootantUsefulStrykerNot": 1
+   },
+   "timing": {
+    "mootant": {
+     "mean": 952.49448491988,
+     "stddev": 40.66116690038241,
+     "median": 948.8379106918801,
+     "min": 913.78510322588,
+     "max": 994.8604408418801,
+     "times": [
+      913.78510322588,
+      994.8604408418801,
+      948.8379106918801
+     ],
+     "user": 2245.0952457866665,
+     "system": 204.98681823999996,
+     "perMutant": 3.0334219264964335,
+     "perUseful": 17.971594055092076,
+     "phases": [
+      {
+       "batch": null,
+       "isolated": 863274,
+       "startup": 847,
+       "dryRun": 48390,
+       "total": 912511
+      },
+      {
+       "batch": null,
+       "isolated": 946561,
+       "startup": 666,
+       "dryRun": 46457,
+       "total": 993685
+      },
+      {
+       "batch": null,
+       "isolated": 896377,
+       "startup": 672,
+       "dryRun": 51024,
+       "total": 948072
+      }
+     ],
+     "unitCost": {
+      "byStatus": {
+       "Killed": {
+        "units": 285,
+        "busySeconds": 351.4,
+        "mutants": 259
+       },
+       "Survived": {
+        "units": 289,
+        "busySeconds": 1221.4,
+        "mutants": 47
+       },
+       "Timeout": {
+        "units": 18,
+        "busySeconds": 151.4,
+        "mutants": 2
+       }
+      },
+      "rounds": [
+       {
+        "units": 308,
+        "busySeconds": 333.2
+       },
+       {
+        "units": 24,
+        "busySeconds": 91.4
+       },
+       {
+        "units": 27,
+        "busySeconds": 159.6
+       },
+       {
+        "units": 51,
+        "busySeconds": 290.8
+       },
+       {
+        "units": 90,
+        "busySeconds": 407
+       },
+       {
+        "units": 92,
+        "busySeconds": 442.2
+       }
+      ]
+     },
+     "runs": [
+      {
+       "dry": 1,
+       "isolated": 6
+      },
+      {
+       "dry": 1,
+       "isolated": 6
+      },
+      {
+       "dry": 1,
+       "isolated": 6
+      }
+     ],
+     "stderr": [
+      [
+       "+ dry run  5100 tests in 47.8s",
+       "+ testing 308 mutants  308/308 test runs in 5m 03s",
+       "+ testing 25 survivors with more test files  25/25 test runs in 55.0s",
+       "+ testing 14 survivors with more test files  27/27 test runs in 1m 32s",
+       "+ testing 13 survivors with more test files  52/52 test runs in 1m 57s",
+       "+ testing 13 survivors with more test files  90/90 test runs in 2m 23s",
+       "+ testing 11 survivors with more test files  92/92 test runs in 2m 34s"
+      ],
+      [
+       "+ dry run  5100 tests in 45.8s",
+       "+ testing 308 mutants  308/308 test runs in 5m 38s",
+       "+ testing 25 survivors with more test files  25/25 test runs in 1m 02s",
+       "+ testing 14 survivors with more test files  27/27 test runs in 1m 42s",
+       "+ testing 13 survivors with more test files  52/52 test runs in 2m 00s",
+       "+ testing 13 survivors with more test files  90/90 test runs in 2m 33s",
+       "+ testing 11 survivors with more test files  92/92 test runs in 2m 52s"
+      ],
+      [
+       "+ dry run  5100 tests in 50.2s",
+       "+ testing 308 mutants  308/308 test runs in 5m 09s",
+       "+ testing 25 survivors with more test files  25/25 test runs in 1m 00s",
+       "+ testing 14 survivors with more test files  27/27 test runs in 1m 43s",
+       "+ testing 13 survivors with more test files  52/52 test runs in 2m 04s",
+       "+ testing 13 survivors with more test files  90/90 test runs in 2m 22s",
+       "+ testing 11 survivors with more test files  92/92 test runs in 2m 38s"
+      ]
+     ]
+    },
+    "stryker": {
+     "mean": 661.0747724134933,
+     "stddev": 4.976250181172714,
+     "median": 663.4331546421599,
+     "min": 655.3577854891599,
+     "max": 664.4333771091599,
+     "times": [
+      663.4331546421599,
+      655.3577854891599,
+      664.4333771091599
+     ],
+     "user": 1633.589237833333,
+     "system": 154.3048236533333,
+     "perMutant": 1.7396704537197192,
+     "perUseful": 12.473108913462138,
+     "phases": [
+      {
+       "setup": 3,
+       "initialRun": 108,
+       "mutation": 549,
+       "initialTests": 5100,
+       "initialNetMs": 79883.2209110002,
+       "initialOverheadMs": 27879.7790889998,
+       "staticWarning": "Detected 30 static mutants (8% of total) that are estimated to take 50% of the time running the tests!"
+      },
+      {
+       "setup": 3,
+       "initialRun": 107,
+       "mutation": 544,
+       "initialTests": 5100,
+       "initialNetMs": 79844.24425499966,
+       "initialOverheadMs": 26874.755745000337,
+       "staticWarning": "Detected 30 static mutants (8% of total) that are estimated to take 51% of the time running the tests!"
+      },
+      {
+       "setup": 2,
+       "initialRun": 113,
+       "mutation": 548,
+       "initialTests": 5100,
+       "initialNetMs": 83849.90547599994,
+       "initialOverheadMs": 29201.09452400006,
+       "staticWarning": "Detected 30 static mutants (8% of total) that are estimated to take 50% of the time running the tests!"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "project": "path-to-regexp",
+   "runs": {
+    "mootant": 3,
+    "stryker": 3
+   },
+   "offsetMismatch": 0,
+   "listVsRun": {
+    "listMutants": 342,
+    "runMutants": 342,
+    "missingInList": 0,
+    "differentEdit": 0
+   },
+   "notes": [],
+   "counts": {
+    "mootant": {
+     "total": 342,
+     "statuses": [
+      {
+       "run": 1,
+       "Killed": 307,
+       "Timeout": 3,
+       "Survived": 29,
+       "NoCoverage": 3
+      },
+      {
+       "run": 2,
+       "Killed": 307,
+       "Timeout": 3,
+       "Survived": 29,
+       "NoCoverage": 3
+      },
+      {
+       "run": 3,
+       "Killed": 307,
+       "Timeout": 3,
+       "Survived": 29,
+       "NoCoverage": 3
+      }
+     ],
+     "byMutator": {
+      "string-literal": 56,
+      "return-value": 13,
+      "regex-pattern": 14,
+      "regex-flag": 3,
+      "arithmetic-operator": 10,
+      "condition": 45,
+      "array-element": 5,
+      "number-literal": 13,
+      "object-property": 7,
+      "statement-removal": 33,
+      "comparison-operator": 100,
+      "update-operator": 11,
+      "logical-operator": 21,
+      "boolean-literal": 10,
+      "method-call": 1
+     },
+     "usefulByMutator": {
+      "regex-pattern": 1,
+      "comparison-operator": 16,
+      "string-literal": 9,
+      "logical-operator": 3,
+      "condition": 1,
+      "statement-removal": 1,
+      "regex-flag": 1
+     }
+    },
+    "stryker": {
+     "total": 509,
+     "statuses": [
+      {
+       "run": 1,
+       "NoCoverage": 4,
+       "Killed": 462,
+       "Timeout": 19,
+       "Survived": 24
+      },
+      {
+       "run": 2,
+       "NoCoverage": 4,
+       "Killed": 462,
+       "Timeout": 19,
+       "Survived": 24
+      },
+      {
+       "run": 3,
+       "NoCoverage": 4,
+       "Killed": 462,
+       "Timeout": 19,
+       "Survived": 24
+      }
+     ],
+     "byMutator": {
+      "CallExpression": 13,
+      "StringLiteral": 100,
+      "BlockStatement": 78,
+      "Regex": 18,
+      "ArithmeticOperator": 5,
+      "ArrayDeclaration": 5,
+      "BooleanLiteral": 21,
+      "ConditionalExpression": 144,
+      "ObjectLiteral": 6,
+      "EqualityOperator": 71,
+      "UpdateOperator": 15,
+      "AssignmentOperator": 19,
+      "LogicalOperator": 8,
+      "ArrowFunction": 5,
+      "MethodExpression": 1
+     },
+     "usefulByMutator": {
+      "CallExpression": 1,
+      "StringLiteral": 11,
+      "EqualityOperator": 5,
+      "ConditionalExpression": 10,
+      "BlockStatement": 1
+     },
+     "static": 17
+    },
+    "skipped": {
+     "total": 319,
+     "byCategory": {
+      "subsumed": 108,
+      "owned": 133,
+      "timeout": 28,
+      "noise": 41,
+      "equivalent": 9
+     },
+     "byRule": {
+      "solitary*": 45,
+      "O11": 4,
+      "O19": 20,
+      "loop-running": 11,
+      "comparison-region": 23,
+      "O1": 83,
+      "loop-advance": 17,
+      "O4": 33,
+      "error-message*": 15,
+      "non-numeric-plus*": 25,
+      "O3": 22,
+      "unused-result": 5,
+      "R2": 2,
+      "lower-bound*": 4,
+      "R4": 5,
+      "shifted-literal": 4,
+      "tail-return-false": 1
+     }
+    }
+   },
+   "determinism": {
+    "mootantDiffering": [],
+    "strykerDiffering": []
+   },
+   "parse": {
+    "errors": 0,
+    "strykerIdentity": [],
+    "mootantIdentity": []
+   },
+   "matching": {
+    "strykerMatchedToMootant": {
+     "exact": 191,
+     "approx": 27
+    },
+    "strykerMatchedToSkippedOnly": {
+     "exact": 129,
+     "approx": 0
+    },
+    "strykerUnmatched": 162,
+    "approxRules": {
+     "filler-string": 22,
+     "filler-array": 4,
+     "arrow-undefined": 1
+    },
+    "mootantMatched": 218,
+    "mootantMatchedApproxOnly": 27,
+    "pairsByMutators": {
+     "CallExpression -> statement-removal": 13,
+     "StringLiteral -> string-literal": 49,
+     "ArrayDeclaration -> array-element": 5,
+     "ConditionalExpression -> condition": 37,
+     "ConditionalExpression -> comparison-operator": 69,
+     "EqualityOperator -> comparison-operator": 16,
+     "ConditionalExpression -> logical-operator": 5,
+     "ArithmeticOperator -> arithmetic-operator": 3,
+     "ArrowFunction -> return-value": 2,
+     "BlockStatement -> statement-removal": 1,
+     "BooleanLiteral -> boolean-literal": 10,
+     "UpdateOperator -> update-operator": 1,
+     "MethodExpression -> method-call": 1,
+     "Regex -> regex-pattern": 6
+    },
+    "strykerUnmatchedByMutator": {
+     "BlockStatement": 60,
+     "Regex": 12,
+     "ArithmeticOperator": 2,
+     "BooleanLiteral": 9,
+     "ObjectLiteral": 6,
+     "EqualityOperator": 55,
+     "LogicalOperator": 8,
+     "StringLiteral": 5,
+     "ConditionalExpression": 2,
+     "ArrowFunction": 3
+    },
+    "strykerSkippedByRule": {
+     "noise/error-message": 13,
+     "subsumed/solitary": 6,
+     "timeout/loop-advance": 15,
+     "subsumed/O4": 30,
+     "subsumed/comparison-region": 13,
+     "owned/O19": 12,
+     "noise/non-numeric-plus": 19,
+     "owned/O1": 9,
+     "owned/O3": 9,
+     "subsumed/R4": 3
+    },
+    "strykerMultiMatch": 0
+   },
+   "strykerUseful": {
+    "total": 28,
+    "byClass": {
+     "a": 20,
+     "b": 7,
+     "c": 1
+    },
+    "a": {
+     "mootantUseful": 20,
+     "mootantKilled": 0,
+     "approx": 7,
+     "mootantStatuses": {
+      "NoCoverage": 2,
+      "Survived": 18
+     }
+    },
+    "b": {
+     "byCategory": {
+      "noise": 2,
+      "subsumed": 3,
+      "owned": 2
+     },
+     "byRule": {
+      "error-message*": 2,
+      "solitary*": 1,
+      "O3": 2,
+      "comparison-region": 2
+     },
+     "ownerStatus": {
+      "none": 2,
+      "useful": 5
+     },
+     "gapVisible": 5,
+     "approx": 0
+    },
+    "c": {
+     "byMutator": {
+      "BlockStatement": 1
+     },
+     "gapVisible": 1,
+     "gapVisibleByMutator": {
+      "BlockStatement": 1
+     }
+    }
+   },
+   "mootantUseful": {
+    "total": 32,
+    "matched": 20,
+    "only": 12,
+    "onlyByMutator": {
+     "regex-pattern": 1,
+     "comparison-operator": 7,
+     "logical-operator": 2,
+     "string-literal": 1,
+     "regex-flag": 1
+    },
+    "onlyStrykerSeesRegion": 6,
+    "matchedStrykerStatuses": {
+     "Survived": 18,
+     "NoCoverage": 2
+    }
+   },
+   "skipAudit": {
+    "noise/error-message*": {
+     "twins": 13,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "NoCoverage": 1,
+      "Killed": 11,
+      "Survived": 1
+     }
+    },
+    "subsumed/solitary*": {
+     "twins": 6,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "NoCoverage": 1,
+      "Killed": 5
+     }
+    },
+    "owned/O1": {
+     "twins": 83,
+     "alsoEmitted": 74,
+     "strykerStatuses": {
+      "Killed": 9
+     }
+    },
+    "timeout/loop-advance": {
+     "twins": 15,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Timeout": 6,
+      "Killed": 9
+     }
+    },
+    "subsumed/O4": {
+     "twins": 30,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 30
+     }
+    },
+    "subsumed/comparison-region": {
+     "twins": 13,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 11,
+      "Survived": 2
+     }
+    },
+    "owned/O19": {
+     "twins": 12,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 12
+     }
+    },
+    "noise/non-numeric-plus*": {
+     "twins": 19,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 19
+     }
+    },
+    "owned/O3": {
+     "twins": 9,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 7,
+      "Survived": 2
+     }
+    },
+    "subsumed/R2": {
+     "twins": 2,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 2
+     }
+    },
+    "subsumed/R4": {
+     "twins": 3,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 2,
+      "Timeout": 1
+     }
+    }
+   },
+   "disagreements": {
+    "total": 0,
+    "strykerUsefulMootantNot": 0,
+    "mootantUsefulStrykerNot": 0
+   },
+   "timing": {
+    "mootant": {
+     "mean": 93.86271706897332,
+     "stddev": 1.510463966242989,
+     "median": 94.17502789564,
+     "min": 92.22051056164,
+     "max": 95.19261274963999,
+     "times": [
+      92.22051056164,
+      95.19261274963999,
+      94.17502789564
+     ],
+     "user": 156.62620003333333,
+     "system": 22.30971938,
+     "perMutant": 0.2744523890905653,
+     "perUseful": 2.9332099084054164,
+     "phases": [
+      {
+       "batch": null,
+       "isolated": 89464,
+       "startup": 516,
+       "dryRun": 760,
+       "total": 90740
+      },
+      {
+       "batch": null,
+       "isolated": 92932,
+       "startup": 380,
+       "dryRun": 734,
+       "total": 94046
+      },
+      {
+       "batch": null,
+       "isolated": 92526,
+       "startup": 452,
+       "dryRun": 695,
+       "total": 93672
+      }
+     ],
+     "unitCost": {
+      "byStatus": {
+       "Killed": {
+        "units": 307,
+        "busySeconds": 64.2,
+        "mutants": 307
+       },
+       "Timeout": {
+        "units": 3,
+        "busySeconds": 8,
+        "mutants": 3
+       },
+       "Survived": {
+        "units": 29,
+        "busySeconds": 9.7,
+        "mutants": 29
+       }
+      },
+      "rounds": [
+       {
+        "units": 339,
+        "busySeconds": 81.9
+       }
+      ]
+     },
+     "runs": [
+      {
+       "dry": 1,
+       "isolated": 1
+      },
+      {
+       "dry": 1,
+       "isolated": 1
+      },
+      {
+       "dry": 1,
+       "isolated": 1
+      }
+     ],
+     "stderr": [
+      [
+       "+ dry run  425 tests in 0.6s",
+       "+ testing 339 mutants  339/339 test runs in 1m 30s"
+      ],
+      [
+       "+ dry run  425 tests in 0.6s",
+       "+ testing 339 mutants  339/339 test runs in 1m 33s"
+      ],
+      [
+       "+ dry run  425 tests in 0.6s",
+       "+ testing 339 mutants  339/339 test runs in 1m 33s"
+      ]
+     ]
+    },
+    "stryker": {
+     "mean": 76.90146766521333,
+     "stddev": 0.5893871506803264,
+     "median": 77.23417569288,
+     "min": 76.22095779988,
+     "max": 77.24926950288,
+     "times": [
+      76.22095779988,
+      77.24926950288,
+      77.23417569288
+     ],
+     "user": 216.7210928333333,
+     "system": 22.299800700000002,
+     "perMutant": 0.1510834335269417,
+     "perUseful": 2.7464809880433334,
+     "phases": [
+      {
+       "setup": 2,
+       "initialRun": 1,
+       "mutation": 71,
+       "initialTests": 425,
+       "initialNetMs": 150.30250999999657,
+       "initialOverheadMs": 856.6974900000034,
+       "staticWarning": null
+      },
+      {
+       "setup": 2,
+       "initialRun": 1,
+       "mutation": 73,
+       "initialTests": 425,
+       "initialNetMs": 121.5739619999988,
+       "initialOverheadMs": 684.4260380000012,
+       "staticWarning": null
+      },
+      {
+       "setup": 2,
+       "initialRun": 1,
+       "mutation": 73,
+       "initialTests": 425,
+       "initialNetMs": 176.6628919999996,
+       "initialOverheadMs": 649.3371080000004,
+       "staticWarning": null
+      }
+     ]
+    }
+   }
+  },
+  {
+   "project": "cheerio",
+   "runs": {
+    "mootant": 3,
+    "stryker": 3
+   },
+   "offsetMismatch": 0,
+   "listVsRun": {
+    "listMutants": 496,
+    "runMutants": 496,
+    "missingInList": 0,
+    "differentEdit": 0
+   },
+   "notes": [],
+   "counts": {
+    "mootant": {
+     "total": 496,
+     "statuses": [
+      {
+       "run": 1,
+       "Killed": 404,
+       "Survived": 86,
+       "NoCoverage": 2,
+       "Timeout": 4
+      },
+      {
+       "run": 2,
+       "Killed": 404,
+       "Survived": 86,
+       "NoCoverage": 2,
+       "Timeout": 4
+      },
+      {
+       "run": 3,
+       "Killed": 404,
+       "Survived": 86,
+       "NoCoverage": 2,
+       "Timeout": 4
+      }
+     ],
+     "byMutator": {
+      "regex-pattern": 12,
+      "string-literal": 66,
+      "regex-flag": 1,
+      "logical-operator": 104,
+      "assignment-operator": 10,
+      "condition": 86,
+      "return-value": 23,
+      "comparison-operator": 103,
+      "statement-removal": 27,
+      "number-literal": 21,
+      "boolean-literal": 8,
+      "method-call": 15,
+      "optional-chaining": 1,
+      "arithmetic-operator": 6,
+      "array-element": 6,
+      "unary-operator": 5,
+      "object-property": 2
+     },
+     "usefulByMutator": {
+      "regex-flag": 1,
+      "regex-pattern": 7,
+      "string-literal": 14,
+      "logical-operator": 25,
+      "comparison-operator": 15,
+      "boolean-literal": 4,
+      "condition": 9,
+      "assignment-operator": 3,
+      "method-call": 6,
+      "number-literal": 2,
+      "statement-removal": 1,
+      "array-element": 1
+     }
+    },
+    "stryker": {
+     "total": 828,
+     "statuses": [
+      {
+       "run": 1,
+       "NoCoverage": 4,
+       "Killed": 733,
+       "Survived": 80,
+       "Timeout": 11
+      },
+      {
+       "run": 2,
+       "NoCoverage": 4,
+       "Killed": 733,
+       "Survived": 80,
+       "Timeout": 11
+      },
+      {
+       "run": 3,
+       "NoCoverage": 4,
+       "Killed": 733,
+       "Survived": 80,
+       "Timeout": 11
+      }
+     ],
+     "byMutator": {
+      "BlockStatement": 132,
+      "StringLiteral": 132,
+      "BooleanLiteral": 37,
+      "ConditionalExpression": 293,
+      "AssignmentOperator": 6,
+      "LogicalOperator": 49,
+      "EqualityOperator": 98,
+      "CallExpression": 16,
+      "UpdateOperator": 7,
+      "MethodExpression": 15,
+      "OptionalChaining": 1,
+      "ArithmeticOperator": 6,
+      "ArrayDeclaration": 8,
+      "ArrowFunction": 4,
+      "UnaryOperator": 5,
+      "Regex": 17,
+      "ObjectLiteral": 2
+     },
+     "usefulByMutator": {
+      "BlockStatement": 3,
+      "StringLiteral": 19,
+      "BooleanLiteral": 4,
+      "ConditionalExpression": 34,
+      "EqualityOperator": 4,
+      "LogicalOperator": 7,
+      "MethodExpression": 6,
+      "Regex": 6,
+      "ArrayDeclaration": 1
+     },
+     "static": 28
+    },
+    "skipped": {
+     "total": 485,
+     "byCategory": {
+      "noise": 47,
+      "equivalent": 23,
+      "subsumed": 148,
+      "owned": 251,
+      "timeout": 16
+     },
+     "byRule": {
+      "large-alternation": 15,
+      "any-character": 2,
+      "solitary*": 54,
+      "O1": 124,
+      "R4": 11,
+      "nullish-swap*": 11,
+      "O3": 89,
+      "O4": 55,
+      "R2": 17,
+      "tail-return": 4,
+      "O19": 31,
+      "error-message*": 3,
+      "nullish-normalization": 1,
+      "comparison-region": 11,
+      "shifted-literal": 5,
+      "case-label": 14,
+      "loop-running": 6,
+      "loop-advance": 8,
+      "unused-result": 7,
+      "lower-bound*": 9,
+      "loop-running*": 2,
+      "tail-return-false": 1,
+      "non-numeric-plus*": 2,
+      "canonical-falsy-default*": 1,
+      "O11": 2
+     }
+    }
+   },
+   "determinism": {
+    "mootantDiffering": [],
+    "strykerDiffering": []
+   },
+   "parse": {
+    "errors": 0,
+    "strykerIdentity": [],
+    "mootantIdentity": []
+   },
+   "matching": {
+    "strykerMatchedToMootant": {
+     "exact": 286,
+     "approx": 28
+    },
+    "strykerMatchedToSkippedOnly": {
+     "exact": 191,
+     "approx": 13
+    },
+    "strykerUnmatched": 310,
+    "approxRules": {
+     "empty-body-undefined": 21,
+     "filler-string": 11,
+     "arrow-undefined": 2,
+     "filler-array": 2,
+     "unary-plus": 5
+    },
+    "mootantMatched": 309,
+    "mootantMatchedApproxOnly": 28,
+    "pairsByMutators": {
+     "BooleanLiteral -> boolean-literal": 8,
+     "ConditionalExpression -> logical-operator": 21,
+     "ConditionalExpression -> condition": 72,
+     "BlockStatement -> return-value": 10,
+     "StringLiteral -> string-literal": 64,
+     "ConditionalExpression -> comparison-operator": 68,
+     "BlockStatement -> statement-removal": 10,
+     "CallExpression -> statement-removal": 9,
+     "EqualityOperator -> comparison-operator": 12,
+     "MethodExpression -> method-call": 15,
+     "OptionalChaining -> optional-chaining": 1,
+     "ArrayDeclaration -> array-element": 6,
+     "ArrowFunction -> return-value": 1,
+     "UnaryOperator -> unary-operator": 5,
+     "ArithmeticOperator -> arithmetic-operator": 5,
+     "Regex -> regex-pattern": 7
+    },
+    "strykerUnmatchedByMutator": {
+     "BlockStatement": 78,
+     "BooleanLiteral": 29,
+     "ConditionalExpression": 45,
+     "AssignmentOperator": 5,
+     "LogicalOperator": 49,
+     "EqualityOperator": 85,
+     "StringLiteral": 2,
+     "ArithmeticOperator": 1,
+     "Regex": 10,
+     "ArrayDeclaration": 2,
+     "ArrowFunction": 2,
+     "ObjectLiteral": 2
+    },
+    "strykerSkippedByRule": {
+     "owned/O19": 21,
+     "noise/error-message": 3,
+     "owned/O1": 44,
+     "subsumed/solitary": 19,
+     "owned/O3": 38,
+     "subsumed/O4": 46,
+     "subsumed/R4": 5,
+     "subsumed/comparison-region": 5,
+     "noise/case-label": 14,
+     "timeout/loop-advance": 7,
+     "timeout/loop-running": 1,
+     "noise/non-numeric-plus": 1
+    },
+    "strykerMultiMatch": 0
+   },
+   "strykerUseful": {
+    "total": 84,
+    "byClass": {
+     "b": 20,
+     "a": 49,
+     "c": 15
+    },
+    "a": {
+     "mootantUseful": 49,
+     "mootantKilled": 0,
+     "approx": 7,
+     "mootantStatuses": {
+      "NoCoverage": 2,
+      "Survived": 47
+     }
+    },
+    "b": {
+     "byCategory": {
+      "owned": 15,
+      "noise": 1,
+      "subsumed": 4
+     },
+     "byRule": {
+      "O19": 3,
+      "error-message*": 1,
+      "O3": 9,
+      "O4": 4,
+      "O1": 3
+     },
+     "ownerStatus": {
+      "useful": 19,
+      "none": 1
+     },
+     "gapVisible": 19,
+     "approx": 0
+    },
+    "c": {
+     "byMutator": {
+      "LogicalOperator": 7,
+      "ConditionalExpression": 7,
+      "Regex": 1
+     },
+     "gapVisible": 14,
+     "gapVisibleByMutator": {
+      "LogicalOperator": 7,
+      "ConditionalExpression": 7
+     }
+    }
+   },
+   "mootantUseful": {
+    "total": 88,
+    "matched": 49,
+    "only": 39,
+    "onlyByMutator": {
+     "regex-flag": 1,
+     "regex-pattern": 2,
+     "logical-operator": 24,
+     "assignment-operator": 3,
+     "comparison-operator": 6,
+     "number-literal": 2,
+     "statement-removal": 1
+    },
+    "onlyStrykerSeesRegion": 18,
+    "matchedStrykerStatuses": {
+     "Survived": 47,
+     "NoCoverage": 2
+    }
+   },
+   "skipAudit": {
+    "owned/O19": {
+     "twins": 19,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "NoCoverage": 1,
+      "Killed": 16,
+      "Survived": 2
+     }
+    },
+    "noise/error-message*": {
+     "twins": 3,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "NoCoverage": 1,
+      "Killed": 2
+     }
+    },
+    "owned/O1": {
+     "twins": 124,
+     "alsoEmitted": 80,
+     "strykerStatuses": {
+      "Killed": 41,
+      "Survived": 3
+     }
+    },
+    "subsumed/solitary*": {
+     "twins": 18,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 17,
+      "Timeout": 1
+     }
+    },
+    "owned/O3": {
+     "twins": 38,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 29,
+      "Survived": 9
+     }
+    },
+    "subsumed/O4": {
+     "twins": 46,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 42,
+      "Survived": 4
+     }
+    },
+    "subsumed/R2": {
+     "twins": 9,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 9
+     }
+    },
+    "subsumed/R4": {
+     "twins": 4,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 4
+     }
+    },
+    "subsumed/comparison-region": {
+     "twins": 5,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 5
+     }
+    },
+    "noise/case-label": {
+     "twins": 14,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 14
+     }
+    },
+    "timeout/loop-advance": {
+     "twins": 7,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Timeout": 4,
+      "Killed": 3
+     }
+    },
+    "timeout/loop-running*": {
+     "twins": 1,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Timeout": 1
+     }
+    },
+    "noise/non-numeric-plus*": {
+     "twins": 1,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 1
+     }
+    }
+   },
+   "disagreements": {
+    "total": 0,
+    "strykerUsefulMootantNot": 0,
+    "mootantUsefulStrykerNot": 0
+   },
+   "timing": {
+    "mootant": {
+     "mean": 164.3435319271267,
+     "stddev": 1.7607192067654411,
+     "median": 165.33641846146,
+     "min": 162.31061074846002,
+     "max": 165.38356657146002,
+     "times": [
+      165.33641846146,
+      162.31061074846002,
+      165.38356657146002
+     ],
+     "user": 320.2317676733333,
+     "system": 44.785652840000004,
+     "perMutant": 0.3313377659821103,
+     "perUseful": 1.8675401355355306,
+     "phases": [
+      {
+       "batch": null,
+       "isolated": 161661,
+       "startup": 464,
+       "dryRun": 2664,
+       "total": 164788
+      },
+      {
+       "batch": null,
+       "isolated": 158955,
+       "startup": 427,
+       "dryRun": 2479,
+       "total": 161861
+      },
+      {
+       "batch": null,
+       "isolated": 162355,
+       "startup": 410,
+       "dryRun": 2100,
+       "total": 164865
+      }
+     ],
+     "unitCost": {
+      "byStatus": {
+       "Killed": {
+        "units": 408,
+        "busySeconds": 110.8,
+        "mutants": 404
+       },
+       "Survived": {
+        "units": 247,
+        "busySeconds": 77.6,
+        "mutants": 86
+       },
+       "Timeout": {
+        "units": 4,
+        "busySeconds": 1.9,
+        "mutants": 4
+       }
+      },
+      "rounds": [
+       {
+        "units": 494,
+        "busySeconds": 140.5
+       },
+       {
+        "units": 43,
+        "busySeconds": 19.3
+       },
+       {
+        "units": 33,
+        "busySeconds": 11.5
+       },
+       {
+        "units": 45,
+        "busySeconds": 10.8
+       },
+       {
+        "units": 44,
+        "busySeconds": 8.2
+       }
+      ]
+     },
+     "runs": [
+      {
+       "dry": 1,
+       "isolated": 5
+      },
+      {
+       "dry": 1,
+       "isolated": 5
+      },
+      {
+       "dry": 1,
+       "isolated": 5
+      }
+     ],
+     "stderr": [
+      [
+       "+ dry run  783 tests in 2.5s",
+       "+ testing 494 mutants  494/494 test runs in 2m 11s",
+       "+ testing 44 survivors with more test files  44/44 test runs in 10.7s",
+       "+ testing 22 survivors with more test files  34/34 test runs in 9.2s",
+       "+ testing 12 survivors with more test files  46/46 test runs in 5.9s",
+       "+ testing 11 survivors with more test files  44/44 test runs in 5.0s"
+      ],
+      [
+       "+ dry run  783 tests in 2.3s",
+       "+ testing 494 mutants  494/494 test runs in 2m 08s",
+       "+ testing 44 survivors with more test files  44/44 test runs in 10.4s",
+       "+ testing 22 survivors with more test files  34/34 test runs in 9.4s",
+       "+ testing 12 survivors with more test files  46/46 test runs in 6.2s",
+       "+ testing 11 survivors with more test files  44/44 test runs in 4.7s"
+      ],
+      [
+       "+ dry run  783 tests in 2.0s",
+       "+ testing 494 mutants  494/494 test runs in 2m 12s",
+       "+ testing 44 survivors with more test files  44/44 test runs in 10.3s",
+       "+ testing 22 survivors with more test files  34/34 test runs in 8.7s",
+       "+ testing 12 survivors with more test files  46/46 test runs in 6.0s",
+       "+ testing 11 survivors with more test files  44/44 test runs in 5.2s"
+      ]
+     ]
+    },
+    "stryker": {
+     "mean": 158.35430888303333,
+     "stddev": 9.869860585051963,
+     "median": 155.32397356869998,
+     "min": 150.3549114487,
+     "max": 169.3840416317,
+     "times": [
+      169.3840416317,
+      150.3549114487,
+      155.32397356869998
+     ],
+     "user": 429.48154939333335,
+     "system": 53.79696345333334,
+     "perMutant": 0.1912491653176731,
+     "perUseful": 1.8851703438456349,
+     "phases": [
+      {
+       "setup": 2,
+       "initialRun": 6,
+       "mutation": 158,
+       "initialTests": 783,
+       "initialNetMs": 1055.7809889999949,
+       "initialOverheadMs": 4626.219011000005,
+       "staticWarning": "Detected 28 static mutants (3% of total) that are estimated to take 56% of the time running the tests!"
+      },
+      {
+       "setup": 2,
+       "initialRun": 5,
+       "mutation": 141,
+       "initialTests": 783,
+       "initialNetMs": 1105.7169669999873,
+       "initialOverheadMs": 4151.283033000012,
+       "staticWarning": "Detected 28 static mutants (3% of total) that are estimated to take 61% of the time running the tests!"
+      },
+      {
+       "setup": 2,
+       "initialRun": 5,
+       "mutation": 146,
+       "initialTests": 783,
+       "initialNetMs": 981.1754909999938,
+       "initialOverheadMs": 3883.8245090000064,
+       "staticWarning": "Detected 28 static mutants (3% of total) that are estimated to take 57% of the time running the tests!"
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "review": {
+  "reviewed": 95,
+  "sampled": 45,
+  "missingFromReview": [],
+  "stryker": {
+   "all": {
+    "same-gap": 36,
+    "equivalent": 18,
+    "noise": 4,
+    "lost": 1
+   },
+   "sampled": {
+    "same-gap": 16,
+    "equivalent": 9,
+    "noise": 4,
+    "lost": 1
+   },
+   "byProject": {
+    "perfectionist|same-gap": 9,
+    "perfectionist|equivalent": 6,
+    "perfectionist|noise": 1,
+    "path-to-regexp|noise": 2,
+    "path-to-regexp|same-gap": 5,
+    "path-to-regexp|equivalent": 1,
+    "cheerio|same-gap": 22,
+    "cheerio|noise": 1,
+    "cheerio|equivalent": 11,
+    "cheerio|lost": 1
+   },
+   "bySet": {
+    "stryker-b|same-gap": 20,
+    "stryker-c|same-gap": 16,
+    "stryker-b|equivalent": 13,
+    "stryker-c|noise": 1,
+    "stryker-c|equivalent": 5,
+    "stryker-b|noise": 3,
+    "stryker-c|lost": 1
+   }
+  },
+  "mootantOnly": {
+   "all": {
+    "equivalent": 18,
+    "useful": 16,
+    "noise": 2
+   },
+   "sampled": {
+    "equivalent": 6,
+    "useful": 9
+   },
+   "byProject": {
+    "perfectionist|equivalent": 12,
+    "perfectionist|useful": 6,
+    "perfectionist|noise": 1,
+    "path-to-regexp|useful": 7,
+    "path-to-regexp|equivalent": 4,
+    "path-to-regexp|noise": 1,
+    "cheerio|useful": 3,
+    "cheerio|equivalent": 2
+   },
+   "byMutator": {
+    "object-property|equivalent": 2,
+    "logical-operator|equivalent": 5,
+    "comparison-operator|equivalent": 5,
+    "assignment-operator|useful": 3,
+    "number-literal|equivalent": 4,
+    "number-literal|useful": 1,
+    "condition|useful": 1,
+    "number-literal|noise": 1,
+    "statement-removal|equivalent": 1,
+    "object-property|useful": 1,
+    "regex-pattern|useful": 2,
+    "logical-operator|useful": 2,
+    "comparison-operator|useful": 4,
+    "string-literal|useful": 1,
+    "comparison-operator|noise": 1,
+    "regex-flag|useful": 1,
+    "assignment-operator|equivalent": 1
+   }
+  }
+ }
+}
