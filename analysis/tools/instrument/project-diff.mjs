@@ -39,6 +39,10 @@ let extraArgs = (flags.get('vitest-args') ?? '').split(' ').filter(Boolean)
 let timeoutMs = Number(flags.get('timeout') ?? 300_000)
 
 let { instrumentFile } = await importDist('core/instrument/instrument-file.js')
+let { loadVueCompiler } = await importDist('core/parser/load-vue-compiler.js')
+let { loadSvelteCompiler } = await importDist('core/parser/load-svelte-compiler.js')
+// Same compilers mootant passes to createSwitchedFiles (core/run-mutants.ts:390).
+let compilers = { vue: await loadVueCompiler(), svelte: await loadSvelteCompiler() }
 let tmp = mkdtempSync(path.join(os.tmpdir(), 'project-diff-'))
 let setup = path.join(tmp, 'setup.mjs')
 writeFileSync(setup, `
@@ -59,7 +63,7 @@ for (let [display, mutants] of byFile) {
   let absolute = path.join(project, display)
   let source = readFileSync(absolute, 'utf8')
   originals.set(absolute, source)
-  switchedTexts.set(absolute, instrumentFile({ mutants, source, file: display }))
+  switchedTexts.set(absolute, instrumentFile({ mutants, source, file: display, compilers }))
 }
 
 function restore() {

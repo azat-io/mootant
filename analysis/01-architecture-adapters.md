@@ -859,7 +859,28 @@ export { createTryTracker } from './adapters/shared/try-tracker'          // т�
 `mutant` из плана, `capabilities` согласованы с наличием методов. Нарушение —
 одна понятная ошибка: «The test runner adapter "x" broke the contract: …».
 
-<!-- SECTION:migration -->
+## 10. План миграции небольшими PR
+
+Каждый шаг оставляет `pnpm test` зелёным и не меняет вердикты. Страховочная
+сетка всех шагов — **шаг 0**; без него остальные не начинать.
+
+| # | PR | Трудоёмкость | Чем подтверждается сохранение поведения обоих адаптеров |
+|---|---|---|---|
+| 0 | **Контрактные тесты**: `test/adapters/contract/*.test.ts` на общей фикстуре `test/fixtures/contract/{vitest,node-test}` (один `src`, эквивалентные тесты), прогоняемые для обоих адаптеров одной таблицей сценариев: покрытие dry run по именам тестов; вердикты = физически применённые мутанты (обобщить `test/helpers/apply-mutant.ts`, `run-reference-mutants.ts`, `run-node-test-reference.ts` из существующих тестов эквивалентности `test/adapters/vitest/index.test.ts:801`, `test/adapters/node-test/index.test.ts:332`); юниты одного файла не пересекаются (файл-замок); `hang`/`crash`/`loadError`/`hookError`; `listTestFiles` с setup-файлами; очистка при прерывании | M | сам является тестом; сценарии BUG-600…604 вначале помечены `it.fails` и становятся обычными по мере исправления |
+| 1 | Проверка результатов адаптера в ядре (`core/run/check-adapter-result.ts`): непустые `tries`, индексы юнитов в диапазоне и без повторов, тесты и мутанты из плана | S | новые unit-тесты с испорченными результатами (ожидается ошибка «adapter "x" broke the contract …»); все `test/core/run/*` и оба `index.test.ts` без изменений; BUG-605 |
+| 2 | Владелец отмены: обработчики SIGINT/SIGTERM/SIGHUP в CLI, `AbortSignal` в `AdapterContext`, `close()` vitest-адаптера убивает воркеры, node-test добавляет SIGHUP | M | контрактный сценарий «прерывание» (нет процессов с `cwd` фикстуры, нет `mootant-*`) для обоих адаптеров; `test/adapters/*/start-*-session.test.ts`; BUG-600/601 |
+| 3 | Явные возможности: `capabilities` (`batch`, `repeat`, `sameFileInOneRun`, `stream`), `runBatch` необязателен; `batch: boolean` принимается и нормализуется в `resolve-adapter` | S | `test/core/run/validate-adapter.test.ts`, `resolve-adapter.test.ts` (нормализация старой формы); `test/core/run-mutants.test.ts` с фейковым адаптером без `runBatch`; тест node-test «нет `runBatch`» |
+| 4 | Адаптер объявляет `runtimeFiles`; `select-run-files` берёт их вместо `SELF_RUNTIME_PATTERN` | S | `test/core/run/select-run-files.test.ts`; тест в каждом адаптере: статическое замыкание импортов `runner`/`preload` ⊆ `runtimeFiles`; BUG-607 |
+| 5 | Общий нормализатор фактов юнита `adapters/shared/to-isolated-facts.ts`; единая семантика таймаута хука | M | существующие `test/adapters/*/build-isolated-facts.test.ts` проходят без изменений ожиданий (кроме сценария BUG-604); табличный тест общего модуля; контрактный сценарий «таймаут хука → `Timeout` в обоих» |
+| 6 | Подтверждение `crash` повтором (+ необязательный `exit` в фактах) | S | `test/core/run/read-isolated-unit.test.ts`, `apply-isolated-result.test.ts`; контрактный сценарий «процесс юнита убит один раз → `Survived` + `worker-crash`»; BUG-602 |
+| 7 | Общее правило бюджета сторожа + `DryTest.ownTimeout` | S | `test/adapters/node-test/get-dry-deadline.test.ts`, тесты пульса Vitest; контрактный сценарий с уменьшенными `DRY_TIMEOUTS`: тест со своим большим таймаутом не «висит» ни в одном адаптере; BUG-603 |
+| 8 | Публичный `mootant/adapter-kit` (+ поле `contract`), встроенные адаптеры импортируют только его и `types/adapter` | M | `test:types`, `test:usage` (knip); снапшот имён экспорта набора; все тесты адаптеров без изменений; правило ESLint/dependency-cruiser «`adapters/*` не импортирует `core/*`, кроме набора» |
+| 9 | (скорость) `runIsolatedStream` за возможностью `stream`, сначала Vitest | M | `--json --all` с потоком и без совпадают побайтно на контрактной фикстуре и проектах бенчмарка; `test/core/run/run-isolated-rounds.test.ts`; замеры раздела 4 |
+| 10 | Адаптер Rstest (isolated-only) на наборе | M–L | контрактный набор с третьим вариантом фикстуры `test/fixtures/contract/rstest` |
+
+Шаги 1, 3, 4, 6, 7 независимы и могут идти в любом порядке после шага 0;
+шаг 8 удобнее после 5 и 7 (в набор уходят уже общие модули).
+
 
 ## 11. Что сделано хорошо (оставить как есть)
 
