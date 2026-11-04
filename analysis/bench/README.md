@@ -56,12 +56,26 @@ Stryker — `STRYKER_VERSION=10.1.1`. Все пути переопределяю
 у всех трёх Vitest-проектов он уже в lockfile — обновлять не пришлось), для
 node:test — проект, где `node --test` — штатный раннер.
 
-| проект | раннер | размер | SHA (дата) | `MUTATE` | тест-сьют |
-|---|---|---|---|---|---|
-| [pillarjs/path-to-regexp](https://github.com/pillarjs/path-to-regexp) | Vitest 5.0.5 | маленький: `src/index.ts` 696 строк, 3 spec-файла (~3,2 тыс. строк, таблица кейсов) | `32292b9d13239c7fa3ed23e89c59c10264f9fe20` (2026-10-22) | TBD | TBD |
-| [cheeriojs/cheerio](https://github.com/cheeriojs/cheerio) | Vitest 5 | средний: ~5 тыс. строк `src`, 22 spec-файла (~8 тыс. строк) | `40d4365fc025ebc053e6c886c1dac3cf29a4bc61` (2026-11-04) | TBD | TBD |
-| [azat-io/eslint-plugin-perfectionist](https://github.com/azat-io/eslint-plugin-perfectionist) | Vitest 5.0.5 | большой: `rules` 4 тыс. + `utils` 7,7 тыс. строк, 24 тест-файла правил на RuleTester (170 тыс. строк) | `486c3c85239e78a24aba2ade212cdef6acba1829` (2026-11-04) | TBD | TBD |
-| [fastify/fast-json-stringify](https://github.com/fastify/fast-json-stringify) | `node --test` | средний: CJS, `index.js` 1,8 тыс. + `lib` 1,5 тыс. строк, 60 тест-файлов | `ac1723c7073ab4e0ceca074ad214af742fa439fa` (2026-11-01) | TBD | TBD |
+| проект | раннер | размер | SHA (дата) | `MUTATE` | мутантов Mootant / Stryker | тест-сьют (смоук, под нагрузкой) |
+|---|---|---|---|---|---|---|
+| [pillarjs/path-to-regexp](https://github.com/pillarjs/path-to-regexp) | Vitest 5.0.5 | маленький: `src/index.ts` 696 строк | `32292b9d13239c7fa3ed23e89c59c10264f9fe20` (2026-10-22) | `src/index.ts` | 342 / 509 | 1 тест-файл, 425 тестов; Vitest Duration 1,9 с |
+| [cheeriojs/cheerio](https://github.com/cheeriojs/cheerio) | Vitest 5 | средний: ~5 тыс. строк `src`, 15 тест-файлов | `40d4365fc025ebc053e6c886c1dac3cf29a4bc61` (2026-11-04) | `src/api/attributes.ts`, `src/api/css.ts`, `src/api/forms.ts` | 496 / 828 | 836 тестов; 19,4 с (вместе с type-check, который в копии выключен) |
+| [azat-io/eslint-plugin-perfectionist](https://github.com/azat-io/eslint-plugin-perfectionist) | Vitest 5.0.5 | большой: `rules` 4 тыс. + `utils` 7,7 тыс. строк, 87 тест-файлов (RuleTester, 170 тыс. строк) | `486c3c85239e78a24aba2ade212cdef6acba1829` (2026-11-04) | `rules/sort-switch-case.ts`, `rules/sort-switch-case/`, `utils/compare/` | 314 / 380 | 5 830 тестов; 460 с wall, 163 с CPU при load average ~30 |
+| [fastify/fast-json-stringify](https://github.com/fastify/fast-json-stringify) | `node --test` | средний: CJS, `index.js` 1,8 тыс. + `lib` 1,5 тыс. строк, 58 тест-файлов | `ac1723c7073ab4e0ceca074ad214af742fa439fa` (2026-11-01) | `lib/serializer.js`, `lib/validator.js`, `lib/standalone.js`, `lib/location.js`, `lib/merge-schemas.js` (без сгенерированного ajv `lib/schema-validator.js`: 1 739 мутантов, его исключает и покрытие проекта) | 308 / 394 | ~600 тестов; 39 с wall, 18,6 с CPU |
+| (догфудинг, только Mootant) mootant-self | Vitest 5 | сам Mootant `170ec52`, 637 тест-файлов | `170ec52a8cc4e4551ca5d689caf4418b4edb4291` | `core/text` (16 файлов, почти все тесты их импортируют) | 544 / — | `test:unit` 251,8 с (`00-baseline.md`) |
+
+Мутанты: Mootant — `mootant list $MUTATE` (пресет `recommended`), Stryker —
+строка `Instrumented N source file(s) with M mutant(s)` (`lib/stryker-count.sh`
+останавливает Stryker сразу после неё). Тест-сьюты — смоук при load average
+20–40 от чужих задач; настоящие значения снимет точка `test`.
+
+Подмножества выбраны так, чтобы полный прогон Mootant в обычном режиме шёл
+5–20 минут при `--concurrency 3`, и чтобы были оба крайних случая
+планировщика Mootant: в path-to-regexp **все юниты одного тест-файла** (они
+идут строго по очереди, `types/adapter/adapter-session.d.ts:14-20`), в
+perfectionist — правило со своим тест-файлом плюс общие компараторы, которые
+достаёт почти каждый из 87 тест-файлов. Для смоук-прогонов и профилей у
+каждого проекта есть меньшее `PROFILE_MUTATE` (`BENCH_SUBSET=1`).
 
 Запасные (склонированы, не настроены): fb55/htmlparser2 `dcafeac3` (Vitest 5),
 squirrelchat/smol-toml `bba6a4bb` (Vitest 5).
