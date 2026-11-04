@@ -206,7 +206,9 @@ while read -r tier project point; do
     continue
   fi
   out=$BENCH_RESULTS/$project/$point
-  if [ -f "$out/hyperfine.json" ] && [ $redo = 0 ]; then
+  # hyperfine creates its export file when it starts, so an interrupted point
+  # leaves it empty: only a non-empty one means the point is done.
+  if [ -s "$out/hyperfine.json" ] && [ $redo = 0 ]; then
     echo "done already: $project:$point"
     continue
   fi
