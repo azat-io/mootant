@@ -1,0 +1,1778 @@
+{
+ "results/cheerio/m-cold": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 161661,
+    "startup": 464,
+    "dryRun": 2664,
+    "total": 164788
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/api/attributes.ts",
+     "duration": 244081,
+     "mutants": 20,
+     "units": 548
+    },
+    {
+     "file": "src/api/css.ts",
+     "duration": 32478,
+     "mutants": 0,
+     "units": 88
+    },
+    {
+     "file": "src/api/forms.ts",
+     "duration": 8818,
+     "mutants": 2,
+     "units": 26
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 2,
+   "totalMutants": 496,
+   "totalErrorMutants": 0,
+   "totalTests": 783,
+   "totalSurvived": 86,
+   "totalIgnored": 0,
+   "totalTimeout": 4,
+   "threshold": null,
+   "coveredScore": 82.59,
+   "totalKilled": 404,
+   "score": 82.26,
+   "runs": {
+    "dry": 1,
+    "isolated": 5
+   },
+   "totalIsolated": 494,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 22,
+   "totalFiles": 3
+  }
+ },
+ "results/cheerio/m-edit-inc": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 16109,
+    "startup": 406,
+    "dryRun": 2473,
+    "total": 18989
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/api/attributes.ts",
+     "duration": 21832,
+     "mutants": 20,
+     "units": 54
+    },
+    {
+     "file": "src/api/forms.ts",
+     "duration": 0,
+     "mutants": 2,
+     "units": 0
+    }
+   ],
+   "totalCached": 440,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 2,
+   "totalMutants": 496,
+   "totalErrorMutants": 0,
+   "totalTests": 783,
+   "totalSurvived": 86,
+   "totalIgnored": 0,
+   "totalTimeout": 4,
+   "threshold": null,
+   "coveredScore": 82.59,
+   "totalKilled": 404,
+   "score": 82.26,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 494,
+   "totalWarnings": 1,
+   "totalErrors": 0,
+   "totalStatic": 22,
+   "totalFiles": 3
+  }
+ },
+ "results/cheerio/m-fast": {
+  "summary": {
+   "duration": {
+    "batch": 4646,
+    "isolated": 57583,
+    "startup": 407,
+    "dryRun": 2729,
+    "total": 65366
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/api/attributes.ts",
+     "duration": 101173,
+     "mutants": 20,
+     "units": 228
+    },
+    {
+     "file": "src/api/css.ts",
+     "duration": 11209,
+     "mutants": 0,
+     "units": 26
+    },
+    {
+     "file": "src/api/forms.ts",
+     "duration": 2510,
+     "mutants": 2,
+     "units": 7
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": 0,
+   "totalBatch": 397,
+   "totalNoCoverage": 2,
+   "totalMutants": 496,
+   "totalErrorMutants": 0,
+   "totalTests": 783,
+   "totalSurvived": 86,
+   "totalIgnored": 0,
+   "totalTimeout": 3,
+   "threshold": null,
+   "coveredScore": 82.59,
+   "totalKilled": 405,
+   "score": 82.26,
+   "runs": {
+    "dry": 1,
+    "batch": 2,
+    "isolated": 5
+   },
+   "totalIsolated": 97,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 22,
+   "totalFiles": 3
+  }
+ },
+ "results/cheerio/m-one": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 409,
+    "startup": 404,
+    "dryRun": 2362,
+    "total": 3175
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/api/attributes.ts",
+     "duration": 386,
+     "mutants": 1,
+     "units": 1
+    }
+   ],
+   "totalCached": null,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 1,
+   "totalErrorMutants": 0,
+   "totalTests": 783,
+   "totalSurvived": 0,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 100,
+   "totalKilled": 1,
+   "score": 100,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 1,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 1,
+   "totalFiles": 1
+  }
+ },
+ "results/cheerio/m-since": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 1015,
+    "startup": 606,
+    "dryRun": 2726,
+    "total": 4347
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/api/attributes.ts",
+     "duration": 1259,
+     "mutants": 0,
+     "units": 3
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 3,
+   "totalErrorMutants": 0,
+   "totalTests": 783,
+   "totalSurvived": 0,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 100,
+   "totalKilled": 3,
+   "score": 100,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 3,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 0,
+   "totalFiles": 1
+  }
+ },
+ "results/cheerio/m-warm": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 2123,
+    "startup": 638,
+    "dryRun": 2932,
+    "total": 5693
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/api/attributes.ts",
+     "duration": 2438,
+     "mutants": 20,
+     "units": 4
+    },
+    {
+     "file": "src/api/forms.ts",
+     "duration": 0,
+     "mutants": 2,
+     "units": 0
+    }
+   ],
+   "totalCached": 490,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 2,
+   "totalMutants": 496,
+   "totalErrorMutants": 0,
+   "totalTests": 783,
+   "totalSurvived": 86,
+   "totalIgnored": 0,
+   "totalTimeout": 4,
+   "threshold": null,
+   "coveredScore": 82.59,
+   "totalKilled": 404,
+   "score": 82.26,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 494,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 22,
+   "totalFiles": 3
+  }
+ },
+ "results/cheerio/s-cold": {
+  "stryker": {
+   "NoCoverage": 4,
+   "Killed": 733,
+   "Survived": 80,
+   "Timeout": 11
+  }
+ },
+ "results/fast-json-stringify/m-cold": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 384358,
+    "startup": 276,
+    "dryRun": 6826,
+    "total": 391460
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "lib/serializer.js",
+     "duration": 404821,
+     "mutants": 38,
+     "units": 1109
+    },
+    {
+     "file": "lib/validator.js",
+     "duration": 253818,
+     "mutants": 63,
+     "units": 745
+    },
+    {
+     "file": "lib/location.js",
+     "duration": 47650,
+     "mutants": 15,
+     "units": 188
+    },
+    {
+     "file": "lib/standalone.js",
+     "duration": 10633,
+     "mutants": 0,
+     "units": 44
+    },
+    {
+     "file": "lib/merge-schemas.js",
+     "duration": 449,
+     "mutants": 2,
+     "units": 2
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 308,
+   "totalErrorMutants": 0,
+   "totalTests": 574,
+   "totalSurvived": 68,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 77.92,
+   "totalKilled": 240,
+   "score": 77.92,
+   "runs": {
+    "dry": 1,
+    "isolated": 7
+   },
+   "totalIsolated": 308,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 118,
+   "totalFiles": 5
+  }
+ },
+ "results/fast-json-stringify/m-edit-inc": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 109171,
+    "startup": 239,
+    "dryRun": 6389,
+    "total": 115799
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "lib/serializer.js",
+     "duration": 183243,
+     "mutants": 38,
+     "units": 396
+    },
+    {
+     "file": "lib/location.js",
+     "duration": 0,
+     "mutants": 15,
+     "units": 0
+    },
+    {
+     "file": "lib/merge-schemas.js",
+     "duration": 0,
+     "mutants": 2,
+     "units": 0
+    },
+    {
+     "file": "lib/validator.js",
+     "duration": 0,
+     "mutants": 63,
+     "units": 0
+    }
+   ],
+   "totalCached": 168,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 308,
+   "totalErrorMutants": 0,
+   "totalTests": 574,
+   "totalSurvived": 68,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 77.92,
+   "totalKilled": 240,
+   "score": 77.92,
+   "runs": {
+    "dry": 1,
+    "isolated": 6
+   },
+   "totalIsolated": 308,
+   "totalWarnings": 1,
+   "totalErrors": 0,
+   "totalStatic": 118,
+   "totalFiles": 5
+  }
+ },
+ "results/fast-json-stringify/m-one": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 422,
+    "startup": 146,
+    "dryRun": 5820,
+    "total": 6387
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "lib/location.js",
+     "duration": 403,
+     "mutants": 1,
+     "units": 1
+    }
+   ],
+   "totalCached": null,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 1,
+   "totalErrorMutants": 0,
+   "totalTests": 573,
+   "totalSurvived": 0,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 100,
+   "totalKilled": 1,
+   "score": 100,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 1,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 1,
+   "totalFiles": 1
+  }
+ },
+ "results/fast-json-stringify/m-since": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 32401,
+    "startup": 209,
+    "dryRun": 6178,
+    "total": 38788
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "lib/serializer.js",
+     "duration": 43451,
+     "mutants": 1,
+     "units": 106
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 13,
+   "totalErrorMutants": 0,
+   "totalTests": 574,
+   "totalSurvived": 2,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 84.62,
+   "totalKilled": 11,
+   "score": 84.62,
+   "runs": {
+    "dry": 1,
+    "isolated": 6
+   },
+   "totalIsolated": 13,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 1,
+   "totalFiles": 1
+  }
+ },
+ "results/fast-json-stringify/m-warm": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 39,
+    "startup": 199,
+    "dryRun": 6594,
+    "total": 6833
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "lib/location.js",
+     "duration": 0,
+     "mutants": 15,
+     "units": 0
+    },
+    {
+     "file": "lib/merge-schemas.js",
+     "duration": 0,
+     "mutants": 2,
+     "units": 0
+    },
+    {
+     "file": "lib/serializer.js",
+     "duration": 0,
+     "mutants": 38,
+     "units": 0
+    },
+    {
+     "file": "lib/validator.js",
+     "duration": 0,
+     "mutants": 63,
+     "units": 0
+    }
+   ],
+   "totalCached": 308,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 308,
+   "totalErrorMutants": 0,
+   "totalTests": 574,
+   "totalSurvived": 68,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 77.92,
+   "totalKilled": 240,
+   "score": 77.92,
+   "runs": {
+    "dry": 1
+   },
+   "totalIsolated": 308,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 118,
+   "totalFiles": 5
+  }
+ },
+ "results/fast-json-stringify/s-cold": {
+  "stryker": {
+   "Killed": 336,
+   "Survived": 57,
+   "Timeout": 1
+  }
+ },
+ "results/path-to-regexp/m-cold": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 89464,
+    "startup": 516,
+    "dryRun": 760,
+    "total": 90740
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/index.ts",
+     "duration": 128407,
+     "mutants": 12,
+     "units": 339
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 3,
+   "totalMutants": 342,
+   "totalErrorMutants": 0,
+   "totalTests": 425,
+   "totalSurvived": 29,
+   "totalIgnored": 0,
+   "totalTimeout": 3,
+   "threshold": null,
+   "coveredScore": 91.45,
+   "totalKilled": 307,
+   "score": 90.64,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 339,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 12,
+   "totalFiles": 1
+  }
+ },
+ "results/path-to-regexp/m-edit-inc": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 16591,
+    "startup": 372,
+    "dryRun": 677,
+    "total": 17639
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/index.ts",
+     "duration": 20909,
+     "mutants": 12,
+     "units": 43
+    }
+   ],
+   "totalCached": 296,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 3,
+   "totalMutants": 342,
+   "totalErrorMutants": 0,
+   "totalTests": 425,
+   "totalSurvived": 29,
+   "totalIgnored": 0,
+   "totalTimeout": 3,
+   "threshold": null,
+   "coveredScore": 91.45,
+   "totalKilled": 307,
+   "score": 90.64,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 339,
+   "totalWarnings": 1,
+   "totalErrors": 0,
+   "totalStatic": 12,
+   "totalFiles": 1
+  }
+ },
+ "results/path-to-regexp/m-fast": {
+  "summary": {
+   "duration": {
+    "batch": 2967,
+    "isolated": 20371,
+    "startup": 486,
+    "dryRun": 1436,
+    "total": 25260
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/index.ts",
+     "duration": 24800,
+     "mutants": 12,
+     "units": 40
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": 0,
+   "totalBatch": 299,
+   "totalNoCoverage": 3,
+   "totalMutants": 342,
+   "totalErrorMutants": 0,
+   "totalTests": 425,
+   "totalSurvived": 29,
+   "totalIgnored": 0,
+   "totalTimeout": 3,
+   "threshold": null,
+   "coveredScore": 91.45,
+   "totalKilled": 307,
+   "score": 90.64,
+   "runs": {
+    "dry": 1,
+    "batch": 2,
+    "isolated": 1
+   },
+   "totalIsolated": 40,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 12,
+   "totalFiles": 1
+  }
+ },
+ "results/path-to-regexp/m-one": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 387,
+    "startup": 396,
+    "dryRun": 698,
+    "total": 1482
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/index.ts",
+     "duration": 354,
+     "mutants": 1,
+     "units": 1
+    }
+   ],
+   "totalCached": null,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 1,
+   "totalErrorMutants": 0,
+   "totalTests": 425,
+   "totalSurvived": 0,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 100,
+   "totalKilled": 1,
+   "score": 100,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 1,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 1,
+   "totalFiles": 1
+  }
+ },
+ "results/path-to-regexp/m-since": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 1467,
+    "startup": 601,
+    "dryRun": 1047,
+    "total": 3116
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/index.ts",
+     "duration": 1839,
+     "mutants": 0,
+     "units": 4
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 4,
+   "totalErrorMutants": 0,
+   "totalTests": 425,
+   "totalSurvived": 2,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 50,
+   "totalKilled": 2,
+   "score": 50,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 4,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 0,
+   "totalFiles": 1
+  }
+ },
+ "results/path-to-regexp/m-warm": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 9259,
+    "startup": 526,
+    "dryRun": 796,
+    "total": 10581
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/index.ts",
+     "duration": 9363,
+     "mutants": 12,
+     "units": 3
+    }
+   ],
+   "totalCached": 336,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 3,
+   "totalMutants": 342,
+   "totalErrorMutants": 0,
+   "totalTests": 425,
+   "totalSurvived": 29,
+   "totalIgnored": 0,
+   "totalTimeout": 3,
+   "threshold": null,
+   "coveredScore": 91.45,
+   "totalKilled": 307,
+   "score": 90.64,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 339,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 12,
+   "totalFiles": 1
+  }
+ },
+ "results/path-to-regexp/s-cold": {
+  "stryker": {
+   "NoCoverage": 4,
+   "Killed": 462,
+   "Timeout": 19,
+   "Survived": 24
+  }
+ },
+ "results/perfectionist/m-cold": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 863274,
+    "startup": 847,
+    "dryRun": 48390,
+    "total": 912511
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "utils/compare/build-subgroup-order-comparator.ts",
+     "duration": 596220,
+     "mutants": 0,
+     "units": 140
+    },
+    {
+     "file": "utils/compare/compare-by-custom-sort.ts",
+     "duration": 413203,
+     "mutants": 0,
+     "units": 94
+    },
+    {
+     "file": "utils/compare/default-comparator-by-options-computer.ts",
+     "duration": 266849,
+     "mutants": 0,
+     "units": 57
+    },
+    {
+     "file": "rules/sort-switch-case.ts",
+     "duration": 266618,
+     "mutants": 19,
+     "units": 195
+    },
+    {
+     "file": "utils/compare/compare-naturally.ts",
+     "duration": 123518,
+     "mutants": 0,
+     "units": 29
+    },
+    {
+     "file": "utils/compare/build-string-formatter.ts",
+     "duration": 113390,
+     "mutants": 0,
+     "units": 40
+    },
+    {
+     "file": "rules/sort-switch-case/build-case-block-comparator-by-options-computer.ts",
+     "duration": 19193,
+     "mutants": 0,
+     "units": 13
+    },
+    {
+     "file": "rules/sort-switch-case/is-condition-expression.ts",
+     "duration": 11057,
+     "mutants": 0,
+     "units": 6
+    },
+    {
+     "file": "utils/compare/name-or-value-comparator-by-options-computer.ts",
+     "duration": 8888,
+     "mutants": 0,
+     "units": 3
+    },
+    {
+     "file": "utils/compare/compute-comparators.ts",
+     "duration": 5594,
+     "mutants": 0,
+     "units": 9
+    },
+    {
+     "file": "utils/compare/compare-alphabetically.ts",
+     "duration": 705,
+     "mutants": 0,
+     "units": 3
+    },
+    {
+     "file": "utils/compare/build-line-length-comparator.ts",
+     "duration": 371,
+     "mutants": 0,
+     "units": 2
+    },
+    {
+     "file": "utils/compare/compute-ordered-value.ts",
+     "duration": 368,
+     "mutants": 0,
+     "units": 2
+    },
+    {
+     "file": "utils/compare/unsorted-comparator.ts",
+     "duration": 170,
+     "mutants": 0,
+     "units": 1
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 6,
+   "totalMutants": 314,
+   "totalErrorMutants": 0,
+   "totalTests": 5100,
+   "totalSurvived": 47,
+   "totalIgnored": 0,
+   "totalTimeout": 2,
+   "threshold": null,
+   "coveredScore": 84.74,
+   "totalKilled": 259,
+   "score": 83.12,
+   "runs": {
+    "dry": 1,
+    "isolated": 6
+   },
+   "totalIsolated": 308,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 19,
+   "totalFiles": 15
+  }
+ },
+ "results/perfectionist/m-edit-inc": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 225832,
+    "startup": 708,
+    "dryRun": 44426,
+    "total": 270966
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "rules/sort-switch-case.ts",
+     "duration": 231354,
+     "mutants": 19,
+     "units": 166
+    },
+    {
+     "file": "utils/compare/compare-by-custom-sort.ts",
+     "duration": 52653,
+     "mutants": 0,
+     "units": 4
+    }
+   ],
+   "totalCached": 146,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 6,
+   "totalMutants": 314,
+   "totalErrorMutants": 0,
+   "totalTests": 5100,
+   "totalSurvived": 47,
+   "totalIgnored": 0,
+   "totalTimeout": 2,
+   "threshold": null,
+   "coveredScore": 84.74,
+   "totalKilled": 259,
+   "score": 83.12,
+   "runs": {
+    "dry": 1,
+    "isolated": 2
+   },
+   "totalIsolated": 308,
+   "totalWarnings": 1,
+   "totalErrors": 0,
+   "totalStatic": 19,
+   "totalFiles": 15
+  }
+ },
+ "results/perfectionist/m-fast": {
+  "summary": {
+   "duration": {
+    "batch": 102777,
+    "isolated": 765399,
+    "startup": 731,
+    "dryRun": 74426,
+    "total": 943333
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "utils/compare/build-subgroup-order-comparator.ts",
+     "duration": 608906,
+     "mutants": 0,
+     "units": 120
+    },
+    {
+     "file": "utils/compare/compare-by-custom-sort.ts",
+     "duration": 423360,
+     "mutants": 0,
+     "units": 75
+    },
+    {
+     "file": "rules/sort-switch-case.ts",
+     "duration": 222860,
+     "mutants": 19,
+     "units": 161
+    },
+    {
+     "file": "utils/compare/compare-naturally.ts",
+     "duration": 126488,
+     "mutants": 0,
+     "units": 26
+    },
+    {
+     "file": "utils/compare/default-comparator-by-options-computer.ts",
+     "duration": 118462,
+     "mutants": 0,
+     "units": 27
+    },
+    {
+     "file": "utils/compare/build-string-formatter.ts",
+     "duration": 118339,
+     "mutants": 0,
+     "units": 31
+    },
+    {
+     "file": "rules/sort-switch-case/build-case-block-comparator-by-options-computer.ts",
+     "duration": 15365,
+     "mutants": 0,
+     "units": 11
+    },
+    {
+     "file": "rules/sort-switch-case/is-condition-expression.ts",
+     "duration": 6647,
+     "mutants": 0,
+     "units": 4
+    },
+    {
+     "file": "utils/compare/compute-comparators.ts",
+     "duration": 5631,
+     "mutants": 0,
+     "units": 8
+    },
+    {
+     "file": "utils/compare/name-or-value-comparator-by-options-computer.ts",
+     "duration": 1445,
+     "mutants": 0,
+     "units": 1
+    },
+    {
+     "file": "utils/compare/compare-alphabetically.ts",
+     "duration": 540,
+     "mutants": 0,
+     "units": 3
+    },
+    {
+     "file": "utils/compare/compute-ordered-value.ts",
+     "duration": 261,
+     "mutants": 0,
+     "units": 1
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": 52,
+   "totalBatch": 103,
+   "totalNoCoverage": 6,
+   "totalMutants": 314,
+   "totalErrorMutants": 0,
+   "totalTests": 5100,
+   "totalSurvived": 47,
+   "totalIgnored": 0,
+   "totalTimeout": 2,
+   "threshold": null,
+   "coveredScore": 84.74,
+   "totalKilled": 259,
+   "score": 83.12,
+   "runs": {
+    "dry": 1,
+    "batch": 2,
+    "recovery": 1,
+    "isolated": 6
+   },
+   "totalIsolated": 205,
+   "totalWarnings": 62,
+   "totalErrors": 0,
+   "totalStatic": 19,
+   "totalFiles": 15
+  }
+ },
+ "results/perfectionist/m-one": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 1229,
+    "startup": 802,
+    "dryRun": 4977,
+    "total": 7008
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "rules/sort-switch-case.ts",
+     "duration": 1186,
+     "mutants": 1,
+     "units": 1
+    }
+   ],
+   "totalCached": null,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 1,
+   "totalErrorMutants": 0,
+   "totalTests": 75,
+   "totalSurvived": 0,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 100,
+   "totalKilled": 1,
+   "score": 100,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 1,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 1,
+   "totalFiles": 1
+  }
+ },
+ "results/perfectionist/m-since": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 3278,
+    "startup": 825,
+    "dryRun": 4957,
+    "total": 9060
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "rules/sort-switch-case.ts",
+     "duration": 3541,
+     "mutants": 0,
+     "units": 3
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 3,
+   "totalErrorMutants": 0,
+   "totalTests": 75,
+   "totalSurvived": 0,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 100,
+   "totalKilled": 3,
+   "score": 100,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 3,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 0,
+   "totalFiles": 1
+  }
+ },
+ "results/perfectionist/m-warm": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 31221,
+    "startup": 813,
+    "dryRun": 48989,
+    "total": 81022
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "utils/compare/compare-by-custom-sort.ts",
+     "duration": 48550,
+     "mutants": 0,
+     "units": 4
+    },
+    {
+     "file": "rules/sort-switch-case.ts",
+     "duration": 0,
+     "mutants": 19,
+     "units": 0
+    }
+   ],
+   "totalCached": 306,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 6,
+   "totalMutants": 314,
+   "totalErrorMutants": 0,
+   "totalTests": 5100,
+   "totalSurvived": 47,
+   "totalIgnored": 0,
+   "totalTimeout": 2,
+   "threshold": null,
+   "coveredScore": 84.74,
+   "totalKilled": 259,
+   "score": 83.12,
+   "runs": {
+    "dry": 1,
+    "isolated": 2
+   },
+   "totalIsolated": 308,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 19,
+   "totalFiles": 15
+  }
+ },
+ "results/perfectionist/s-cold": {
+  "stryker": {
+   "NoCoverage": 10,
+   "Killed": 324,
+   "Survived": 43,
+   "RuntimeError": 1,
+   "Timeout": 2
+  }
+ },
+ "results-proto/parallel-units/on/cheerio/m-cold": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 106552,
+    "startup": 437,
+    "dryRun": 2827,
+    "total": 109815
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/api/attributes.ts",
+     "duration": 273059,
+     "mutants": 20,
+     "units": 548
+    },
+    {
+     "file": "src/api/css.ts",
+     "duration": 32780,
+     "mutants": 0,
+     "units": 88
+    },
+    {
+     "file": "src/api/forms.ts",
+     "duration": 9309,
+     "mutants": 2,
+     "units": 26
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 2,
+   "totalMutants": 496,
+   "totalErrorMutants": 0,
+   "totalTests": 783,
+   "totalSurvived": 86,
+   "totalIgnored": 0,
+   "totalTimeout": 4,
+   "threshold": null,
+   "coveredScore": 82.59,
+   "totalKilled": 404,
+   "score": 82.26,
+   "runs": {
+    "dry": 1,
+    "isolated": 5
+   },
+   "totalIsolated": 494,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 22,
+   "totalFiles": 3
+  }
+ },
+ "results-proto/parallel-units/on/fast-json-stringify/m-cold": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 261938,
+    "startup": 172,
+    "dryRun": 5468,
+    "total": 267578
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "lib/serializer.js",
+     "duration": 437758,
+     "mutants": 38,
+     "units": 1109
+    },
+    {
+     "file": "lib/validator.js",
+     "duration": 260792,
+     "mutants": 63,
+     "units": 745
+    },
+    {
+     "file": "lib/location.js",
+     "duration": 47987,
+     "mutants": 15,
+     "units": 188
+    },
+    {
+     "file": "lib/standalone.js",
+     "duration": 12007,
+     "mutants": 0,
+     "units": 44
+    },
+    {
+     "file": "lib/merge-schemas.js",
+     "duration": 372,
+     "mutants": 2,
+     "units": 2
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 308,
+   "totalErrorMutants": 0,
+   "totalTests": 574,
+   "totalSurvived": 68,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 77.92,
+   "totalKilled": 240,
+   "score": 77.92,
+   "runs": {
+    "dry": 1,
+    "isolated": 7
+   },
+   "totalIsolated": 308,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 118,
+   "totalFiles": 5
+  }
+ },
+ "results-proto/parallel-units/on/path-to-regexp/m-cold": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 51970,
+    "startup": 356,
+    "dryRun": 737,
+    "total": 53063
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/index.ts",
+     "duration": 153558,
+     "mutants": 12,
+     "units": 339
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 3,
+   "totalMutants": 342,
+   "totalErrorMutants": 0,
+   "totalTests": 425,
+   "totalSurvived": 29,
+   "totalIgnored": 0,
+   "totalTimeout": 3,
+   "threshold": null,
+   "coveredScore": 91.45,
+   "totalKilled": 307,
+   "score": 90.64,
+   "runs": {
+    "dry": 1,
+    "isolated": 1
+   },
+   "totalIsolated": 339,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 12,
+   "totalFiles": 1
+  }
+ },
+ "results-proto/parallel-units/on/perfectionist/m-cold": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 653664,
+    "startup": 808,
+    "dryRun": 45984,
+    "total": 700455
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "utils/compare/build-subgroup-order-comparator.ts",
+     "duration": 609672,
+     "mutants": 0,
+     "units": 140
+    },
+    {
+     "file": "utils/compare/compare-by-custom-sort.ts",
+     "duration": 443479,
+     "mutants": 0,
+     "units": 94
+    },
+    {
+     "file": "rules/sort-switch-case.ts",
+     "duration": 310438,
+     "mutants": 19,
+     "units": 195
+    },
+    {
+     "file": "utils/compare/default-comparator-by-options-computer.ts",
+     "duration": 279249,
+     "mutants": 0,
+     "units": 57
+    },
+    {
+     "file": "utils/compare/compare-naturally.ts",
+     "duration": 124176,
+     "mutants": 0,
+     "units": 29
+    },
+    {
+     "file": "utils/compare/build-string-formatter.ts",
+     "duration": 113758,
+     "mutants": 0,
+     "units": 40
+    },
+    {
+     "file": "rules/sort-switch-case/build-case-block-comparator-by-options-computer.ts",
+     "duration": 21386,
+     "mutants": 0,
+     "units": 13
+    },
+    {
+     "file": "rules/sort-switch-case/is-condition-expression.ts",
+     "duration": 13203,
+     "mutants": 0,
+     "units": 6
+    },
+    {
+     "file": "utils/compare/name-or-value-comparator-by-options-computer.ts",
+     "duration": 10456,
+     "mutants": 0,
+     "units": 3
+    },
+    {
+     "file": "utils/compare/compute-comparators.ts",
+     "duration": 5870,
+     "mutants": 0,
+     "units": 9
+    },
+    {
+     "file": "utils/compare/compare-alphabetically.ts",
+     "duration": 583,
+     "mutants": 0,
+     "units": 3
+    },
+    {
+     "file": "utils/compare/compute-ordered-value.ts",
+     "duration": 441,
+     "mutants": 0,
+     "units": 2
+    },
+    {
+     "file": "utils/compare/build-line-length-comparator.ts",
+     "duration": 353,
+     "mutants": 0,
+     "units": 2
+    },
+    {
+     "file": "utils/compare/unsorted-comparator.ts",
+     "duration": 227,
+     "mutants": 0,
+     "units": 1
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 6,
+   "totalMutants": 314,
+   "totalErrorMutants": 0,
+   "totalTests": 5100,
+   "totalSurvived": 47,
+   "totalIgnored": 0,
+   "totalTimeout": 2,
+   "threshold": null,
+   "coveredScore": 84.74,
+   "totalKilled": 259,
+   "score": 83.12,
+   "runs": {
+    "dry": 1,
+    "isolated": 6
+   },
+   "totalIsolated": 308,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 19,
+   "totalFiles": 15
+  }
+ },
+ "results-proto/dry-snapshot/on/cheerio/m-cold": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 159066,
+    "startup": 506,
+    "dryRun": 2242,
+    "total": 161814
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/api/attributes.ts",
+     "duration": 241398,
+     "mutants": 20,
+     "units": 548
+    },
+    {
+     "file": "src/api/css.ts",
+     "duration": 30368,
+     "mutants": 0,
+     "units": 88
+    },
+    {
+     "file": "src/api/forms.ts",
+     "duration": 7827,
+     "mutants": 2,
+     "units": 26
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 2,
+   "totalMutants": 496,
+   "totalErrorMutants": 0,
+   "totalTests": 783,
+   "totalSurvived": 86,
+   "totalIgnored": 0,
+   "totalTimeout": 4,
+   "threshold": null,
+   "coveredScore": 82.59,
+   "totalKilled": 404,
+   "score": 82.26,
+   "runs": {
+    "dry": 1,
+    "isolated": 5
+   },
+   "totalIsolated": 494,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 22,
+   "totalFiles": 3
+  }
+ },
+ "results-proto/dry-snapshot/on/cheerio/m-edit": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 159058,
+    "startup": 466,
+    "dryRun": 2334,
+    "total": 161858
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/api/attributes.ts",
+     "duration": 240852,
+     "mutants": 20,
+     "units": 548
+    },
+    {
+     "file": "src/api/css.ts",
+     "duration": 30100,
+     "mutants": 0,
+     "units": 88
+    },
+    {
+     "file": "src/api/forms.ts",
+     "duration": 8385,
+     "mutants": 2,
+     "units": 26
+    }
+   ],
+   "totalCached": 0,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 2,
+   "totalMutants": 496,
+   "totalErrorMutants": 0,
+   "totalTests": 783,
+   "totalSurvived": 86,
+   "totalIgnored": 0,
+   "totalTimeout": 4,
+   "threshold": null,
+   "coveredScore": 82.59,
+   "totalKilled": 404,
+   "score": 82.26,
+   "runs": {
+    "dry": 1,
+    "isolated": 5
+   },
+   "totalIsolated": 494,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 22,
+   "totalFiles": 3
+  }
+ },
+ "results-proto/dry-snapshot/on/cheerio/m-warm": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 12,
+    "startup": 193,
+    "dryRun": 86,
+    "total": 291
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "src/api/attributes.ts",
+     "duration": 0,
+     "mutants": 20,
+     "units": 0
+    },
+    {
+     "file": "src/api/forms.ts",
+     "duration": 0,
+     "mutants": 2,
+     "units": 0
+    }
+   ],
+   "totalCached": 494,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 2,
+   "totalMutants": 496,
+   "totalErrorMutants": 0,
+   "totalTests": 783,
+   "totalSurvived": 86,
+   "totalIgnored": 0,
+   "totalTimeout": 4,
+   "threshold": null,
+   "coveredScore": 82.59,
+   "totalKilled": 404,
+   "score": 82.26,
+   "runs": {},
+   "totalIsolated": 494,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 22,
+   "totalFiles": 3
+  }
+ },
+ "results-proto/dry-snapshot/on/fast-json-stringify/m-warm": {
+  "summary": {
+   "duration": {
+    "batch": null,
+    "isolated": 25,
+    "startup": 132,
+    "dryRun": 193,
+    "total": 350
+   },
+   "passed": true,
+   "staticCost": [
+    {
+     "file": "lib/location.js",
+     "duration": 0,
+     "mutants": 15,
+     "units": 0
+    },
+    {
+     "file": "lib/merge-schemas.js",
+     "duration": 0,
+     "mutants": 2,
+     "units": 0
+    },
+    {
+     "file": "lib/serializer.js",
+     "duration": 0,
+     "mutants": 38,
+     "units": 0
+    },
+    {
+     "file": "lib/validator.js",
+     "duration": 0,
+     "mutants": 63,
+     "units": 0
+    }
+   ],
+   "totalCached": 308,
+   "totalUnrepeatableTests": null,
+   "totalBatch": null,
+   "totalNoCoverage": 0,
+   "totalMutants": 308,
+   "totalErrorMutants": 0,
+   "totalTests": 574,
+   "totalSurvived": 68,
+   "totalIgnored": 0,
+   "totalTimeout": 0,
+   "threshold": null,
+   "coveredScore": 77.92,
+   "totalKilled": 240,
+   "score": 77.92,
+   "runs": {},
+   "totalIsolated": 308,
+   "totalWarnings": 0,
+   "totalErrors": 0,
+   "totalStatic": 118,
+   "totalFiles": 5
+  }
+ }
+}

@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "command": "fast-json-stringify:m-since",
+      "mean": 1.35880644782,
+      "stddev": null,
+      "median": 1.35880644782,
+      "user": 0.3676211,
+      "system": 0.10499636,
+      "min": 1.35880644782,
+      "max": 1.35880644782,
+      "times": [
+        1.35880644782
+      ],
+      "exit_codes": [
+        0
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "command": "fast-json-stringify:m-edit-inc",
+      "mean": 125.00541556128,
+      "stddev": null,
+      "median": 125.00541556128,
+      "user": 63.08896404,
+      "system": 10.324863859999999,
+      "min": 125.00541556128,
+      "max": 125.00541556128,
+      "times": [
+        125.00541556128
+      ],
+      "exit_codes": [
+        0
+      ]
+    }
+  ]
+}

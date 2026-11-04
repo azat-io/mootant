@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "command": "cheerio:m-list-text",
+      "mean": 1.22599343346,
+      "stddev": null,
+      "median": 1.22599343346,
+      "user": 0.31106202,
+      "system": 0.08438516,
+      "min": 1.22599343346,
+      "max": 1.22599343346,
+      "times": [
+        1.22599343346
+      ],
+      "exit_codes": [
+        0
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "command": "fast-json-stringify:s-command",
+      "mean": 769.65704799492,
+      "stddev": null,
+      "median": 769.65704799492,
+      "user": 45.88606161999999,
+      "system": 14.146621739999999,
+      "min": 769.65704799492,
+      "max": 769.65704799492,
+      "times": [
+        769.65704799492
+      ],
+      "exit_codes": [
+        0
+      ]
+    }
+  ]
+}

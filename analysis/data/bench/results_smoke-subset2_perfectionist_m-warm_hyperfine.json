@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "command": "perfectionist:m-warm",
+      "mean": 14.4075062013,
+      "stddev": null,
+      "median": 14.4075062013,
+      "user": 7.850974,
+      "system": 1.74827116,
+      "min": 14.4075062013,
+      "max": 14.4075062013,
+      "times": [
+        14.4075062013
+      ],
+      "exit_codes": [
+        0
+      ]
+    }
+  ]
+}

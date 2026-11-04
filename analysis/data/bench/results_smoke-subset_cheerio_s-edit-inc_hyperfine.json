@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "command": "cheerio:s-edit-inc",
+      "mean": 40.81662200624,
+      "stddev": null,
+      "median": 40.81662200624,
+      "user": 13.41549216,
+      "system": 3.61461048,
+      "min": 40.81662200624,
+      "max": 40.81662200624,
+      "times": [
+        40.81662200624
+      ],
+      "exit_codes": [
+        0
+      ]
+    }
+  ]
+}

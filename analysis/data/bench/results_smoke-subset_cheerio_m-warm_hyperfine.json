@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "command": "cheerio:m-warm",
+      "mean": 17.8215785111,
+      "stddev": null,
+      "median": 17.8215785111,
+      "user": 6.31229712,
+      "system": 1.09860656,
+      "min": 17.8215785111,
+      "max": 17.8215785111,
+      "times": [
+        17.8215785111
+      ],
+      "exit_codes": [
+        0
+      ]
+    }
+  ]
+}

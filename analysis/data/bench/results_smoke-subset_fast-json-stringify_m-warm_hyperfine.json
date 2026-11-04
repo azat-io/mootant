@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "command": "fast-json-stringify:m-warm",
+      "mean": 23.58801776116,
+      "stddev": null,
+      "median": 23.58801776116,
+      "user": 15.926761199999998,
+      "system": 2.56648202,
+      "min": 23.58801776116,
+      "max": 23.58801776116,
+      "times": [
+        23.58801776116
+      ],
+      "exit_codes": [
+        0
+      ]
+    }
+  ]
+}
