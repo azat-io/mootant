@@ -5,15 +5,16 @@
 в `$BENCH_RESULTS` (по умолчанию `/home/user/projects/bench/results`), сводка —
 `summarize.mjs`.
 
-> **Статус на 2026-11-04, 12:20 UTC.** Окно замеров идёт до ~13:50 UTC,
-> данные лежат в `/home/user/projects/bench/results`:
+> **Статус на 2026-11-04, 13:45 UTC.** Окно замеров закрыто в 13:43 UTC.
+> Данные лежат в `/home/user/projects/bench/results`, прототипы — в
+> `/home/user/projects/bench/results-proto`:
 >
-> - ярусы 1–2 сняты полностью;
-> - ярус 3 — к концу окна;
-> - прототипы и профили — по `analysis/bench/window3.sh`.
+> - ярусы 1–3 сняты полностью, ярусы 4–6 в окно не вошли;
+> - прототип P1 — на четырёх проектах, P3 — на cheerio и fast-json-stringify;
+> - CPU-профили — perfectionist и path-to-regexp.
 >
-> Результаты и их разбор — в `analysis/04-performance.md`, 4.5. Цифры смоука
-> (`smoke/*.md`) годятся только для отладки стенда.
+> Результаты и их разбор — в `analysis/04-performance.md`, 4.5–4.6. Цифры
+> смоука (`smoke/*.md`) годятся только для отладки стенда.
 
 ## Быстрый старт
 
@@ -55,6 +56,7 @@ Stryker — `STRYKER_VERSION=10.1.1`. Все пути переопределяю
 | `summarize.mjs [dir]` | таблицы Markdown из всего сохранённого |
 | `profile.sh <project> [list run vitest]` | CPU-профили главного процесса, всех процессов (воркеры Vitest, процессы node:test), `mootant list` (текст и JSON) и разбивка самого Vitest |
 | `lib/cpuprofile-top.mjs` | топ функций по self time, агрегация по пакетам/модулям (группы `mootant/core/hints` и т.д.), инклюзивное время выбранных функций |
+| `lib/cpuprofile-categories.mjs <каталог>` | CPU группы профилей (главный процесс или все воркеры) по категориям self time: загрузка модулей, раннер Vitest, снятие мест тестов, код тестов и проекта, GC, Mootant, IPC; инклюзивное время ключевых функций. Таблицы 4.5.6 раздела 4 |
 | `baseline-tests.sh` | (не часть стенда) базовая линия тестов самого Mootant, этап 0 |
 
 ## Проекты
@@ -226,7 +228,9 @@ Mootant.
 | — | `profile.sh <project>` для четырёх проектов | CPU-профили и разбивка (не замеры) | 5–15 мин на проект | ~40 мин |
 
 Итого машинного времени: **ярусы 1–3 и профили — около 4 ч** (диапазон
-3–6 ч); с ярусом 4 — ~5 ч; весь план — 9–12 ч.
+3–6 ч); с ярусом 4 — ~5 ч; весь план — 9–12 ч. Если окно меньше 4 ч,
+запускать `run.sh --tier 2`, затем `profile.sh perfectionist` и
+`profile.sh path-to-regexp`.
 
 **Факт окна 2026-11-04** (по `point.log` точек):
 
@@ -241,9 +245,19 @@ Mootant.
   проекте `--fast` не быстрее обычного режима.
 - **Ярус 3 — 25 мин** (11:58–12:23 UTC). perfectionist `m-edit-inc` ×3 —
   14 мин, fast-json-stringify `m-edit-inc` ×3 — 6 мин, остальные точки — по
-  0,5–2 мин. Если окно меньше 4 ч,
-запускать `run.sh --tier 2`, затем `profile.sh perfectionist` и
-`profile.sh path-to-regexp`.
+  0,5–2 мин.
+- **Прототипы — 2 ч 13 мин** в две части (`results/window.log`):
+  - пара off/on P1 на path-to-regexp — 55 мин (07:40–08:35 UTC);
+  - режим on — 78 мин (12:23–13:40 UTC): P1 на perfectionist — 36 мин,
+    cheerio — 6 мин, fast-json-stringify — 13 мин; P3 на cheerio — 16 мин,
+    на fast-json-stringify — 7 мин, из них 6 мин — незамеряемый прогон,
+    записавший снимок кэша.
+  - P3 на perfectionist не снят: подготовка `m-warm` упала за секунду. Лог
+    незамеряемого прогона шёл в ещё не созданный каталог `snapshots/`;
+    исправлено после окна в `prepare/state.sh`.
+- **Профили — 3 мин 21 с** (13:40–13:43 UTC): perfectionist (подмножество
+  `PROFILE_MUTATE`) и path-to-regexp. cheerio и fast-json-stringify в окно не
+  вошли.
 
 Перед стартом: `setup.sh` (если стенд ещё не собран; ~10 мин), затем
 `uptime` (load average должен быть < 0,5), `df -h /` (нужно ≥ 3 ГБ: отчёты

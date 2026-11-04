@@ -40,6 +40,10 @@ prime_mootant_cache() {
   echo "priming the Mootant cache of $NAME (untimed run)" >&2
   reset_tree
   rm -rf "$TMPDIR" && mkdir -p "$TMPDIR"
+  # The log below goes next to $SNAP: without its directory the redirection
+  # fails, "|| true" hides it and nothing is primed (P3 on perfectionist,
+  # window 2026-11-04).
+  mkdir -p "$SNAP"
   node "$MOOTANT_BIN" run "${MUTATE[@]}" \
     --concurrency "$BENCH_CONCURRENCY" --json >/dev/null 2>"$SNAP.prime.err" || true
   save_mootant_cache
@@ -63,10 +67,10 @@ restore_stryker_incremental() {
   if [ ! -f "$SNAP/stryker-incremental.json" ]; then
     echo "priming Stryker's incremental file of $NAME (untimed run)" >&2
     reset_tree
+    mkdir -p "$SNAP" # for the log next to it, as in prime_mootant_cache
     node node_modules/@stryker-mutator/core/bin/stryker.js run stryker.bench.json \
       --incremental --incrementalFile reports/bench-incremental.json \
       >"$SNAP.stryker-prime.out" 2>&1 || true
-    mkdir -p "$SNAP"
     cp reports/bench-incremental.json "$SNAP/stryker-incremental.json"
   fi
   reset_tree
