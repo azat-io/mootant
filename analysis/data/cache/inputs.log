@@ -530,3 +530,11 @@
   rcg87hr1ngex NoCoverage cached=false packages/web/src/math.ts:13 return-value "this.stored" -> "0"
   h00478et0j28 Killed     cached=false packages/web/src/math.ts:19 number-literal "5" -> "6"
   summary: total=6 killed=1 survived=3 cached=0 score=16.67
+[tsconfig-reference/r2] exit=0 args=packages/web/src
+  pa2de01va9w6 Survived   cached=true packages/web/src/math.ts:2 arithmetic-operator "value * 2" -> "value / 2"
+  147q84zqzz7f Survived   cached=true packages/web/src/math.ts:2 number-literal "2" -> "3"
+  bycewh700bdg Survived   cached=true packages/web/src/math.ts:6 number-literal "0" -> "1"
+  1gsnepxxgxaq Killed     cached=false packages/web/src/math.ts:9 statement-removal "this.stored = double(value)" -> ";"
+  rcg87hr1ngex Killed     cached=false packages/web/src/math.ts:13 return-value "this.stored" -> "0"
+  h00478et0j28 Killed     cached=true packages/web/src/math.ts:19 number-literal "5" -> "6"
+  summary: total=6 killed=3 survived=3 cached=4 score=50
