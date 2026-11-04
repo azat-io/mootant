@@ -418,9 +418,50 @@ lines than a function takes arguments» (44,8 с). Полный топ-200 —
    дёшев. Шардинг (`--shard`) в CI имеет смысл только после п. 1: сейчас
    любой шард, получивший `vitest/index.test.ts`, будет самым долгим.
 
-## 5.4. Нестабильные тесты
+## 5.4. Нестабильные тесты и зависимость от окружения
 
-(заполняется по данным прогонов quiet/load)
+Сравнивались тихий прогон этапа 0 (5 падений: 4 из-за `TERM=linux`, 1 из-за
+root), load-1 (22 падения в 12 файлах, `TERM=xterm-256color`) и мои прогоны
+подмножеств под той же нагрузкой. Каждое падение разобрано до механизма:
+
+| # | Тест | Как падает | Механизм (причина) | Класс |
+| ---: | --- | --- | --- | --- |
+| 1 | 10 тестов `test/adapters/vitest/index.test.ts` («verdict equivalence …», «… with the cache …», «runs every mutant … isolated», «… fast mode») | `Test timed out in 30000/60000/120000ms` | явные таймауты `}, 30_000)` … `}, 180_000)` (`:529-1919`) на вложенных прогонах Mootant+Vitest; под load 30 тест идёт 30–120 с | таймаут под нагрузкой |
+| 2 | `test/adapters/node-test/index.test.ts:344` «node:test verdict equivalence agrees with mutants applied by hand» | `expected false to be true` на `:350` (`expect(original).toBe(true)`), в моём прогоне — таймаут 60 с | **не расхождение вердиктов**: эталонный прогон `node --test` исходной копии фикстуры получает лимит 4 000 мс по стене (`:140`, `test/helpers/run-node-test-reference.ts:150-153`) и под нагрузкой не успевает → `'Timeout'` → `original = false` | таймаут оракула |
+| 3 | `test/core/generate/generate-file-mutants.test.ts:4825` «runProgram › observes function f() { return new Promise(() => {}) }» | `expected [ 'hung' ] …` | `test/helpers/run-program.ts:8` `TIME_LIMIT = 1000` мс по стене на запуск программы в воркере; под нагрузкой старт воркера + исполнение > 1 с → `hung` | таймаут хелпера |
+| 4 | `test/core/instrument/instrument-file.test.ts:404` «switches function f(text) { … like each mutant applied alone» | ожидали `'hung'` первым элементом | тот же лимит 1 с: на этот раз не успел **эталонный** прогон исходной программы (`:419`), а переключённый успел | таймаут хелпера |
+| 5 | `test/adapters/vitest/runner.test.ts:654` «records coverage, stray errors and flips in a dry run with beats» | `2049.9999999999995` вместо `2050` (`:693`) | **плавающая точка, а не нагрузка**: `adapters/vitest/runner.ts:991-997` считает `watch = now + 50 + timeout + hooks`, затем `beatDry(now)` → `watch - now`. Результат точен не для всех `now`. Моделирование: ≈ 1 % при `performance.now()` в 0,1–1 с от старта воркера и ≈ 23 % при 1–10 с, что бывает под нагрузкой. Тот же файл на `:1499` уже округляет (`Math.round(beat.budget / 10) * 10`), а на `:693` — нет | недетерминизм |
+| 6–12 | `test/cli/index.test.ts:211` (10,0 с); `test/cli/report/format-header.test.ts:21` (44,8 с); `test/cli/terminal/get-max-display-width.test.ts:17` (13,9 с); `test/core/cache/prune-cache-entries.test.ts:48` (6,5 с); `test/cli/html/client/start-report.test.ts:476` (6,8 с); `test/core/run-mutants.test.ts:822` (5,3 с, загрузка компиляторов Svelte/Vue); `generate-file-mutants.test.ts` «keeps no weak mutant and covers every fault of if (!((((!(y1 > x1) …» (7,4 с) | `Test timed out in 5000ms` | CPU-тяжёлые тесты на дефолтном `testTimeout` 5 с, в тишине с запасом в 1,5–10 раз меньше | таймаут под нагрузкой |
+| 13 | `test/adapters/node-test/score-node-test.test.ts:98` «skips test files it cannot read» | `expected 1 to be +0` | `chmod 000` не мешает читать root'у | окружение: uid |
+| 14–17 | `test/cli/run-list.test.ts` (2), `test/cli/run-mutation.test.ts` (2) | ASCII `*`, `->`, `!` вместо `●`, `→`, `▲` | `cli/terminal/is-unicode-supported.ts:13`; тесты стабят `NO_COLOR` (`run-list.test.ts:126`, `run-mutation.test.ts:62`), но не `TERM` | окружение: `TERM` |
+| 18 | порог coverage: branches 99,98 % < 100 % | `ERROR: Coverage for branches … does not meet global threshold` при **всех зелёных тестах** | `adapters/node-test/start-node-test-session.ts:119,167` — `environment['NODE_OPTIONS'] ?? ''`: если `NODE_OPTIONS` задан в окружении машины, правая ветка недостижима. **Подтверждено**: `start-node-test-session.test.ts` с `NODE_OPTIONS=--use-openssl-ca` → Branch 94,11 % (32/34), Uncovered 119,167; с `env -u NODE_OPTIONS` → 100 % (34/34), 12/12 тестов зелёные в обоих случаях | окружение: `NODE_OPTIONS` |
+
+Где воспроизведено: 1–13 — load-1; 2 и `cli/index.test.ts:211` — ещё и мой
+прогон 14 файлов под load 27; 14–17 — этап 0; 18 — §5.4.1 ниже.
+
+Следствие для пользователя-разработчика: на машине с load average выше
+≈ 10 `pnpm test` падает в 6–12 тестах, на машине с `NODE_OPTIONS`
+(отладчик VS Code через auto-attach, `--max-old-space-size` в CI,
+`--use-openssl-ca` за корпоративным прокси) падает порог покрытия, под root
+(Docker по умолчанию) падает один тест, на консоли Linux — четыре. Кроме
+того, догфудинг Mootant на самом себе под нагрузкой обрывается ещё в dry run.
+Мой первый прогон `cli/terminal` закончился сообщением «Tests fail without
+mutants; fix them first (2 tests)»: `cli/index.test.ts:211` и
+`format-header.test.ts:21` не уложились в 5 с даже в контрольном прогоне без
+мутантов (`analysis/data/tests/mutants/run-terminal-attempt1.stderr.txt`).
+Инструмент повёл себя верно: тесты действительно падали. Но это показывает,
+что «тесты масштаба» на дефолтном таймауте мешают и самому догфудингу.
+
+### 5.4.1. Тесты, зависящие от машины: список и фиксы
+
+| Зависимость | Тесты | Фикс | Трудоёмкость |
+| --- | --- | --- | --- |
+| `TERM` | `test/cli/run-list.test.ts` «prints the text report…», «prints diagnostics to stderr…»; `test/cli/run-mutation.test.ts` «shows the flags in the header…», «prints the diagnostics, then the text report…» | в `beforeEach` рядом с `vi.stubEnv('NO_COLOR', '1')` (`run-list.test.ts:126`, `run-mutation.test.ts:62`) добавить `vi.stubEnv('TERM', 'xterm-256color')` и `vi.stubEnv('CI', undefined)`. Надёжнее — общий `test.setupFiles` или `test.env` в `vitest.config.ts`, который нормализует `TERM`, `CI`, `NO_COLOR`, `FORCE_COLOR` для всех тестов; тесты, которые проверяют сами переменные (`test/cli/terminal/*.test.ts`), и так стабят их явно | S |
+| uid (root) | `test/adapters/node-test/score-node-test.test.ts:98-105` | вместо `chmod 000` — `vi.mock(import('node:fs/promises'), …)` с `readFile`, который отвергает `EACCES` только для `test/a.test.js` (остальные чтения — `importOriginal`). `it.skipIf(process.getuid?.() === 0)` **не подходит**: под root ветка `catch {}` (`adapters/node-test/score-node-test.ts:88-91`) станет непокрытой и упадёт порог 100 % | S |
+| `NODE_OPTIONS` | порог branches из-за `adapters/node-test/start-node-test-session.ts:119,167` | в `test/adapters/node-test/start-node-test-session.test.ts` явно задать оба состояния: `vi.stubEnv('NODE_OPTIONS', undefined)` в одном тесте и непустое значение в другом. Проверить на `node-test/index.test.ts` и `get-node-cache-inputs` — они тоже читают `NODE_OPTIONS` (`adapters/node-test/get-node-cache-inputs.ts:69`) | S |
+| нагрузка/время | строки 1–12 таблицы выше | (а) `testTimeout: 15_000` глобально или явные таймауты у семи CPU-тяжёлых тестов; (б) уменьшить «тесты масштаба» до 130–150 тыс. элементов (лимит spread в V8 на этой машине — 130 000, проверено); (в) `TIME_LIMIT` в `test/helpers/run-program.ts:8` и лимит 4 000 мс эталона node:test (`test/adapters/node-test/index.test.ts:140`) масштабировать множителем из окружения (`MOOTANT_TEST_TIME_FACTOR`) или поднять до 3–5 с — «зависание» в этих тестах — бесконечный цикл, его ловит любой лимит; (г) `runner.test.ts:693` — сравнивать `Math.round(beat.budget)`, как уже сделано на `:1499` | S–M |
+| `/tmp` | `test/fixtures/equivalence/shared/test/render.test.ts:14` и `test/fixtures/node-test/shared/test/render.test.js:16` оставляют `mootant-render-<sha1(url)>.txt` — по файлу на каждую копию фикстуры (эталон копирует проект во временный каталог со случайным именем). Сейчас на машине их 95 | в `finally` добавить `await rm(output, { force: true })` рядом с `rm(lock)` | S |
+| пользовательский git-конфиг | `test/helpers/create-git-repository.ts:53-65` фиксирует только `user.*` и `commit.gpgSign`; глобальные `core.hooksPath`, `init.templateDir`, `core.autocrlf` разработчика на тесты влияют (гипотеза, не воспроизводил) | `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1` в env `execFileSync` хелпера, как уже сделано в `find-git-root.test.ts:59-61` | S |
 
 ## 5.5. Пробелы покрытия: догфудинг мутантами
 

@@ -1,0 +1,50 @@
+mootant run · vitest 5.1.0 · recommended · mode isolated · score 67.35% (covered 75.86%) · killed 65 timeout 1 survived 21 nocov 11 errors 0 · passed true
+recheck: mootant run src --mutant <id>
+legend: id :col mutator status [tests=N]  original → replacement; extend = test files to add a test to; near = covering test to start from
+warning: src/stock.ts No test loaded src/stock.ts through the test runner's transform: no test imports it, or tests import a built copy, an external or a pre-bundled dependency.
+
+src/coupon.ts
+6|let pattern = /^([A-Z]+)-(\d{1,2})$/u
+  0x8hhnamhe2m :15 regex-pattern survived tests=0  /^([A-Z]+)-(\d{1,2})$/u → /([A-Z]+)-(\d{1,2})$/u
+    extend: test/coupon.test.ts, test/cart.test.ts
+  xvqdhczpaw6y :15 regex-pattern survived tests=0  /^([A-Z]+)-(\d{1,2})$/u → /^([^]+)-(\d{1,2})$/u
+  q5xrpjynsnxt :15 regex-pattern survived tests=0  /^([A-Z]+)-(\d{1,2})$/u → /^([A-Z]+)-([^]{1,2})$/u
+  qdae1d78n3rr :15 regex-pattern survived tests=0  /^([A-Z]+)-(\d{1,2})$/u → /^([A-Z]+)-(\d{1,2})/u
+9|  let match = pattern.exec(input.trim().toUpperCase())
+  s53zjaddtg8c :28 method-call survived tests=3  input.trim() → input
+    extend: test/coupon.test.ts
+    near: test/coupon.test.ts:6 "parseCoupon > reads the code and the percent"
+14|  if (percent === 0 || percent > 50) {
+  kfavv7nygebn :7 logical-operator survived tests=2  percent === 0 || percent > 50 → percent > 50
+    near: test/coupon.test.ts:6 "parseCoupon > reads the code and the percent"
+  37dsvm6qhmc9 :7 comparison-operator survived tests=2  percent === 0 → percent <= 0
+    near: test/coupon.test.ts:6 "parseCoupon > reads the code and the percent"
+  q5tmgxmgm415 :24 comparison-operator survived tests=2  percent > 50 → percent >= 50
+    near: test/coupon.test.ts:6 "parseCoupon > reads the code and the percent"
+  73h12thgqqnp :24 comparison-operator survived tests=2  percent > 50 → percent > 51
+    near: test/coupon.test.ts:6 "parseCoupon > reads the code and the percent"
+
+src/discount.ts
+2|  if (total >= 100 || isMember) {
+  q31p780qv6yk :7 comparison-operator survived tests=6  total >= 100 → total > 100
+    extend: test/discount.test.ts, test/cart.test.ts
+    near: test/discount.test.ts:6 "getDiscount > gives members 10% off"
+
+src/price.ts
+3|  GBP: '£',
+  gj5d06294fkn :8 string-literal survived tests=0  '£' → ''
+    extend: test/price.test.ts, test/receipt.test.ts
+12|  let sign = amount < 0 ? '-' : ''
+  4wx3baqpaygm :14 comparison-operator survived tests=3  amount < 0 → amount <= 0
+    near: test/price.test.ts:6 "formatPrice > shows dollars with cents"
+  m4c0z8b6cx4x :14 comparison-operator survived tests=3  amount < 0 → amount < -1
+    near: test/price.test.ts:6 "formatPrice > shows dollars with cents"
+
+src/receipt.ts
+8|      `${item.name} × ${item.quantity}  ${formatPrice(item.price * item.quantity)}`,
+  e2h58hx0hbfy :7 string-literal survived tests=1  `${item.name} × ${item.quantity}  ${formatPrice(item.price * item.quantity)}` → `${item.name}${item.quantity}${formatPrice(item.price * item.quantity)}`
+    extend: test/receipt.test.ts
+    near: test/receipt.test.ts:6 "formatReceipt > ends with the total"
+  4vbst49gk1ba :55 arithmetic-operator survived tests=1  item.price * item.quantity → item.price / item.quantity
+    near: test/receipt.test.ts:6 "formatReceipt > ends with the total"
+11|  lines.push('Thank you for shopping with us!')

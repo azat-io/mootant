@@ -561,8 +561,11 @@ frontmatter, имя = каталог, меньше 500 строк, ссылки)
 Это **приближение**: у Claude свой токенизатор, абсолютные числа будут другими,
 но соотношения форматов на таком тексте (код, пути, JSON) сохраняются;
 o200k и cl100k расходятся между собой не больше чем на 3 %. Скрипты —
-`analysis/ux/tokens/*.mjs`, результаты — `analysis/ux/tokens/*-measure.json`,
-образцы — `analysis/ux/tokens/sample-*`.
+`analysis/ux/tokens/*.mjs` (`npm install @toon-format/toon@4.4.0
+js-tiktoken@1.0.21`; `node measure-run.mjs <verbose-all.json> <out> <label>
+[slim.json] [slim-all.json] [text.txt]`, преобразования — `formats.mjs`),
+результаты — `analysis/ux/tokens/*-measure.json`, образцы —
+`analysis/ux/tokens/sample-*`.
 
 Четыре набора данных:
 
