@@ -376,13 +376,22 @@ mutants applied by hand» (72,8 с) и «formatHeader handles a body of more
 lines than a function takes arguments» (44,8 с). Полный топ-200 —
 `analysis/data/tests/load-1.tests-top200.tsv`.
 
-**Медленные фикстуры.** Это интеграционные проекты, которые гоняют
-вложенные прогоны Mootant: `test/fixtures/equivalence/*` (14 подпроектов:
-`vue`, `svelte`, `stale`, `teardown`, `hang`, `concurrent`, `logging`, …),
-`test/fixtures/cache*` (7 проектов), `test/fixtures/node-test/*`. Каждый тест
-на них — полный цикл «старт Vitest → dry run → раунды isolated» плюс
-эталонный прогон на копии проекта с каждым мутантом. Отсюда 30–120 с на тест
-под нагрузкой.
+**Медленные фикстуры.** Это интеграционные проекты, на которых тесты гоняют
+вложенные прогоны Mootant. Каждый тест на них — полный цикл «старт Vitest →
+dry run → раунды isolated», плюс эталонный прогон на копии проекта с каждым
+мутантом. Тесты кэша гоняют проект дважды (холодный и тёплый прогон).
+Длительность тестов `test/adapters/vitest/index.test.ts` по фикстурам
+(load-1; «таймаут» — тест упёрся в свой лимит):
+
+| Фикстура | Тест (строка) | с |
+| --- | --- | ---: |
+| `test/fixtures/equivalence/vue` | «agrees with mutants applied by hand in Vue…» (`:1102`) | 120,0 (таймаут) |
+| `test/fixtures/cache*` (копии через `copyFixture`) | 13 тестов «vitest adapter with the cache» (`:1456-1919`) | 8,8–75,4, в сумме ≈ 600; 3 таймаута |
+| `test/fixtures/equivalence` (корень), `…/svelte`, `…/logging`, `…/teardown` | `:802`, `:1218`, `:1369`, `:891` | по 60 (таймауты) |
+| `…/environment`, `…/concurrent`, `…/rounds` | `:914`, `:991`, `:1293` | 57,7; 49,9; 40,4 |
+| `test/fixtures/runner` | `:482`, `:531` | 30,2; 30,0 (таймауты) |
+| `…/hang`, `…/shared`, `…/stale`, `…/stuck`, `…/global`, `…/slow`, `…/leaky` | `:596`, `:1062`, `:857`, `:947`, `:1344`, `:1087`, `:979` | 29,5; 28,9; 28,6; 16,8; 13,9; 6,4; 2,8 |
+| `test/fixtures/node-test/*` | `test/adapters/node-test/index.test.ts`, 9 тестов (`basic` — 72,8 с) | 127,1 на файл |
 
 ### Что даст больше всего
 
@@ -669,6 +678,15 @@ Timeout 2 (бесконечные циклы в `fit-parts.ts:21,26` пойма�
 | Только на Windows | 1 | `get-text-style.ts:32` не передан `platform`: на Linux не убить без подмены `process.platform` |
 | Эквивалентные | 18 | см. ниже |
 | Шум (граница абсурдного значения) | 1 | `get-text-style.ts:28` `> 0` → `> 1` (терминал шириной в 1 колонку) |
+
+**Проверка (подтверждено).** 67 строк тестов
+(`analysis/experiments/tests-terminal-gaps.diff`: 8 новых случаев в шести
+файлах) проходят на исходном коде. Повторный прогон по 34 выжившим
+(`run-terminal-fixed.json`) убил **15 из 34**: все 8 реальных дыр, 6 кадров
+спиннера и мутант Windows (`platform` подменён через
+`Object.defineProperty(process, 'platform', …)`). Остались ровно те 19, что
+классифицированы как эквивалентные и шумовые: классификация совпала с
+фактом без исключений. Score модуля 88,7 % → 93,7 %.
 
 Самая полезная находка:
 `cli/terminal/create-spinner.ts:184` (`rows = countTerminalRows(frame, …)`

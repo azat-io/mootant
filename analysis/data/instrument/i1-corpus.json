@@ -162,5 +162,104 @@
   "listMs": 564,
   "totalMs": 1188,
   "findings": []
+ },
+ {
+  "corpus": "vuejs/core (reactivity, shared, runtime-core, runtime-dom, compiler-core, compiler-sfc)",
+  "note": "runtime-core without the raw-parse check (memory)",
+  "files": 162,
+  "mutants": 28805,
+  "switchedParseErrors": 1,
+  "transformErrors": 1,
+  "compileErrors": 0,
+  "siteMismatch": 0,
+  "rawParseErrors": 0,
+  "audit": {
+   "named-evaluation-replacement": 2
+  },
+  "findings": [
+   {
+    "kind": "switched-parse-error",
+    "file": "packages/shared/src/escapeHtml.ts",
+    "message": "HTML comments are not allowed in modules"
+   },
+   {
+    "kind": "transform-error",
+    "file": "packages/shared/src/escapeHtml.ts",
+    "message": "Transform failed with 1 error:\n\n\u001b[31m[PARSE_ERROR] \u001b[0mHTML comments are not allowed in modules\n -  in ../../../../projects/instrument/corpus/vuejs_core/packages/shared/src/escapeHtml.ts at 4151..4155"
+   },
+   {
+    "kind": "named-evaluation-replacement",
+    "file": "packages/runtime-core/src/hydrationStrategies.ts",
+    "id": "pam2rg475r30",
+    "mutator": "logical-operator",
+    "original": "getGlobalThis().requestIdleCallback || (cb => setTimeout(cb, 1))",
+    "replacement": "(cb => setTimeout(cb, 1))",
+    "line": 7
+   },
+   {
+    "kind": "named-evaluation-replacement",
+    "file": "packages/runtime-core/src/hydrationStrategies.ts",
+    "id": "z9576eyzg7j8",
+    "mutator": "logical-operator",
+    "original": "getGlobalThis().cancelIdleCallback || (id => clearTimeout(id))",
+    "replacement": "(id => clearTimeout(id))",
+    "line": 9
+   }
+  ]
+ },
+ {
+  "corpus": "sveltejs/svelte packages/svelte/src without compiler/phases/1-parse/utils/entities.js",
+  "note": "without the raw-parse check (memory); entities.js measured separately (BUG-104)",
+  "files": 374,
+  "mutants": 44982,
+  "switchedParseErrors": 3,
+  "transformErrors": 3,
+  "compileErrors": 0,
+  "siteMismatch": 0,
+  "rawParseErrors": 0,
+  "audit": {
+   "named-evaluation-replacement": 1
+  },
+  "findings": [
+   {
+    "kind": "switched-parse-error",
+    "file": "packages/svelte/src/internal/server/renderer.test.ts",
+    "message": "HTML comments are not allowed in modules"
+   },
+   {
+    "kind": "transform-error",
+    "file": "packages/svelte/src/internal/server/renderer.test.ts",
+    "message": "Transform failed with 4 errors:\n\n\u001b[31m[PARSE_ERROR] \u001b[0mHTML comments are not allowed in modules\n     \u001b[38;5;246m╭\u001b[0m\u001b[38;5;246m─\u001b[0m\u001b[38;5;246m[\u001b[0m ../../../../projects/instrument/corpus/sveltejs_s"
+   },
+   {
+    "kind": "switched-parse-error",
+    "file": "packages/svelte/src/compiler/phases/1-parse/index.js",
+    "message": "HTML comments are not allowed in modules"
+   },
+   {
+    "kind": "transform-error",
+    "file": "packages/svelte/src/compiler/phases/1-parse/index.js",
+    "message": "Transform failed with 70 errors:\n\n\u001b[31m[PARSE_ERROR] \u001b[0mHTML comments are not allowed in modules\n -  in ../../../../projects/instrument/corpus/sveltejs_svelte/packages/svelte/src/compiler/phases/1-pa"
+   },
+   {
+    "kind": "switched-parse-error",
+    "file": "packages/svelte/src/compiler/preprocess/index.js",
+    "message": "HTML comments are not allowed in modules"
+   },
+   {
+    "kind": "transform-error",
+    "file": "packages/svelte/src/compiler/preprocess/index.js",
+    "message": "Transform failed with 148 errors:\n\n\u001b[31m[PARSE_ERROR] \u001b[0mHTML comments are not allowed in modules\n -  in ../../../../projects/instrument/corpus/sveltejs_svelte/packages/svelte/src/compiler/preprocess"
+   },
+   {
+    "kind": "named-evaluation-replacement",
+    "file": "packages/svelte/src/compiler/state.js",
+    "id": "jf36c029ab2y",
+    "mutator": "logical-operator",
+    "original": "state.warning ?? (() => true)",
+    "replacement": "(() => true)",
+    "line": 150
+   }
+  ]
  }
 ]

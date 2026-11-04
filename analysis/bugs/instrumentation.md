@@ -6,7 +6,7 @@
 > BUG-100…BUG-199. Node 22.23.4 (плюс 22.12.0 и 20.19.0 для node:test),
 > Vitest 5.0.5, Vite 8.3.5, oxc-parser 0.156.0, vue 3.5.44, svelte 5.57.3.
 
-## Итог в двух абзацах
+## Итог
 
 Ядро переключения (`core/instrument/*`, `core/generate/validate-replacement.ts`,
 `core/syntax/is-value-position.ts`) спроектировано очень аккуратно: все
@@ -14,21 +14,31 @@
 optional chaining, `delete`/`typeof`, цели присваивания, директивы, ASI,
 метки, `super`, генераторы, async, деструктуризация, JSX, шаблоны Vue/Svelte,
 `import.meta.glob`) закрыты явными проверками, и это подтверждается
-эмпирически: на корпусе из 130 тыс. мутантов (≈1 300 файлов, 9 проектов)
-switched-текст всегда парсится и компилируется; полные тест-сьюты пяти
-проектов на switched-коде без runtime и с `active=null` дают ровно те же
-результаты, что и на оригинале; активация мутанта через runtime совпала с
-физическим применением на всех проверенных мутантах (I3, см. ниже), кроме
-одного узкого класса (вывод имени функции, BUG-103).
+эмпирически. На корпусе из 123 867 мутантов (1 466 файлов, 9 проектов,
+`--preset strict`) switched-текст каждого файла компилируется V8, у каждого
+мутанта ровно один сайт, структурный аудит не нашёл ни одной цели в
+«чувствительной» позиции. Тест-сьюты на switched-коде без runtime и с
+`active=null` дали ровно те же результаты, что на оригинале (ufo 487 тестов,
+defu 23, фикстуры Vue и Svelte). Активация мутанта через runtime совпала с
+физическим применением по каждому тесту на всех 322 проверенных мутантах
+(ufo 200, Vue 70, Svelte 52) и на 1 054 мутантах ловушек — кроме узкого
+класса с выводом имени функции (BUG-103).
 
-Найденные проблемы лежат на краях: (1) защитная сетка dry run слишком грубая —
-провал, не достигший ни одного сайта, объявляет сломанными **все** файлы
-прогона (BUG-100, medium); (2) размер switched-текста растёт квадратично с
-размером литерала (BUG-104, medium; реальный пример — таблица сущностей
-компилятора Svelte: 41 КБ → 92 МБ); (3) нет source map — номера строк в
-stack trace неверны у 43 % строк кода Mootant (BUG-102, low); (4) проверка
-сайта не гигиенична к привязке `globalThis` (BUG-101, low; независимо найдено
-и в BUG-904 другого раздела); (5) NamedEvaluation (BUG-103, low).
+Найденные проблемы лежат на краях, но две из них реальны для популярного кода:
+(1) регулярное выражение, начинающееся с `<!--`, попадает в switched-тексте
+сразу после `(` и из-за ошибки лексера oxc (Vite 8/rolldown) модуль не
+разбирается — файл теряет все мутанты (BUG-106, medium; 3 исходных файла
+корпуса — парсер и препроцессор компилятора Svelte и `escapeHtml.ts` Vue — и
+один тестовый);
+(2) защитная сетка dry run слишком грубая — провал, не достигший ни одного
+сайта, объявляет сломанными **все** файлы прогона (BUG-100, medium);
+(3) размер switched-текста растёт квадратично с размером литерала (BUG-104,
+medium; таблица сущностей компилятора Svelte: 41 КБ → 92 МБ);
+(4) нет source map — номера строк в stack trace неверны у 43 % строк кода
+Mootant (BUG-102, low); (5) проверка сайта не гигиенична к привязке
+`globalThis` (BUG-101, low; независимо найдено как BUG-904); (6)
+NamedEvaluation (BUG-103, low); (7) id зависят от cwd без конфига (BUG-105,
+low).
 
 ## Таблица находок
 
@@ -40,9 +50,11 @@ stack trace неверны у 43 % строк кода Mootant (BUG-102, low); (
 | BUG-103 | Вывод имени (NamedEvaluation) не работает через `?:`: при активном мутанте logical-operator, оставляющем анонимную функцию/класс в инициализаторе (`let g = flag \|\| function () {}` → `function () {}`), `g.name === ''`, а у физически применённого мутанта `'g'` | low | подтверждён | `core/instrument/render-mutant-range.ts:91-95` | `test/repros/BUG-103.test.ts`; trap t07 (9 из 59 мутантов) |
 | BUG-104 | Размер switched-текста (и отчёта `list --json`) квадратичен по числу элементов литерала: replacement'ы `object-property`/`array-element` — весь литерал без одного элемента. Svelte `entities.js` (41 КБ, `--preset strict`): switched 92 МБ, `list --json --verbose` 419 МБ, 3,9 ГБ RSS | medium | подтверждён | `core/instrument/render-mutant-range.ts:85-95`, `core/instrument/create-switched-files.ts:74-104`, `core/mutators/object-property.ts`, `core/mutators/array-element.ts` | `test/repros/BUG-104.test.ts`; `analysis/tools/instrument/switch-size.mjs` |
 | BUG-105 | Id мутантов зависят от каталога запуска, если у проекта нет файла конфигурации: корень = cwd (`core/config/prepare-run.ts:133`), display path входит в хэш id (`core/identity/create-mutant-id.ts:58-66`) → из подкаталога все id другие, `--mutant` и кэш (`.mootant` тоже в cwd) не находят прежние | low | подтверждён | `core/config/prepare-run.ts:133`, `core/identity/create-mutant-id.ts:58-66` | `analysis/tools/instrument/i4-determinism.mjs` (данные `analysis/data/instrument/i4-traps.json`) |
+| BUG-106 | Литерал регулярного выражения, начинающийся с `<!--` (вырезание HTML-комментариев), в switched-тексте стоит сразу после `(`; oxc (0.156–0.157, им разбирают модули Vite 8/rolldown) в режиме `unambiguous` читает `(/<!--` как HTML-комментарий → «HTML comments are not allowed in modules», тест-файлы не загружаются, все мутанты файла `Error` (`instrumentation-break`). Триггер — и оригинал (`/<!--[\s\S]*?-->/g`), и replacement `regex-pattern` (`/^(?:-?>)+\|<!--\|…/` → `/<!--\|…/`) | medium | подтверждён | `core/instrument/render-mutant-range.ts:91-95`; апстрим — лексер oxc | `test/repros/BUG-106.test.ts`; `test/repros/BUG-106/run.sh`; I1: vuejs/core `packages/shared/src/escapeHtml.ts`, svelte `compiler/phases/1-parse/index.js`, `compiler/preprocess/index.js` |
 
-Bug-prompts: `analysis/bug-prompts/BUG-100.md`, `analysis/bug-prompts/BUG-104.md`
-(medium). Остальные — low, промпты не требуются.
+Bug-prompts (medium): `analysis/bug-prompts/BUG-100.md`,
+`analysis/bug-prompts/BUG-104.md`, `analysis/bug-prompts/BUG-106.md`.
+Остальные — low, промпты не требуются.
 
 Пересечения с другими разделами (независимые подтверждения): BUG-101 ≈
 BUG-904 (`static-review.md`); BUG-100 — обобщение BUG-902 (нестабильный провал
@@ -126,9 +138,16 @@ CLI `mootant list --json --verbose` (тот же конфиг и пресет, �
    | expressjs/express (`lib`, `index.js`, CJS) | 7 | 1 225 | 0/0/0/0/0 | 1 NamedEvaluation (`lib/response.js:914`) |
    | ljharb/qs `lib` (CJS) | 5 | 1 735 | 0/0/0/0/0 | — |
    | pmndrs/zustand `src` (TS/TSX) | 12 | 553 | 0/0/0/0/0 | — |
-   | vuejs/core (6 пакетов) | см. ниже | | | |
-   | sveltejs/svelte `packages/svelte/src` | 380 | 49 518 | см. BUG-104 | |
+   | vuejs/core (reactivity, shared, runtime-core, runtime-dom, compiler-core, compiler-sfc) | 162 | 28 805 | 1/1/0/0/0 — `shared/src/escapeHtml.ts` (BUG-106) | 2 NamedEvaluation (`runtime-core/src/hydrationStrategies.ts:7,9`) |
+   | sveltejs/svelte `packages/svelte/src` без `entities.js` | 374 | 44 982 | 3/3/0/0/— — `compiler/phases/1-parse/index.js`, `compiler/preprocess/index.js`, `internal/server/renderer.test.ts` (BUG-106) | 1 NamedEvaluation (`compiler/state.js:150`) |
+   | svelte `compiler/phases/1-parse/utils/entities.js` | 1 | 4 462 | switched 92 МБ — не разбирался (BUG-104) | |
    | ловушки | 20 | 1 104 | 1 compile (V8 Node 22 не знает `(?i:)` — ошибка в оригинале фикстуры) | 9 NamedEvaluation, 2 `globalThis` |
+   | **Итого (без ловушек)** | **1 466** | **123 867** | **4 файла не разбираются (все — BUG-106), 0 compile, 0 сайтов, 0 raw** | **5 NamedEvaluation** |
+
+   Для runtime-core Vue и Svelte проверка разбора каждого физически
+   применённого мутанта отключена (`--raw no`): `parseSync` на каждый мутант
+   держал до 6 ГБ RSS, а два первых прогона были убиты OOM-killer'ом общей
+   машины.
 
 3. **I2 (project-diff.mjs i2)** — весь тест-сьют проекта обычным Vitest без
    Mootant: оригинал; все мутированные файлы заменены switched-текстом без
@@ -149,9 +168,12 @@ CLI `mootant list --json --verbose` (тот же конфиг и пресет, �
 
    | Проект | Мутантов | Убиты физически | Убиты switched | Расхождений |
    | --- | ---: | ---: | ---: | ---: |
-   | Vue-фикстура (все, 27 в шаблоне) | 70 | 55 | 55 | 0 |
-   | unjs/ufo (seed 7) | (в работе) | | | |
-   | Svelte-фикстура (все) | (в работе) | | | |
+   | unjs/ufo (seed 7, 14 мутаторов, в среднем 467 тестов на прогон) | 200 | 151 | 151 | 0 |
+   | Vue-фикстура (все, из них 27 в шаблоне) | 70 | 55 | 55 | 0 |
+   | Svelte-фикстура (все: компонент с рунами и `.svelte.js`) | 52 | 35 | 35 | 0 |
+   | **Итого** | **322** | **241** | **241** | **0** |
+
+   Совпадение — по каждому тесту (не только «убит/выжил»).
 
 5. **node:test** — фикстуры `nt-cjs` (CJS-модуль, импортируемый из ESM-теста
    именованными импортами; на Node 22.23.4 с `registerHooks`, 22.12.0 и
@@ -279,6 +301,38 @@ instrumented dry run → `instrumentation-break`, все мутанты файл
 Исправление: при отсутствии конфига искать корень по ближайшему
 `package.json`/`.git`.
 
+### BUG-106 — `(/<!--` и лексер oxc
+
+Switched-текст всегда берёт replacement и original в скобки
+(`core/instrument/render-mutant-range.ts:91-95`). oxc в режиме
+`sourceType: 'unambiguous'` (так модули разбирают Vite 8 и rolldown, и так же
+`core/parser/parse-file.ts:118`) в файле с `import`/`export` читает скобку,
+за которой сразу идёт литерал `/<!--…/`, как HTML-комментарий и сообщает
+«HTML comments are not allowed in modules». Минимальные случаи
+(oxc-parser 0.156.0 и 0.157.0): `const a = (/<!--x/g)\nexport {}` — ошибка;
+`(c ? (/<!--x/g) : 1)` — ошибка; `/<!--x/g`, `f(/<!--x/g)`, `(0, /<!--x/g)`,
+`(c ? /<!--x/g : 1)` и тот же код с `sourceType: 'module'` — разбираются. То
+есть это ошибка oxc, но Mootant сам создаёт единственную форму, в которой она
+проявляется: в исходниках регулярное выражение обычно стоит после `=` или
+как аргумент вызова.
+
+Триггеры в корпусе: исходные `/<!--[^]*?-->|<script…>/g` в
+`packages/svelte/src/compiler/phases/1-parse/index.js:15` и
+`compiler/preprocess/index.js:254,256`; в vuejs/core —
+`packages/shared/src/escapeHtml.ts:48`, где исходное
+`/^(?:-?>)+|<!--|-->|--!>|<!-$/g` не начинается с `<!--`, но replacement
+`regex-pattern` без первой альтернативы — начинается. Тот же шаблон есть в
+`packages/server-renderer/src/helpers/ssrRenderSlot.ts:139` Vue
+(`/<!--[^]*?-->/gm`, в корпус не входил). На Vitest 5 + Vite 8:
+`RolldownError: Parse failure … HTML comments are not allowed in modules`,
+все мутанты файла `Error` с ложной формулировкой «Tests fail with the
+switched … and pass without it» (фикстура `BUG-106/run.sh`: 9/9 `Error`).
+Если упавшие тест-файлы не успели достичь ни одного сайта, BUG-100 выбросит
+и все остальные файлы прогона. Обход в Mootant: не брать в скобки ветки, где
+они не нужны (литералы, вызовы, члены — в ветке `?:` скобки нужны только
+последовательности), плюс проверка разбора switched-текста в
+`createSwitchedFiles`; и сообщить об ошибке в oxc.
+
 ## Отсутствующие гарантии и неявные предположения
 
 1. **Switched-текст не проверяется на синтаксическую корректность.**
@@ -289,9 +343,11 @@ instrumented dry run → `instrumentation-break`, все мутанты файл
    скобками там, где это нужно. Для плагинных мутаторов непарсящийся текст
    (`needsParentheses` возвращает true, когда текст не парсится, и просто
    оборачивает его) уходит в switched-файл и через BUG-100 ломает весь прогон
-   (BUG-905). Эмпирически для встроенных мутаторов — 0 ошибок на 130 тыс.
-   мутантов. Дёшево было бы парсить switched-текст в `createSwitchedFiles` и
-   отбрасывать мутанты, ломающие разбор.
+   (BUG-905). Эмпирически для встроенных мутаторов — 0 ошибок на 124 тыс.
+   мутантов, кроме BUG-106 (4 файла из 1 466, где switched-текст не
+   разбирается из-за ошибки oxc). Дёшево было бы парсить switched-текст тем же
+   парсером в `createSwitchedFiles` и отбрасывать (с диагностикой) мутанты,
+   ломающие разбор, — это закрыло бы и BUG-106, и BUG-905.
 2. **«Replacement того же синтаксического класса».** Для блочных мутантов
    switch оборачивает replacement в `{…}`, а физическое применение и отчёт —
    нет: объявление `let`/`function` в replacement плагина имеет разную
@@ -341,13 +397,13 @@ instrumented dry run → `instrumentation-break`, все мутанты файл
 
 - Все ловушки из задания, кроме имён функций (см. «Методика», п. 1).
 - `typeof undeclared`, `delete`, optional chaining, callee с `this`, tag,
-  `eval`, цели присваивания: аудит 130 тыс. мутантов — 0 нарушений
-  `is-value-position`.
+  `eval`, цели присваивания, директивы, блок вне statement-позиции, тело
+  метки, `super()`: аудит 123 867 мутантов — 0 нарушений.
 - Директивы (`'use strict'`, `'use client'`) не мутируются и не оборачиваются
   (`core/tree/index-tree.ts:129-130`).
 - ASI: guard `;` перед каждым выражением, начинающим statement списка; на
   корпусах без точек с запятой (Mootant, perfectionist, Vue core, zustand) —
-  0 ошибок разбора.
+  0 ошибок разбора, связанных с ASI (единственные ошибки разбора — BUG-106).
 - `super()`: statement-removal его не создаёт; parameter properties и поля
   TS остаются корректными.
 - Шаблоны Vue (27 мутантов шаблона, включая обработчики событий) и Svelte:

@@ -1,0 +1,7 @@
+M-bM-^\M-^T dry run  253 tests in 40.6s
+M-bM-^\M-^T testing 34 mutants  34/34 test runs in 12.7s
+M-bM-^\M-^T testing 16 survivors with more test files  16/16 test runs in 8.6s
+M-bM-^\M-^T testing 11 survivors with more test files  21/21 test runs in 15.0s
+M-bM-^\M-^T testing 10 survivors with more test files  40/40 test runs in 36.2s
+M-bM-^\M-^T testing 10 survivors with more test files  58/58 test runs in 1m 15s
+M-bM-^\M-^T testing 3 survivors with more test files  23/23 test runs in 32.7s
