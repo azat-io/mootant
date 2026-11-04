@@ -913,3 +913,11 @@ Auto-merging src/lines.ts
   EXPECT: lines 2 and 5
   [detached] --since main exit=0
     "src/lines.ts": lines 5
+  EXPECT (worktree): line 6
+  [worktree] --since HEAD exit=0
+    "src/lines.ts": lines 6
+=== merge_conflict (05:13:36)
+  state: UU src/lines.ts 
+  EXPECT: line 3 (resolved, not yet added)
+  [unmerged] --since main exit=0
+    "src/lines.ts": lines 3

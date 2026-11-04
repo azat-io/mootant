@@ -2,7 +2,7 @@
 # Recreates the environment fixtures of analysis/bugs/cli-env.md in
 # /home/user/projects/cli (needs base-vt: npm project with the mootant tgz,
 # vitest 5.0.5 and vite 8.3.5 installed with --legacy-peer-deps).
-# usage: make-env-fixtures.sh
+# usage: make-env-fixtures.sh [--with-installs]
 set -euo pipefail
 T=$(cd "$(dirname "$0")" && pwd)
 P=/home/user/projects/cli
@@ -192,4 +192,36 @@ for s in vt nt; do
   rm -rf "${P:?}/${s:?}-hang-long"; cp -a "$P/$s-hang" "$P/$s-hang-long"
   printf "export default {\n  run: { timeout: { constant: 30000 } },\n}\n" > "$P/$s-hang-long/mootant.config.js"
 done
-echo "fixtures ready in $P (vt-vue, vt-svelte, vt-alias, nt-ts, nt-tsx: see cli-env.md)"
+# TypeScript under node:test (type stripping, Node >= 22.18)
+D=$($MF nt-ts node-test); mkdir -p $D/src $D/test
+printf 'export function add(a: number, b: number): number {\n  return a + b\n}\n\nexport function isAdult(age: number): boolean {\n  return age >= 18\n}\n' > $D/src/math.ts
+printf "import { it } from 'node:test'\nimport assert from 'node:assert/strict'\n\nimport { add, isAdult } from '../src/math.ts'\n\nit('adds', () => {\n  assert.equal(add(2, 3), 5)\n})\n\nit('checks adults', () => {\n  assert.equal(isAdult(30), true)\n  assert.equal(isAdult(3), false)\n})\n" > $D/test/math.test.ts
+
+# Vitest path aliases: resolve.alias and tsconfig paths
+D=$($MF vt-alias vitest); mkdir -p $D/src/lib $D/test; cp $P/nt-ts/src/math.ts $D/src/lib/math.ts
+printf "import { expect, it } from 'vitest'\n\nimport { add } from '@lib/math'\nimport { isAdult } from '~/lib/math'\n\nit('adds', () => {\n  expect(add(2, 3)).toBe(5)\n})\n\nit('checks adults', () => {\n  expect(isAdult(30)).toBe(true)\n  expect(isAdult(3)).toBe(false)\n})\n" > $D/test/math.test.ts
+printf '{\n  "compilerOptions": {\n    "target": "es2022",\n    "module": "esnext",\n    "moduleResolution": "bundler",\n    "baseUrl": ".",\n    "paths": { "~/*": ["src/*"] }\n  }\n}\n' > $D/tsconfig.json
+printf "import { fileURLToPath } from 'node:url'\nimport { defineConfig } from 'vitest/config'\n\nexport default defineConfig({\n  resolve: {\n    alias: { '@lib': fileURLToPath(new URL('./src/lib', import.meta.url)) },\n    tsconfigPaths: true,\n  },\n})\n" > $D/vitest.config.ts
+
+# fixtures that need packages from the registry: pass --with-installs
+if [ "${1:-}" = --with-installs ]; then
+  D=$($MF vt-vue vitest)
+  (cd $D && npm i -D --legacy-peer-deps vue@3.5.44 @vue/compiler-dom@3.5.44 @vitejs/plugin-vue@6.0.10 @vue/test-utils happy-dom@21.0.4 >/dev/null)
+  mkdir -p $D/src $D/test
+  printf '<script setup lang="ts">\nimport { ref, computed } from '"'"'vue'"'"'\n\nconst props = defineProps<{ start: number; max: number }>()\nconst count = ref(props.start)\nconst atMax = computed(() => count.value >= props.max)\n\nfunction increment(): void {\n  if (!atMax.value) {\n    count.value += 1\n  }\n}\n</script>\n\n<template>\n  <button :disabled="atMax" @click="increment">{{ count > 0 ? count : '"'"'zero'"'"' }}</button>\n</template>\n' > $D/src/Counter.vue
+  printf "import { mount } from '@vue/test-utils'\nimport { expect, it } from 'vitest'\n\nimport Counter from '../src/Counter.vue'\n\nit('counts up to max', async () => {\n  let wrapper = mount(Counter, { props: { start: 1, max: 2 } })\n  expect(wrapper.text()).toBe('1')\n  await wrapper.get('button').trigger('click')\n  expect(wrapper.text()).toBe('2')\n  expect(wrapper.get('button').attributes('disabled')).toBeDefined()\n})\n" > $D/test/counter.test.ts
+  printf "import vue from '@vitejs/plugin-vue'\nimport { defineConfig } from 'vitest/config'\n\nexport default defineConfig({\n  plugins: [vue()],\n  test: { environment: 'happy-dom' },\n})\n" > $D/vitest.config.ts
+  D=$($MF vt-svelte vitest)
+  (cd $D && npm i -D --legacy-peer-deps svelte@5.57.3 @sveltejs/vite-plugin-svelte@7.3.1 happy-dom@21.0.4 >/dev/null)
+  mkdir -p $D/src $D/test
+  printf '<script>\n  let { start = 0, max = 10 } = $props()\n  let count = $state(start)\n  let atMax = $derived(count >= max)\n\n  function increment() {\n    if (!atMax) {\n      count += 1\n    }\n  }\n</script>\n\n<button disabled={atMax} onclick={increment}>{count > 0 ? count : '"'"'zero'"'"'}</button>\n' > $D/src/Counter.svelte
+  printf "import { flushSync, mount, unmount } from 'svelte'\nimport { expect, it } from 'vitest'\n\nimport Counter from '../src/Counter.svelte'\n\nit('counts up to max', () => {\n  let component = mount(Counter, { target: document.body, props: { start: 1, max: 2 } })\n  let button = document.body.querySelector('button')\n  expect(button.textContent).toBe('1')\n  button.click()\n  flushSync()\n  expect(button.textContent).toBe('2')\n  expect(button.disabled).toBe(true)\n  unmount(component)\n})\n" > $D/test/counter.test.js
+  printf "import { svelte } from '@sveltejs/vite-plugin-svelte'\nimport { defineConfig } from 'vitest/config'\n\nexport default defineConfig({\n  plugins: [svelte()],\n  resolve: { conditions: ['browser'] },\n  test: { environment: 'happy-dom' },\n})\n" > $D/vitest.config.js
+  D=$($MF nt-tsx node-test)
+  (cd $D && npm i -D --legacy-peer-deps tsx@4.23.15 >/dev/null)
+  mkdir -p $D/src $D/test; cp $P/nt-ts/src/math.ts $D/src/
+  sed "s#'../src/math.ts'#'~/math'#" $P/nt-ts/test/math.test.ts > $D/test/math.test.ts
+  sed -i 's/"test": "node --test"/"test": "tsx --test test\/math.test.ts"/' $D/package.json
+  printf '{\n  "compilerOptions": {\n    "target": "es2022",\n    "module": "esnext",\n    "moduleResolution": "bundler",\n    "baseUrl": ".",\n    "paths": { "~/*": ["src/*"] }\n  }\n}\n' > $D/tsconfig.json
+fi
+echo "fixtures ready in $P"
