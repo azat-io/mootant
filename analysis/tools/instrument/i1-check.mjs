@@ -49,6 +49,7 @@ let bin = flags.get('bin') ?? path.join(MOOTANT_ROOT, 'bin/mootant.js')
 let preset = flags.get('preset') ?? 'strict'
 let rawCheck = flags.get('raw') !== 'no'
 let MAX_SWITCHED = Number(flags.get('max-switched') ?? 8_000_000)
+let parses = 0
 
 let { instrumentFile } = await importDist('core/instrument/instrument-file.js')
 let { transformWithOxc } = await loadVite()
@@ -346,6 +347,9 @@ for (let [display, mutants] of byFile) {
     if (rawCheck) {
       let applied = applyRaw(source, mutant)
       let result = oxc.parseSync(display, applied, { ...options, preserveParens: true })
+      // oxc keeps native memory per parse; collect often (run with --expose-gc).
+      parses++
+      if (globalThis.gc && parses % 100 === 0) globalThis.gc()
       if (result.errors.length > 0) {
         stats.rawParseErrors++
         findings.push({ kind: 'raw-parse-error', file: display, id: mutant.id, mutator: mutant.mutator, original: mutant.original.slice(0, 120), replacement: mutant.replacement.slice(0, 120), message: result.errors[0].message })

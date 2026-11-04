@@ -99,3 +99,6 @@ Auto-merging src/lines.ts
     "src/lines.ts": lines 2
   [cfg-diff.relative] --since HEAD exit=0
     "src/lines.ts": lines 2
+  [cfg-diff.external] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-core.quotePath] --since HEAD exit=0
