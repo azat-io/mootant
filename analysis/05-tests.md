@@ -334,7 +334,89 @@ run-dry/run-batch/run-isolated) относятся к файлам, которы
 
 ## 5.3. Время test:unit
 
-(заполняется по данным прогонов quiet/load)
+Источники: тихий прогон этапа 0 (`/home/user/scratch/baseline-run1/test:unit.log`,
+итоговая строка Vitest; JSON-репортера там не было) и прогон координатора под
+нагрузкой `load-1` (`vitest --run --coverage --coverage.reportOnFailure`,
+JSON-репортер; `analysis/data/tests/load-1.files.tsv`,
+`load-1.tests-top200.tsv`, `load-1.summary.json`; скрипт сводки —
+`analysis/tools/tests/vitest-json.mjs`).
+
+| Прогон | Load average | Wall | Разбивка Vitest | Старт воркера (isolate) | Оценка Vitest для `isolate: false` |
+| --- | --- | ---: | --- | ---: | ---: |
+| quiet (этап 0) | ≈ 0 | 250,8 с | tests 81 %, import 12 %, transform 4 %, worker 3 % | ~128 мс × 637 | ≥ 27 с быстрее |
+| load-1 | 29–34 | 1 382 с | tests 71 %, import 18 %, worker 6 %, transform 3 %, environment 1 % | ~1,47 с × 637 | ≥ 311 с быстрее |
+
+**Один файл — это критический путь.** В load-1 сумма длительностей файлов
+равна 1 891,6 с. Из них `test/adapters/vitest/index.test.ts` (33 теста)
+занимает **1 354,7 с, 71,6 %**, а wall всего прогона — 1 382 с: всё
+остальное успело пройти параллельно, пока шёл этот файл. 589 из 637 файлов
+идут меньше секунды.
+
+Топ-10 файлов (load-1, секунды; под нагрузкой абсолютные значения раздуты в
+3–10 раз, полезно ранжирование):
+
+| # | Файл | с | Тестов | Что внутри |
+| ---: | --- | ---: | ---: | --- |
+| 1 | `test/adapters/vitest/index.test.ts` | 1 354,7 | 33 | вложенные `runMutants` + настоящий Vitest на фикстурах `test/fixtures/equivalence/*`, `cache*`, эталон с физическими мутантами |
+| 2 | `test/adapters/node-test/index.test.ts` | 127,1 | 9 | то же для `node --test` (`test/fixtures/node-test/*`) |
+| 3 | `test/core/generate/generate-file-mutants.test.ts` | 101,5 | 987 | property-based проверки генерации, `runProgram` в воркерах |
+| 4 | `test/cli/report/format-header.test.ts` | 44,9 | 6 | один тест на 300 000 строк — 44,8 с |
+| 5 | `test/cli/index.test.ts` | 23,6 | 14 | приёмка `list` на `test/fixtures/list`, разбор каждого мутанта |
+| 6 | `test/cli/html/client/start-report.test.ts` | 17,1 | 21 | happy-dom, отчёт на 1 000 тестов |
+| 7 | `test/cli/terminal/get-max-display-width.test.ts` | 13,9 | 3 | один тест на 200 000 текстов |
+| 8 | `test/core/instrument/instrument-file.test.ts` | 13,8 | 56 | исполнение программ под каждым мутантом |
+| 9 | `test/core/run-mutants.test.ts` | 7,7 | 31 | загрузка компиляторов Svelte/Vue |
+| 10 | `test/core/cache/prune-cache-entries.test.ts` | 6,9 | 2 | 200 002 записи кэша |
+
+Медленные тесты (топ по load-1): 17 из 20 самых долгих — в
+`test/adapters/vitest/index.test.ts`. Это «verdict equivalence …» (Vue
+120 с, Svelte 60 с, default/fast 60 с) и «vitest adapter with the cache …»
+(до 75 с). Остальные в топе: «node:test verdict equivalence agrees with
+mutants applied by hand» (72,8 с) и «formatHeader handles a body of more
+lines than a function takes arguments» (44,8 с). Полный топ-200 —
+`analysis/data/tests/load-1.tests-top200.tsv`.
+
+**Медленные фикстуры.** Это интеграционные проекты, которые гоняют
+вложенные прогоны Mootant: `test/fixtures/equivalence/*` (14 подпроектов:
+`vue`, `svelte`, `stale`, `teardown`, `hang`, `concurrent`, `logging`, …),
+`test/fixtures/cache*` (7 проектов), `test/fixtures/node-test/*`. Каждый тест
+на них — полный цикл «старт Vitest → dry run → раунды isolated» плюс
+эталонный прогон на копии проекта с каждым мутантом. Отсюда 30–120 с на тест
+под нагрузкой.
+
+### Что даст больше всего
+
+(уточняется по тихому прогону quiet-2, см. ниже)
+
+1. **Разрезать `test/adapters/vitest/index.test.ts` на 3–4 файла** по
+   `describe`: `vitest adapter`, `verdict equivalence`, `vitest adapter with
+   the cache`, и, возможно, Vue/Svelte отдельно. Vitest параллелит файлы, но
+   не тесты внутри файла. Сейчас этот файл идёт в одном воркере и задаёт wall
+   всего `test:unit`. По load-1: остальные 636 файлов дают 537 с суммарно,
+   то есть ≈ 180 с на трёх воркерах. Значит, после разреза wall упирается в
+   самую длинную часть, а не в 1 355 с. Под нагрузкой ожидаемый выигрыш
+   ×2–2,5. В тишине — пропорционально доле этого файла (уточню по quiet-2).
+   Трудоёмкость S: перенос `describe` и общих хелперов файла (`runAllPaths`,
+   `expectAgreement`, …) в `test/helpers`. Риск: суммарная нагрузка растёт,
+   потому что вложенные прогоны идут с `concurrency: 2` одновременно. На
+   4 vCPU CI это нормально, на слабой машине стоит держать `maxWorkers`.
+2. **`isolate: false` для чистых юнит-тестов.** Сам Vitest оценивает выигрыш
+   в ≥ 27 с (11 %) тихо и ≥ 311 с под нагрузкой. Но 35 файлов мокают модули
+   проекта, 10 стабят окружение, и есть глобальное состояние раннера (тесты
+   `runner.test.ts` чистят `globalThis.__mootant`, `:640-652`). Безопасный
+   вариант — два проекта Vitest: `unit` с `isolate: false` для `core/syntax`,
+   `core/regex`, `core/hints`, `core/text`, `core/tree`, `core/mutators`
+   (≈ 300 файлов без `vi.mock`) и `integration` с изоляцией для остального.
+   Трудоёмкость M. Проверка: дважды прогнать `unit` в разном порядке
+   (`--sequence.shuffle`), должно быть зелено.
+3. **Удешевить «тесты масштаба»**: 300 000 строк → достаточно чуть выше
+   лимита аргументов V8 (≈ 120 000 при стандартном стеке), либо явно задать
+   таймаут этим тестам. Сейчас один тест — 44,8 с под нагрузкой, в тишине
+   доли секунды. На wall в тишине почти не влияет, зато это главный
+   источник нестабильности (§5.4).
+4. **Не трогать coverage ради скорости**: доля `transform` 3–4 %, v8-coverage
+   дёшев. Шардинг (`--shard`) в CI имеет смысл только после п. 1: сейчас
+   любой шард, получивший `vitest/index.test.ts`, будет самым долгим.
 
 ## 5.4. Нестабильные тесты
 

@@ -165,6 +165,9 @@ SIGKILL посреди записи может остаться `run-v3.json.<pi
 
 Наблюдение координатора совпадает: `/tmp/mootant-4WyyZs` (beat/claim/done/env/
 out/plan/worker) остался после внешнего SIGTERM; не удалён — улика.
+То же после моего прогона без `ps`, убитого `timeout -s KILL` (BUG-502):
+`/tmp/mootant-NFzQFD` с `beat/27628.json` зависшего воркера 27628; оставлен
+как улика.
 
 ### BUG-506: процесс не завершается
 
