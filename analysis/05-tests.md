@@ -30,14 +30,18 @@
   1 382 с. Критический путь — один файл, `test/adapters/vitest/index.test.ts`:
   71,6 % суммарного времени файлов под нагрузкой. Разрезать его — S, больше
   всего пользы (§5.3).
-- **Нестабильность.** Под нагрузкой падают 22 теста. 20 из них — время:
-  дефолтные 5 с у «тестов масштаба» (300 000 строк и т. п.), лимиты по стене
-  в оракулах (1 с у `runProgram`, 4 с у эталона node:test) и таймауты
-  вложенных прогонов. Ещё один — сравнение float, один — root. Падение «node:test
-  verdict equivalence» — это таймаут эталона на **исходной** копии, а не
-  расхождение вердиктов. Зависимости от машины: `TERM` (4 теста), root
-  (1), **`NODE_OPTIONS` (порог coverage падает при зелёных тестах, BUG-850)**,
-  глобальный `core.hooksPath` в git (8 тестов) (§5.4).
+- **Нестабильность.** Два полных прогона под нагрузкой: 22 и 10 падений,
+  всего 24 разных теста, общих только 8, то есть набор плавает. Почти всё —
+  время: дефолтные 5 с у «тестов масштаба» (300 000 строк и т. п.), лимиты
+  по стене в оракулах (1 с у `runProgram`, 4 с у эталона node:test),
+  таймауты вложенных прогонов. Ещё одно — сравнение float, ещё одно — root.
+  Падение «node:test verdict equivalence» — это таймаут эталона на
+  **исходной** копии, а не расхождение вердиктов. Зависимости от машины:
+  `TERM=linux` (4 теста; `TERM=dumb`, `CI`, `FORCE_COLOR`, `NO_COLOR`,
+  турецкая локаль — без падений), root (1), **`NODE_OPTIONS` (порог coverage
+  падает при зелёных тестах, BUG-850; без `NODE_OPTIONS` тот же сьют даёт
+  100 %)**, глобальный `core.hooksPath` в git (8 тестов), `mootant.config.*`
+  выше по дереву (7 тестов) (§5.4).
 - **Дыры, найденные мутантами (подтверждены новыми тестами).**
   `core/git`: 84,45 % → 90,3 % после 61 строки тестов (14 из 37 выживших).
   Главное: тест `parse-unified-diff.test.ts:81-94` не может упасть по своей
@@ -507,8 +511,9 @@ dry run → раунды isolated», плюс эталонный прогон н
 ## 5.4. Нестабильные тесты и зависимость от окружения
 
 Сравнивались тихий прогон этапа 0 (5 падений: 4 из-за `TERM=linux`, 1 из-за
-root), load-1 (22 падения в 12 файлах, `TERM=xterm-256color`) и мои прогоны
-подмножеств под той же нагрузкой. Каждое падение разобрано до механизма:
+root), load-1 (22 падения в 12 файлах, `TERM=xterm-256color`), мой второй
+полный прогон e-load (10 падений) и мои прогоны подмножеств под той же
+нагрузкой. Каждое падение load-1 разобрано до механизма:
 
 | # | Тест | Как падает | Механизм (причина) | Класс |
 | ---: | --- | --- | --- | --- |
@@ -525,8 +530,9 @@ root), load-1 (22 падения в 12 файлах, `TERM=xterm-256color`) и �
 Где воспроизведено: 1–13 — load-1; 2 и `cli/index.test.ts:211` — ещё и мой
 прогон 14 файлов под load 27; 14–17 — этап 0; 18 — §5.4.1 ниже.
 
-Следствие для разработчика: при load average 20–30 на 4 vCPU `pnpm test`
-падает примерно в 20 тестах (порог, где падения начинаются, я не искал). На
+Следствие для разработчика: при load average 18–42 на 4 vCPU `pnpm test`
+падает в 10–22 тестах (два прогона; порог, где падения начинаются, я не
+искал). На
 машине с `NODE_OPTIONS`
 (отладчик VS Code через auto-attach, `--max-old-space-size` в CI,
 `--use-openssl-ca` за корпоративным прокси) падает порог покрытия, под root
@@ -539,6 +545,32 @@ mutants; fix them first (2 tests)»: `cli/index.test.ts:211` и
 Инструмент повёл себя верно: тесты действительно падали. Но это показывает,
 что «тесты масштаба» на дефолтном таймауте мешают и самому догфудингу.
 
+### Повторяемость: два прогона под нагрузкой
+
+Мой второй прогон всего сьюта (`e-load`: `--maxWorkers=2`, без
+`NODE_OPTIONS`, load average 18–42) дал **10 падений** против 22 в load-1.
+Всего за два прогона упали **24 разных теста**:
+
+| Упал | Тестов | Какие |
+| --- | ---: | --- |
+| в обоих прогонах | 8 | 7 из-за нагрузки: `cli/index.test.ts:211` (разбор каждого мутанта); `vitest/index.test.ts` — «agrees with mutants applied by hand» default/fast, Vue, Svelte и «skips only the message mutants…»; эталон node:test; `format-header.test.ts:21` (300 000 строк). Плюс root-тест |
+| только в load-1 | 14 | «runs every mutant … isolated», «… fast mode», «worker-scoped fixture cleanup», три теста кэша, float в `runner.test.ts:693`, `get-max-display-width`, property-тест и `runProgram` в `generate-file-mutants`, `prune-cache-entries`, `instrument-file`, `start-report`, компиляторы в `run-mutants` |
+| только в e-load | 2 | `cli/index.test.ts` «prints the same mutants before the skipped section in the text format» (5,6 с), `test/core/hints/create-syntactic-type-provider.test.ts:88` «infers a chain of 20,000 operators» (10,2 с) |
+
+Набор падений от прогона к прогону меняется: это нестабильность, а не
+детерминированные поломки. Стабильно падают тесты с наименьшим запасом:
+вложенные эквивалентности Vue/Svelte и самые тяжёлые тесты масштаба. Тестов
+масштаба в сьюте девять: кроме названных — `get-short-id-length.test.ts:24`
+(300 000), `create-run-progress.test.ts:434` (100 000 символов),
+`get-logical-chain.test.ts:27` и `walk-tree.test.ts:86` (по 20 000
+операндов). Эти четыре в двух прогонах не падали, но и они идут на
+дефолтных 5 с.
+
+**Порог coverage в e-load выполнен: 100 % по всем четырём метрикам** при 10
+упавших тестах, а в load-1 было 99,98 % по ветвям. Разница между прогонами
+в `NODE_OPTIONS`, и это независимое подтверждение BUG-850 на уровне всего
+сьюта: упавшие тесты порог не роняют, роняет переменная окружения.
+
 ### 5.4.1. Тесты, зависящие от машины: список и фиксы
 
 | Зависимость | Тесты | Фикс | Трудоёмкость |
@@ -547,8 +579,8 @@ mutants; fix them first (2 tests)»: `cli/index.test.ts:211` и
 | uid (root) | `test/adapters/node-test/score-node-test.test.ts:98-105` | вместо `chmod 000` — `vi.mock(import('node:fs/promises'), …)` с `readFile`, который отвергает `EACCES` только для `test/a.test.js` (остальные чтения — `importOriginal`). `it.skipIf(process.getuid?.() === 0)` **не подходит**: под root ветка `catch {}` (`adapters/node-test/score-node-test.ts:89-91`) станет непокрытой и упадёт порог 100 % | S |
 | `NODE_OPTIONS` | порог branches из-за `adapters/node-test/start-node-test-session.ts:119,167` | в `test/adapters/node-test/start-node-test-session.test.ts` явно задать оба состояния: `vi.stubEnv('NODE_OPTIONS', undefined)` в одном тесте и непустое значение в другом. Проверить на `node-test/index.test.ts` и `get-node-cache-inputs` — они тоже читают `NODE_OPTIONS` (`adapters/node-test/get-node-cache-inputs.ts:69`) | S |
 | нагрузка/время | строки 1–12 таблицы выше | (а) `testTimeout: 15_000` глобально или явные таймауты у семи CPU-тяжёлых тестов; (б) уменьшить «тесты масштаба» до 130–150 тыс. элементов (лимит spread в V8 на этой машине — 130 000, проверено); (в) `TIME_LIMIT` в `test/helpers/run-program.ts:8` и лимит 4 000 мс эталона node:test (`test/adapters/node-test/index.test.ts:140`) масштабировать множителем из окружения (`MOOTANT_TEST_TIME_FACTOR`) или поднять до 3–5 с — «зависание» в этих тестах — бесконечный цикл, его ловит любой лимит; (г) `runner.test.ts:693` — сравнивать `Math.round(beat.budget)`, как уже сделано на `:1499` | S–M |
-| `/tmp` | `test/fixtures/equivalence/shared/test/render.test.ts:14` и `test/fixtures/node-test/shared/test/render.test.js:16` оставляют `mootant-render-<sha1(url)>.txt` — по файлу на каждую копию фикстуры (эталон копирует проект во временный каталог со случайным именем). Сейчас на машине их 95 | в `finally` добавить `await rm(output, { force: true })` рядом с `rm(lock)` | S |
-| конфиг Mootant выше по дереву | **Подтверждено** (BUG-864, найдено случайно: мой `mootant.config.ts` в корне worktree для догфудинга): поиск конфига идёт от cwd вверх до `$HOME` (`core/config/load-config.ts:86-108`), и прогоны на фикстурах `test/fixtures/node-test/*`, `test/fixtures/equivalence/*` подхватывают конфиг корня репозитория или `~/.mootantrc`. С таким файлом падают 7 из 9 тестов `test/adapters/node-test/index.test.ts` | `test/fixtures/.mootantrc` с `{}`, чтобы поиск останавливался в фикстурах, или явный `config` в вызовах `runMutants` в тестах. Это важно для T9: конфиг догфудинга иначе придётся держать под нестандартным именем и передавать через `--config` | S |
+| `/tmp` | `test/fixtures/equivalence/shared/test/render.test.ts:14` и `test/fixtures/node-test/shared/test/render.test.js:16` оставляют `mootant-render-<sha1(url)>.txt` — по файлу на каждую копию фикстуры (эталон копирует проект во временный каталог со случайным именем). На машине их было 95, после двух моих полных прогонов и прогонов подмножеств — 140 | в `finally` добавить `await rm(output, { force: true })` рядом с `rm(lock)` | S |
+| конфиг Mootant выше по дереву | **Подтверждено** (BUG-864, найдено случайно: мой `mootant.config.ts` в корне worktree для догфудинга): поиск конфига идёт от cwd вверх до домашнего каталога, а если cwd не под ним — до корня ФС (`core/config/load-config.ts:86-108`, `stopDir: os.homedir()` у lilconfig), и прогоны на фикстурах `test/fixtures/node-test/*`, `test/fixtures/equivalence/*` подхватывают конфиг корня репозитория или `~/.mootantrc`. С таким файлом падают 7 из 9 тестов `test/adapters/node-test/index.test.ts` | `test/fixtures/.mootantrc` с `{}`, чтобы поиск останавливался в фикстурах, или явный `config` в вызовах `runMutants` в тестах. Это важно для T9: конфиг догфудинга иначе придётся держать под нестандартным именем и передавать через `--config` | S |
 | глобальный git-конфиг | `test/helpers/create-git-repository.ts:53-65` фиксирует только `user.*` и `commit.gpgSign`. **Подтверждено** (BUG-863): с глобальным `core.hooksPath`, где `pre-commit` делает `exit 1`, падают 8 из 38 тестов `test/core/git/*` и `test/core/list-mutants.test.ts`; без хука — 38/38 | `-c core.hooksPath=/dev/null` в хелпере или `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1` в env `execFileSync`, как уже сделано в `find-git-root.test.ts:59-61`. Тесты `read-changed-lines`, которые проверяют устойчивость к конфигу, задают его локально через `git config` и не пострадают | S |
 
 ### 5.4.2. Матрица окружений (отрицательный результат, кроме `TERM=linux`)
@@ -603,7 +635,9 @@ mutants; fix them first (2 tests)»: `cli/index.test.ts:211` и
 --all --verbose`, load average машины 18–33 (другие агенты).
 
 **Оговорка о конфиге.** Для `core/git` использован
-`vitest.mootant.config.ts`: конфиг проекта без трёх интеграционных
+`vitest.mootant.config.ts` (через `analysis/tools/tests/configs/mootant.git.config.ts`;
+во время прогона он лежал в корне worktree как `mootant.config.ts`, отсюда
+находка BUG-864): конфиг проекта без трёх интеграционных
 файлов (`test/adapters/vitest/index.test.ts`,
 `test/adapters/node-test/index.test.ts`, `test/cli/index.test.ts`). Они
 попадают в related через `core/run-mutants.ts` и `core/list-mutants.ts`, но
@@ -892,7 +926,7 @@ L — несколько дней, XL — больше недели.
 | # | Что сделать | Трудоёмкость | Польза |
 | ---: | --- | --- | --- |
 | T1 | Сделать сьют независимым от машины: `NODE_OPTIONS` в `start-node-test-session.test.ts` (BUG-850), `TERM`/`CI` в тестах CLI (BUG-853), без `chmod` для root (BUG-854), `core.hooksPath=/dev/null` в git-хелпере (BUG-863), общий setup-файл, нормализующий `TERM`, `CI`, `NO_COLOR`, `FORCE_COLOR`, `NODE_OPTIONS` | S | `pnpm test` и `release:check` зелёные в Docker, в консоли, с отладчиком VS Code, за прокси |
-| T2 | Устойчивость к нагрузке (BUG-851, BUG-852): лимиты по стене в оракулах ×5, «тесты масштаба» до 140–150 тыс. элементов или явные таймауты, `testTimeout` 15–20 с, округление в `runner.test.ts:693` | S–M | исчезают 20 из 22 падений под нагрузкой, догфудинг перестаёт обрываться в dry run |
+| T2 | Устойчивость к нагрузке (BUG-851, BUG-852): лимиты по стене в оракулах ×5, «тесты масштаба» до 140–150 тыс. элементов или явные таймауты, `testTimeout` 15–20 с, округление в `runner.test.ts:693` | S–M | исчезают все падения по времени (22 разных теста за два прогона под нагрузкой), догфудинг перестаёт обрываться в dry run |
 | T3 | Добавить тесты-находки: `analysis/experiments/tests-git-gaps.diff` (BUG-856) и `tests-terminal-gaps.diff` (BUG-862) | S | закрыта регрессия «`--since` теряет строки ханка» и ещё 20+ непроверенных поведений |
 | T4 | Разрезать `test/adapters/vitest/index.test.ts` на 3–4 файла | S | wall `test:unit` упирается в самый долгий кусок, а не в 1 файл (71,6 % суммарного времени под нагрузкой) |
 | T5 | Протокол «мутанты до и после» для рефакторинга раздела 1 (§5.2) | S на семейство | сужение экспорта не теряет поведение, которое держат только тесты-двойники (13 % мутантов в семействе логирования) |
@@ -924,7 +958,8 @@ L — несколько дней, XL — больше недели.
   `FORCE_COLOR`, `NO_COLOR` и локали по тестам CLI.
 
 **T2. Устойчивость к нагрузке.**
-- *Проблема*: при load average ≈ 30 падают 20 тестов (и ещё BUG-852). Внутри
+- *Проблема*: под нагрузкой (load average 18–42) за два прогона по времени
+  упали 22 разных теста, а от прогона к прогону набор меняется. Плюс BUG-852. Внутри
   догфудинга Mootant те же тесты обрывают прогон.
 - *Чем подтверждено*: load-1 (`analysis/data/tests/load-1-failures.tsv`),
   мои прогоны (`cli/index.test.ts:211`, `get-max-display-width.test.ts:17`,
@@ -998,9 +1033,13 @@ L — несколько дней, XL — больше недели.
   раздела 1 по смыслу ломаются 2 теста, остальные 137–186 — правка пути.
 
 **Что не проверено.**
-- Тихий прогон с длительностями по файлам и тестам (quiet-2 координатора)
-  и второй прогон под нагрузкой (load-2) к моменту написания не появились.
-  Ранжирование времени — по load-1, тихий wall — по этапу 0.
+- Тихий прогон с длительностями по файлам и тестам (quiet-2 координатора) к
+  моменту написания не появился. Ранжирование времени — по load-1 и e-load,
+  тихий wall — по этапу 0. Когда quiet-2 и load-2 появятся,
+  `node analysis/tools/tests/vitest-json.mjs auto load-1=… e-load=… load-2=…
+  quiet-2=…` даст сводку и список `unstable` для всех прогонов сразу.
+- Порог нагрузки, при котором начинаются падения: оба прогона шли при load
+  average 18–42 на 4 vCPU.
 - macOS/Windows: регистронезависимая ФС, пути с `\`. Тесты гонялись только на
   Linux.
 - Догфудинг больших модулей (`core/regex`, `core/run`) — раздел 4 /

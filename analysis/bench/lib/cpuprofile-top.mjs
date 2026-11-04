@@ -87,7 +87,7 @@ export function groupOf(url, functionName, mode = 'package') {
     let inner = file.slice(file.indexOf('/dist/') + 6).split('/')
     return `mootant/${inner.slice(0, inner.length > 2 ? 2 : 1).join('/')}`
   }
-  if (mode === 'module') return `project/${file}`
+  if (mode === 'module') return `project:${file}`
   let dir = path.posix.dirname(file).split('/').slice(-2).join('/')
   return `project/${dir}`
 }
