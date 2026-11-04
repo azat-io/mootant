@@ -1,1 +1,16 @@
 {"id": "wawq8gmd0fy5", "rule": "solitary", "file": "rules/sort-export-attributes.ts", "status": "survived", "tests": ["test/rules/sort-export-attributes.test.ts"], "seconds": 5.3, "tail": ""}
+{"id": "erwx3jj103wt", "rule": "solitary", "file": "rules/sort-export-attributes.ts", "status": "survived", "tests": ["test/rules/sort-export-attributes.test.ts"], "seconds": 4.4, "tail": ""}
+{"id": "yxxhhp0a5bbg", "rule": "solitary", "file": "rules/sort-export-attributes.ts", "status": "survived", "tests": ["test/rules/sort-export-attributes.test.ts"], "seconds": 3.6, "tail": ""}
+{"id": "tqnt6hhsyqaj", "rule": "solitary", "file": "rules/sort-export-attributes.ts", "status": "survived", "tests": ["test/rules/sort-export-attributes.test.ts"], "seconds": 3.6, "tail": ""}
+{"id": "zz8c49pdbswc", "rule": "solitary", "file": "rules/sort-export-attributes.ts", "status": "survived", "tests": ["test/rules/sort-export-attributes.test.ts"], "seconds": 3.9, "tail": ""}
+{"id": "0r7v27wcab8m", "rule": "solitary", "file": "rules/sort-heritage-clauses.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 4.2, "tail": ""}
+{"id": "m3b8y2p1vbcr", "rule": "solitary", "file": "rules/sort-heritage-clauses.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 4.2, "tail": ""}
+{"id": "8hmgfvm4xss2", "rule": "error-message", "file": "rules/sort-heritage-clauses/compute-node-name.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 5.0, "tail": ""}
+{"id": "qdas8mv63qqd", "rule": "error-message", "file": "rules/sort-heritage-clauses/compute-node-name.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 4.3, "tail": ""}
+{"id": "zqqax749xpwd", "rule": "error-message", "file": "rules/sort-heritage-clauses/compute-node-name.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 4.1, "tail": ""}
+{"id": "g5am4apkrvdk", "rule": "solitary", "file": "rules/sort-heritage-clauses/sort-heritage-clause.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 4.5, "tail": ""}
+{"id": "3w58znkqk60f", "rule": "solitary", "file": "rules/sort-heritage-clauses/sort-heritage-clause.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 6.4, "tail": ""}
+{"id": "gebe0bh5adtf", "rule": "solitary", "file": "rules/sort-heritage-clauses/sort-heritage-clause.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 7.0, "tail": ""}
+{"id": "96k3gsrpa4nq", "rule": "solitary", "file": "rules/sort-heritage-clauses/sort-heritage-clause.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 5.0, "tail": ""}
+{"id": "dvkvwbtjeek3", "rule": "solitary", "file": "rules/sort-heritage-clauses/sort-heritage-clause.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 4.7, "tail": ""}
+{"id": "xe1hj4b0j2db", "rule": "solitary", "file": "rules/sort-heritage-clauses/sort-heritage-clause.ts", "status": "survived", "tests": ["test/rules/sort-heritage-clauses.test.ts"], "seconds": 5.3, "tail": ""}
