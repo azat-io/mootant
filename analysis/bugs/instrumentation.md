@@ -37,8 +37,7 @@ medium; таблица сущностей компилятора Svelte: 41 КБ
 (4) нет source map — номера строк в stack trace неверны у 43 % строк кода
 Mootant (BUG-102, low); (5) проверка сайта не гигиенична к привязке
 `globalThis` (BUG-101, low; независимо найдено как BUG-904); (6)
-NamedEvaluation (BUG-103, low); (7) id зависят от cwd без конфига (BUG-105,
-low).
+NamedEvaluation (BUG-103, low).
 
 ## Таблица находок
 
@@ -49,7 +48,6 @@ low).
 | BUG-102 | Switched-текст сдвигает строки (многострочные replacement'ы вставляются рядом с оригиналом) и колонки, source map не строится, Vitest-плагин возвращает `map: null` (для Vite это «позиции не менялись»), node:test отдаёт текст как есть → stack trace указывает не туда; тест, читающий номер строки тестируемого кода, падает в dry run → все мутанты файла `Error` | low | подтверждён | `core/instrument/instrument-file.ts:44,51-76`, `adapters/vitest/create-mootant-plugin.ts:49`, `adapters/node-test/preload/create-source-switcher.ts:54-56` | `test/repros/BUG-102.test.ts`; `test/repros/BUG-102/run.sh` |
 | BUG-103 | Вывод имени (NamedEvaluation) не работает через `?:`: при активном мутанте logical-operator, оставляющем анонимную функцию/класс в инициализаторе (`let g = flag \|\| function () {}` → `function () {}`), `g.name === ''`, а у физически применённого мутанта `'g'` | low | подтверждён | `core/instrument/render-mutant-range.ts:91-95` | `test/repros/BUG-103.test.ts`; trap t07 (9 из 59 мутантов) |
 | BUG-104 | Размер switched-текста (и отчёта `list --json`) квадратичен по числу элементов литерала: replacement'ы `object-property`/`array-element` — весь литерал без одного элемента. Svelte `entities.js` (41 КБ, `--preset strict`): switched 92 МБ, `list --json --verbose` 419 МБ, 3,9 ГБ RSS | medium | подтверждён | `core/instrument/render-mutant-range.ts:85-95`, `core/instrument/create-switched-files.ts:74-104`, `core/mutators/object-property.ts`, `core/mutators/array-element.ts` | `test/repros/BUG-104.test.ts`; `analysis/tools/instrument/switch-size.mjs` |
-| BUG-105 | Id мутантов зависят от каталога запуска, если у проекта нет файла конфигурации: корень = cwd (`core/config/prepare-run.ts:133`), display path входит в хэш id (`core/identity/create-mutant-id.ts:58-66`) → из подкаталога все id другие, `--mutant` и кэш (`.mootant` тоже в cwd) не находят прежние | low | подтверждён | `core/config/prepare-run.ts:133`, `core/identity/create-mutant-id.ts:58-66` | `analysis/tools/instrument/i4-determinism.mjs` (данные `analysis/data/instrument/i4-traps.json`) |
 | BUG-106 | Литерал регулярного выражения, начинающийся с `<!--` (вырезание HTML-комментариев), в switched-тексте стоит сразу после `(`; oxc (0.156–0.157, им разбирают модули Vite 8/rolldown) в режиме `unambiguous` читает `(/<!--` как HTML-комментарий → «HTML comments are not allowed in modules», тест-файлы не загружаются, все мутанты файла `Error` (`instrumentation-break`). Триггер — и оригинал (`/<!--[\s\S]*?-->/g`), и replacement `regex-pattern` (`/^(?:-?>)+\|<!--\|…/` → `/<!--\|…/`) | medium | подтверждён | `core/instrument/render-mutant-range.ts:91-95`; апстрим — лексер oxc | `test/repros/BUG-106.test.ts`; `test/repros/BUG-106/run.sh`; I1: vuejs/core `packages/shared/src/escapeHtml.ts`, svelte `compiler/phases/1-parse/index.js`, `compiler/preprocess/index.js` |
 
 Bug-prompts (medium): `analysis/bug-prompts/BUG-100.md`,
@@ -184,8 +182,14 @@ CLI `mootant list --json --verbose` (тот же конфиг и пресет, �
    не подтвердилась).
 
 6. **I4 (i4-determinism.mjs)** — два `list` подряд: идентичные id, тексты и
-   порядок (992 мутанта); обратный порядок путей: идентично; запуск из
-   подкаталога: другие id (BUG-105).
+   порядок (992 мутанта); обратный порядок путей: идентичные id и порядок.
+   Запуск из подкаталога в проекте без конфига даёт другие id (992 из 992):
+   корень = cwd (`core/config/prepare-run.ts:133`), display path входит в
+   хэш (`core/identity/create-mutant-id.ts:58-66`). Это задокументировано
+   (`docs/content/guide/configuration.mdx:126-130`: «Without a configuration
+   file, the current directory is the root»), поэтому не баг, но ловушка:
+   `--mutant <id>` и кэш (`node_modules/.cache/mootant` в корне) из другого
+   каталога не находятся. В проектах с конфигом id стабильны.
 
 ## Подробности по находкам
 
@@ -288,18 +292,6 @@ instrumented dry run → `instrumentation-break`, все мутанты файл
 которого `JSON.stringify` бросает). Отдельно для раздела производительности:
 `list` одного `entities.js` занимает 50–56 с даже под recommended —
 генерация мутантов нелинейна на больших литералах.
-
-### BUG-105 — id зависят от cwd без конфигурации
-
-`prepareRun` берёт корень как каталог найденного конфига, иначе `cwd`
-(`core/config/prepare-run.ts:133`); display path относителен к корню и входит
-в хэш id (`core/identity/create-mutant-id.ts:58-66`). В проекте без
-`mootant.config.*` запуск `mootant list t/misc.js` из `src/` даёт другие id
-(`probe.js` vs `src/probe.js`, 992 из 992 id отличаются). Последствия:
-`--mutant <id>` из другого каталога не находит мутант, кэш (`.mootant` тоже
-в корне = cwd) не переиспользуется. Проекты с конфигом не затронуты.
-Исправление: при отсутствии конфига искать корень по ближайшему
-`package.json`/`.git`.
 
 ### BUG-106 — `(/<!--` и лексер oxc
 

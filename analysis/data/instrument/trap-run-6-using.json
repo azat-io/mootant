@@ -1,0 +1,19 @@
+{
+ "summary": {
+  "files": 1,
+  "mutants": 30,
+  "aDiffs": 0,
+  "bDiffs": 0,
+  "bLooseOnly": 0,
+  "rawUnparsable": 0
+ },
+ "results": [
+  {
+   "file": "src/traps/t21-using.ts",
+   "mutants": 30,
+   "original": "{\"r\":[2,3],\"log\":[\"work 2\",\"dispose a1\",\"work 4\",\"dispose b\",\"dispose a2\"]}",
+   "a": [],
+   "b": []
+  }
+ ]
+}

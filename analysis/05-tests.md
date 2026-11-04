@@ -470,7 +470,7 @@ mutants; fix them first (2 tests)»: `cli/index.test.ts:211` и
 | `NODE_OPTIONS` | порог branches из-за `adapters/node-test/start-node-test-session.ts:119,167` | в `test/adapters/node-test/start-node-test-session.test.ts` явно задать оба состояния: `vi.stubEnv('NODE_OPTIONS', undefined)` в одном тесте и непустое значение в другом. Проверить на `node-test/index.test.ts` и `get-node-cache-inputs` — они тоже читают `NODE_OPTIONS` (`adapters/node-test/get-node-cache-inputs.ts:69`) | S |
 | нагрузка/время | строки 1–12 таблицы выше | (а) `testTimeout: 15_000` глобально или явные таймауты у семи CPU-тяжёлых тестов; (б) уменьшить «тесты масштаба» до 130–150 тыс. элементов (лимит spread в V8 на этой машине — 130 000, проверено); (в) `TIME_LIMIT` в `test/helpers/run-program.ts:8` и лимит 4 000 мс эталона node:test (`test/adapters/node-test/index.test.ts:140`) масштабировать множителем из окружения (`MOOTANT_TEST_TIME_FACTOR`) или поднять до 3–5 с — «зависание» в этих тестах — бесконечный цикл, его ловит любой лимит; (г) `runner.test.ts:693` — сравнивать `Math.round(beat.budget)`, как уже сделано на `:1499` | S–M |
 | `/tmp` | `test/fixtures/equivalence/shared/test/render.test.ts:14` и `test/fixtures/node-test/shared/test/render.test.js:16` оставляют `mootant-render-<sha1(url)>.txt` — по файлу на каждую копию фикстуры (эталон копирует проект во временный каталог со случайным именем). Сейчас на машине их 95 | в `finally` добавить `await rm(output, { force: true })` рядом с `rm(lock)` | S |
-| пользовательский git-конфиг | `test/helpers/create-git-repository.ts:53-65` фиксирует только `user.*` и `commit.gpgSign`; глобальные `core.hooksPath`, `init.templateDir`, `core.autocrlf` разработчика на тесты влияют (гипотеза, не воспроизводил) | `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1` в env `execFileSync` хелпера, как уже сделано в `find-git-root.test.ts:59-61` | S |
+| глобальный git-конфиг | `test/helpers/create-git-repository.ts:53-65` фиксирует только `user.*` и `commit.gpgSign`. **Подтверждено** (BUG-863): с глобальным `core.hooksPath`, где `pre-commit` делает `exit 1`, падают 8 из 38 тестов `test/core/git/*` и `test/core/list-mutants.test.ts`; без хука — 38/38 | `-c core.hooksPath=/dev/null` в хелпере или `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1` в env `execFileSync`, как уже сделано в `find-git-root.test.ts:59-61`. Тесты `read-changed-lines`, которые проверяют устойчивость к конфигу, задают его локально через `git config` и не пострадают | S |
 
 ## 5.5. Пробелы покрытия: догфудинг мутантами
 
@@ -846,8 +846,6 @@ L — несколько дней, XL — больше недели.
   Ранжирование времени — по load-1, тихий wall — по этапу 0.
 - Матрица окружений (`analysis/tools/tests/env-matrix.sh`: `TERM`, `CI`,
   `FORCE_COLOR`, `NO_COLOR`, локаль `tr_TR`) — см. §5.4.2, если успела.
-- Влияние глобального git-конфига разработчика на тесты с настоящим git
-  (гипотеза, §5.4.1).
 - macOS/Windows: регистронезависимая ФС, пути с `\`. Тесты гонялись только на
   Linux.
 - Догфудинг больших модулей (`core/regex`, `core/run`) — раздел 4 /
