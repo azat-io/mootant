@@ -99,7 +99,7 @@ define_point() {
     test)
       KIND=plain
       CMD="${TEST_CMD[*]}"
-      POINT_RUNS=$((RUNS > 5 ? RUNS : 5))
+      POINT_RUNS=${BENCH_TEST_RUNS:-5}
       SETUP="${TEST_CMD[*]} >/dev/null 2>&1 || true" # warms the page cache
       ;;
     m-cold)
@@ -126,7 +126,7 @@ define_point() {
       ;;
     m-list-text | m-list-json)
       KIND=plain
-      POINT_RUNS=$((RUNS > 5 ? RUNS : 5))
+      POINT_RUNS=${BENCH_TEST_RUNS:-5}
       CMD="node node_modules/mootant/bin/mootant.js list ${MUTATE[*]}"
       [ "$point" = m-list-json ] && CMD="$CMD --json"
       ;;

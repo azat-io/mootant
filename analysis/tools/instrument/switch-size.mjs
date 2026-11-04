@@ -7,7 +7,7 @@ import path from 'node:path'
 import { importDist, loadVite, MOOTANT_ROOT } from './lib.mjs'
 let [file, verbose] = process.argv.slice(2)
 let t0 = Date.now()
-let out = execFileSync(process.execPath, [path.join(MOOTANT_ROOT, 'bin/mootant.js'), 'list', file, '--json', '--verbose'], { encoding: 'utf8', maxBuffer: 1 << 30 })
+let out = execFileSync(process.execPath, [path.join(MOOTANT_ROOT, 'bin/mootant.js'), 'list', file, '--json', '--verbose', ...(process.env.PRESET ? ['--preset', process.env.PRESET] : [])], { encoding: 'utf8', maxBuffer: 1 << 30 })
 let t1 = Date.now()
 let report = JSON.parse(out)
 let { instrumentFile } = await importDist('core/instrument/instrument-file.js')

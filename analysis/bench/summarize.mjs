@@ -120,6 +120,39 @@ function countStryker(report) {
   }
 }
 
+// Phases of a Stryker run from its log (stdout, one-second timestamps):
+// Stryker 10.1.1 leaves the report's `performance` field out.
+function readStrykerPhases(file, meta) {
+  if (!existsSync(file) || meta === null) return null
+  let marks = {}
+  let pattern = /(\d\d):(\d\d):(\d\d) \(\d+\) INFO (\w+)\S* (.*)$/u
+  for (let raw of readFileSync(file, 'utf8').split('\n')) {
+    let line = raw.replace(/\u001b\[[0-9;]*m/gu, '')
+    let match = pattern.exec(line)
+    if (!match) continue
+    let [, hh, mm, ss, source, text] = match
+    let day = new Date(meta.start * 1000)
+    let at = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), Number(hh), Number(mm), Number(ss))
+    if (at < meta.start * 1000 - 3_600_000) at += 86_400_000
+    if (source === 'DryRunExecutor' && text.startsWith('Starting initial test run')) marks.dryStart = at
+    else if (source === 'DryRunExecutor' && text.startsWith('Initial test run succeeded')) {
+      marks.dryEnd = at
+      let ran = /Ran (\d+) tests in (\d+) seconds? \(net ([\d.]+) ms, overhead ([\d.]+) ms\)/u.exec(text)
+      if (ran) marks.dryTests = Number(ran[1])
+    } else if (source === 'MutationTestExecutor' && text.startsWith('Done in')) marks.done = at
+    else if (source === 'Instrumenter' && text.startsWith('Instrumented')) marks.instrumented = at
+  }
+  if (marks.dryStart === undefined || marks.done === undefined) return null
+  let start = meta.start * 1000
+  return {
+    setup: marks.dryStart - start,
+    initialRun: (marks.dryEnd ?? marks.dryStart) - marks.dryStart,
+    mutation: marks.done - (marks.dryEnd ?? marks.dryStart),
+    after: meta.end * 1000 - marks.done,
+    dryTests: marks.dryTests ?? null,
+  }
+}
+
 function describeRun(dir, k, kind) {
   let report = readJson(path.join(dir, `run-${k}.json`))
   let time = readTime(path.join(dir, `run-${k}.time`))
@@ -131,6 +164,9 @@ function describeRun(dir, k, kind) {
   if (report !== null) {
     if (kind === 'mootant' && report.summary) counted = countMootant(report)
     else if (kind === 'stryker' && report.files) counted = countStryker(report)
+  }
+  if (counted !== null && kind === 'stryker' && counted.phases === null) {
+    counted.phases = readStrykerPhases(path.join(dir, `run-${k}.out`), meta)
   }
   return { k, report: counted, time, mem, meta, units }
 }
@@ -255,16 +291,15 @@ for (let project of projects.sort()) {
   }
   let stryker = points.filter(point => point.kind === 'stryker' && point.runs.some(run => run.report))
   if (stryker.length > 0) {
-    out.push('Фазы Stryker (поле performance отчёта, медианы, с):', '')
+    out.push('Фазы Stryker (по журналу: setup = старт процесса → «Starting initial test run», initialRun = dry run, mutation = до «Done in», вне фаз = после «Done»; медианы, с):', '')
     out.push('| точка | setup | initialRun | mutation | вне фаз | доля initialRun | static-мутантов | CompileError |')
     out.push('|---|---|---|---|---|---|---|---|')
     for (let point of stryker) {
       let reports = point.runs.map(run => run.report).filter(Boolean)
       let phase = name => median(reports.map(report => report.phases?.[name] ?? NaN))
       let wall = wallStats(point)
-      let sumPhases = ['setup', 'initialRun', 'mutation'].map(phase).reduce((a, b) => (a ?? 0) + (b ?? 0), 0)
       out.push(
-        `| ${point.point} | ${seconds(phase('setup'))} | ${seconds(phase('initialRun'))} | ${seconds(phase('mutation'))} | ${wall ? seconds(wall.median - sumPhases) : '–'} | ${wall ? percent(phase('initialRun') / wall.median) : '–'} | ${reports[0].statics} | ${reports[0].compileErrors} |`,
+        `| ${point.point} | ${seconds(phase('setup'))} | ${seconds(phase('initialRun'))} | ${seconds(phase('mutation'))} | ${seconds(phase('after'))} | ${wall ? percent(phase('initialRun') / wall.median) : '–'} | ${reports[0].statics} | ${reports[0].compileErrors} |`,
       )
     }
     out.push('')

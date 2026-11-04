@@ -47,6 +47,10 @@ bench_project() {
   unset PROFILE_MUTATE
   # shellcheck source=/dev/null
   . "$file"
+  # BENCH_SUBSET=1: the small subset of smoke runs and profiles.
+  if [ "${BENCH_SUBSET:-0}" = 1 ] && declare -p PROFILE_MUTATE >/dev/null 2>&1; then
+    MUTATE=("${PROFILE_MUTATE[@]}")
+  fi
   PROJECT_DIR=$BENCH_PROJECTS/$NAME
   PROJECT_CONF=$BENCH_HOME/projects/$NAME
 }
