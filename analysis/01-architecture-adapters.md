@@ -256,6 +256,7 @@ JSDoc-описание семантики). Ядро вызывает адапт
 | `incomplete: 'crash'` вызван мутантом | **`Killed` без проверки `reached`**, даже если процесс убит извне (OOM, `kill`) — см. BUG-602 | `core/run/read-isolated-unit.ts:42-44` |
 | `DryFile.dependencies` полны | устаревший кэш | `core/cache/prepare-run-cache.ts:129-135` |
 | Покрытие полно | мутант без покрытия или не тот файл первым | `core/run/read-dry-run.ts:82-95` |
+| `dryRun({files: null, related})` находит **все** тестовые файлы, которые могут загрузить мутируемые | ложный `NoCoverage`; у Vitest набор зависит даже от выбора мутантов (BUG-201, `data/isolation.md`) | `types/adapter/dry-run-request.d.ts` (`related`), `adapters/vitest/run-dry.ts:231-236`; ср. node-test: `adapters/node-test/run-dry.ts:75-80` |
 | `DryRunRequest.repeat` поддержан, если `batch: true` | исключение из адаптера и падение `--fast` | `core/run-mutants.ts:234`, `core/run/run-dry-phase.ts:197`; `node-test` бросает: `adapters/node-test/run-dry.ts:58-62` |
 
 ### 3.5. Как ядро узнаёт, умеет ли раннер выбирать тест или только файл
@@ -443,12 +444,31 @@ SIGINT/SIGTERM/SIGHUP в CLI, который прерывает прогон, в
 
 Эксперимент с эталоном (физически применённые мутации, оба порядка, batch,
 параллельно) проводит агент-оракул: **[данные эксперимента:
-data/isolation.md]**. На 04:59 UTC в `analysis/data/isolation.md` опубликован
-только его разбор механизмов по коду — он независимо приходит к тем же
-выводам (процесс на юнит у Vitest 5 при `isolate: true`; batch может дать
-только ложные Killed/Timeout, но не ложные Survived; `crash` и `load-error`
-→ Killed без проверки `reached`); результаты прогонов — там же, когда
-появятся. Здесь — механизмы по коду и то, что из них следует.
+data/isolation.md]**. Его разбор механизмов по коду независимо приходит к тем же выводам, что и
+этот раздел, а результаты для Vitest (на 05:10 UTC) их подтверждают:
+
+* isolated-вердикты **не зависят** от соседних мутантов, порядка (`AB` = `BA`)
+  и `--concurrency` и совпадают с эталоном для модульного кэша, моков
+  (`vi.mock`, `vi.doMock`, `{ spy: true }`), `globalThis`, `process.env`,
+  прототипов и фейковых таймеров;
+* batch (`--fast`) даёт ожидаемые ложные Killed из-за состояния,
+  оставленного **контрольной** попыткой (пары counter и seen), а не вторым
+  мутантом; ложных Survived batch дать не может — выжившие перепроверяются
+  isolated (`core/run/run-batch-phases.ts:91-97`);
+* два отклонения касаются контракта, а не изоляции: (1) **набор тестовых
+  файлов dry run зависит от выбранных мутантов** — Vitest-адаптер трактует
+  подсказку `related` как точный фильтр статического графа
+  (`adapters/vitest/run-dry.ts:231-236`), и тест, достающий модуль через
+  `vi.importActual` в хелпере, выпадает (`NoCoverage` вместо `Killed`,
+  BUG-201 в `data/isolation.md`), хотя контракт обещает «those that may
+  import them run» (`types/adapter/dry-run-request.d.ts`); node-test в
+  первом dry run гоняет все файлы и этой проблемы не имеет; (2) лимит
+  вычислений сайтов превращает медленного, но проходящего мутанта (мемо
+  выключено → экспонента) в `Timeout (hit-limit)`, тогда как эталон
+  выживает — это вопрос классификации (`core/run/classify-try.ts:26-28`), а не
+  адаптера.
+
+Ниже — механизмы по коду и то, что из них следует.
 
 ### 5.1. Механизмы
 
