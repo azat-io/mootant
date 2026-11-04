@@ -1,0 +1,106 @@
+✔ isAdult (5.741392ms)
+✔ add (0.627007ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 41.592245
++ dry run  2 tests in 0.6s
+✖ isAdult (2.27187ms)
+✖ add (0.506014ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13.180792
+
+✖ failing tests:
+
+test at test/math.test.js:9:1
+✖ isAdult (2.27187ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///home/user/projects/cache/nt-outside-root/test/math.test.js:10:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/math.test.js:14:1
+✖ add (0.506014ms)
+  e [MootantBailError]: mootant skipped the test, since an earlier test already failed with the mutant active.
+      at t (file:///home/user/projects/cache/nt-outside-root/node_modules/mootant/dist/adapters/node-test/preload/create-bail-error.js:5:9)
+      at Object.open (file:///home/user/projects/cache/nt-outside-root/node_modules/mootant/dist/adapters/node-test/preload/create-try-tracker.js:51:25)
+      at TestContext.<anonymous> (file:///home/user/projects/cache/nt-outside-root/node_modules/mootant/dist/adapters/node-test/preload/preload.js:59:5)
+      at TestHook.runInAsyncScope (node:async_hooks:214:14)
+      at TestHook.run (node:internal/test_runner/test:1047:25)
+      at TestHook.run (node:internal/test_runner/test:1354:18)
+      at Test.runHook (node:internal/test_runner/test:965:20)
+      at Test.run (node:internal/test_runner/test:1022:27)
+      at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+      at Test.postRun (node:internal/test_runner/test:1173:19)
+✔ isAdult (1.452895ms)
+✔ add (0.652908ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12.338706
+✔ isAdult (4.752325ms)
+✔ add (0.672813ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 31.848502
+✔ isAdult (17.871848ms)
+✖ add (1.229331ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 69.788105
+
+✖ failing tests:
+
+test at test/math.test.js:14:1
+✖ add (1.229331ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 4
+  
+      at TestContext.<anonymous> (file:///home/user/projects/cache/nt-outside-root/test/math.test.js:15:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 4,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
++ testing 4 mutants  4/4 test runs in 1.4s
