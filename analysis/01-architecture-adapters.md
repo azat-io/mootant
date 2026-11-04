@@ -9,7 +9,45 @@
 > на 170ec52. Пометки: **[подтверждено]** — есть запуск/трасса/тест;
 > **[по коду]** — вывод из чтения кода; **[гипотеза]** — не проверено.
 
-<!-- SECTION:summary -->
+## Резюме
+
+* **Граница проведена правильно по смыслу**: ядро планирует и решает,
+  адаптер исполняет и сообщает сырые факты (`types/adapter/test-adapter.d.ts:4-9`);
+  ядро перепроверяет лимит вычислений, контрольные попытки batch,
+  подтверждает таймауты и проверяет настоящие провалы без инструментирования.
+  Это главное достоинство, его нужно сохранить.
+* **Технически контракт — «внутренний API, который случайно экспортирован»**:
+  нет версии, результаты не проверяются (BUG-605), четыре возможности сжаты в
+  один `batch: boolean`, `runBatch` обязателен даже без batch, отмены нет,
+  встроенные адаптеры берут `core/*` по внутренним путям, ядро знает
+  раскладку папок адаптеров (`core/run/select-run-files.ts:27-28`).
+* Ядро **не знает**, умеет ли раннер выбирать тест: isolated всегда гоняет
+  весь файл (сознательно, ради состояния, оставленного мутантом), batch
+  требует выбора по id, повторов и смены мутанта между попытками.
+* Путь одного мутанта прослежен в обоих адаптерах декоратором поверх
+  публичного контракта и V8-покрытием: вердикты 10 мутантов совпали, рабочая
+  часть обоих адаптеров использует один и тот же набор из 5 модулей `shared`.
+* **Отмена не имеет владельца**: каталог `mootant-*` остаётся при любом
+  прерывании (BUG-600), а SIGTERM/SIGHUP оставляют бесконечно крутящиеся
+  сироты зависших юнитов (BUG-601, Vitest — SIGTERM и SIGHUP, node:test —
+  SIGHUP).
+* **Смерть процесса юнита = Killed** без повтора: внешний SIGKILL превращает
+  выжившего мутанта в убитого в обоих адаптерах (BUG-602).
+* **Одно правило — два кода** с разным поведением: бюджет сторожа dry run
+  (node:test обрывает прогон на честно долгом тесте, BUG-603), таймаут хука
+  (`Timeout` против `Killed`, BUG-604). Остальные пары (dry run, кэш,
+  детект, чтение попыток) различаются по делу и переносить их не нужно.
+* Производительность: главное переиспользование уже есть (рантайм-
+  переключение + общий кэш трансформаций Vite); на каждый юнит заново
+  создаётся процесс и инициализируется раннер, и на маленьких файлах это
+  доминирует (индикативно 454/91 мс у Vitest). Контракт мешает потоковому
+  исполнению и префорку — места для цифр раздела 4 отмечены.
+* Rstest 0.12.6 подключается через текущий контракт за **L** (проверено на
+  фикстуре: путь теста в setup-файле, активация мутанта, свежий процесс; но
+  `run()` пересобирает движок и не запускает файл дважды), Jest 30.5.2 — за
+  **XL** (переиспользуемые воркеры, обёртки окружения и трансформеров). С
+  целевым контрактом и `mootant/adapter-kit` — **M** и **L**.
+
 
 ## 0. Методика
 
@@ -33,7 +71,7 @@
    `adapters/shared/*` и адаптера выполнялись в каком процессе
    (`tools/v8-modules.mjs`).
 4. **Статический анализ импортов** адаптеров в `core/*` и `adapters/shared/*`
-   (раздел 2.3) и чтение мест вызова в ядре.
+   (раздел 2) и чтение мест вызова в ядре.
 
 ## 1. Путь одного мутанта от ядра до вердикта
 
@@ -118,14 +156,14 @@ JSDoc-описание семантики). Ядро вызывает адапт
 | Операция | Обязательна | Кто вызывает | Сколько раз | Комментарий |
 |---|---|---|---|---|
 | `TestAdapter.start(context)` | да | `core/run-mutants.ts:275` | 1 | контекст: `files` (живой массив, ядро дописывает его после старта: `core/run-mutants.ts:394`), `workDirectory`, `concurrency`, `root`, колбэки |
-| `TestAdapter.batch` | да | `core/run-mutants.ts:234`, `core/run/create-run-state.ts` (через `batch`) | — | единственный флаг возможностей |
+| `TestAdapter.batch` | да | `core/run-mutants.ts:234, 468` (→ `classifyMutants`) | — | единственный флаг возможностей |
 | `TestAdapter.name` / `version` | `name` да | отчёты, ключ кэша `core/cache/prepare-run-cache.ts:159-163` | — | |
 | `AdapterSession.listTestFiles()` | да | `core/run-mutants.ts:378` | 1 | тестовые и setup-файлы: их не мутируют (`core/run/select-run-files.ts:55-59`) |
 | `AdapterSession.dryRun(request)` | да | `core/run/run-dry-phase.ts:482` | 1–5 | повтор при `--fast`, проверка без инструментирования, повтор без сломанных файлов |
 | `AdapterSession.cacheInputs()` | нет | `core/cache/prepare-run-cache.ts:116-119` | 1 | без неё кэш выключен |
 | `AdapterSession.runIsolated(plan)` | да | `core/run/run-isolated-rounds.ts:101` | по раунду | раунды 1, 1, 2, 4, … файлов на мутанта (`core/run/run-isolated-rounds.ts:69`) |
 | `AdapterSession.runBatch(plan)` | **да по типу**, по смыслу — только при `batch: true` | `core/run/run-batch-phases.ts:82, 166` | фазы 1–2, ≤2 восстановления, подтверждение | `node-test` вынужден реализовать заглушку-исключение: `adapters/node-test/start-node-test-session.ts:206-207` |
-| `AdapterSession.close()` | да | `core/run-mutants.ts:321` (finally) | 1 | «Safe to call twice» (`types/adapter/adapter-session.d.ts:56-58`) |
+| `AdapterSession.close()` | да | `core/run-mutants.ts:321` (finally) | 1 | «Safe to call twice» (`types/adapter/adapter-session.d.ts:54-57`) |
 | `diagnostics`, `workers`, `version` | нет | `core/run-mutants.ts:382, 462, 544` | — | `diagnostics` читается один раз, сразу после `listTestFiles` |
 | `context.onUnitEnd(end?)` | нет | `core/run-mutants.ts:276-288` | на юнит | только прогресс/живые счётчики (`core/run/preview-isolated-unit.ts`) |
 | `context.onOutput(text, file)` | нет | `core/run-mutants.ts:289-295` | — | вывод тестов |
@@ -145,8 +183,8 @@ JSDoc-описание семантики). Ядро вызывает адапт
 | Что | Формат | Кто создаёт | Где используется | Замечание |
 |---|---|---|---|---|
 | id мутанта | строка ядра | `core/identity/*` | `IsolatedUnit.mutant`, `BatchTest.mutants`, `TryFacts.mutant`, `covers`, `runtime.active` | адаптер передаёт его в рабочий процесс непрозрачно |
-| id теста | **определяет адаптер** | Vitest — `RunnerTestCase.id` (позиционный хеш Vitest), `adapters/vitest/run-dry.ts:158`; node:test — дайджест `(root, file, fullName, occurrence)`, `adapters/node-test/get-test-id.ts` (через `core/cache/create-digest`) | `BatchTest.id`, `TryFacts.test`, кэш (`recordBatch`) | контракт требует лишь «stable across runs while the file is unchanged» (`types/adapter/dry-test.d.ts:31-34`); уникальность внутри файла не оговорена, но `core/run/read-dry-run.ts:57` молча перезапишет дубликат |
-| ключ тестового файла | `file` или `file\0project` | ядро, `core/run/get-test-file-key.ts:16-21` | весь планировщик | понятие «проект» — из Vitest; `node-test` всегда `''` (`adapters/node-test/build-dry-file.ts:98`) |
+| id теста | **определяет адаптер** | Vitest — `RunnerTestCase.id` (позиционный хеш Vitest), `adapters/vitest/run-dry.ts:158`; node:test — дайджест `(root, file, fullName, occurrence)`, `adapters/node-test/get-test-id.ts` (через `core/cache/create-digest`) | `BatchTest.id`, `TryFacts.test`, кэш (`recordBatch`) | контракт требует лишь «stable across runs while the file is unchanged» (`types/adapter/dry-test.d.ts:32-35`); уникальность внутри файла не оговорена, но `core/run/read-dry-run.ts:57` молча перезапишет дубликат |
+| ключ тестового файла | `file` или `file\0project` | ядро, `core/run/get-test-file-key.ts:12-17` | весь планировщик | понятие «проект» — из Vitest; `node-test` всегда `''` (`adapters/node-test/build-dry-file.ts:98`) |
 | индекс юнита | позиция в `plan.units` | ядро | `IsolatedFacts.unit`, `BatchResult.*.unit`, `UnitEnd.unit` | диапазон не проверяется (3.4) |
 
 ### 3.3. Покрытие, результаты, ошибки
@@ -194,8 +232,8 @@ JSDoc-описание семантики). Ядро вызывает адапт
 | `DryTest.tries` не пуст | `TypeError: Cannot read properties of undefined (reading 'failed')` | `core/run/run-dry-phase.ts:589`, `core/run/read-dry-run.ts:66-77` |
 | Индексы юнитов в диапазоне | `TypeError` в `run-batch-phases` / `apply-batch-result`; в `onUnitEnd` — исключение внутри колбэка адаптера | `core/run/run-batch-phases.ts:168`, `core/run/apply-batch-result.ts:86, 279`, `core/run/preview-isolated-unit.ts:25-27` |
 | Дубликаты `IsolatedFacts.unit` | последний молча побеждает | `core/run/apply-isolated-result.ts:52` |
-| `reached`, `failed`, `timedOut`, `skipped` честны | неверный вердикт; «expected to fail» уже перевёрнут адаптером | `types/adapter/try-facts.d.ts:41-55` |
-| Юнит isolated — свежий граф модулей с самой загрузки | ложные вердикты от общего состояния | `types/adapter/isolated-plan.d.ts:3-10` |
+| `reached`, `failed`, `timedOut`, `skipped` честны | неверный вердикт; «expected to fail» уже перевёрнут адаптером | `types/adapter/try-facts.d.ts:22-52` |
+| Юнит isolated — свежий граф модулей с самой загрузки | ложные вердикты от общего состояния | `types/adapter/isolated-plan.d.ts:3-11` |
 | Два юнита одного файла не идут одновременно | ложные вердикты от общих файлов/портов | `types/adapter/adapter-session.d.ts:14-19` |
 | `incomplete: 'crash'` вызван мутантом | **`Killed` без проверки `reached`**, даже если процесс убит извне (OOM, `kill`) — см. BUG-602 | `core/run/read-isolated-unit.ts:42-44` |
 | `DryFile.dependencies` полны | устаревший кэш | `core/cache/prepare-run-cache.ts:129-135` |
@@ -205,7 +243,7 @@ JSDoc-описание семантики). Ядро вызывает адапт
 ### 3.5. Как ядро узнаёт, умеет ли раннер выбирать тест или только файл
 
 Никак, кроме одного булева `TestAdapter.batch`
-(`types/adapter/test-adapter.d.ts:25-28`). Фактически контракт содержит **две
+(`types/adapter/test-adapter.d.ts:25-29`). Фактически контракт содержит **две
 разные модели гранулярности**, и флаг `batch` неявно включает целый набор
 возможностей:
 
@@ -228,13 +266,13 @@ JSDoc-описание семантики). Ядро вызывает адапт
 | Место | Что знает | Чем мешает |
 |---|---|---|
 | `core/run/select-run-files.ts:27-28` (`SELF_RUNTIME_PATTERN`) | раскладку папок адаптеров: `adapters/<имя>/worker/`, `adapters/<имя>/runner.` — раскладку **Vitest**; не покрывает `adapters/node-test/preload/` и `adapters/shared/*`, которые тоже исполняются в рабочих процессах | новый адаптер с другой раскладкой должен править ядро; запуск из исходников может переключить код самого mootant |
-| `core/run/run-dry-phase.ts:489` | текст «did not finish within 60 s plus its own timeout and the timeouts of its hooks» — верно для Vitest (`adapters/vitest/runner.ts:985-993`), неверно для `node:test`, где к бюджету добавляется только `--test-timeout` (`adapters/node-test/get-dry-deadline.ts:17-28`) | сообщение вводит в заблуждение; см. BUG-601 |
+| `core/run/run-dry-phase.ts:489` | текст «did not finish within 60 s plus its own timeout and the timeouts of its hooks» — верно для Vitest (`adapters/vitest/runner.ts:989-998`), неверно для `node:test`, где к бюджету добавляется только `--test-timeout` (`adapters/node-test/get-dry-deadline.ts:17-28`) | сообщение вводит в заблуждение, а честно долгий тест обрывает прогон: BUG-603 |
 | `types/adapter/*.d.ts` | словарь Vitest: «project», «worker-scoped fixtures», `aroundAll`; `DryFile.project` | терпимо: это документация семантики; `project` полезен и Jest/Rstest |
 | `types/mutant/diagnostic.d.ts:10-33` | закрытый union кодов диагностик (`config-overridden`, `worker-hang`, …) | адаптер третьей стороны не может завести свой код без правки ядра |
 | `cli/built-in-adapters.ts:3-4` | импортирует `adapters/*/score-*.ts` напрямую, мимо `index.ts` адаптера | CLI знает внутренние файлы адаптеров |
 | `cli/parse-arguments.ts:40-41` | справка «default: Vitest's maxWorkers, CPU cores - 1 for node:test» | каждое новое имя раннера — правка CLI |
 | `core/run-mutants.ts:237` | `fast` без `batch` → «runs every mutant isolated» | норм: формулировка общая |
-| Внутренности ядра, которые импортируют адаптеры (протечки) | `core/instrument/resolve-switched-text` (`adapters/vitest/create-mootant-plugin.ts:7`, `adapters/node-test/preload/create-source-switcher.ts:8`); `core/runtime/install-mutant-runtime` (`adapters/vitest/runner.ts:23`, `adapters/vitest/start-vitest-session.ts:18`, `adapters/node-test/preload/preload.ts:9`); `core/compare-code-units` (5 файлов); `core/cache/create-digest` (`adapters/node-test/get-test-id.ts:3`, `adapters/shared/index-environment-hashes.ts:2`); `core/run/compare-dry-entries` (`adapters/vitest/run-dry.ts:10`) | `resolveSwitchedText` и `installMutantRuntime` публичны (`core/index.ts:11`, `core/runtime/index.ts`), но встроенные адаптеры берут их по внутренним путям; `compareCodeUnits`, `createDigest`, `compareDryEntries` вообще не экспортируются — адаптер третьей стороны должен их копировать, а ключ кэша зависит от того, совпал ли дайджест |
+| Внутренности ядра, которые импортируют адаптеры (протечки) | `core/instrument/resolve-switched-text` (`adapters/vitest/create-mootant-plugin.ts:7`, `adapters/node-test/preload/create-source-switcher.ts:8`); `core/runtime/install-mutant-runtime` (`adapters/vitest/runner.ts:23`, `adapters/vitest/start-vitest-session.ts:18`, `adapters/node-test/preload/preload.ts:9`); `core/compare-code-units` (5 файлов); `core/cache/create-digest` (`adapters/node-test/get-test-id.ts:3`, `adapters/shared/index-environment-hashes.ts:2`); `core/run/compare-dry-entries` (`adapters/vitest/run-dry.ts:10`) | `resolveSwitchedText` и `installMutantRuntime` публичны (`core/index.ts:11`, `core/runtime/index.ts`), но встроенные адаптеры берут их по внутренним путям; `compareCodeUnits`, `createDigest`, `compareDryEntries` вообще не экспортируются — адаптер третьей стороны должен их копировать |
 
 Вывод по контракту: **граница проведена правильно по смыслу** (факты против
 решений, план против исполнения), но **технически она — «внутренний API,
@@ -405,7 +443,7 @@ data/isolation.md]**. Здесь — механизмы по коду и то, �
 обычном прогоне раннера, с одной разницей: мутант может испортить файл,
 который тест сам записал и который следующий юнит (другой мутант) прочтёт до
 перезаписи. Mootant отслеживает такие файлы для кэша (`DryFile.modified`,
-`types/adapter/dry-file.d.ts:39-46`), но не восстанавливает их между
+`types/adapter/dry-file.d.ts:34-41`), но не восстанавливает их между
 юнитами **[гипотеза; проверяется оракулом]**.
 
 ### 5.2. Как адаптер отличает падение теста от сбоя раннера
@@ -459,7 +497,7 @@ Stryker на Vitest: **переключение мутантов в рантай
 ### 6.3. Какие решения контракта мешают переиспользованию
 
 1. **`IsolatedUnit` = «свежий граф модулей с начала загрузки»**
-   (`types/adapter/isolated-plan.d.ts:3-10`). Формально это не требует
+   (`types/adapter/isolated-plan.d.ts:3-11`). Формально это не требует
    свежего процесса, но оба адаптера выполняют его свежим процессом — потому
    что глобальное состояние, слушатели `process.on`, таймеры и нативные модули
    переживают сброс графа. Это правильная цена за корректность; ускорять надо
@@ -510,10 +548,10 @@ Stryker на Vitest: **переключение мутантов в рантай
 | Выбор тестов и контролей в batch | ● план `core/run/plan-batch.ts:40-110` | | ● исполнение `[null, m1, null, …]` `adapters/vitest/runner.ts:640-647` | — | оставить |
 | Переключаемый текст | ● `createSwitchedFiles` | | ○ подача через Vite-плагин `adapters/vitest/create-mootant-plugin.ts:33-50` | ○ подача через module hooks + `_compile` `adapters/node-test/preload/install-module-hooks.ts:71-86` | оставить; `resolveSwitchedText` брать из публичного входа (`core/index.ts:11`) |
 | Активация мутанта в процессе | ○ рантайм `core/runtime/install-mutant-runtime.ts:18-31` | | ● `adapters/vitest/runner.ts:550, 846` | ● `adapters/node-test/preload/create-try-tracker.ts:149-152` | оставить |
-| Расписание юнитов: «никогда два юнита одного файла одновременно, в порядке плана» | ○ формулирует (`types/adapter/adapter-session.d.ts:14-19`) | | ● claim + waitForTurn + чередующий sequencer (`adapters/vitest/worker/claim-unit.ts:19-42`, `adapters/vitest/worker/wait-for-turn.ts:32-49`, `adapters/vitest/create-interleaved-sequencer.ts:18-80`) | ● ключ в пуле (`adapters/node-test/run-in-pool.ts:33-82`, `adapters/node-test/run-isolated.ts:96`) | оставить в адаптерах (у Vitest пулом владеет Vitest), но вынести claim/turn/пульс в `adapters/shared` для раннеров с собственным пулом (Rstest, Jest) и покрыть одним контрактным тестом |
+| Расписание юнитов: «никогда два юнита одного файла одновременно, в порядке плана» | ○ формулирует (`types/adapter/adapter-session.d.ts:14-19`) | | ● claim + waitForTurn + чередующий sequencer (`adapters/vitest/worker/claim-unit.ts:19-42`, `adapters/vitest/worker/wait-for-turn.ts:32-49`, `adapters/vitest/create-interleaved-sequencer.ts:18-76`) | ● ключ в пуле (`adapters/node-test/run-in-pool.ts:33-82`, `adapters/node-test/run-isolated.ts:96`) | оставить в адаптерах (у Vitest пулом владеет Vitest), но вынести claim/turn/пульс в `adapters/shared` для раннеров с собственным пулом (Rstest, Jest) и покрыть одним контрактным тестом |
 | Сторожевой таймер (hang) | | | ● пульс-файлы + опрос 250 мс + SIGKILL (`adapters/vitest/runner.ts:1087-1110`, `adapters/vitest/watch-heartbeats.ts:32-72`, `adapters/vitest/stop-hung-worker.ts:13-34`) | ● опрос out-файла 50 мс + функции дедлайна (`adapters/node-test/run-test-process.ts:133-139`, `adapters/node-test/get-dry-deadline.ts:17-28`, `adapters/node-test/get-unit-deadline.ts:20-25`) | исполнение — в адаптере; **правило бюджета** — одно (см. 7.1, п. 2) |
 | Лимиты (timeout, hitLimit) юнитов и попыток | ● `core/run/get-try-limits.ts:16-28`, `core/run/plan-isolated.ts:16-45` | | ○ режет `hookTimeout` до бюджета (`adapters/vitest/runner.ts:553, 562-569`) | | оставить |
-| Бюджеты dry run | ● константы 60 с (`core/run/run-dry-phase.ts:114`) | | ○ + таймаут теста + таймауты хуков (`adapters/vitest/runner.ts:985-996`, `adapters/vitest/worker/get-hook-budget.ts`) | ○ + только `--test-timeout` (`adapters/node-test/get-dry-deadline.ts:22-27`) | расхождение → BUG-601 |
+| Бюджеты dry run | ● константы 60 с (`core/run/run-dry-phase.ts:114`) | | ○ + таймаут теста + таймауты хуков (`adapters/vitest/runner.ts:989-998`, `adapters/vitest/worker/get-hook-budget.ts`) | ○ + только `--test-timeout` (`adapters/node-test/get-dry-deadline.ts:22-27`) | расхождение → BUG-601 |
 | Отмена (Ctrl+C, SIGTERM) | ✗ нет | | ✗ нет | ○ свои обработчики, пока живы процессы (`adapters/node-test/track-process-group.ts:17-46`) | **ядро/CLI**: один обработчик, `AbortSignal` в контексте, `close()` + `work.remove()` — см. 4.4 и BUG-600 |
 | Ключ и хранение кэша | ● `core/cache/*` | | | | оставить |
 | Входы кэша: настройки, конфиги, окружение | | ○ `index-environment-hashes`, `verdict-variable-pattern` | ● `adapters/vitest/get-cache-inputs.ts:43-60` | ● `adapters/node-test/get-node-cache-inputs.ts:41-77` | оставить (источники разные) |
@@ -561,7 +599,7 @@ Stryker на Vitest: **переключение мутантов в рантай
    Общее требование одно: «процесс, не подающий признаков жизни дольше
    бюджета (+ собственные таймауты раннера), убивается и сообщается как
    `hang`». Расхождения: (а) Vitest добавляет к бюджету dry run таймаут
-   самого теста и хуков (`adapters/vitest/runner.ts:985-996`), node-test —
+   самого теста и хуков (`adapters/vitest/runner.ts:989-998`), node-test —
    только `--test-timeout` (`adapters/node-test/get-dry-deadline.ts:22-27`);
    (б) у Vitest запас `HANG_GRACE = 1000` мс на каждый пульс
    (`adapters/vitest/runner.ts:176, 1093`), у node-test запаса нет, а до записи
@@ -872,7 +910,7 @@ export { createTryTracker } from './adapters/shared/try-tracker'          // т�
 | 3 | Явные возможности: `capabilities` (`batch`, `repeat`, `sameFileInOneRun`, `stream`), `runBatch` необязателен; `batch: boolean` принимается и нормализуется в `resolve-adapter` | S | `test/core/run/validate-adapter.test.ts`, `resolve-adapter.test.ts` (нормализация старой формы); `test/core/run-mutants.test.ts` с фейковым адаптером без `runBatch`; тест node-test «нет `runBatch`» |
 | 4 | Адаптер объявляет `runtimeFiles`; `select-run-files` берёт их вместо `SELF_RUNTIME_PATTERN` | S | `test/core/run/select-run-files.test.ts`; тест в каждом адаптере: статическое замыкание импортов `runner`/`preload` ⊆ `runtimeFiles`; BUG-607 |
 | 5 | Общий нормализатор фактов юнита `adapters/shared/to-isolated-facts.ts`; единая семантика таймаута хука | M | существующие `test/adapters/*/build-isolated-facts.test.ts` проходят без изменений ожиданий (кроме сценария BUG-604); табличный тест общего модуля; контрактный сценарий «таймаут хука → `Timeout` в обоих» |
-| 6 | Подтверждение `crash` повтором (+ необязательный `exit` в фактах) | S | `test/core/run/read-isolated-unit.test.ts`, `apply-isolated-result.test.ts`; контрактный сценарий «процесс юнита убит один раз → `Survived` + `worker-crash`»; BUG-602 |
+| 6 | Подтверждение `crash` повтором (+ необязательный `exit` в фактах) | S | новый `test/core/run/read-isolated-unit.test.ts` и `test/core/run/apply-isolated-result.test.ts`; контрактный сценарий «процесс юнита убит один раз → `Survived` + `worker-crash`»; BUG-602 |
 | 7 | Общее правило бюджета сторожа + `DryTest.ownTimeout` | S | `test/adapters/node-test/get-dry-deadline.test.ts`, тесты пульса Vitest; контрактный сценарий с уменьшенными `DRY_TIMEOUTS`: тест со своим большим таймаутом не «висит» ни в одном адаптере; BUG-603 |
 | 8 | Публичный `mootant/adapter-kit` (+ поле `contract`), встроенные адаптеры импортируют только его и `types/adapter` | M | `test:types`, `test:usage` (knip); снапшот имён экспорта набора; все тесты адаптеров без изменений; правило ESLint/dependency-cruiser «`adapters/*` не импортирует `core/*`, кроме набора» |
 | 9 | (скорость) `runIsolatedStream` за возможностью `stream`, сначала Vitest | M | `--json --all` с потоком и без совпадают побайтно на контрактной фикстуре и проектах бенчмарка; `test/core/run/run-isolated-rounds.test.ts`; замеры раздела 4 |
@@ -912,3 +950,21 @@ export { createTryTracker } from './adapters/shared/try-tracker'          // т�
 * **Контракт компонуем**: декоратор-трассировщик (раздел 0) — 100 строк на
   публичных типах, без доступа к внутренностям.
 
+## 12. Существенные рекомендации (после критического пересмотра)
+
+| # | Рекомендация | Проблема | Чем подтверждена | Польза | Риски/компромиссы | Как проверить |
+|---|---|---|---|---|---|---|
+| 1 | Контрактный набор тестов для всех адаптеров на общей фикстуре (шаг 0) | правила одного контракта реализованы дважды, и расхождения не ловятся: тесты адаптеров в основном на моках следующего слоя (`test/adapters/vitest/start-vitest-session.test.ts:29-55`), сквозные тесты — на разных фикстурах | BUG-603 и BUG-604 найдены только сравнением двух адаптеров на эквивалентных фикстурах | безопасный рефакторинг, критерий готовности для Rstest/Jest | +время `test:unit` (настоящие раннеры) — держать 10–15 сценариев | набор ловит возврат BUG-604, если откатить шаг 5 |
+| 2 | Единый владелец отмены (шаг 2) | при SIGTERM/SIGHUP — бесконечные сироты; каталог не удаляется никогда | BUG-600, BUG-601: 6/6 и 3/4 сценариев | CI-отмена и закрытый терминал не оставляют процессов, жгущих CPU | обработчики сигналов в CLI должны корректно сниматься (тесты, программный API) | контрактный сценарий «прерывание» |
+| 3 | Подтверждать `crash` повтором (шаг 6) | смерть процесса от инфраструктуры = ложный `Killed`, молча | BUG-602 в обоих адаптерах | score не завышается из-за OOM в CI | +1 юнит на редкий настоящий crash | `Survived` после разового SIGKILL; без повтора — `Killed` |
+| 4 | Явные возможности, необязательный `runBatch`, `repeat` отдельно от `batch` (шаг 3) | один флаг кодирует 4 возможности; заглушка `runBatch` в node-test; неявная связь `repeat`↔`batch` | `types/adapter/test-adapter.d.ts:25-29`, `adapters/node-test/start-node-test-session.ts:206-207`, `adapters/node-test/run-dry.ts:58-62` | Rstest/Jest подключаются без заглушек; ядро само раскладывает волны для раннеров без «одного файла дважды» | ещё одно поле контракта; старая форма поддерживается | тесты `validate-adapter`/`resolve-adapter`, фейковый адаптер без `runBatch` |
+| 5 | `mootant/adapter-kit` + общий нормализатор фактов + общее правило бюджета (шаги 5, 7, 8) | новый адаптер копирует ≈1000 строк инфраструктуры; протечки в `core/*` по внутренним путям | разделы 2, 7.1, 8.2–8.4 | Rstest: L → M; Jest: XL → L | набор становится публичным API (semver) — включать только устоявшееся | `test:types`, knip, снапшот экспорта; тесты адаптеров без изменений |
+| 6 | Проверять результаты адаптера (шаг 1) | нарушение контракта → `TypeError` без имени адаптера | BUG-605 | диагностируемость сторонних адаптеров | микроскопическая цена на прогон | unit-тесты с испорченными результатами |
+| 7 | Потоковое isolated-исполнение и префорк процессов (6.4, п. 1–2) | барьер раунда и старт процесса на критическом пути | индикативно: startup юнита 454 мс при duration 91 мс (Vitest), 94 при 86 мс (node:test), раздел 1 | ожидается кратный выигрыш на маленьких тестовых файлах — **решать после [ДАННЫЕ РАЗДЕЛА 4]** | сложность расписания; префорк не должен грузить код пользователя заранее | побайтное совпадение `--json --all`; оракул `data/isolation.md` |
+
+**Отклонено после пересмотра** (перенос ради переноса): объединять
+`run-dry.ts`, `run-isolated.ts`, `get-*-cache-inputs.ts`, `score-*.ts`,
+`read-tries.ts`/`read-try-facts.ts` — совпадает в них мало, различия
+определяются раннером (7.1, п. 4–9); переводить node:test на переключение
+мутантов в одном процессе или переиспользовать воркеры — ломает изоляцию
+(6.4); делать «юнит = только покрывающие тесты» — меняет вердикты.
