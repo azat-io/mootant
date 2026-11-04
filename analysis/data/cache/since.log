@@ -85,3 +85,12 @@ Auto-merging src/lines.ts
   [target] --since HEAD exit=0
     "src/target.ts": lines 5
   link retargeted to lines.ts, lines.ts line 4 changed. EXPECT: lines.ts line 4 (and maybe the whole of lines.ts through the link)
+  [retarget] --since HEAD exit=0
+    "src/lines.ts": lines 1
+=== user_config (05:13:46)
+  EXPECT: line 2 under every git configuration
+  [cfg-diff.noprefix] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-diff.mnemonicPrefix] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-diff.algorithm] --since HEAD exit=0
