@@ -555,8 +555,8 @@ Stryker на Vitest: **переключение мутантов в рантай
 | Расписание юнитов: «никогда два юнита одного файла одновременно, в порядке плана» | ○ формулирует (`types/adapter/adapter-session.d.ts:14-19`) | | ● claim + waitForTurn + чередующий sequencer (`adapters/vitest/worker/claim-unit.ts:19-42`, `adapters/vitest/worker/wait-for-turn.ts:32-49`, `adapters/vitest/create-interleaved-sequencer.ts:18-76`) | ● ключ в пуле (`adapters/node-test/run-in-pool.ts:33-82`, `adapters/node-test/run-isolated.ts:96`) | оставить в адаптерах (у Vitest пулом владеет Vitest), но вынести claim/turn/пульс в `adapters/shared` для раннеров с собственным пулом (Rstest, Jest) и покрыть одним контрактным тестом |
 | Сторожевой таймер (hang) | | | ● пульс-файлы + опрос 250 мс + SIGKILL (`adapters/vitest/runner.ts:1087-1110`, `adapters/vitest/watch-heartbeats.ts:32-72`, `adapters/vitest/stop-hung-worker.ts:13-34`) | ● опрос out-файла 50 мс + функции дедлайна (`adapters/node-test/run-test-process.ts:133-139`, `adapters/node-test/get-dry-deadline.ts:17-28`, `adapters/node-test/get-unit-deadline.ts:20-25`) | исполнение — в адаптере; **правило бюджета** — одно (см. 7.1, п. 2) |
 | Лимиты (timeout, hitLimit) юнитов и попыток | ● `core/run/get-try-limits.ts:16-28`, `core/run/plan-isolated.ts:16-45` | | ○ режет `hookTimeout` до бюджета (`adapters/vitest/runner.ts:553, 562-569`) | | оставить |
-| Бюджеты dry run | ● константы 60 с (`core/run/run-dry-phase.ts:114`) | | ○ + таймаут теста + таймауты хуков (`adapters/vitest/runner.ts:989-998`, `adapters/vitest/worker/get-hook-budget.ts`) | ○ + только `--test-timeout` (`adapters/node-test/get-dry-deadline.ts:22-27`) | расхождение → BUG-601 |
-| Отмена (Ctrl+C, SIGTERM) | ✗ нет | | ✗ нет | ○ свои обработчики, пока живы процессы (`adapters/node-test/track-process-group.ts:17-46`) | **ядро/CLI**: один обработчик, `AbortSignal` в контексте, `close()` + `work.remove()` — см. 4.4 и BUG-600 |
+| Бюджеты dry run | ● константы 60 с (`core/run/run-dry-phase.ts:114`) | | ○ + таймаут теста + таймауты хуков (`adapters/vitest/runner.ts:989-998`, `adapters/vitest/worker/get-hook-budget.ts`) | ○ + только `--test-timeout` (`adapters/node-test/get-dry-deadline.ts:22-27`) | расхождение → BUG-603 |
+| Отмена (Ctrl+C, SIGTERM, SIGHUP) | ✗ нет | | ✗ нет | ○ свои обработчики SIGINT/SIGTERM, пока живы процессы (`adapters/node-test/track-process-group.ts:7, 17-46`) | **ядро/CLI**: один обработчик, `AbortSignal` в контексте, `close()` + `work.remove()` — см. 4.4, BUG-600, BUG-601 |
 | Ключ и хранение кэша | ● `core/cache/*` | | | | оставить |
 | Входы кэша: настройки, конфиги, окружение | | ○ `index-environment-hashes`, `verdict-variable-pattern` | ● `adapters/vitest/get-cache-inputs.ts:43-60` | ● `adapters/node-test/get-node-cache-inputs.ts:41-77` | оставить (источники разные) |
 | Зависимости тестового файла | | ○ `track-inputs` (чтения fs, env), `list-tsconfig-files` | ● граф модулей Vite (`adapters/vitest/collect-dependencies.ts:76-155`) | ● загруженные модули + чтения (`adapters/node-test/collect-node-dependencies.ts:30-74`) | оставить; общий фильтр «файл проекта вне `node_modules`» — в `shared` (сейчас три копии: `adapters/vitest/get-module-file.ts:19`, `adapters/node-test/collect-node-dependencies.ts:52`, `adapters/shared/track-inputs.ts:33`) |
@@ -586,7 +586,14 @@ Stryker на Vitest: **переключение мутантов в рантай
      наблюдаемое поведение мутанта → одинаковый статус независимо от раннера.
      На score не влияет (оба «detected», `core/run/compute-score.ts:13`), но
      влияет на отчёт, на кэш причин и на дедупликацию «таймаутных» мутантов.
-     **[по коду]**, BUG-610.
+     **[подтверждено]** на `fixture-hook` (хук с таймаутом 200 мс, мутант
+     делает ожидание 450 мс): Vitest — `Timeout` «Hook timed out in 200ms.»,
+     node:test — `Killed` «The test file failed outside its tests (exit code
+     1).», BUG-604. Ещё одна неочевидная развилка: если оставшееся ожидание
+     хука держит цикл событий дольше бюджета юнита (в первом варианте
+     фикстуры — 3 с), node:test-процесс не завершается сам, его убивает
+     сторож, и тот же мутант становится `Timeout (hang)`; статус зависит от
+     длины «хвоста», а не от поведения мутанта.
    * `startup` и `hits` при crash считаются по-разному
      (`adapters/vitest/build-isolated-facts.ts:35, 46-48` ↔
      `adapters/node-test/build-isolated-facts.ts:52-57, 86-87`).

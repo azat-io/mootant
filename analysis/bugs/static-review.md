@@ -252,7 +252,7 @@ computed `import()` may not be selected»
   разбирается ни в одном контексте, просто оборачивает его в скобки
   (`core/generate/group-replacement.ts:233-236`: `readings.length === 0 →
   return true`), а не отвергает; `addReplacement`
-  (`core/generate/collect-candidates.ts:266-330`) проверяет узел
+  (`core/generate/collect-candidates.ts:266-367`) проверяет узел
   (`validateReplacement`), но не текст. `mootant list` показывает такой мутант
   как обычный (`a + b -> a +`).
 - `instrumentFile`/`createSwitchedFiles` не разбирают результат
