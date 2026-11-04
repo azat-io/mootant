@@ -1,0 +1,14 @@
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  6 failed | 631 passed (637)
+      Tests  10 failed | 10481 passed (10491)
+   Duration  1169.85s (tests 80%, import 15%, worker 4%, transform 1%)
+    Isolate  637 workers spawned · ~695ms startup each (spawn + environment, per file)
+             at least ~220.71s faster with isolate: false — reuses workers across files instead of one per file
+start 05:42:50 load 31.31 28.16 26.75
+exit 1 wall 1176 end 06:02:26 load 18.92 31.83 33.67
+=============================== Coverage summary ===============================
+Statements   : 100% ( 12686/12686 )
+Branches     : 100% ( 10223/10223 )
+Functions    : 100% ( 2374/2374 )
+Lines        : 100% ( 12458/12458 )
+================================================================================

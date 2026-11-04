@@ -384,21 +384,24 @@ run-dry/run-batch/run-isolated) относятся к файлам, которы
 ## 5.3. Время test:unit
 
 Источники: тихий прогон этапа 0 (`/home/user/scratch/baseline-run1/test:unit.log`,
-итоговая строка Vitest; JSON-репортера там не было) и прогон координатора под
-нагрузкой `load-1` (`vitest --run --coverage --coverage.reportOnFailure`,
-JSON-репортер; `analysis/data/tests/load-1.files.tsv`,
-`load-1.tests-top200.tsv`, `load-1.summary.json`; скрипт сводки —
-`analysis/tools/tests/vitest-json.mjs`).
+итоговая строка Vitest; JSON-репортера там не было), прогон координатора под
+нагрузкой `load-1` и мой второй прогон под нагрузкой `e-load` (оба
+`vitest --run --coverage --coverage.reportOnFailure` с JSON-репортером;
+`analysis/data/tests/load-1.files.tsv`, `load-1.tests-top200.tsv`,
+`load-1.summary.json`, `e-load.files.tsv`, `e-load.summary.txt`,
+`load-1-vs-e-load.json`; скрипт сводки — `analysis/tools/tests/vitest-json.mjs`).
 
 | Прогон | Load average | Wall | Разбивка Vitest | Старт воркера (isolate) | Оценка Vitest для `isolate: false` |
 | --- | --- | ---: | --- | ---: | ---: |
 | quiet (этап 0) | ≈ 0 | 250,8 с | tests 81 %, import 12 %, transform 4 %, worker 3 % | ~128 мс × 637 | ≥ 27 с быстрее |
-| load-1 | 29–34 | 1 382 с | tests 71 %, import 18 %, worker 6 %, transform 3 %, environment 1 % | ~1,47 с × 637 | ≥ 311 с быстрее |
+| load-1 (координатор, 3 воркера, `NODE_OPTIONS` задан) | 29–34 | 1 382 с | tests 71 %, import 18 %, worker 6 %, transform 3 %, environment 1 % | ~1,47 с × 637 | ≥ 311 с быстрее |
+| e-load (мой, `--maxWorkers=2`, без `NODE_OPTIONS`) | 18–42 | 1 170 с | tests 80 %, import 15 %, worker 4 %, transform 1 % | ~695 мс × 637 | ≥ 221 с быстрее |
 
 **Один файл — это критический путь.** В load-1 сумма длительностей файлов
 равна 1 891,6 с. Из них `test/adapters/vitest/index.test.ts` (33 теста)
 занимает **1 354,7 с, 71,6 %**, а wall всего прогона — 1 382 с: всё
-остальное успело пройти параллельно, пока шёл этот файл. 589 из 637 файлов
+остальное успело пройти параллельно, пока шёл этот файл. В e-load картина
+та же: 1 062,5 с из 1 414,2 с (75,1 %) при wall 1 170 с. 589 из 637 файлов
 идут меньше секунды.
 
 Топ-10 файлов (load-1, секунды; под нагрузкой абсолютные значения раздуты в

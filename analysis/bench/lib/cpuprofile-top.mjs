@@ -6,7 +6,11 @@
 // Usage: cpuprofile-top.mjs [options] <file.cpuprofile | directory>...
 //   --top N           rows per table (default 25)
 //   --merge           one summary of all profiles (e.g. every Vitest worker)
-//   --focus a,b,c     inclusive time of these function names
+//   --focus a,b,c     inclusive time of these functions: a bare name matches
+//                     the function name; an entry with a "/" or ending in .js
+//                     matches every frame of that module file (Mootant's dist
+//                     is minified, but has one exported function per file, so
+//                     core/run/run-dry-phase.js stands for runDryPhase)
 //   --by package|module   grouping of the second table (default package)
 //   --json            machine-readable output
 // Groups: (program), (idle), (garbage collector); node:internal/<area>;
@@ -130,11 +134,18 @@ function analyze(profile) {
   }
   let inclusive = new Map()
   let active = new Map()
-  let wanted = new Set(focus)
+  let byName = new Set(focus.filter(entry => !entry.includes('/') && !entry.endsWith('.js')))
+  let byFile = focus.filter(entry => !byName.has(entry))
+  function focusOf(frame) {
+    if (byName.has(frame.functionName)) return frame.functionName
+    if (byFile.length === 0 || !frame.url) return null
+    let file = toPath(frame.url).split(path.sep).join('/')
+    return byFile.find(entry => file.endsWith(`/${entry}`)) ?? null
+  }
   function walk(id) {
     let node = nodes.get(id)
-    let name = node.callFrame.functionName
-    let counted = wanted.has(name)
+    let name = focusOf(node.callFrame)
+    let counted = name !== null
     if (counted) {
       if ((active.get(name) ?? 0) === 0) {
         inclusive.set(name, (inclusive.get(name) ?? 0) + total.get(id))
@@ -144,7 +155,7 @@ function analyze(profile) {
     for (let child of node.children ?? []) walk(child)
     if (counted) active.set(name, active.get(name) - 1)
   }
-  if (wanted.size > 0) walk(profile.nodes[0].id)
+  if (focus.length > 0) walk(profile.nodes[0].id)
   return {
     totalUs: total.get(profile.nodes[0].id) ?? 0,
     wallUs: profile.endTime - profile.startTime,
