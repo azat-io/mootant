@@ -94,8 +94,8 @@ function runVitest({ active, related }) {
   // --mirror <dir>: run only <dir>/<path without extension>.test.<ext> (one test
   // file per source file, as in mootant itself) instead of `vitest related`.
   let mirrored = mirror && related ? related.map(file => findMirror(file)).filter(Boolean) : null
-  let args = mirrored ? ['vitest', 'run', ...mirrored, '--run',
-  ] : ['vitest', related ? 'related' : 'run', ...(related ?? []), '--run', '--reporter=json', `--outputFile=${json}`, '--pool=forks', `--maxWorkers=${workers}`, '--testTimeout=10000', '--coverage.enabled=false', ...extraArgs]
+  let selection = mirrored ? ['run', ...mirrored] : [related ? 'related' : 'run', ...(related ?? [])]
+  let args = ['vitest', ...selection, '--run', '--reporter=json', `--outputFile=${json}`, '--pool=forks', `--maxWorkers=${workers}`, '--testTimeout=10000', '--coverage.enabled=false', ...extraArgs]
   let started = Date.now()
   let result = spawnSync('npx', args, {
     env: { ...process.env, DIFF_ACTIVE: active, NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import ${pathToFileURL(setup).href}`.trim(), FORCE_COLOR: '0' },
@@ -151,7 +151,8 @@ try {
     }
   } else if (mode === 'i3') {
     let ids = flags.get('ids')?.split(',')
-    let chosen = ids ? pending.filter(mutant => ids.includes(mutant.id)) : sample(pending, Number(flags.get('sample') ?? 100), Number(flags.get('seed') ?? 1))
+    let candidates = mirror ? pending.filter(mutant => findMirror(path.join(project, mutant.file)) !== null) : pending
+    let chosen = ids ? candidates.filter(mutant => ids.includes(mutant.id)) : sample(candidates, Number(flags.get('sample') ?? 100), Number(flags.get('seed') ?? 1))
     let rows = []
     let count = 0
     for (let mutant of chosen) {

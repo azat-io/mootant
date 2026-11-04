@@ -1,8 +1,8 @@
 # Эксперимент «Изоляция» (раздел 1, «Архитектура адаптеров»)
 
 > Коммит 170ec52, Node 22.23.4, Vitest 5.0.5, машина 4 vCPU / 15 GB (общая,
-> параллельно работали другие агенты; load average во время прогонов 4–9).
-> Сырые отчёты — `/home/user/projects/oracle/results/<проект>/iso-*.json`,
+> параллельно работали другие агенты; load average во время прогонов 4–32).
+> Сырые отчёты — `/home/user/projects/oracle/results{,-nt}/<фикстура>/iso-*.json`,
 > скрипт — `analysis/tools/oracle/isolation.sh`, сводка —
 > `analysis/tools/oracle/verdicts.mjs`.
 
@@ -13,7 +13,7 @@
 - Единица (unit) = мутант × целый тест-файл (`core/run/plan-isolated.ts:16-44`).
   Все единицы раунда идут одним `vitest.runTestSpecifications`: на каждую
   единицу — своя спецификация того же файла (`adapters/vitest/run-plan.ts:63-65`).
-- Ядро проекта принудительно получает `isolate: true` и собственный пул
+- Каждый проект Vitest принудительно получает `isolate: true` и собственный пул
   `mootant-forks` (`adapters/vitest/configure-project.ts:46-49`), а Vitest 5
   при `isolate: true` создаёт для каждой задачи новый `PoolRunner`, то есть
   новый процесс (`node_modules/vitest/dist/chunks/index.1TqnEahn.js:5932`, `:5974-5995`). Значит, у каждой единицы свой процесс, свой граф модулей,
