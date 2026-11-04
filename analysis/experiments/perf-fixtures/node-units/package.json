@@ -1,0 +1,8 @@
+{
+  "name": "fixture-node-units",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

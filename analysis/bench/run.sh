@@ -78,6 +78,9 @@ PLAN=$(cat <<'EOF'
 5 path-to-regexp s-edit-inc
 5 cheerio s-edit-inc
 5 fast-json-stringify s-command
+6 mootant-self m-one
+6 mootant-self m-cold
+6 mootant-self m-warm
 EOF
 )
 

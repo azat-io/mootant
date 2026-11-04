@@ -17,7 +17,7 @@
 //     mootant's own installMutantRuntime). Differences are re-run once.
 //     Only the test files `vitest related <mutated file>` selects are run.
 
-import { writeFileSync, readFileSync, rmSync, mkdtempSync } from 'node:fs'
+import { writeFileSync, readFileSync, rmSync, mkdtempSync, existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
@@ -37,6 +37,15 @@ let preset = flags.get('preset') ?? 'strict'
 let bin = flags.get('bin') ?? path.join(MOOTANT_ROOT, 'bin/mootant.js')
 let extraArgs = (flags.get('vitest-args') ?? '').split(' ').filter(Boolean)
 let timeoutMs = Number(flags.get('timeout') ?? 300_000)
+let mirror = flags.get('mirror') ?? null
+function findMirror(file) {
+  let relative = path.relative(project, file).replace(/\.[cm]?[jt]sx?$/u, '')
+  for (let extension of ['.test.ts', '.test.js', '.test.tsx']) {
+    let candidate = path.join(project, mirror, relative + extension)
+    if (existsSync(candidate)) return path.relative(project, candidate)
+  }
+  return null
+}
 
 let { instrumentFile } = await importDist('core/instrument/instrument-file.js')
 let { loadVueCompiler } = await importDist('core/parser/load-vue-compiler.js')
@@ -82,7 +91,11 @@ function writeAll(kind, except = null) {
 /** Runs vitest and returns per-test outcomes { "file > name": status }. */
 function runVitest({ active, related }) {
   let json = path.join(tmp, `r${Date.now()}${Math.random()}.json`)
-  let args = ['vitest', related ? 'related' : 'run', ...(related ?? []), '--run', '--reporter=json', `--outputFile=${json}`, '--pool=forks', `--maxWorkers=${workers}`, '--testTimeout=10000', '--coverage.enabled=false', ...extraArgs]
+  // --mirror <dir>: run only <dir>/<path without extension>.test.<ext> (one test
+  // file per source file, as in mootant itself) instead of `vitest related`.
+  let mirrored = mirror && related ? related.map(file => findMirror(file)).filter(Boolean) : null
+  let args = mirrored ? ['vitest', 'run', ...mirrored, '--run',
+  ] : ['vitest', related ? 'related' : 'run', ...(related ?? []), '--run', '--reporter=json', `--outputFile=${json}`, '--pool=forks', `--maxWorkers=${workers}`, '--testTimeout=10000', '--coverage.enabled=false', ...extraArgs]
   let started = Date.now()
   let result = spawnSync('npx', args, {
     env: { ...process.env, DIFF_ACTIVE: active, NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import ${pathToFileURL(setup).href}`.trim(), FORCE_COLOR: '0' },

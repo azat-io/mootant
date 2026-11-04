@@ -47,6 +47,8 @@ bench_project() {
   # Mootant's CLI as the project installed it (a devDependency, as
   # adapters/vitest/check-vitest-copy.ts requires).
   MOOTANT_BIN=node_modules/mootant/bin/mootant.js
+  # Ignored paths that prepare/state.sh keeps besides node_modules (a build).
+  CLEAN_KEEP=()
   unset PROFILE_MUTATE
   # shellcheck source=/dev/null
   . "$file"

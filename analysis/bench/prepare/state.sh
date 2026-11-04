@@ -23,7 +23,9 @@ reset_tree() {
   git checkout -q -f bench/base
   git reset -q --hard bench/base
   # Only what the tools write; node_modules stays.
-  git clean -q -fdx -e node_modules
+  local keep=(-e node_modules) path
+  for path in "${CLEAN_KEEP[@]}"; do keep+=(-e "$path"); done
+  git clean -q -fdx "${keep[@]}"
   rm -rf node_modules/.cache/mootant node_modules/.vite node_modules/.vitest \
     .stryker-tmp reports/bench .mootant
   node "$BENCH_HOME/lib/make-stryker-config.mjs" "$PROJECT_CONF/stryker.json" . \

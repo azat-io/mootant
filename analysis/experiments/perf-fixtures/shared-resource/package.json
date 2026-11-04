@@ -1,0 +1,8 @@
+{
+  "name": "fixture-shared-resource",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  }
+}

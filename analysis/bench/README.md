@@ -175,7 +175,37 @@ TBD (после смоук-прогонов).
 
 ## Профилирование
 
-TBD (после смоук-прогонов).
+`profile.sh <project> [list main workers vitest]` — отдельно от замеров
+(профилировщик замедляет процессы на 5–15 %), на подмножестве `PROFILE_MUTATE`
+из `project.sh` (или на `MUTATE`, если подмножества нет). Результат —
+`$BENCH_RESULTS/profiles/<project>/<mode>/` и сводка `summary.md` рядом.
+
+| режим | как снимается | что даёт |
+|---|---|---|
+| `list` | `node --cpu-prof mootant list ...` и `... --json` | поиск файлов (`expandPaths`), парсинг (`prepareFilePrograms` → oxc-parser), генерация мутантов и эвристики (`collectFileCandidates`; self-время групп `mootant/core/mutators`, `mootant/core/hints`, `mootant/core/skips`, `mootant/core/syntax` …), дедупликация, id, отчёт и его форматирование (`formatReport`; наблюдение из догфудинга: текст в ~2,8 раза медленнее JSON) |
+| `main` | `node --cpu-prof mootant run --no-cache ...` (только главный процесс) | CPU главного процесса по фазам: инклюзивное время `listFileMutants`, `startVitestSession`, `createSwitchedFiles` (инструментирование), `runDryPhase`, `readDryRun`, `prepareRunCache`/`saveRunCache` (кэш), `runIsolatedRounds`, `runPlan`/`writePlanFiles`/`readOutFiles` (файловый IPC с воркерами), `collectDependencies`/`readUnitInputs` (входы для кэша), `buildRunReport`/`formatRunReport` (отчёт); self-время по пакетам: `vite`/`rolldown`/`oxc` (трансформации Vite в главном процессе) против `mootant/*`; `(idle)` — ожидание воркеров |
+| `workers` | `NODE_OPTIONS="--cpu-prof --cpu-prof-dir=…"` для всего дерева | профили каждого форка Vitest (и каждого процесса node:test): `node:internal/modules` и `vitest` (загрузка и запуск раннера), `project/*` (тесты и код проекта), `mootant/adapters` (раннер Mootant: учёт попыток, запись out-файлов), `(garbage collector)`. Профиль пишется при нормальном выходе процесса; воркер, убитый сигналом (зависший юнит), профиля не оставит — сводка печатает, сколько профилей вернулось |
+| `vitest` | обычный `vitest run --reporter=default` | собственная разбивка Vitest: `Duration … (transform, setup, import, tests, environment)` — сколько в обычном прогоне уходит на трансформации и импорт против тестов |
+
+Доля запуска раннера и трансформаций против тестов в прогоне Mootant
+считается из трёх источников: (1) Vitest-разбивка обычного прогона (`vitest`);
+(2) по каждому юниту из трассы — старт процесса (`summary.staticCost` минус
+`mutants[].duration`, это spawn → `onBeforeCollect`), `loadDuration` (импорт
+тест-файла и всего, что он тянет, вместе с запросами трансформаций к Vite
+главного процесса) и Σ `tries[].duration` (тесты); (3) CPU-профили воркеров
+(`workers`), где видно, что внутри загрузки: модульный загрузчик node, runner
+Vitest, сами модули проекта, `node_modules`.
+
+Отдельный вопрос — простой воркеров (наблюдение из догфудинга: 85 юнитов одного
+тест-файла шли по очереди ~15 минут). Его даёт трасса рабочего каталога
+(`lib/trace-units.mjs` → `lib/units-report.mjs`): по каждому раунду занятость
+слотов, ожидание очереди тест-файла (claim → start), хвост и самая длинная
+последовательная цепочка; пример — `node lib/units-report.mjs run-1.units.json
+--workers 3`.
+
+Проверено на смоуке: `--cpu-prof` главного процесса пишет профиль; с
+`NODE_OPTIONS` профили пишут и форки Vitest (они наследуют окружение) — см.
+«Смоук-проверка» ниже.
 
 ## Известные ограничения стенда
 

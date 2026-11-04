@@ -1,0 +1,12 @@
+diff --git a/core/text/pluralize.ts b/core/text/pluralize.ts
+index db4cd36..d347b00 100644
+--- a/core/text/pluralize.ts
++++ b/core/text/pluralize.ts
+@@ -6,5 +6,6 @@
+  * @returns Text such as `1 file` or `2 files`.
+  */
+ export function pluralize(count: number, noun: string): string {
+-  return `${count} ${noun}${count === 1 ? '' : 's'}`
++  let suffix = count === 1 ? '' : 's'
++  return `${count} ${noun}${suffix}`
+ }

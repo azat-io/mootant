@@ -1,4 +1,6 @@
-\* mootant list src                                                                preset recommended
+# Вывод в псевдотерминале (script, 100 колонок); кадры спиннера прогресса удалены, точная запись — файл .raw рядом.
+
+* mootant list src                                                                preset recommended
 
 mutants         79 in 5 files
 
