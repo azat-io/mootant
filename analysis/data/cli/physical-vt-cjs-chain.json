@@ -1,0 +1,90 @@
+[
+ {
+  "id": "g0radrc2m8bt",
+  "mutator": "return-value",
+  "line": 4,
+  "original": "isAdult(age)",
+  "replacement": "undefined",
+  "mootant": "Killed",
+  "ms": 1891,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "v90tg4fdkazm",
+  "mutator": "statement-removal",
+  "line": 7,
+  "original": "module.exports = { canVote }",
+  "replacement": ";",
+  "mootant": "Killed",
+  "ms": 2339,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "fjfy14waksn6",
+  "mutator": "object-property",
+  "line": 7,
+  "original": "{ canVote }",
+  "replacement": "{}",
+  "mootant": "Killed",
+  "ms": 1222,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "zf73tx9bhd9a",
+  "mutator": "comparison-operator",
+  "line": 2,
+  "original": "age >= 18",
+  "replacement": "age > 18",
+  "mootant": "NoCoverage",
+  "ms": 1482,
+  "physical": "fail",
+  "agree": false
+ },
+ {
+  "id": "33g529185vjy",
+  "mutator": "comparison-operator",
+  "line": 2,
+  "original": "age >= 18",
+  "replacement": "age == 18",
+  "mootant": "NoCoverage",
+  "ms": 1653,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "hnkax4y1064t",
+  "mutator": "comparison-operator",
+  "line": 2,
+  "original": "age >= 18",
+  "replacement": "age >= 17",
+  "mootant": "NoCoverage",
+  "ms": 1099,
+  "physical": "fail",
+  "agree": false
+ },
+ {
+  "id": "55562cg8tap7",
+  "mutator": "statement-removal",
+  "line": 5,
+  "original": "module.exports = { isAdult }",
+  "replacement": ";",
+  "mootant": "NoCoverage",
+  "ms": 2222,
+  "physical": "fail",
+  "agree": false
+ },
+ {
+  "id": "c8cd5rerqjah",
+  "mutator": "object-property",
+  "line": 5,
+  "original": "{ isAdult }",
+  "replacement": "{}",
+  "mootant": "NoCoverage",
+  "ms": 1711,
+  "physical": "fail",
+  "agree": false
+ }
+]

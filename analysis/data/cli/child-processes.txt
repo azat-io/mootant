@@ -1,0 +1,15 @@
+######## vt-child
+killed          1
+survived        0
+timeout         0
+score           100%
+exit=0
+left:  2981     1  2981 sleep 417
+ 2983     1  2628 sleep 418
+######## nt-child
+killed          1
+survived        0
+timeout         0
+score           100%
+exit=0
+left:  3444     1  3444 sleep 417

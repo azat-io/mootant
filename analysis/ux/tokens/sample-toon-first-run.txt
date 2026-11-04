@@ -1,0 +1,60 @@
+summary:
+  coveredScore: 43.28
+  score: 36.71
+  totalErrorMutants: 0
+  duration:
+    total: 2112
+  totalNoCoverage: 12
+  totalSurvived: 38
+  totalWarnings: 1
+  totalIgnored: 0
+  totalTimeout: 0
+  totalMutants: 79
+  totalKilled: 29
+  totalErrors: 0
+  totalTests: 13
+  totalFiles: 5
+  passed: true
+schemaVersion: 3
+diagnostics[1]{severity,column,line,message,file,code}:
+  warning,null,null,"No test loaded src/format.ts through the test runner's transform: no test imports it, or tests import a built copy, an external or a pre-bundled dependency.",src/format.ts,never-served
+command: run
+listed: actionable
+runner: vitest
+preset: recommended
+mode: isolated
+mutants[50]:
+  - scope: formatPrice
+    mutator: string-literal
+    column: 55
+    status: NoCoverage
+    before[1]: "export function formatPrice(value: number, currency = 'USD'): string {"
+    after[1]: "export function formatPrice(value: number, currency = ''): string {"
+    file: src/format.ts
+    line: 1
+    id: 0hqsvg55dxk5
+    tests: 0
+    recheck: mootant run src --mutant 0hqsvg55dxk5
+  - scope: formatPrice
+    mutator: string-literal
+    column: 10
+    status: NoCoverage
+    before[1]: "  return `${value.toFixed(2)} ${currency}`"
+    after[1]: "  return `${value.toFixed(2)}${currency}`"
+    file: src/format.ts
+    line: 2
+    id: yef5frdtd4g0
+    tests: 0
+    recheck: mootant run src --mutant yef5frdtd4g0
+  - scope: formatPrice
+    mutator: number-literal
+    column: 27
+    status: NoCoverage
+    before[1]: "  return `${value.toFixed(2)} ${currency}`"
+    after[1]: "  return `${value.toFixed(3)} ${currency}`"
+    file: src/format.ts
+    line: 2
+    id: kgzax84n0a6s
+    tests: 0
+    recheck: mootant run src --mutant kgzax84n0a6s
+  - scope: pluralize

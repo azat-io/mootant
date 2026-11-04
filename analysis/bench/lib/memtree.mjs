@@ -16,7 +16,7 @@ if (!rootArg || !output) {
   process.exit(2)
 }
 let root = Number(rootArg)
-let interval = 500
+let interval = 1000
 let pssEvery = 2
 for (let index = 0; index < rest.length; index++) {
   if (rest[index] === '--interval') interval = Number(rest[++index])

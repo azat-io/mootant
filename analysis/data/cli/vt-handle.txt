@@ -1,0 +1,51 @@
++ dry run  3 tests in 0.6s
++ testing 8 mutants  8/8 test runs in 3.4s
+* mootant run src                                 vitest 5.0.5
+
+dry run         3 tests in 0.6s
+mutants         9 in 1 file
+time            5.2s (start 1.3s, dry run 0.6s, isolated 3.3s)
+
+killed          3
+survived        5
+timeout         0
+no coverage     1
+score           33.33% (covered 37.5%)
+
+survived 5
+
+src/math.js
+  6:10  comparison-operator  kkdj
+    - return age >= 18
+    + return age > 18
+    test: test/math.test.js
+
+  6:10  comparison-operator  wnz4
+    - return age >= 18
+    + return age >= 17
+    test: test/math.test.js
+
+  10:7  comparison-operator  d69e
+    - if (n > 10) {
+    + if (n >= 10) {
+    test: test/math.test.js
+
+  10:7  comparison-operator  jdc6
+    - if (n > 10) {
+    + if (n != 10) {
+    test: test/math.test.js
+
+  10:7  comparison-operator  dewf
+    - if (n > 10) {
+    + if (n > 11) {
+    test: test/math.test.js
+
+no coverage 1
+
+src/math.js
+  13:10  string-literal  af24
+    - return 'small'
+    + return ''
+    test: test/math.test.js
+
+re-check one: mootant run src --mutant kkdj

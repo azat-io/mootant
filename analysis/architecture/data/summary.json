@@ -21,16 +21,8 @@
     "core/runtime/index.ts",
     "types/html/inline-script.d.ts"
   ],
-  "sccValue": [
-    11,
-    5
-  ],
-  "sccAll": [
-    11,
-    5,
-    2,
-    2
-  ],
+  "sccValue": [11, 5],
+  "sccAll": [11, 5, 2, 2],
   "topFanOut": [
     "core/syntax/create-syntax-helpers.ts value=40 type=6 areas=3",
     "core/run-mutants.ts value=35 type=13 areas=13",

@@ -35,7 +35,78 @@
 4. **Статический анализ импортов** адаптеров в `core/*` и `adapters/shared/*`
    (раздел 2.3) и чтение мест вызова в ядре.
 
-<!-- SECTION:trace -->
+## 1. Путь одного мутанта от ядра до вердикта
+
+Мутант `qm8g8eqrtwnn` (`src/price.js:5`, `price - (price * percent) / 100` →
+`price + …`), `mootant run --mutant qm8g8eqrtwnn`. Идентификаторы мутантов
+у двух вариантов фикстуры **совпадают** (все 10), то есть идентичность не
+зависит от раннера. Время `t` — от `start()` по журналу декоратора
+(`/home/user/projects/adapters/out/{vitest,nt}-trace/calls.jsonl`), один
+прогон на нагруженной машине (load ≈ 6 на 4 vCPU) — **индикативно**, не
+замер производительности.
+
+| # | Шаг | Где | Vitest | node:test |
+|---|---|---|---|---|
+| 1 | список мутантов, выбор `--mutant` | `core/run-mutants.ts:192-214` | 10 → 1 | 10 → 1 |
+| 2 | выбор адаптера (объект из конфига → `validateAdapter`; имя → `builtIns[name].load()`) | `core/run/resolve-adapter.ts:38-75` | — | — |
+| 3 | рабочий каталог | `core/run-mutants.ts:271` | `/tmp/mootant-ZggIot` | `/tmp/mootant-pd5dRY` |
+| 4 | `start(context)`; `context.files` ещё **пуст** | `core/run-mutants.ts:275-300` | t=53 → 1121 мс: `detectVitest`, `checkVitestCopy`, `createVitest`, `globTestSpecifications`, рантайм в главном процессе | t=25 → 284 мс: команда из `package.json`, `execFile(node -p …)` за версией (`adapters/node-test/read-node-runtime.ts:22`), список файлов, `checkTypeScript`, входы кэша |
+| 5 | `listTestFiles()` | `core/run-mutants.ts:378` | `[test/price.test.js]` | `[test/price.test.js]` |
+| 6 | переключаемые файлы — **все 10** ожидающих мутантов файла, а не только выбранный | `core/run-mutants.ts:340-342, 390-394` | — | — |
+| 7 | `dryRun({files:null, related:[src/price.js], repeat:false, instrumented:true, timeouts:{60000,60000}})` | `core/run/run-dry-phase.ts:195-199, 482` | 620 мс; 1 fork; покрытие попыток: тест 1 → 7 мутантов, тест 2 → 3, тест 3 → 3; `served:[src/price.js]` | 380 мс; 1 spawn с `MOOTANT_UNIT={mode:'dry', plan, out}`; то же покрытие; `line: null` у тестов (у node:test строки нет) |
+| 8 | анализ dry run → isolated (не `--fast`) → файлы мутанта | `core/run/read-dry-run.ts`, `core/run/classify-mutants.ts:55-61`, `core/run/rank-mutant-files.ts` | `[test/price.test.js]` | то же |
+| 9 | план раунда 0: юнит `{mutant, file, project:'', limits}` | `core/run/plan-isolated.ts:16-45` | `timeout: 1217, hitLimit: 400000` | `timeout: 1166, hitLimit: 400000` |
+| 10 | `runIsolated(plan)` | `core/run/run-isolated-rounds.ts:101` | 584 мс: `plan/<hash>.json` → fork → `claim/<hash>-0` (pid) → `runtime.active` до загрузки (`adapters/vitest/runner.ts:550`) → тест 1 падает «expected 250 to be 150» с `reached` → bail → `end` → `done/<hash>-0`; **startup 454 мс, duration 91 мс** | 199 мс: spawn с `MOOTANT_UNIT={mode:'isolated', mutant, hitLimit, bail:true, expected:[]}` → тест 1 падает → bail; **startup 94 мс, duration 86 мс** |
+| 11 | `onUnitEnd({unit, facts})` до конца прогона | `core/run-mutants.ts:276-288` | да (`adapters/vitest/run-plan.ts:94-103`) | да (`adapters/node-test/run-isolated.ts:93`) |
+| 12 | факты → вердикт: `classifyTry` (failed + reached → killed, `assertion`) → `decideEvidence` | `core/run/read-isolated-unit.ts:46-62`, `core/run/decide-evidence.ts` | Killed | Killed |
+| 13 | `close()`, удаление каталога | `core/run-mutants.ts:321, 324` | `vitest.close()` 32 мс | `stopLiveProcessGroups()` 0 мс |
+
+Сквозная проверка на всех 10 мутантах фикстуры: **вердикты двух адаптеров
+совпали** (7 Killed, 3 Survived, score 70), полное время 5,6 с (Vitest)
+против 2,5 с (node:test). На 10 юнитах одного тестового файла: медиана
+`startup` 1423 мс [562…1918] у Vitest против 170 мс [101…286] у node:test,
+медиана `duration` 303 против 85 мс; юниты одного файла идут строго
+последовательно, поэтому интервал между концами юнитов — 580 мс (Vitest) и
+272 мс (node:test). Это **индикативные** числа одного прогона; методичные
+замеры — **[ДАННЫЕ РАЗДЕЛА 4]**. Качественный вывод устойчив: на маленьком
+проекте стоимость юнита определяется не тестами, а запуском и
+сворачиванием процесса раннера (у Vitest старт следующего юнита того же
+файла уже перекрывается с текущим за счёт claim + ожидания очереди —
+`adapters/vitest/worker/wait-for-turn.ts:32-49`; у node:test процесс
+следующего юнита запускается только после конца предыдущего —
+`adapters/node-test/run-in-pool.ts:46-54`).
+
+## 2. Где адаптеры обращаются к `adapters/shared` и внутренностям ядра
+
+Сводка по V8-покрытию прогона (модули, в которых выполнилась хотя бы одна
+именованная функция; `/home/user/projects/adapters/out/*-functions.txt`) и,
+для воркера Vitest, по статическому замыканию импортов `runner.js`: в этом
+прогоне fork-воркеры Vitest файлов покрытия не оставили (вероятно, Vitest
+завершает их не обычным выходом — не проверял).
+
+| Процесс | `adapters/shared` | `core/*` (не `types`) | Шаги |
+|---|---|---|---|
+| главный, Vitest | `list-tsconfig-files` (входы кэша/зависимости, шаг 7, 10) | `core/instrument/resolve-switched-text` (Vite-плагин, шаг 7), `core/runtime/install-mutant-runtime` (шаг 4), `core/run/compare-dry-entries` (шаг 7), `core/compare-code-units` | 34 модуля `adapters/vitest` |
+| воркер Vitest (`runner.js` + 18 `worker/*`) | `capture-clock`, `get-error-message`, `track-environment`, `track-file-reads`, `track-inputs` | `core/runtime/*` (4 модуля) | шаги 7, 10 |
+| главный, node:test | `read-test-scripts` (шаг 4, `findTestCommand`), `index-environment-hashes` (шаг 4, входы кэша считаются даже при `cache: false`) | `core/cache/create-digest` (id тестов, хеши окружения), `core/compare-code-units` | 43 модуля `adapters/node-test` |
+| процесс теста node:test (13 `preload/*`) | `capture-clock`, `track-environment`, `track-file-reads`, `track-inputs`, `get-error-message` (только в isolated: сообщение провала) | `core/runtime/install-mutant-runtime`, **`core/instrument/resolve-switched-text`** (переключение идёт в процессе теста) | шаги 7, 10 |
+
+Наблюдения:
+
+* **Рабочая часть обоих адаптеров использует один и тот же набор из пяти
+  модулей `shared`** (часы, сообщение ошибки, учёт чтений `fs` и `env`).
+  Это и есть настоящее общее ядро «кода в рабочем процессе»; оно уже
+  вынесено правильно.
+* **Протечки в `core/*`** по внутренним путям: `resolve-switched-text`
+  (оба), `install-mutant-runtime` (оба), `compare-code-units` (оба),
+  `create-digest` (node-test, shared), `compare-dry-entries` (vitest).
+  Первые два — по сути публичный API адаптера (они и экспортируются:
+  `core/index.ts:11`, `core/runtime/index.ts`), остальные три — нет.
+* `select-run-files` исключает из мутации `adapters/*/worker/` и
+  `adapters/*/runner.*` (`core/run/select-run-files.ts:27-28`), но **не**
+  пять модулей `shared`, которые исполняются в рабочих процессах, и не
+  `adapters/node-test/preload/` (BUG-607).
+
 
 ## 3. Фактический контракт
 
@@ -274,7 +345,40 @@ sequenceDiagram
 сейчас две сессии в одном процессе не создаются, но для программного API это
 скрытое ограничение **[по коду]**.
 
-<!-- SECTION:cleanup -->
+### 4.4. Кто и что очищает: успех, таймаут, падение воркера, отмена
+
+Прогоны отмены — `tools/signal-case.sh` на `fixture-slow` (в dry run идут
+синхронный цикл 5 с и `await` 3 с; сигнал через 1 с после `dryRun:call`),
+приватный `TMPDIR`; живые процессы ищутся по `cwd` фикстуры. Сценарий
+«зависший юнит + SIGTERM» — `fixture-hang/vitest`: мутант
+`if (fast)` → `if (false)` даёт шаг 0 и бесконечный цикл в немутируемом
+модуле `lib/walk.js`, где нет сайтов, поэтому лимит вычислений не
+срабатывает и останавливает только сторож.
+
+| Событие | Vitest | node:test | Ядро/CLI |
+|---|---|---|---|
+| Успешный прогон | Vitest гасит воркеры после каждого прогона; `waitForWorkers` дожидается их смерти (`adapters/vitest/run-specifications.ts:41-42`); `close()` → `vitest.close()` | процесс завершён к моменту результата; группа добита при выходе (`adapters/node-test/run-test-process.ts:162-165`); out-файл удалён (`adapters/node-test/run-test-file.ts:55-57`) | `session.close()` и `work.remove()` в `finally` (`core/run-mutants.ts:320-325`) — **[подтверждено]**: каталоги удалены |
+| Таймаут попытки/юнита | сторож: пульс просрочен → `stopHungWorker` (SIGKILL, только если родитель — мы: `adapters/vitest/stop-hung-worker.ts:19-24`); в batch — `abandoned`, остаток юнита пропускается (`adapters/vitest/runner.ts:886-888`) | дедлайн → SIGKILL всей группы (`adapters/node-test/run-test-process.ts:133-139`) | `hang` → Timeout с подтверждением (`core/run/get-unit-evidence.ts:22-28`) |
+| Падение воркера | нет записи `end` → `crash`; Vitest запускает новый воркер для следующего юнита | нет `end` → `crash`; группа убита при выходе | **Killed без повтора** (`core/run/read-isolated-unit.ts:42-44`) — BUG-602 **[подтверждено]** |
+| Зависание при сворачивании воркера | пульс покрывает teardown; без пульса — убийство через 70 с (`adapters/vitest/wait-for-workers.ts:20, 113`) | неприменимо (процесс на юнит) | — |
+| Ctrl+C в терминале (TTY) | воркеры в той же группе получают SIGINT и умирают | процессы-лидеры своих групп убиты обработчиком адаптера (`adapters/node-test/track-process-group.ts:40-46`) | спиннер делает `process.exit(130)` (`cli/terminal/create-spinner.ts:147-160`) → `finally` не выполняется → **каталог `mootant-*` остаётся** (оба адаптера) **[подтверждено]** |
+| SIGINT группе без TTY (CI, `kill -INT -pgid`) | воркеры умирают | убиты обработчиком | обработчиков нет → смерть по сигналу, код 130 → **каталог остаётся** (оба) **[подтверждено]** |
+| SIGTERM только главному процессу (`kill`, `timeout`, отмена задачи CI) | **обработчика нет**: воркер в синхронном цикле осиротел (ppid 1, R) и жил ещё ≈5 с; **зависший юнит** (`fixture-hang`) осиротел и крутился >75 с при ~30–37 % CPU, пока я не убил его вручную — бесконечно (BUG-601) **[подтверждено]** | процессы убиты обработчиком, код 143 | каталог остаётся (оба) **[подтверждено]** |
+
+Итог: **отмена — единственная часть жизненного цикла, у которой нет
+владельца.** У node-test есть локальная защита процессов (хорошая), у
+Vitest — никакой, а рабочий каталог не удаляется ни в одном из шести
+вариантов прерывания (BUG-600). Утечка невелика (28–64 КБ на фикстуре; у
+node-test план переключения содержит полный переключённый текст каждого
+мутируемого файла), но накапливается в `/tmp` при каждом Ctrl+C.
+Предложение (раздел 9): `AdapterContext.signal` + единый обработчик
+SIGINT/SIGTERM в CLI, который прерывает прогон, вызывает `session.close()`
+и `work.remove()` и только потом выходит с 130/143; `close()` vitest-
+адаптера обязан убить все воркеры (pid уже известны: `worker/<pid>`).
+Проверка: интеграционный тест, который запускает `mootant run` на
+фикстуре с медленным тестом, посылает SIGTERM/SIGINT и проверяет, что нет
+ни каталога, ни живых процессов с `cwd` фикстуры — для обоих адаптеров.
+
 
 ## 5. Изоляция
 
@@ -574,7 +678,27 @@ API не меняется в 0.12.x (версию придётся пинить)
 терпима при `performance.buildCache: true`; без batch и без кэша на первой
 итерации (`cacheInputs` необязателен).
 
-<!-- SECTION:rstest-check -->
+**Проверка на фикстуре [подтверждено].** `/home/user/projects/adapters/fixture-rstest`
+(`@rstest/core` 0.12.6, тот же `src/price.js` и эквивалентные тесты;
+скрипт `probe.mjs`): `createRstest` + Rsbuild-плагин с `api.transform`,
+подающий переключённый текст с `globalThis.__mootant.hit('m1')`, и
+setup-файл, который читает план по `expect.getState().testPath` и ставит
+`runtime.active` до загрузки файла теста, отслеживая попытки через
+`beforeEach`/`afterEach`.
+
+| Проверка | Результат |
+|---|---|
+| путь теста виден в setup-файле до загрузки теста | да (`expect.getState().testPath`; в исходниках — геттер над состоянием воркера, `packages/core/src/runtime/api/expect.ts:158-162`) |
+| мутант из плана активен с загрузки, `reached` по попыткам | да: при `active: 'm1'` тест 1 падает «expected 250 to be 150», `reached: true` только у него |
+| свежий процесс на каждый `run()` | да: pid 761, 804, 861, 932, 968 |
+| переиспользование сборки между `run()` | **нет**: трансформация переключённого файла на каждом `run()`; 1258 мс первый, 480–660 мс последующие на 3 тестах |
+| один файл дважды в `filters` | запускается **один раз** → нужны волны |
+| `related: true` с `filters: ['src/price.js']` | находит `test/price.test.js` |
+| id тестов стабильны между запусками | да, позиционные (`22268940b0_0_0`), как у Vitest |
+
+Значит, оценка L держится, а главный риск производительности Rstest —
+пересборка на каждую волну isolated-юнитов (у Vitest её нет вовсе).
+
 
 ### 8.3. Jest 30.5.2 через текущий контракт
 

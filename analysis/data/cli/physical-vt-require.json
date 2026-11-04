@@ -1,0 +1,79 @@
+[
+ {
+  "id": "y1rmnxcp1zgc",
+  "mutator": "arithmetic-operator",
+  "line": 2,
+  "original": "a + b",
+  "replacement": "a",
+  "mootant": "NoCoverage",
+  "ms": 2921,
+  "physical": "fail",
+  "agree": false
+ },
+ {
+  "id": "kkdjmf7aa2n0",
+  "mutator": "comparison-operator",
+  "line": 6,
+  "original": "age >= 18",
+  "replacement": "age > 18",
+  "mootant": "NoCoverage",
+  "ms": 2706,
+  "physical": "fail",
+  "agree": false
+ },
+ {
+  "id": "wmgd2bwwp6r1",
+  "mutator": "comparison-operator",
+  "line": 6,
+  "original": "age >= 18",
+  "replacement": "age == 18",
+  "mootant": "NoCoverage",
+  "ms": 1612,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "wnz4qe9kj0e3",
+  "mutator": "comparison-operator",
+  "line": 6,
+  "original": "age >= 18",
+  "replacement": "age >= 17",
+  "mootant": "NoCoverage",
+  "ms": 2385,
+  "physical": "fail",
+  "agree": false
+ },
+ {
+  "id": "q16bq3dgqt4k",
+  "mutator": "statement-removal",
+  "line": 9,
+  "original": "module.exports = { add, isAdult }",
+  "replacement": ";",
+  "mootant": "NoCoverage",
+  "ms": 1755,
+  "physical": "fail",
+  "agree": false
+ },
+ {
+  "id": "sxq2cy4r21bf",
+  "mutator": "object-property",
+  "line": 9,
+  "original": "{ add, isAdult }",
+  "replacement": "{ isAdult }",
+  "mootant": "NoCoverage",
+  "ms": 1670,
+  "physical": "fail",
+  "agree": false
+ },
+ {
+  "id": "6qjtvyftqmts",
+  "mutator": "object-property",
+  "line": 9,
+  "original": "{ add, isAdult }",
+  "replacement": "{ add }",
+  "mootant": "NoCoverage",
+  "ms": 1848,
+  "physical": "fail",
+  "agree": false
+ }
+]

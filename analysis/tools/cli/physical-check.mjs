@@ -14,7 +14,13 @@ let timeout = Number(process.env.TEST_TIMEOUT ?? 60000)
 let run = args => {
   let r = spawnSync('node', [bin, ...args], { cwd: fixture, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1 << 28 })
   if (!r.stdout) throw new Error(`mootant ${args.join(' ')} failed: ${r.stderr}`)
-  return JSON.parse(r.stdout)
+  try {
+    return JSON.parse(r.stdout)
+  } catch {
+    // stdout is not pure JSON (see BUG-509): take the last line
+    console.log(`! stdout of mootant ${args[0]} is not pure JSON; parsing its last line`)
+    return JSON.parse(r.stdout.trim().split('\n').at(-1))
+  }
 }
 let listed = run(['list', ...paths, '--json', '--verbose']).mutants
 let verdicts = new Map(run(['run', ...paths, '--json', '--all', '--no-cache']).mutants.map(m => [m.id, m.status]))

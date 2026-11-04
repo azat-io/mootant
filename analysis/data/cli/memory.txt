@@ -1,0 +1,12 @@
+######## vt-mem
+{"summary":{"killed":1,"timeout":1,"survived":0,"errorMutants":0,"passed":true},"mutants":[]}
+exit=0
++ dry run  1 test in 0.8s
++ testing 2 mutants  2/2 test runs in 3.3s
++ testing 1 survivor with more test files  1/1 test runs in 3.5s
+######## nt-mem
+{"summary":{"killed":1,"timeout":1,"survived":0,"errorMutants":0,"passed":true},"mutants":[]}
+exit=0
++ dry run  1 test in 0.4s
++ testing 2 mutants  2/2 test runs in 1.6s
++ testing 1 survivor with more test files  1/1 test runs in 2.0s

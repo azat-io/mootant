@@ -1,0 +1,145 @@
+[
+ {
+  "id": "58btk70b3b4t",
+  "mutator": "number-literal",
+  "line": 2,
+  "original": "0",
+  "replacement": "1",
+  "mootant": "NoCoverage",
+  "ms": 12434,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "c4tk8fa4t7f8",
+  "mutator": "number-literal",
+  "line": 2,
+  "original": "10",
+  "replacement": "11",
+  "mootant": "NoCoverage",
+  "ms": 5708,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "arsb7xw7rymt",
+  "mutator": "comparison-operator",
+  "line": 4,
+  "original": "count >= max",
+  "replacement": "count > max",
+  "mootant": "Killed",
+  "ms": 6271,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "r2rv8w2gews1",
+  "mutator": "comparison-operator",
+  "line": 4,
+  "original": "count >= max",
+  "replacement": "count == max",
+  "mootant": "Survived",
+  "ms": 5498,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "vy75bqg8n7r8",
+  "mutator": "comparison-operator",
+  "line": 4,
+  "original": "count >= max",
+  "replacement": "true",
+  "mootant": "Killed",
+  "ms": 5189,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "dk6zb1tt0etk",
+  "mutator": "condition",
+  "line": 7,
+  "original": "!atMax",
+  "replacement": "true",
+  "mootant": "Survived",
+  "ms": 7024,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "2s5by8722z8z",
+  "mutator": "condition",
+  "line": 7,
+  "original": "!atMax",
+  "replacement": "false",
+  "mootant": "Killed",
+  "ms": 7197,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "r59rny25x380",
+  "mutator": "assignment-operator",
+  "line": 8,
+  "original": "count += 1",
+  "replacement": "count -= 1",
+  "mootant": "Killed",
+  "ms": 7484,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "psmk4ffrvgtx",
+  "mutator": "number-literal",
+  "line": 8,
+  "original": "1",
+  "replacement": "2",
+  "mootant": "Killed",
+  "ms": 6916,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "9cew993spjhw",
+  "mutator": "comparison-operator",
+  "line": 13,
+  "original": "count > 0",
+  "replacement": "count >= 0",
+  "mootant": "Survived",
+  "ms": 5828,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "sads0sr5wz0b",
+  "mutator": "comparison-operator",
+  "line": 13,
+  "original": "count > 0",
+  "replacement": "count != 0",
+  "mootant": "Survived",
+  "ms": 5285,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "53fqpgn2vthf",
+  "mutator": "comparison-operator",
+  "line": 13,
+  "original": "count > 0",
+  "replacement": "count > 1",
+  "mootant": "Killed",
+  "ms": 4318,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "37a6ttwq0z48",
+  "mutator": "string-literal",
+  "line": 13,
+  "original": "'zero'",
+  "replacement": "''",
+  "mootant": "NoCoverage",
+  "ms": 4387,
+  "physical": "pass",
+  "agree": true
+ }
+]

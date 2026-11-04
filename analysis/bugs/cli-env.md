@@ -60,3 +60,51 @@
 - npm 10/11: `npm i -D vitest@5.0.5` падает внутри npm (`Cannot read
   properties of null (reading 'edgesOut')`) и без mootant — не баг mootant;
   фикстуры ставились с `--legacy-peer-deps` + явный `vite`.
+
+### Черновые заметки: сигналы и процессы (харнесс `tools/cli/signal-test.sh`, данные `data/cli/sig-*.txt`, `e1*.txt`)
+
+Фикстуры `vt-hang-long`/`nt-hang-long`: мутант `9 -> 10` делает шаг цикла 0,
+синхронный бесконечный цикл в теле теста; `run.timeout.constant: 30000`, чтобы
+зависание длилось ~30 с. Сигнал через 3–4 с (изолированная фаза), `vt-slow`/
+`nt-slow` — через 2 с (dry run, тест ждёт 4 с).
+
+| Сценарий | Vitest | node:test |
+| --- | --- | --- |
+| Ctrl+C: SIGINT группе, TTY | 130, процессов нет, workdir + temp Vite остались | 130, процессов нет, workdir остался |
+| SIGINT только pid, без TTY | 130, **зависший воркер-сирота (ppid 1, 100% CPU)** | 130, группа убита, workdir остался |
+| SIGTERM только pid, без TTY | 143, **воркер-сирота** | 143, ок, workdir остался |
+| SIGTERM pid, TTY, сессию ведёт shell | 143, **воркер-сирота** | 143, ок, workdir остался |
+| SIGHUP pid, без TTY | 129, **воркер-сирота** | 129, **тестовый процесс-сирота** |
+| SIGQUIT pid, без TTY | — | 131, **тестовый процесс-сирота** |
+| SIGTERM pid в dry run | 143, воркер-сирота до конца своего теста | 143, ок |
+| нет `ps` в PATH, без сигнала | **прогон висит бесконечно** (75 с до внешнего KILL, воркер 99% CPU; с `ps` — 5,2 с, вердикт Timeout) | не затронут |
+
+Workdir `mootant-XXXXXX` (beat/claim/done/env/out/plan/worker) остаётся при
+любом сигнале; у Vitest ещё каталог `<random>/ssr/...` в TMPDIR. Улика
+координатора: `/tmp/mootant-4WyyZs` после SIGTERM внешнего лимита.
+
+### Черновые заметки: ещё находки (подтверждены)
+
+- `vt-handle`: `globalSetup` открывает HTTP-сервер и не закрывает. `npx vitest
+  --run` печатает «close timed out after 10000ms» и выходит (16,6 с); `mootant
+  run src` печатает весь отчёт и **не завершается** (убит `timeout 90`, код 124).
+- `vt-require`, `vt-cjs-chain`: под Vitest модуль, загруженный через
+  `require()` (из CJS-исходника `a.cjs` или `createRequire` в тесте), не
+  переключается: мутанты `b.cjs` — NoCoverage (+ предупреждение
+  `never-served`), а физически применённые убиваются тестами (4/5 и 6/7
+  расхождений, `data/cli/physical-vt-cjs-chain.json`,
+  `physical-vt-require.json`). node:test тот же код обрабатывает верно.
+- `mono`: любой проект Vitest (`test.projects`) с `root`, отличным от корня
+  mootant (`projects: ['packages/*']`, inline `{ test: { root } }`,
+  `extends: true`, конфиги пакетов) → «Tests fail without mutants … fails to
+  load: The test runner did not report this file», хотя `npx vitest --run`
+  зелёный. Из каталога пакета работает; проекты с общим `root` работают.
+- `--json`: stdout не чистый JSON, если что-то в процессе mootant пишет в
+  stdout: `vite-plugin-svelte` без `svelte.config.js` («no Svelte config
+  found…» и предупреждения компилятора) или `console.log` в
+  `vitest.config.js` (как баннер dotenv@17). `JSON.parse` падает.
+- Vue/Svelte/алиасы: вердикты совпали с физическим применением мутантов
+  (11/11, 13/13, 4/4). Память: мутант, раздувающий массив, при
+  `--max-old-space-size=256` получает Timeout (cause `hang`) в обоих раннерах.
+- Дочерние процессы теста: Vitest оставляет и detached-, и обычный `sleep`
+  (как и `npx vitest --run`), node:test убивает обычный, оставляет detached.

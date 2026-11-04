@@ -1,0 +1,40 @@
+mootant list · recommended · 16279 mutants in 410 files · id :col mutator  original → replacement
+
+core/cache/apply-cached-batch.ts
+31|  if (cache === null) {
+  stfye28m2qz4 :7 comparison-operator  cache === null → true
+  e2r0d909vtgc :7 comparison-operator  cache === null → false
+35|    if (mutant.path !== 'batch' || mutant.verdict !== null) {
+  b9kzv4tvheys :9 logical-operator  mutant.path !== 'batch' || mutant.verdict !== null → mutant.verdict !== null
+  j067ezyzgpsp :9 logical-operator  mutant.path !== 'batch' || mutant.verdict !== null → mutant.path !== 'batch'
+  9ghwn0kc10fm :9 logical-operator  mutant.path !== 'batch' || mutant.verdict !== null → true
+40|    let decided = decideEvidence({ evidence, ranked })
+  px4m3t3dssvb :34 object-property  { evidence, ranked } → { ranked }
+  96p5vb51re7n :34 object-property  { evidence, ranked } → { evidence }
+41|    if (decided === null) {
+  26cv7px00tfs :9 comparison-operator  decided === null → true
+  sdn6cse1k080 :9 comparison-operator  decided === null → false
+42|      mutant.verdict = findCachedBatchKill(state, cache, mutant)
+  wvja7j0jpdpc :7 statement-removal  mutant.verdict = findCachedBatchKill(state, cache, mutant) → ;
+44|      mutant.path = 'isolated'
+  y6zjxn1bwz40 :7 statement-removal  mutant.path = 'isolated' → ;
+  1ghzecasqg57 :21 string-literal  'isolated' → ''
+45|      mutant.verdict = decided.verdict
+  pnteaj4ap9ts :7 statement-removal  mutant.verdict = decided.verdict → ;
+46|      mutant.survived = decided.verdict === null
+  n0k5r5ynjvwr :7 statement-removal  mutant.survived = decided.verdict === null → ;
+  xj0sx7gst35j :25 comparison-operator  decided.verdict === null → true
+  61cxx1m0zsyd :25 comparison-operator  decided.verdict === null → false
+47|      mutant.ranked = ranked
+  tqwfxp39q2g4 :7 statement-removal  mutant.ranked = ranked → ;
+48|      mutant.evidence = evidence
+  8aj07shm4vna :7 statement-removal  mutant.evidence = evidence → ;
+50|    if (mutant.verdict !== null || mutant.survived) {
+  cfar6pdez3r9 :9 logical-operator  mutant.verdict !== null || mutant.survived → mutant.survived
+  chdqc2cqr5fa :9 logical-operator  mutant.verdict !== null || mutant.survived → mutant.verdict !== null
+  pqyb2esy5v7a :9 logical-operator  mutant.verdict !== null || mutant.survived → true
+51|      mutant.cached = true
+  6g8za2fnzys9 :7 statement-removal  mutant.cached = true → ;
+  87abrxw4wpnb :23 boolean-literal  true → false
+52|      mutant.queue = []
+  anq5ypmnncyc :7 statement-removal  mutant.queue = [] → ;

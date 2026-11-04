@@ -1,0 +1,38 @@
+diff --git a/cli/terminal/get-display-width.ts b/cli/terminal/get-display-width.ts
+index f3a4fa0..d5b78b4 100644
+--- a/cli/terminal/get-display-width.ts
++++ b/cli/terminal/get-display-width.ts
+@@ -16,6 +16,11 @@ const WIDE_PATTERN =
+  */
+ const ZERO_WIDTH_PATTERN = /^[\p{Cc}\p{Cf}\p{Mn}]+$/u
+ 
++/**
++ * Printable ASCII only, where every character takes one column.
++ */
++const PRINTABLE_ASCII_PATTERN = /^[\u{20}-\u{7E}]*$/u
++
+ /**
+  * Splits text into the characters people see.
+  */
+@@ -23,14 +28,19 @@ let segmenter = new Intl.Segmenter()
+ 
+ /**
+  * Counts the terminal columns a text takes, ignoring color codes, so columns
+- * with Chinese, Japanese, Korean text or emoji line up.
++ * with Chinese, Japanese, Korean text or emoji line up. Printable ASCII, the
++ * common case, is counted by its length without splitting it into graphemes.
+  *
+  * @param text - Text, possibly with colors.
+  * @returns Columns of the text.
+  */
+ export function getDisplayWidth(text: string): number {
++  let plain = stripAnsi(text)
++  if (PRINTABLE_ASCII_PATTERN.test(plain)) {
++    return plain.length
++  }
+   let width = 0
+-  let graphemes = splitGraphemes(stripAnsi(text))
++  let graphemes = splitGraphemes(plain)
+   for (let grapheme of graphemes) {
+     width += getGraphemeWidth(grapheme)
+   }

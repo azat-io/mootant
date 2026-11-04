@@ -1,0 +1,60 @@
+mootant run · vitest 5.1.0 · recommended · mode isolated · score 36.71% (covered 43.28%) · killed 29 timeout 0 survived 38 nocov 12 errors 0 · passed true
+recheck: mootant run src --mutant <id>
+legend: id :col mutator status [tests=N]  original → replacement; extend = test files to add a test to; near = covering test to start from
+warning: src/format.ts No test loaded src/format.ts through the test runner's transform: no test imports it, or tests import a built copy, an external or a pre-bundled dependency.
+
+src/format.ts
+1|export function formatPrice(value: number, currency = 'USD'): string {
+  0hqsvg55dxk5 :55 string-literal nocov tests=0  'USD' → ''
+2|  return `${value.toFixed(2)} ${currency}`
+  yef5frdtd4g0 :10 string-literal nocov tests=0  `${value.toFixed(2)} ${currency}` → `${value.toFixed(2)}${currency}`
+  kgzax84n0a6s :27 number-literal nocov tests=0  2 → 3
+6|  return count === 1 ? `${count} ${word}` : `${count} ${word}s`
+  6d3mk17warh0 :10 comparison-operator nocov tests=0  count === 1 → count <= 1
+  wn30d81x8yxr :10 comparison-operator nocov tests=0  count === 1 → count >= 1
+  g4g068e3mrxm :10 comparison-operator nocov tests=0  count === 1 → false
+  v3v7aem0x0hb :24 string-literal nocov tests=0  `${count} ${word}` → ''
+  w76jajazse0z :45 string-literal nocov tests=0  `${count} ${word}s` → ''
+
+src/price.ts
+10|  if (total >= 100) {
+  x223xjw7z7bp :7 comparison-operator survived tests=4  total >= 100 → total >= 99
+    extend: test/price.test.ts
+    near: test/price.test.ts:6 "getDiscount > gives large orders 10% off"
+19|    total += item.price * item.quantity
+  pf5twx02xjb9 :14 arithmetic-operator survived tests=1  item.price * item.quantity → item.price / item.quantity
+    near: test/price.test.ts:24 "getTotal > sums items"
+25|  if (percent <= 0) {
+  8yjn206d0brh :7 comparison-operator survived tests=1  percent <= 0 → percent < 0
+    near: test/price.test.ts:34 "applyDiscount > applies a percent"
+  qra1k6m55pdq :7 comparison-operator survived tests=1  percent <= 0 → percent == 0
+    near: test/price.test.ts:34 "applyDiscount > applies a percent"
+  m37n1smr0ja9 :7 comparison-operator survived tests=1  percent <= 0 → percent <= 1
+    near: test/price.test.ts:34 "applyDiscount > applies a percent"
+26|    return total
+  nekb0xt2g679 :12 return-value nocov tests=0  total → 0
+
+src/retry.ts
+3|  attempts = 3,
+  wddkssqztt58 :14 number-literal survived tests=1  3 → 4
+    extend: test/retry.test.ts
+    near: test/retry.test.ts:5 "returns the result"
+6|  for (let attempt = 1; attempt <= attempts; attempt++) {
+  079b17fw26tc :22 number-literal survived tests=1  1 → 2
+    near: test/retry.test.ts:5 "returns the result"
+  ggxa66qdq8p9 :25 comparison-operator survived tests=1  attempt <= attempts → attempt < attempts
+    near: test/retry.test.ts:5 "returns the result"
+8|      return await task()
+  wjh2efrh9skn :14 missing-await survived tests=1  await task() → task()
+    near: test/retry.test.ts:5 "returns the result"
+10|      lastError = error
+  vjfx2q2m95mq :7 statement-removal nocov tests=0  lastError = error → ;
+13|  throw lastError
+  t0d7ryvtp8m0 :3 statement-removal nocov tests=0  throw lastError → ;
+
+src/slug.ts
+5|  return title
+  zy0xdgz7xy6n :10 method-call survived tests=1  ⏎.trim() → ∅
+    extend: test/slug.test.ts
+    near: test/slug.test.ts:5 "slugifies a title"
+8|    .replace(/[^a-z0-9]+/g, '-')

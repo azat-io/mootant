@@ -6,7 +6,10 @@
 
 - Linux 6.18.44 x86_64, 4 vCPU (Intel Xeon @ 2.10GHz), 15 GiB RAM, файловая
   система с блоком 4 KiB. Машина общая, сеть идёт через прокси, поэтому время
-  установки шумное.
+  установки шумное. Нагрузку во время основных замеров (03:42–03:56 UTC) я не
+  контролировал. Косвенно на стабильность указывает разброс трёх холодных
+  прогонов: не больше 4.4 s, а у Mootant не больше 2.1 s. Размеры и число
+  пакетов от нагрузки не зависят.
 - Node.js v22.23.4, npm 10.9.9.
 - Версии из реестра на дату замера: `@stryker-mutator/core` 10.1.1,
   `@stryker-mutator/vitest-runner` 10.1.1,
@@ -33,13 +36,12 @@
   `node_modules/.package-lock.json`, `find … -name package.json` (как в
   задании) и `npm ls --all --parseable | sort -u`. Первый и третий совпали во
   всех сценариях.
-- Чистая добавка инструмента считалась скриптом. Он сравнивает
-  `.package-lock.json` сценария и базового проекта и суммирует `du -sk` для
-  каждого добавленного пути (скрипт `delta.mjs` лежал в scratchpad; его логика
-  описана здесь).
+- Чистая добавка инструмента считалась скриптом `delta.mjs` (см.
+  приложение). Он сравнивает `.package-lock.json` сценария и базового
+  проекта и суммирует `du -sk` для каждого добавленного пути.
 
-Скрипт замера: `install-size.sh` из scratchpad сессии. Его логика описана выше,
-а сырой вывод приведён в конце файла.
+Скрипт замера `install-size.sh` приведён в приложении, а его сырой вывод —
+в конце файла.
 
 ## Итог
 
@@ -109,10 +111,15 @@ rolldown) и `lilconfig` (< 0.1 MB).
 
    Даже один optional peer `vitest` заставляет npm 10 разрешить граф его
    optional peers (`@vitest/browser-*`, `playwright`, `webdriverio`, `jsdom`,
-   `happy-dom` и т. д.) и скачать их метаданные. В тёплом кэше разница
-   меньше: около 5.5 s против примерно 2–3 s. Предполагаю, что при установке
-   опубликованного `mootant` из реестра будет то же самое, потому что манифест
-   тот же. Это гипотеза: проверить её нельзя, пока 0.1.0 не опубликован.
+   `happy-dom` и т. д.) и скачать их метаданные. Предполагаю, что при
+   установке опубликованного `mootant` из реестра будет то же самое, потому
+   что манифест тот же. Это гипотеза: проверить её нельзя, пока 0.1.0 не
+   опубликован.
+
+   Тёплые прогоны вариантов надёжных цифр не дали, и я их отбросил. Повтор в
+   04:39 пришёлся на load average около 22 (параллельные замеры других
+   агентов), и время выросло примерно вдвое у обоих вариантов: `nopeers`
+   7.1–7.9 s, `vitestonly` 16.6–19.5 s.
 3. **Одна функция — один файл видна и в пакете.** `node_modules/mootant`
    состоит из 1434 файлов (609 `.js`, 822 `.d.ts`). Их apparent size 1.7 MB,
    а на диске из-за блоков по 4 KiB они занимают 6.4 MB. Tarball весит
@@ -242,3 +249,161 @@ size-stryker-tsc vs size-stryker: added 3, 31.0 MB
 # npm re-install artefact check: copy of size-baseline-vitest, plain `npm i` (no new packages)
 added 2 packages -> lightningcss-linux-x64-musl, @rolldown/binding-linux-x64-musl
 ```
+
+## Приложение: скрипты
+
+Контрольный эксперимент с вариантами tarball собирался так:
+
+1. Распаковать артефакт.
+2. Удалить поля из `package/package.json`: для `nopeers` —
+   `peerDependencies`, `peerDependenciesMeta` и `devDependencies`; для
+   `vitestonly` оставить только `vitest` в `peerDependencies` и
+   `peerDependenciesMeta`; для `nodev` — только `devDependencies`.
+3. Запаковать обратно через `tar czf mootant-<v>.tgz package`.
+4. Поставить в пустой каталог с новым `--cache`, по 3 прогона.
+
+<details>
+<summary><code>install-size.sh</code></summary>
+
+```bash
+#!/usr/bin/env bash
+# Measures install size, package count and install time for StrykerJS and Mootant.
+# Usage: install-size.sh <log-file>
+set -u
+R=/home/user/projects/research
+LOG=${1:-$R/install-size.log}
+CACHES=$R/npm-caches
+TGZ=/home/user/artifacts/mootant-0.1.0-170ec52.tgz
+NPMFLAGS="--no-audit --no-fund --loglevel=error"
+COLD_RUNS=3
+WARM_RUNS=2
+mkdir -p "$CACHES"
+: > "$LOG"
+
+log() { echo "$*" | tee -a "$LOG"; }
+
+now() { date +%s.%N; }
+
+metrics() { # $1 dir $2 label
+  local d=$1 label=$2
+  (
+    cd "$d" || exit 1
+    local disk app lockcount pjcount lscount
+    disk=$(du -sh node_modules | cut -f1)
+    app=$(du -sh --apparent-size node_modules | cut -f1)
+    diskk=$(du -sk node_modules | cut -f1)
+    lockcount=$(node -e 'const l=require("./node_modules/.package-lock.json");console.log(Object.keys(l.packages).filter(p=>p.startsWith("node_modules/")).length)')
+    pjcount=$(find node_modules -name package.json -not -path '*/node_modules/*/node_modules/*' | wc -l)
+    lscount=$(npm ls --all --parseable 2>/dev/null | sort -u | tail -n +2 | wc -l)
+    log "METRIC $label disk=$disk diskKB=$diskk apparent=$app lock_packages=$lockcount find_package_json=$pjcount npm_ls_parseable=$lscount"
+    log "TOP $label:"
+    du -sk node_modules/* node_modules/@*/* 2>/dev/null | grep -v '/@[^/]*$' | sort -n | tail -12 | awk '{printf "  %6.1f MB  %s\n", $1/1024, $2}' | tee -a "$LOG"
+  )
+}
+
+restore() { # $1 dir $2 snapshot-or-empty
+  local d=$1 snap=$2
+  rm -rf "$d"
+  mkdir -p "$d"
+  if [ -n "$snap" ]; then
+    cp -a "$snap/package.json" "$snap/package-lock.json" "$d/"
+    cp -a "$snap/node_modules" "$d/"
+  else
+    (cd "$d" && npm init -y >/dev/null)
+  fi
+}
+
+run_scenario() { # $1 name $2 dir $3 snapshot $4.. packages
+  local name=$1 d=$2 snap=$3
+  shift 3
+  local pkgs="$*"
+  log "=== SCENARIO $name: npm i -D $pkgs (base: ${snap:-empty})"
+  local i t0 t1
+  for i in $(seq 1 $COLD_RUNS); do
+    restore "$d" "$snap"
+    rm -rf "$CACHES/cold-$name"
+    t0=$(now)
+    (cd "$d" && npm i -D $pkgs $NPMFLAGS --cache "$CACHES/cold-$name") >>"$LOG" 2>&1
+    t1=$(now)
+    log "TIME $name cold run=$i seconds=$(echo "$t1 - $t0" | bc)"
+  done
+  # cold cache of the last run is now warm
+  for i in $(seq 1 $WARM_RUNS); do
+    restore "$d" "$snap"
+    t0=$(now)
+    (cd "$d" && npm i -D $pkgs $NPMFLAGS --cache "$CACHES/cold-$name") >>"$LOG" 2>&1
+    t1=$(now)
+    log "TIME $name warm run=$i seconds=$(echo "$t1 - $t0" | bc)"
+  done
+  metrics "$d" "$name"
+  (cd "$d" && log "VERSIONS $name: $(npm ls --depth=0 2>/dev/null | tail -n +2 | tr '\n' ' ')")
+}
+
+log "node $(node --version) npm $(npm --version) date $(date -Iseconds)"
+log "machine: $(nproc) vCPU, $(free -h | awk '/Mem:/{print $2}') RAM"
+log "flags: $NPMFLAGS; cold = fresh --cache dir per run; warm = cache populated by previous runs"
+
+# Baselines (snapshots for delta scenarios)
+run_scenario baseline-vitest $R/size-baseline-vitest "" vitest@5
+run_scenario baseline-vitest-ts $R/size-baseline-vitest-ts "" vitest@5 typescript
+
+# Stryker (empty dir, peers auto-installed by npm >= 7)
+run_scenario stryker $R/size-stryker "" @stryker-mutator/core @stryker-mutator/vitest-runner
+run_scenario stryker-tsc $R/size-stryker-tsc "" @stryker-mutator/core @stryker-mutator/vitest-runner @stryker-mutator/typescript-checker
+
+# Stryker on top of an existing project
+run_scenario stryker-on-vitest $R/size-stryker-on-vitest $R/size-baseline-vitest @stryker-mutator/core @stryker-mutator/vitest-runner
+run_scenario stryker-tsc-on-vitest-ts $R/size-stryker-tsc-on-vitest-ts $R/size-baseline-vitest-ts @stryker-mutator/core @stryker-mutator/vitest-runner @stryker-mutator/typescript-checker
+
+# Mootant (peer vitest is optional, so npm does not auto-install it)
+run_scenario mootant-on-vitest $R/size-mootant $R/size-baseline-vitest "$TGZ"
+run_scenario mootant-alone $R/size-mootant-novitest "" "$TGZ"
+run_scenario mootant-on-vitest-ts $R/size-mootant-on-vitest-ts $R/size-baseline-vitest-ts "$TGZ"
+
+log "DONE $(date -Iseconds)"
+```
+
+</details>
+
+<details>
+<summary><code>delta.mjs</code></summary>
+
+```js
+// Usage: node delta.mjs <baseDir|-> <scenarioDir>
+// Prints packages present in scenario but not in base (by install path and version), with disk size.
+import { readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import path from 'node:path'
+
+let [base, scenario] = process.argv.slice(2)
+let read = dir => {
+  if (dir === '-') return {}
+  let lock = JSON.parse(readFileSync(path.join(dir, 'node_modules/.package-lock.json'), 'utf8'))
+  return Object.fromEntries(
+    Object.entries(lock.packages)
+      .filter(([p]) => p.startsWith('node_modules/'))
+      .map(([p, v]) => [p, v.version]),
+  )
+}
+let a = read(base)
+let b = read(scenario)
+let added = Object.keys(b).filter(p => a[p] !== b[p])
+let rows = added.map(p => {
+  let kb = Number(execFileSync('du', ['-sk', path.join(scenario, p)]).toString().split('\t')[0])
+  return { p, v: b[p], kb }
+})
+rows.sort((x, y) => y.kb - x.kb)
+let addedSet = new Set(added)
+let isNested = p => {
+  let parts = p.split('/node_modules/')
+  for (let i = 1; i < parts.length; i++) {
+    if (addedSet.has(parts.slice(0, i).join('/node_modules/'))) return true
+  }
+  return false
+}
+let total = rows.filter(r => !isNested(r.p)).reduce((s, r) => s + r.kb, 0)
+console.log(`added packages: ${rows.length}, total ${(total / 1024).toFixed(1)} MB (du -sk sum, nested dirs counted once per top path)`)
+for (let r of rows.slice(0, 25)) console.log(`${(r.kb / 1024).toFixed(1).padStart(7)} MB  ${r.p}@${r.v}`)
+```
+
+</details>

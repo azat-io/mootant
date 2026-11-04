@@ -4,7 +4,9 @@ REPO=https://github.com/cheeriojs/cheerio
 SHA=40d4365fc025ebc053e6c886c1dac3cf29a4bc61
 PM=npm
 RUNNER=vitest
-MUTATE=(src/api/attributes.ts)
+# The attribute, CSS and form APIs: 393 + 76 + 27 = 496 mutants.
+MUTATE=(src/api/attributes.ts src/api/css.ts src/api/forms.ts)
+PROFILE_MUTATE=(src/api/forms.ts)
 TEST_CMD=(node node_modules/vitest/vitest.mjs run)
 TSC_CHECKER=1
 

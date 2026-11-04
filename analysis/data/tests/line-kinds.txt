@@ -1,0 +1,30 @@
+tests files 637 {"total":81819,"blank":7331,"jsdoc":4114,"lineComment":219,"import":2810,"testDecl":3256,"expect":4803,"other":59286} jsdocBlocks 819 {
+  total: '100.0%',
+  blank: '9.0%',
+  jsdoc: '5.0%',
+  lineComment: '0.3%',
+  import: '3.4%',
+  testDecl: '4.0%',
+  expect: '5.9%',
+  other: '72.5%'
+}
+helpers files 59 {"total":4784,"blank":381,"jsdoc":1645,"lineComment":0,"import":193,"testDecl":1,"expect":0,"other":2564} jsdocBlocks 319 {
+  total: '100.0%',
+  blank: '8.0%',
+  jsdoc: '34.4%',
+  lineComment: '0.0%',
+  import: '4.0%',
+  testDecl: '0.0%',
+  expect: '0.0%',
+  other: '53.6%'
+}
+src files 653 {"total":59924,"blank":3863,"jsdoc":18737,"lineComment":7,"import":3182,"testDecl":7,"expect":0,"other":34128} jsdocBlocks 2788 {
+  total: '100.0%',
+  blank: '6.4%',
+  jsdoc: '31.3%',
+  lineComment: '0.0%',
+  import: '5.3%',
+  testDecl: '0.0%',
+  expect: '0.0%',
+  other: '57.0%'
+}

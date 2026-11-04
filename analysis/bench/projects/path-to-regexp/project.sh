@@ -4,7 +4,9 @@ REPO=https://github.com/pillarjs/path-to-regexp
 SHA=32292b9d13239c7fa3ed23e89c59c10264f9fe20
 PM=npm
 RUNNER=vitest
+# The whole library: 342 mutants; one test file (src/index.spec.ts) covers it.
 MUTATE=(src/index.ts)
+PROFILE_MUTATE=(src/index.ts)
 TEST_CMD=(node node_modules/vitest/vitest.mjs run)
 # typescript 7 (native) has no JS API for @stryker-mutator/typescript-checker.
 TSC_CHECKER=0

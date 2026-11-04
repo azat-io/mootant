@@ -1,0 +1,3 @@
++ dry run  1 test in 0.5s
++ testing 2 mutants  2/2 test runs in 2.9s
++ testing 1 survivor with more test files  1/1 test runs in 2.9s

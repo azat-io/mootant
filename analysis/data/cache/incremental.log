@@ -1,0 +1,129 @@
+=== property_write_elsewhere (04:36:06)
+[inc-property-write/r1] exit=0 args=src
+  569qg05zk12y Survived   cached=false src/math.ts:1 number-literal "18" -> "19"
+  6xzwgnmmsbfj Survived   cached=false src/math.ts:4 comparison-operator "age >= config.boundary" -> "age > config.boundary"
+  sz0dz5p6hxwc Killed     cached=false src/math.ts:4 comparison-operator "age >= config.boundary" -> "age == config.boundary"
+  fdvp5tman4t7 Killed     cached=false src/math.ts:4 comparison-operator "age >= config.boundary" -> "true"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:8 arithmetic-operator "a + b" -> "a - b"
+  summary: total=5 killed=3 survived=2 cached=0 score=60
+[inc-property-write/r2] exit=0 args=src --incremental
+  569qg05zk12y Survived   cached=true src/math.ts:1 number-literal "18" -> "19"
+  6xzwgnmmsbfj Survived   cached=true src/math.ts:4 comparison-operator "age >= config.boundary" -> "age > config.boundary"
+  sz0dz5p6hxwc Killed     cached=true src/math.ts:4 comparison-operator "age >= config.boundary" -> "age == config.boundary"
+  fdvp5tman4t7 Killed     cached=true src/math.ts:4 comparison-operator "age >= config.boundary" -> "true"
+  rxef04cnhtr7 Killed     cached=true src/math.ts:8 arithmetic-operator "a + b" -> "a - b"
+  rn94kw9kkagy Survived   cached=false src/math.ts:11 statement-removal "config.boundary = 30" -> ";"
+  0386qf3g9v7y Killed     cached=false src/math.ts:11 number-literal "30" -> "31"
+  summary: total=7 killed=4 survived=3 cached=5 score=57.14
+  diag warning incremental-reuse: 5 mutants have cached evidence that only their region matched, which a change elsewhere may have made stale; run with --no-incremental to check them.
+[inc-property-write/r3] exit=0 args=src --no-cache
+  569qg05zk12y Survived   cached=false src/math.ts:1 number-literal "18" -> "19"
+  6xzwgnmmsbfj Killed     cached=false src/math.ts:4 comparison-operator "age >= config.boundary" -> "age > config.boundary"
+  sz0dz5p6hxwc Survived   cached=false src/math.ts:4 comparison-operator "age >= config.boundary" -> "age == config.boundary"
+  fdvp5tman4t7 Killed     cached=false src/math.ts:4 comparison-operator "age >= config.boundary" -> "true"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:8 arithmetic-operator "a + b" -> "a - b"
+  rn94kw9kkagy Survived   cached=false src/math.ts:11 statement-removal "config.boundary = 30" -> ";"
+  0386qf3g9v7y Killed     cached=false src/math.ts:11 number-literal "30" -> "31"
+  summary: total=7 killed=4 survived=3 cached=null score=57.14
+  STALE 6xzwgnmmsbfj cached-run=Survived (cached=true) fresh-run=Killed src/math.ts:4
+  STALE sz0dz5p6hxwc cached-run=Killed (cached=true) fresh-run=Survived src/math.ts:4
+  => 2 verdict(s) differ between the cached run and the fresh run
+=== test_change (04:36:20)
+[inc-test-change/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[inc-test-change/r2] exit=0 args=src --incremental
+  a073vwf4fehh Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[inc-test-change/r3] exit=0 args=src --no-cache
+  a073vwf4fehh Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+  => 0 verdict(s) differ between the cached run and the fresh run
+=== unlisted_dependency (04:36:35)
+[inc-unlisted-dependency/r1] exit=0 args=src/math.ts
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[inc-unlisted-dependency/r2] exit=0 args=src/math.ts --incremental
+  a073vwf4fehh Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[inc-unlisted-dependency/r3] exit=0 args=src/math.ts --no-cache
+  a073vwf4fehh Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+  => 0 verdict(s) differ between the cached run and the fresh run
+=== listed_dependency (04:36:50)
+[inc-listed-dependency/r1] exit=0 args=src
+  55vpmx6qwh39 Survived   cached=false src/limits.ts:1 number-literal "30" -> "31"
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=5 killed=2 survived=3 cached=0 score=40
+[inc-listed-dependency/r2] exit=0 args=src --incremental
+  mz23hhprag3q Survived   cached=false src/limits.ts:1 number-literal "18" -> "19"
+  a073vwf4fehh Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=true src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=5 killed=2 survived=3 cached=4 score=40
+  diag warning incremental-reuse: 4 mutants have cached evidence that only their region matched, which a change elsewhere may have made stale; run with --no-incremental to check them.
+[inc-listed-dependency/r3] exit=0 args=src --no-cache
+  mz23hhprag3q Survived   cached=false src/limits.ts:1 number-literal "18" -> "19"
+  a073vwf4fehh Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=5 killed=2 survived=3 cached=null score=40
+  STALE a073vwf4fehh cached-run=Survived (cached=true) fresh-run=Killed src/math.ts:2
+  STALE wb20k1v8dpgd cached-run=Killed (cached=true) fresh-run=Survived src/math.ts:2
+  => 2 verdict(s) differ between the cached run and the fresh run
+=== caller_change (04:37:09)
+[inc-caller-change/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  g8ft43ka5wrb Killed     cached=false src/math.ts:6 return-value "isAdult(age + 0)" -> "true"
+  mdqpt9mr12hv Killed     cached=false src/math.ts:6 return-value "isAdult(age + 0)" -> "false"
+  pn6v0z96f9yp Survived   cached=false src/math.ts:6 number-literal "0" -> "1"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:10 arithmetic-operator "a + b" -> "a - b"
+  summary: total=7 killed=4 survived=3 cached=0 score=57.14
+[inc-caller-change/r2] exit=0 args=src --incremental
+  a073vwf4fehh Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  b4m95v66tvrg Killed     cached=false src/math.ts:6 return-value "isAdult(age + 12)" -> "true"
+  83gfkq3nzp7c Killed     cached=false src/math.ts:6 return-value "isAdult(age + 12)" -> "false"
+  xs4gbm12q5fw Survived   cached=false src/math.ts:6 arithmetic-operator "age + 12" -> "age - 12"
+  qgy44m4f6v7t Killed     cached=false src/math.ts:6 number-literal "12" -> "13"
+  rxef04cnhtr7 Killed     cached=true src/math.ts:10 arithmetic-operator "a + b" -> "a - b"
+  summary: total=8 killed=5 survived=3 cached=4 score=62.5
+  diag warning incremental-reuse: 4 mutants have cached evidence that only their region matched, which a change elsewhere may have made stale; run with --no-incremental to check them.
+[inc-caller-change/r3] exit=0 args=src --no-cache
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  b4m95v66tvrg Killed     cached=false src/math.ts:6 return-value "isAdult(age + 12)" -> "true"
+  83gfkq3nzp7c Killed     cached=false src/math.ts:6 return-value "isAdult(age + 12)" -> "false"
+  xs4gbm12q5fw Survived   cached=false src/math.ts:6 arithmetic-operator "age + 12" -> "age - 12"
+  qgy44m4f6v7t Killed     cached=false src/math.ts:6 number-literal "12" -> "13"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:10 arithmetic-operator "a + b" -> "a - b"
+  summary: total=8 killed=6 survived=2 cached=null score=75
+  STALE 7dbs29dvk40a cached-run=Survived (cached=true) fresh-run=Killed src/math.ts:2
+  => 1 verdict(s) differ between the cached run and the fresh run

@@ -1,0 +1,20 @@
+######## vt-basic
+v22.12.0 exit=0 vitest score=33.33 af24:NoCoverage d69e:Survived dewf:Survived jdc6:Survived kkdj:Survived v7zk:Killed wmgd:Killed wnz4:Survived y1rm:Killed 
+v22.23.4 exit=0 vitest score=33.33 af24:NoCoverage d69e:Survived dewf:Survived jdc6:Survived kkdj:Survived v7zk:Killed wmgd:Killed wnz4:Survived y1rm:Killed 
+v24.22.2 exit=0 vitest score=33.33 af24:NoCoverage d69e:Survived dewf:Survived jdc6:Survived kkdj:Survived v7zk:Killed wmgd:Killed wnz4:Survived y1rm:Killed 
+v26.13.0 exit=0 vitest score=33.33 af24:NoCoverage d69e:Survived dewf:Survived jdc6:Survived kkdj:Survived v7zk:Killed wmgd:Killed wnz4:Survived y1rm:Killed 
+######## vt-cjs
+v22.12.0 exit=0 vitest score=71.43 3d4t:Survived bxch:Killed c357:Killed f83m:Survived q6kf:Killed qpmn:Killed y7me:Killed 
+v22.23.4 exit=0 vitest score=71.43 3d4t:Survived bxch:Killed c357:Killed f83m:Survived q6kf:Killed qpmn:Killed y7me:Killed 
+v24.22.2 exit=0 vitest score=71.43 3d4t:Survived bxch:Killed c357:Killed f83m:Survived q6kf:Killed qpmn:Killed y7me:Killed 
+v26.13.0 exit=0 vitest score=71.43 3d4t:Survived bxch:Killed c357:Killed f83m:Survived q6kf:Killed qpmn:Killed y7me:Killed 
+######## vt-cjs-pkg
+v22.12.0 exit=0 vitest score=71.43 6qjt:Killed kkdj:Survived q16b:Killed sxq2:Killed wmgd:Killed wnz4:Survived y1rm:Killed 
+v22.23.4 exit=0 vitest score=71.43 6qjt:Killed kkdj:Survived q16b:Killed sxq2:Killed wmgd:Killed wnz4:Survived y1rm:Killed 
+v24.22.2 exit=0 vitest score=71.43 6qjt:Killed kkdj:Survived q16b:Killed sxq2:Killed wmgd:Killed wnz4:Survived y1rm:Killed 
+v26.13.0 exit=0 vitest score=71.43 6qjt:Killed kkdj:Survived q16b:Killed sxq2:Killed wmgd:Killed wnz4:Survived y1rm:Killed 
+######## vt-alias
+v22.12.0 exit=0 vitest score=50 frhq:Killed gzjs:Survived wht8:Killed zntm:Survived 
+v22.23.4 exit=0 vitest score=50 frhq:Killed gzjs:Survived wht8:Killed zntm:Survived 
+v24.22.2 exit=0 vitest score=50 frhq:Killed gzjs:Survived wht8:Killed zntm:Survived 
+v26.13.0 exit=0 vitest score=50 frhq:Killed gzjs:Survived wht8:Killed zntm:Survived 

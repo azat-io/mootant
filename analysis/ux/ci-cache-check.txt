@@ -1,0 +1,20 @@
+# Эмуляция CI: npm ci → mootant run → сохранить node_modules/.cache/mootant → npm ci → восстановить → mootant run
+## run 1 (холодный кэш)
++ dry run  13 tests in 1.4s
++ testing 67 mutants  67/67 test runs in 27.9s
+## run 2 (тот же node_modules, тёплый кэш)
++ dry run  13 tests in 2.1s
+Reused cached verdicts for 67 of 79 mutants.
+## npm ci (как на новом раннере), восстановить кэш как actions/cache
+added 45 packages in 6s
+mtime prepare-run-cache.js: 2026-11-04 04:39:38.344446545
+## run 3 (после npm ci, восстановленный кэш)
++ dry run  13 tests in 1.6s
++ testing 67 mutants  67/67 test runs in 31.1s
+## touch -d 1985-10-26 на файлах dist (как в tarball), npm ci → восстановить → run 4 и run 5
+added 45 packages in 5s
+## run 4 (npm ci + touch, холодный кэш)
++ testing 67 mutants  67/67 test runs in 34.3s
+added 45 packages in 10s
+## run 5 (новый npm ci + touch, восстановленный кэш)
+Reused cached verdicts for 67 of 79 mutants.

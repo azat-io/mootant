@@ -1,0 +1,78 @@
+windows of 6 lines in >=3 files: 12
+--- in 6 files, e.g. test/adapters/vitest/start-vitest-session.test.ts:6, test/core/cache/hash-files.test.ts:5, test/core/config/load-typescript-config.test.ts:3
+    beforeAll,
+    afterAll,
+    describe,
+    expect,
+    it,
+    vi,
+--- in 4 files, e.g. test/core/config/load-typescript-config.test.ts:2, test/core/git/find-git-root.test.ts:2, test/core/git/run-git.test.ts:4
+    afterEach,
+    beforeAll,
+    afterAll,
+    describe,
+    expect,
+    it,
+--- in 4 files, e.g. test/core/hints/create-type-hints.test.ts:35, test/core/hints/infer-annotation-type.test.ts:13, test/core/hints/infer-binding-type.test.ts:90
+    'array',
+    'bigint',
+    'boolean',
+    'function',
+    'number',
+    'object',
+--- in 4 files, e.g. test/core/hints/create-type-hints.test.ts:36, test/core/hints/infer-annotation-type.test.ts:14, test/core/hints/infer-binding-type.test.ts:91
+    'bigint',
+    'boolean',
+    'function',
+    'number',
+    'object',
+    'promise',
+--- in 4 files, e.g. test/core/hints/create-type-hints.test.ts:37, test/core/hints/infer-annotation-type.test.ts:15, test/core/hints/infer-binding-type.test.ts:92
+    'boolean',
+    'function',
+    'number',
+    'object',
+    'promise',
+    'string',
+--- in 4 files, e.g. test/core/hints/create-type-hints.test.ts:38, test/core/hints/infer-annotation-type.test.ts:16, test/core/hints/infer-binding-type.test.ts:93
+    'function',
+    'number',
+    'object',
+    'promise',
+    'string',
+    'symbol',
+--- in 3 files, e.g. test/adapters/node-test/build-dry-file.test.ts:200, test/adapters/node-test/build-isolated-facts.test.ts:232, test/adapters/node-test/preload/preload.test.ts:164
+    {
+    message: 'thrown',
+    kind: 'error',
+    load: false,
+    tries: [0],
+    hits: 0,
+--- in 3 files, e.g. test/core/mutators/shared/get-owner-constant.test.ts:11, test/core/mutators/shared/get-toward-mutant.test.ts:12, test/core/mutators/shared/has-polar-mutant.test.ts:12
+    it.each<{
+    setup: TestContextSetup
+    type: Node['type']
+    expected: boolean
+    source: string
+    value: boolean
+--- in 3 files, e.g. test/core/mutators/shared/get-owner-constant.test.ts:12, test/core/mutators/shared/get-toward-mutant.test.ts:13, test/core/mutators/shared/has-polar-mutant.test.ts:13
+    setup: TestContextSetup
+    type: Node['type']
+    expected: boolean
+    source: string
+    value: boolean
+    text: string
+--- in 3 files, e.g. test/core/mutators/shared/get-owner-constant.test.ts:13, test/core/mutators/shared/get-toward-mutant.test.ts:14, test/core/mutators/shared/has-polar-mutant.test.ts:14
+    type: Node['type']
+    expected: boolean
+    source: string
+    value: boolean
+    text: string
+    {
+--- in 3 files, e.g. test/core/tree/get-context-slot.test.ts:56, test/core/tree/get-raw-slot.test.ts:31, test/core/tree/get-slot.test.ts:46
+    parent: null,
+    index: null,
+    key: null,
+    it('throws for a node outside the runtime tree', () => {
+    let { tree } = createTestFile('a')
+    let other = createTestFile('a')

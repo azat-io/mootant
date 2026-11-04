@@ -1,0 +1,46 @@
+[
+ {
+  "id": "wht82w3cajb6",
+  "mutator": "arithmetic-operator",
+  "line": 2,
+  "original": "a + b",
+  "replacement": "a - b",
+  "mootant": "Killed",
+  "ms": 3113,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "zntmhdkbm34r",
+  "mutator": "comparison-operator",
+  "line": 6,
+  "original": "age >= 18",
+  "replacement": "age > 18",
+  "mootant": "Survived",
+  "ms": 3000,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "frhq0bqben5f",
+  "mutator": "comparison-operator",
+  "line": 6,
+  "original": "age >= 18",
+  "replacement": "age == 18",
+  "mootant": "Killed",
+  "ms": 2532,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "gzjss85xbmvp",
+  "mutator": "comparison-operator",
+  "line": 6,
+  "original": "age >= 18",
+  "replacement": "age >= 17",
+  "mootant": "Survived",
+  "ms": 2546,
+  "physical": "pass",
+  "agree": true
+ }
+]

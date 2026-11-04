@@ -1,0 +1,76 @@
+{
+  "source": {
+    "name": "mootant",
+    "url": "https://github.com/azat-io/mootant"
+  },
+  "diagnostics": [
+    {
+      "message": "Surviving mutant (comparison-operator, 04410gm51y2t)\n-   if (isMember && total >= 50) {\n+   if (isMember && total > 50) {\nExtend: test/price.test.ts\nCovering test: test/price.test.ts:10 \"getDiscount > gives members 5% off\"\nRe-check: npx mootant run src --mutant 04410gm51y2t",
+      "location": {
+        "path": "src/price.ts",
+        "range": {
+          "start": {
+            "line": 13,
+            "column": 19
+          }
+        }
+      },
+      "severity": "WARNING",
+      "code": {
+        "value": "comparison-operator",
+        "url": "https://mootant.org/mutators/comparison-operator"
+      }
+    },
+    {
+      "message": "Surviving mutant (comparison-operator, bjzvqjpcq0vj)\n-   if (isMember && total >= 50) {\n+   if (isMember && total == 50) {\nExtend: test/price.test.ts\nCovering test: test/price.test.ts:10 \"getDiscount > gives members 5% off\"\nRe-check: npx mootant run src --mutant bjzvqjpcq0vj",
+      "location": {
+        "path": "src/price.ts",
+        "range": {
+          "start": {
+            "line": 13,
+            "column": 19
+          }
+        }
+      },
+      "severity": "WARNING",
+      "code": {
+        "value": "comparison-operator",
+        "url": "https://mootant.org/mutators/comparison-operator"
+      }
+    },
+    {
+      "message": "Surviving mutant (comparison-operator, fpap8r6zcdbf)\n-   if (isMember && total >= 50) {\n+   if (isMember && total >= 49) {\nExtend: test/price.test.ts\nCovering test: test/price.test.ts:10 \"getDiscount > gives members 5% off\"\nRe-check: npx mootant run src --mutant fpap8r6zcdbf",
+      "location": {
+        "path": "src/price.ts",
+        "range": {
+          "start": {
+            "line": 13,
+            "column": 19
+          }
+        }
+      },
+      "severity": "WARNING",
+      "code": {
+        "value": "comparison-operator",
+        "url": "https://mootant.org/mutators/comparison-operator"
+      }
+    },
+    {
+      "message": "No test reaches this mutant (number-literal, cez51e5bcx69)\n-     return 7\n+     return 8\nExtend: test/price.test.ts\nRe-check: npx mootant run src --mutant cez51e5bcx69",
+      "location": {
+        "path": "src/price.ts",
+        "range": {
+          "start": {
+            "line": 14,
+            "column": 12
+          }
+        }
+      },
+      "severity": "WARNING",
+      "code": {
+        "value": "number-literal",
+        "url": "https://mootant.org/mutators/number-literal"
+      }
+    }
+  ]
+}

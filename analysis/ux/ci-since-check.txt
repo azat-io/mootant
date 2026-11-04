@@ -1,0 +1,36 @@
+# --since в эмуляции checkout для pull_request (локальный remote, refs/pull/1/merge = merge(main@aa4fad7, feature@ac9bae8))
+# feature меняет src/price.ts (getDiscount), main после ответвления меняет src/slug.ts
+
+## ck-depth1 (shallow=true) : mootant list src --since origin/main
+Error: --since: unknown git revision "origin/main".
+exit=1
+
+## ck-depth1-main (shallow=true) : mootant list src --since origin/main
+Error: --since: origin/main and HEAD have no common commit; a shallow clone may need "git fetch --deepen".
+exit=1
+
+## ck-depth2 (shallow=true) : mootant list src --since origin/main
+Error: --since: unknown git revision "origin/main".
+exit=1
+
+## ck-depth2 (shallow=true) : mootant list src --since HEAD^1
+* mootant list src --since 'HEAD^1'                     preset recommended
+
+mutants         5 in 1 file
+
+src/price.ts
+  13:7   logical-operator     isMember && total >= 50 -> total >= 50  hccj
+  13:19  comparison-operator  total >= 50 -> total > 50               0441
+  13:19  comparison-operator  total >= 50 -> total == 50              bjzv
+exit=0
+
+## ck-full (shallow=false) : mootant list src --since origin/main
+* mootant list src --since origin/main                  preset recommended
+
+mutants         5 in 1 file
+
+src/price.ts
+  13:7   logical-operator     isMember && total >= 50 -> total >= 50  hccj
+  13:19  comparison-operator  total >= 50 -> total > 50               0441
+  13:19  comparison-operator  total >= 50 -> total == 50              bjzv
+exit=0

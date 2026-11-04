@@ -35,7 +35,8 @@ node $A/scripts/facade-closures.mjs "$D" > /dev/null
 
 # 2a. Independent cross-check of the cycles with madge.
 "$TOOLS/madge" --circular --extensions ts --ts-config $A/scripts/madge-tsconfig.json \
-  --no-spinner --no-color core adapters cli types > "$D/madge-circular.txt" 2>&1 || true
+  --no-spinner --no-color core adapters cli types 2>&1 \
+  | sed -E 's/ \([0-9.]+s\)//' > "$D/madge-circular.txt" || true
 
 # 3. Folder graphs as SVG (dot rendered by Graphviz compiled to wasm).
 "$TOOLS/depcruise" --config $A/scripts/depcruise.config.cjs --output-type archi \
@@ -72,7 +73,7 @@ fs.writeFileSync(process.argv[1] + "/jscpd-summary.json", JSON.stringify(summary
 rm -rf "$D/.jscpd-strict" "$D/.jscpd-weak"
 
 # 5. Snapshots of the big graphs are kept compressed.
-gzip -kf "$D/depcruise.json" "$D/depcruise-tests.json"
+gzip -nkf "$D/depcruise.json" "$D/depcruise-tests.json"
 
 # 6. Project formatting for the JSON files, when the project's Prettier exists.
 if [ -x node_modules/.bin/prettier ]; then

@@ -4,8 +4,12 @@ REPO=https://github.com/azat-io/eslint-plugin-perfectionist
 SHA=486c3c85239e78a24aba2ade212cdef6acba1829
 PM=pnpm
 RUNNER=vitest
-# Filled in after the smoke runs (see README, "Projects").
-MUTATE=(rules/sort-switch-case.ts rules/sort-switch-case)
+# One rule with its helpers (tested by one test file, so Mootant's units of it
+# run one at a time) and the shared comparators (reached from every rule test
+# file): 208 + 106 = 314 mutants (mootant list, recommended).
+MUTATE=(rules/sort-switch-case.ts rules/sort-switch-case utils/compare)
+# Smoke and profiles: the helpers of the rule only (21 mutants).
+PROFILE_MUTATE=(rules/sort-switch-case)
 TEST_CMD=(node node_modules/vitest/vitest.mjs run)
 TSC_CHECKER=1
 

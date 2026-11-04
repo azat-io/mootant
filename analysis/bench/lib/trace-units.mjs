@@ -36,7 +36,7 @@ if (!tmpdir || !output) {
   console.error('usage: trace-units.mjs <tmpdir> <out.json> [--interval ms] [--pid pid]')
   process.exit(2)
 }
-let interval = 100
+let interval = 250
 let watchedPid = null
 for (let index = 0; index < rest.length; index++) {
   if (rest[index] === '--interval') interval = Number(rest[++index])

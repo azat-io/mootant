@@ -1,0 +1,62 @@
+{
+ "mutants": 16279,
+ "skipped": 16195,
+ "rows": [
+  {
+   "name": "json (as printed, list --json --skipped)",
+   "chars": 14499077,
+   "o200k": 4115204,
+   "cl100k": 4041625,
+   "ms": 18347
+  },
+  {
+   "name": "json mutants only (list --json)",
+   "chars": 5006311,
+   "o200k": 1401715,
+   "cl100k": 1372172,
+   "ms": 6247
+  },
+  {
+   "name": "json mutants only, pretty 2sp",
+   "chars": 7083566,
+   "o200k": 2056754,
+   "cl100k": 2049225,
+   "ms": 9149
+  },
+  {
+   "name": "toon mutants only",
+   "chars": 5287655,
+   "o200k": 1670383,
+   "cl100k": 1662677,
+   "ms": 7118
+  },
+  {
+   "name": "toon mutants only, tab",
+   "chars": 5320214,
+   "o200k": 1732523,
+   "cl100k": 1725220,
+   "ms": 7930
+  },
+  {
+   "name": "toon with skipped",
+   "chars": 15325523,
+   "o200k": 4667586,
+   "cl100k": 4625270,
+   "ms": 20526
+  },
+  {
+   "name": "compact mutants only",
+   "chars": 3018228,
+   "o200k": 928133,
+   "cl100k": 921871,
+   "ms": 4216
+  },
+  {
+   "name": "compact with skipped",
+   "chars": 9191215,
+   "o200k": 2759062,
+   "cl100k": 2727340,
+   "ms": 12027
+  }
+ ]
+}

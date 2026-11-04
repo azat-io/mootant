@@ -44,6 +44,7 @@ bench_project() {
   SINCE_FROM=
   SINCE_TO=
   TSC_CHECKER=0
+  unset PROFILE_MUTATE
   # shellcheck source=/dev/null
   . "$file"
   PROJECT_DIR=$BENCH_PROJECTS/$NAME

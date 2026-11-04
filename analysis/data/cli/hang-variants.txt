@@ -1,0 +1,12 @@
+######## vt-hang-micro
+[{"id":"v2kk","status":"Killed"},{"id":"4x91","status":"Timeout"}] ["worker-hang: The worker running test/step.test.js with mutant 4x91kz4wr1sh stopped responding and was stopped.","worker-hang: The worker running test/step.test.js with mutant 4x91kz4wr1sh stopped responding and was stopped."]
+exit=0 after 8s
+######## nt-hang-micro
+[{"id":"v2kk","status":"Killed"},{"id":"4x91","status":"Timeout"}] ["worker-hang: The worker running test/step.test.js with mutant 4x91kz4wr1sh stopped responding and was stopped.","worker-hang: The worker running test/step.test.js with mutant 4x91kz4wr1sh stopped responding and was stopped."]
+exit=0 after 4s
+######## vt-hang-after
+[{"id":"v2kk","repl":"return size + 9","status":"Survived"},{"id":"4x91","status":"Timeout"}] ["worker-hang: The worker running test/step.test.js with mutant 4x91kz4wr1sh stopped responding and was stopped.","worker-hang: The worker running test/step.test.js with mutant 4x91kz4wr1sh stopped responding and was stopped."]
+exit=0 after 10s
+######## nt-hang-after
+[{"id":"v2kk","repl":"return size + 9","status":"Survived"},{"id":"4x91","status":"Timeout"}] ["worker-hang: The worker running test/step.test.js with mutant 4x91kz4wr1sh stopped responding and was stopped.","worker-hang: The worker running test/step.test.js with mutant 4x91kz4wr1sh stopped responding and was stopped."]
+exit=0 after 4s

@@ -1,0 +1,123 @@
+[
+ {
+  "id": "73vzq2rapn44",
+  "mutator": "comparison-operator",
+  "line": 6,
+  "original": "count.value >= props.max",
+  "replacement": "count.value > props.max",
+  "mootant": "Killed",
+  "ms": 3293,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "0e485hpgshmr",
+  "mutator": "comparison-operator",
+  "line": 6,
+  "original": "count.value >= props.max",
+  "replacement": "count.value == props.max",
+  "mootant": "Survived",
+  "ms": 4384,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "c62yvc5fnvrg",
+  "mutator": "comparison-operator",
+  "line": 6,
+  "original": "count.value >= props.max",
+  "replacement": "true",
+  "mootant": "Killed",
+  "ms": 3728,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "px15y6z97e5n",
+  "mutator": "condition",
+  "line": 9,
+  "original": "!atMax.value",
+  "replacement": "true",
+  "mootant": "Survived",
+  "ms": 4228,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "4v1gvafz1zzn",
+  "mutator": "condition",
+  "line": 9,
+  "original": "!atMax.value",
+  "replacement": "false",
+  "mootant": "Killed",
+  "ms": 3727,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "pc1mw0836zse",
+  "mutator": "assignment-operator",
+  "line": 10,
+  "original": "count.value += 1",
+  "replacement": "count.value -= 1",
+  "mootant": "Killed",
+  "ms": 3188,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "x77vm31qzxcm",
+  "mutator": "number-literal",
+  "line": 10,
+  "original": "1",
+  "replacement": "2",
+  "mootant": "Killed",
+  "ms": 4028,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "0sqach5mcrw4",
+  "mutator": "comparison-operator",
+  "line": 16,
+  "original": "count > 0",
+  "replacement": "count >= 0",
+  "mootant": "Survived",
+  "ms": 4420,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "5h3vz2pa336w",
+  "mutator": "comparison-operator",
+  "line": 16,
+  "original": "count > 0",
+  "replacement": "count != 0",
+  "mootant": "Survived",
+  "ms": 4157,
+  "physical": "pass",
+  "agree": true
+ },
+ {
+  "id": "y5r9typdcrvm",
+  "mutator": "comparison-operator",
+  "line": 16,
+  "original": "count > 0",
+  "replacement": "count > 1",
+  "mootant": "Killed",
+  "ms": 2971,
+  "physical": "fail",
+  "agree": true
+ },
+ {
+  "id": "gwfyxd4wp1ja",
+  "mutator": "string-literal",
+  "line": 16,
+  "original": "'zero'",
+  "replacement": "''",
+  "mootant": "NoCoverage",
+  "ms": 3974,
+  "physical": "pass",
+  "agree": true
+ }
+]

@@ -1,4 +1,5 @@
 {
   "testRunner": "vitest",
-  "plugins": ["@stryker-mutator/vitest-runner"]
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "tsconfigFile": "tsconfig.stryker-skip.json"
 }

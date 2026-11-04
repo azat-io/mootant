@@ -1,0 +1,15 @@
+- Finding files
+Processed 823 files (41 warnings)
+
+✖ Found 9 circular dependencies!
+
+1) core/mutators/shared/get-literal-skip.ts > core/mutators/shared/get-branch-copy-skip.ts > core/mutators/shared/get-owner-constant.ts > core/mutators/shared/get-condition-constants.ts
+2) core/mutators/shared/get-literal-skip.ts > core/mutators/shared/get-branch-copy-skip.ts > core/mutators/shared/get-owner-constant.ts > core/mutators/shared/get-condition-constants.ts > core/mutators/shared/get-nullish-directions.ts > core/mutators/shared/get-literal-flip.ts
+3) core/mutators/shared/has-polar-mutant.ts > core/mutators/shared/get-logical-drops.ts
+4) core/hints/infer-annotation-type.ts > core/hints/infer-binding-type.ts
+5) core/hints/infer-annotation-type.ts > core/hints/infer-expression-type.ts
+6) core/hints/infer-annotation-type.ts > core/hints/infer-expression-type.ts > core/hints/infer-call-type.ts
+7) core/hints/infer-annotation-type.ts > core/hints/infer-expression-type.ts > core/hints/infer-member-type.ts
+8) types/run/mutant-state.d.ts > types/run/isolated-evidence.d.ts
+9) types/run/run-state.d.ts > types/run/live-verdicts.d.ts
+

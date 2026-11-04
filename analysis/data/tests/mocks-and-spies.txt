@@ -1,0 +1,231 @@
+mock calls 84 internal 65 files with internal mocks 35 sameDir 44
+4	node:fs/promises
+4	core/config/load-config
+3	adapters/vitest/detect-vitest
+2	adapters/node-test/run-test-file
+2	node:module
+2	adapters/vitest/run-plan
+2	adapters/vitest/read-unit-inputs
+2	adapters/vitest/watch-heartbeats
+2	adapters/vitest/stop-hung-worker
+2	node:child_process
+2	cli/terminal/is-interactive-terminal
+2	core/git/read-changed-lines
+2	svelte/compiler
+2	oxc-parser
+1	adapters/node-test/get-preload-path
+1	adapters/node-test/start-node-test-session
+1	node:test
+1	node:worker_threads
+1	adapters/node-test/preload/install-module-hooks
+1	adapters/shared/track-inputs
+1	core/runtime/install-mutant-runtime
+1	adapters/node-test/run-test-process
+1	adapters/node-test/read-node-runtime
+1	adapters/node-test/run-dry
+1	adapters/node-test/run-isolated
+1	adapters/shared/track-environment
+1	adapters/shared/track-file-reads
+1	adapters/vitest/configure-project
+1	adapters/vitest/start-vitest-session
+1	adapters/vitest/collect-dependencies
+1	adapters/vitest/wait-for-workers
+1	adapters/vitest/check-vitest-copy
+1	adapters/vitest/run-dry
+1	adapters/vitest/run-batch
+1	adapters/vitest/run-isolated
+1	adapters/vitest/get-cache-inputs
+1	adapters/node-test/score-node-test
+1	cli/terminal/create-spinner
+1	cli/html/client/download-json
+1	cli/run-mutation
+1	cli/run-list
+1	core/list-mutants
+1	core/run-mutants
+1	cli/html/write-html-report
+1	cli/create-run-progress
+1	cli/terminal/is-unicode-supported
+1	node:tty
+1	jiti
+1	core/parser/load-svelte-compiler
+1	core/parser/load-vue-compiler
+1	core/git/run-git
+1	core/hints/infer-expression-type
+1	core/tree/walk-tree
+1	core/identity/create-mutant-id
+1	core/plugins/core-plugin
+1	@vue/compiler-dom
+1	@vue/compiler-dom/package.json
+1	core/regex/parse-regex-pattern
+1	core/regex/map-string-units
+1	core/instrument/create-switched-files
+1	node:fs
+1	core/regex/reads-regex-statics
+1	core/syntax/solve-value-bounds
+1	core/syntax/get-fixed-initializer
+1	core/syntax/get-value-bound
+--- spies by object.method
+11	process.kill
+5	process.features.typescript
+4	TestRunner.getSuiteHooks
+4	console.warn
+4	console.error
+3	process.on
+3	console.info
+3	file.tree.slots.get
+1	process.cwd
+1	state.onCleanup
+1	TestRunner.prototype.injectValue
+1	TestRunner.prototype.onBeforeRunTask
+1	TestRunner.prototype.onBeforeRunSuite
+1	TestRunner.prototype.onAfterRunSuite
+1	TestRunner.prototype.onAfterRunTask
+1	TestRunner.prototype.onAfterRunFiles
+1	TestRunner.getTestFn
+1	second.onStray
+1	first.onStray
+1	process.platform
+1	clock.clearTimeout
+1	performance.now
+1	navigator.clipboard.writeText
+1	document.execCommand
+1	URL.createObjectURL
+1	URL.revokeObjectURL
+1	HTMLAnchorElement.prototype.click
+1	target.addEventListener
+1	Element.prototype.scrollIntoView
+1	globalThis.scrollTo
+1	localStorage.setItem
+1	process.exit
+1	process.stderr.write
+1	file.scopes.bindings.values
+--- internal mocks list
+test/adapters/node-test/index.test.ts:35	adapters/node-test/get-preload-path	same-dir
+test/adapters/node-test/index.test.ts:39	adapters/node-test/start-node-test-session	same-dir
+test/adapters/node-test/preload/preload.test.ts:16	adapters/node-test/preload/install-module-hooks	same-dir
+test/adapters/node-test/preload/preload.test.ts:21	adapters/shared/track-inputs	other-dir
+test/adapters/node-test/preload/preload.test.ts:29	core/runtime/install-mutant-runtime	other-dir
+test/adapters/node-test/run-dry.test.ts:18	adapters/node-test/run-test-file	same-dir
+test/adapters/node-test/run-isolated.test.ts:16	adapters/node-test/run-test-file	same-dir
+test/adapters/node-test/run-test-file.test.ts:14	adapters/node-test/run-test-process	same-dir
+test/adapters/node-test/start-node-test-session.test.ts:17	adapters/node-test/read-node-runtime	same-dir
+test/adapters/node-test/start-node-test-session.test.ts:21	adapters/node-test/run-dry	same-dir
+test/adapters/node-test/start-node-test-session.test.ts:25	adapters/node-test/run-isolated	same-dir
+test/adapters/shared/track-inputs.test.ts:8	adapters/shared/track-environment	same-dir
+test/adapters/shared/track-inputs.test.ts:12	adapters/shared/track-file-reads	same-dir
+test/adapters/vitest/create-mootant-plugin.test.ts:12	adapters/vitest/configure-project	same-dir
+test/adapters/vitest/index.test.ts:38	adapters/vitest/start-vitest-session	same-dir
+test/adapters/vitest/read-unit-inputs.test.ts:8	adapters/vitest/collect-dependencies	same-dir
+test/adapters/vitest/run-batch.test.ts:10	adapters/vitest/run-plan	same-dir
+test/adapters/vitest/run-batch.test.ts:14	adapters/vitest/read-unit-inputs	same-dir
+test/adapters/vitest/run-dry.test.ts:20	adapters/vitest/watch-heartbeats	same-dir
+test/adapters/vitest/run-dry.test.ts:24	adapters/vitest/stop-hung-worker	same-dir
+test/adapters/vitest/run-isolated.test.ts:10	adapters/vitest/run-plan	same-dir
+test/adapters/vitest/run-isolated.test.ts:14	adapters/vitest/read-unit-inputs	same-dir
+test/adapters/vitest/run-plan.test.ts:16	adapters/vitest/watch-heartbeats	same-dir
+test/adapters/vitest/run-plan.test.ts:20	adapters/vitest/stop-hung-worker	same-dir
+test/adapters/vitest/run-specifications.test.ts:8	adapters/vitest/wait-for-workers	same-dir
+test/adapters/vitest/score-vitest.test.ts:9	adapters/vitest/detect-vitest	same-dir
+test/adapters/vitest/start-vitest-session.test.ts:29	adapters/vitest/detect-vitest	same-dir
+test/adapters/vitest/start-vitest-session.test.ts:33	adapters/vitest/check-vitest-copy	same-dir
+test/adapters/vitest/start-vitest-session.test.ts:37	adapters/vitest/run-dry	same-dir
+test/adapters/vitest/start-vitest-session.test.ts:41	adapters/vitest/run-batch	same-dir
+test/adapters/vitest/start-vitest-session.test.ts:45	adapters/vitest/run-isolated	same-dir
+test/adapters/vitest/start-vitest-session.test.ts:49	adapters/vitest/get-cache-inputs	same-dir
+test/cli/built-in-adapters.test.ts:7	adapters/vitest/detect-vitest	other-dir
+test/cli/built-in-adapters.test.ts:8	adapters/node-test/score-node-test	other-dir
+test/cli/create-run-progress.test.ts:12	cli/terminal/is-interactive-terminal	other-dir
+test/cli/create-run-progress.test.ts:13	cli/terminal/create-spinner	other-dir
+test/cli/html/client/start-report.test.ts:12	cli/html/client/download-json	same-dir
+test/cli/index.test.ts:23	cli/run-mutation	same-dir
+test/cli/index.test.ts:28	cli/run-list	same-dir
+test/cli/run-list.test.ts:12	core/list-mutants	other-dir
+test/cli/run-mutation.test.ts:22	core/run-mutants	other-dir
+test/cli/run-mutation.test.ts:23	cli/html/write-html-report	other-dir
+test/cli/run-mutation.test.ts:24	cli/create-run-progress	same-dir
+test/cli/terminal/create-spinner.test.ts:10	cli/terminal/is-interactive-terminal	same-dir
+test/cli/terminal/create-spinner.test.ts:11	cli/terminal/is-unicode-supported	same-dir
+test/core/config/prepare-run.test.ts:10	core/config/load-config	same-dir
+test/core/files/list-file-mutants.test.ts:18	core/parser/load-svelte-compiler	other-dir
+test/core/files/list-file-mutants.test.ts:26	core/parser/load-vue-compiler	other-dir
+test/core/files/list-file-mutants.test.ts:34	core/config/load-config	other-dir
+test/core/git/read-changed-lines.test.ts:11	core/git/run-git	same-dir
+test/core/hints/create-syntactic-type-provider.test.ts:11	core/hints/infer-expression-type	same-dir
+test/core/hints/infer-member-type.test.ts:9	core/tree/walk-tree	other-dir
+test/core/list-mutants.test.ts:28	core/identity/create-mutant-id	other-dir
+test/core/list-mutants.test.ts:36	core/git/read-changed-lines	other-dir
+test/core/list-mutants.test.ts:41	core/config/load-config	other-dir
+test/core/list-mutants.test.ts:46	core/plugins/core-plugin	other-dir
+test/core/regex/read-regex-argument.test.ts:11	core/regex/parse-regex-pattern	same-dir
+test/core/regex/read-regex-argument.test.ts:19	core/regex/map-string-units	same-dir
+test/core/run-mutants.test.ts:37	core/config/load-config	other-dir
+test/core/run-mutants.test.ts:41	core/git/read-changed-lines	other-dir
+test/core/run-mutants.test.ts:45	core/instrument/create-switched-files	other-dir
+test/core/syntax/create-syntax-helpers.test.ts:14	core/regex/reads-regex-statics	other-dir
+test/core/syntax/create-syntax-helpers.test.ts:22	core/syntax/solve-value-bounds	same-dir
+test/core/syntax/get-value-bound.test.ts:13	core/syntax/get-fixed-initializer	same-dir
+test/core/syntax/solve-value-bounds.test.ts:14	core/syntax/get-value-bound	same-dir
+--- spy list
+test/adapters/node-test/preload/preload.test.ts:78	process.on
+test/adapters/node-test/preload/preload.test.ts:102	process.on
+test/adapters/node-test/stop-live-process-groups.test.ts:12	process.kill
+test/adapters/node-test/stop-process-group.test.ts:21	process.kill
+test/adapters/node-test/stop-process-group.test.ts:28	process.kill
+test/adapters/node-test/track-process-group.test.ts:42	process.kill
+test/adapters/node-test/track-process-group.test.ts:53	process.kill
+test/adapters/node-test/track-process-group.test.ts:70	process.kill
+test/adapters/shared/track-file-reads.test.ts:296	process.cwd
+test/adapters/vitest/runner.test.ts:244	state.onCleanup
+test/adapters/vitest/runner.test.ts:616	TestRunner.prototype.injectValue
+test/adapters/vitest/runner.test.ts:619	TestRunner.prototype.onBeforeRunTask
+test/adapters/vitest/runner.test.ts:620	TestRunner.prototype.onBeforeRunSuite
+test/adapters/vitest/runner.test.ts:621	TestRunner.prototype.onAfterRunSuite
+test/adapters/vitest/runner.test.ts:622	TestRunner.prototype.onAfterRunTask
+test/adapters/vitest/runner.test.ts:623	TestRunner.prototype.onAfterRunFiles
+test/adapters/vitest/runner.test.ts:624	TestRunner.getSuiteHooks
+test/adapters/vitest/runner.test.ts:627	TestRunner.getTestFn
+test/adapters/vitest/runner.test.ts:1543	second.onStray
+test/adapters/vitest/runner.test.ts:1544	first.onStray
+test/adapters/vitest/stop-hung-worker.test.ts:35	process.kill
+test/adapters/vitest/stop-hung-worker.test.ts:49	process.kill
+test/adapters/vitest/stop-hung-worker.test.ts:68	process.kill
+test/adapters/vitest/stop-hung-worker.test.ts:88	process.platform
+test/adapters/vitest/stop-hung-worker.test.ts:89	process.kill
+test/adapters/vitest/worker/get-hook-budget.test.ts:19	TestRunner.getSuiteHooks
+test/adapters/vitest/worker/install-try-hook.test.ts:23	TestRunner.getSuiteHooks
+test/adapters/vitest/worker/install-try-hook.test.ts:49	TestRunner.getSuiteHooks
+test/adapters/vitest/worker/is-process-alive.test.ts:22	process.kill
+test/adapters/vitest/worker/race-try-timeout.test.ts:9	clock.clearTimeout
+test/cli/create-run-progress.test.ts:83	performance.now
+test/cli/html/client/copy-text.test.ts:28	navigator.clipboard.writeText
+test/cli/html/client/copy-text.test.ts:38	document.execCommand
+test/cli/html/client/download-json.test.ts:15	URL.createObjectURL
+test/cli/html/client/download-json.test.ts:19	URL.revokeObjectURL
+test/cli/html/client/download-json.test.ts:21	HTMLAnchorElement.prototype.click
+test/cli/html/client/start-report.test.ts:29	target.addEventListener
+test/cli/html/client/start-report.test.ts:140	Element.prototype.scrollIntoView
+test/cli/html/client/start-report.test.ts:141	globalThis.scrollTo
+test/cli/html/client/start-report.test.ts:196	localStorage.setItem
+test/cli/index.test.ts:69	console.info
+test/cli/index.test.ts:70	console.warn
+test/cli/index.test.ts:71	console.error
+test/cli/index.test.ts:76	process.exit
+test/cli/report/print-diagnostics.test.ts:14	console.error
+test/cli/report/print-diagnostics.test.ts:15	console.warn
+test/cli/run-list.test.ts:127	console.error
+test/cli/run-list.test.ts:128	console.info
+test/cli/run-list.test.ts:129	console.warn
+test/cli/run-mutation.test.ts:63	console.error
+test/cli/run-mutation.test.ts:64	console.info
+test/cli/run-mutation.test.ts:65	console.warn
+test/cli/terminal/create-spinner.test.ts:90	process.stderr.write
+test/cli/terminal/create-spinner.test.ts:94	process.on
+test/core/config/load-typescript-config.test.ts:39	process.features.typescript
+test/core/config/load-typescript-config.test.ts:52	process.features.typescript
+test/core/config/load-typescript-config.test.ts:70	process.features.typescript
+test/core/config/load-typescript-config.test.ts:86	process.features.typescript
+test/core/config/load-typescript-config.test.ts:100	process.features.typescript
+test/core/syntax/get-collection-class.test.ts:168	file.tree.slots.get
+test/core/syntax/get-match-regex.test.ts:125	file.tree.slots.get
+test/core/syntax/get-named-groups-fact.test.ts:379	file.tree.slots.get
+test/core/syntax/is-global-name.test.ts:114	file.scopes.bindings.values

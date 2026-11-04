@@ -737,6 +737,64 @@ EOF2
   summarize "$DATA_DIR/spawn-star.r5-npm-run.json"
 }
 
+# T1: a solution-style packages/web/tsconfig.json references
+# tsconfig.app.json, which sets useDefineForClassFields; listTsconfigFiles
+# follows "extends" only, and the root pattern of prepareRunCache only sees
+# files at the root. Flipping the option changes class field semantics.
+tsconfig_reference() {
+  local d
+  d=$(new_project tsconfig-reference)
+  rm -rf "$d/src" "$d/test"
+  mkdir -p "$d/packages/web/src" "$d/packages/web/test"
+  echo '{ "files": [], "references": [{ "path": "./tsconfig.app.json" }] }' >"$d/packages/web/tsconfig.json"
+  echo '{ "compilerOptions": { "target": "ES2022", "useDefineForClassFields": true }, "include": ["src", "test"] }' >"$d/packages/web/tsconfig.app.json"
+  cat >"$d/packages/web/src/math.ts" <<'EOF2'
+export function double(value: number): number {
+  return value * 2
+}
+
+class Base {
+  stored = 0
+
+  set value(value: number) {
+    this.stored = double(value)
+  }
+
+  get value(): number {
+    return this.stored
+  }
+}
+
+export class Child extends Base {
+  // @ts-expect-error a field over an accessor, as in older code bases
+  value = 5
+}
+EOF2
+  cat >"$d/packages/web/test/math.test.ts" <<'EOF2'
+import { expect, it } from 'vitest'
+
+import { Child, double } from '../src/math'
+
+it('child', () => {
+  expect([5, 10]).toContain(new Child().value)
+  expect(double(0)).toBe(0)
+})
+EOF2
+  cat >"$d/vitest.config.ts" <<'EOF2'
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  test: { include: ['packages/*/test/**/*.test.ts'] },
+})
+EOF2
+  commit_all "$d" tsconfig
+  run_mootant "$d" r1 packages/web/src
+  sed -i 's/"useDefineForClassFields": true/"useDefineForClassFields": false/' "$d/packages/web/tsconfig.app.json"
+  run_mootant "$d" r2 packages/web/src
+  run_mootant "$d" r3 packages/web/src --no-cache
+  compare_runs tsconfig-reference r2 r3
+}
+
 # ---- node:test ----
 
 TEMPLATE_NODE=$CACHE_ROOT/template-node

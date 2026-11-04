@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Mootant",
+          "informationUri": "https://github.com/azat-io/mootant",
+          "rules": [
+            {
+              "id": "comparison-operator",
+              "helpUri": "https://mootant.org/mutators/comparison-operator"
+            },
+            {
+              "id": "number-literal",
+              "helpUri": "https://mootant.org/mutators/number-literal"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "comparison-operator",
+          "level": "warning",
+          "message": {
+            "text": "Surviving mutant:\n-   if (isMember && total >= 50) {\n+   if (isMember && total > 50) {\nExtend: test/price.test.ts\nCovering test: test/price.test.ts:10 \"getDiscount > gives members 5% off\"\nRe-check: npx mootant run src --mutant 04410gm51y2t"
+          },
+          "partialFingerprints": {
+            "mootantMutantId": "04410gm51y2t"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/price.ts"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 19
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "comparison-operator",
+          "level": "warning",
+          "message": {
+            "text": "Surviving mutant:\n-   if (isMember && total >= 50) {\n+   if (isMember && total == 50) {\nExtend: test/price.test.ts\nCovering test: test/price.test.ts:10 \"getDiscount > gives members 5% off\"\nRe-check: npx mootant run src --mutant bjzvqjpcq0vj"
+          },
+          "partialFingerprints": {
+            "mootantMutantId": "bjzvqjpcq0vj"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/price.ts"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 19
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "comparison-operator",
+          "level": "warning",
+          "message": {
+            "text": "Surviving mutant:\n-   if (isMember && total >= 50) {\n+   if (isMember && total >= 49) {\nExtend: test/price.test.ts\nCovering test: test/price.test.ts:10 \"getDiscount > gives members 5% off\"\nRe-check: npx mootant run src --mutant fpap8r6zcdbf"
+          },
+          "partialFingerprints": {
+            "mootantMutantId": "fpap8r6zcdbf"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/price.ts"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 19
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "number-literal",
+          "level": "warning",
+          "message": {
+            "text": "No test reaches this mutant:\n-     return 7\n+     return 8\nExtend: test/price.test.ts\nRe-check: npx mootant run src --mutant cez51e5bcx69"
+          },
+          "partialFingerprints": {
+            "mootantMutantId": "cez51e5bcx69"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/price.ts"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
