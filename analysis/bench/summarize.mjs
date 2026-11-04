@@ -208,7 +208,7 @@ function cell(value) {
 }
 
 let projects = existsSync(root)
-  ? readdirSync(root).filter(name => statSync(path.join(root, name)).isDirectory() && !['setup', 'snapshots', 'profiles', 'smoke'].includes(name))
+  ? readdirSync(root).filter(name => statSync(path.join(root, name)).isDirectory() && !['setup', 'snapshots', 'profiles', 'tmp'].includes(name) && !name.startsWith('smoke'))
   : []
 let out = []
 out.push(`# Результаты бенчмарка`, '', `Каталог: \`${root}\`; воркеров: ${workers}. Определения метрик — analysis/bench/README.md, раздел «Метрики».`, '')

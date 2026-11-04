@@ -1,0 +1,79 @@
+{
+ "summary": {
+  "duration": {
+   "batch": null,
+   "isolated": 527720,
+   "startup": 1477,
+   "dryRun": 6136,
+   "total": 535333
+  },
+  "passed": true,
+  "staticCost": [
+   {
+    "file": "src/utils.ts",
+    "duration": 407445,
+    "mutants": 27,
+    "units": 508
+   },
+   {
+    "file": "src/parse.ts",
+    "duration": 205565,
+    "mutants": 6,
+    "units": 256
+   },
+   {
+    "file": "src/punycode.ts",
+    "duration": 156131,
+    "mutants": 5,
+    "units": 222
+   },
+   {
+    "file": "src/query.ts",
+    "duration": 53959,
+    "mutants": 0,
+    "units": 70
+   },
+   {
+    "file": "src/url.ts",
+    "duration": 44831,
+    "mutants": 0,
+    "units": 62
+   },
+   {
+    "file": "src/encoding.ts",
+    "duration": 32989,
+    "mutants": 6,
+    "units": 46
+   }
+  ],
+  "totalCached": 0,
+  "totalUnrepeatableTests": null,
+  "totalBatch": null,
+  "totalNoCoverage": 64,
+  "totalMutants": 855,
+  "totalErrorMutants": 0,
+  "totalTests": 489,
+  "totalSurvived": 135,
+  "totalIgnored": 0,
+  "totalTimeout": 2,
+  "threshold": null,
+  "coveredScore": 82.93,
+  "totalKilled": 654,
+  "score": 76.73,
+  "runs": {
+   "dry": 1,
+   "isolated": 5
+  },
+  "totalIsolated": 791,
+  "totalWarnings": 0,
+  "totalErrors": 0,
+  "totalStatic": 44,
+  "totalFiles": 7
+ },
+ "statuses": {
+  "Killed": 654,
+  "Survived": 135,
+  "NoCoverage": 64,
+  "Timeout": 2
+ }
+}

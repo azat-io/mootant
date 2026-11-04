@@ -173,6 +173,13 @@ CLI `mootant list --json --verbose` (тот же конфиг и пресет, �
 
    Совпадение — по каждому тесту (не только «убит/выжил»).
 
+   Сквозная проверка самого Mootant (`compare-verdicts.mjs`): `mootant run src
+   --json --all --concurrency 2` на ufo (855 мутантов `recommended`, 9 мин;
+   654 Killed, 135 Survived, 64 NoCoverage, 2 Timeout) против физического
+   применения из I3: из 200 мутантов выборки 157 есть в прогоне (43 — только
+   `strict`), вердикт совпал у **157 из 157** (Killed/Timeout ⇔ хоть один тест
+   упал при физическом применении).
+
 5. **node:test** — фикстуры `nt-cjs` (CJS-модуль, импортируемый из ESM-теста
    именованными импортами; на Node 22.23.4 с `registerHooks`, 22.12.0 и
    20.19.0 с `register()`) и `nt-ts` (TS через встроенный type stripping

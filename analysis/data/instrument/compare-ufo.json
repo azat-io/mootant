@@ -1,0 +1,13 @@
+{
+ "i3": "/home/user/projects/instrument/i3-ufo.json",
+ "run": "/home/user/projects/instrument/ufo-mootant-run.json",
+ "counts": {
+  "compared": 157,
+  "agree": 157,
+  "falseKilled": 0,
+  "falseSurvived": 0,
+  "missing": 43,
+  "error": 0
+ },
+ "disagreements": []
+}

@@ -1,6 +1,6 @@
 # Матрицы согласия Mootant × эталон
 
-> Сгенерировано `analysis/tools/oracle/aggregate.mjs` из `analysis/data/oracle/**/*.oracle.jsonl` и отчётов Mootant в `/home/user/projects/oracle/results{,-nt}/`. Строки — вердикт Mootant, столбцы — исход эталона. Для `crash` и `slow` (Vitest) и `slow` (node:test) — пресет `strict`, для остальных — `recommended`. Стресс-фикстуры намеренно состоят из «трудных» случаев, их проценты не переносятся на обычные проекты.
+> Сгенерировано `analysis/tools/oracle/aggregate.mjs` из `analysis/data/oracle/**/*.oracle.jsonl` и отчётов Mootant в `/home/user/projects/oracle/results{,-nt}/`. Строки — вердикт Mootant, столбцы — исход эталона. Для `crash` и `slow` (Vitest), `crash` и `slow` (node:test) — пресет `strict`, для остальных — `recommended`. Стресс-фикстуры намеренно состоят из «трудных» случаев, их проценты не переносятся на обычные проекты. Для `nt/slow` в матрицу вошёл первый прогон, где `9trb33kh` — `Survived`; в 4 повторах из 5 он `Timeout` (BUG-204).
 
 ## Sums per group
 
@@ -8,36 +8,36 @@
 
 | Mootant \ эталон | killed | killed-timeout | timeout | survived | всего |
 |---|---:|---:|---:|---:|---:|
-| Killed | 111 | 0 | 0 | 3 | 114 |
+| Killed | 119 | 0 | 0 | 3 | 122 |
 | Timeout | 0 | 5 | 2 | 3 | 10 |
-| Survived | 1 | 0 | 0 | 63 | 64 |
-| NoCoverage | 8 | 1 | 0 | 17 | 26 |
+| Survived | 2 | 0 | 0 | 67 | 69 |
+| NoCoverage | 11 | 1 | 0 | 21 | 33 |
 | Error | 2 | 0 | 0 | 0 | 2 |
 
-Сравнимых (без Error): 214; согласие «обнаружен / не обнаружен»: 198 (92.5 %), расхождений: 16.
+Сравнимых (без Error): 234; согласие «обнаружен / не обнаружен»: 214 (91.5 %), расхождений: 20.
 
 ### vitest-fast
 
 | Mootant \ эталон | killed | killed-timeout | timeout | survived | всего |
 |---|---:|---:|---:|---:|---:|
-| Killed | 111 | 0 | 0 | 5 | 116 |
+| Killed | 118 | 0 | 0 | 5 | 123 |
 | Timeout | 0 | 5 | 2 | 4 | 11 |
-| Survived | 1 | 0 | 0 | 60 | 61 |
-| NoCoverage | 8 | 1 | 0 | 17 | 26 |
+| Survived | 1 | 0 | 0 | 63 | 64 |
+| NoCoverage | 8 | 1 | 0 | 18 | 27 |
 | Error | 2 | 0 | 0 | 0 | 2 |
 
-Сравнимых (без Error): 214; согласие «обнаружен / не обнаружен»: 195 (91.1 %), расхождений: 19.
+Сравнимых (без Error): 225; согласие «обнаружен / не обнаружен»: 206 (91.6 %), расхождений: 19.
 
 ### node-test
 
 | Mootant \ эталон | killed | killed-timeout | timeout | survived | всего |
 |---|---:|---:|---:|---:|---:|
-| Killed | 105 | 0 | 0 | 0 | 105 |
-| Timeout | 0 | 0 | 2 | 2 | 4 |
-| Survived | 0 | 0 | 0 | 51 | 51 |
-| NoCoverage | 5 | 0 | 0 | 14 | 19 |
+| Killed | 119 | 0 | 0 | 0 | 119 |
+| Timeout | 0 | 0 | 4 | 2 | 6 |
+| Survived | 0 | 0 | 0 | 61 | 61 |
+| NoCoverage | 5 | 0 | 0 | 18 | 23 |
 
-Сравнимых (без Error): 179; согласие «обнаружен / не обнаружен»: 172 (96.1 %), расхождений: 7.
+Сравнимых (без Error): 209; согласие «обнаружен / не обнаружен»: 202 (96.7 %), расхождений: 7.
 
 ### real-default
 
@@ -144,6 +144,26 @@
 
 Сравнимых (без Error): 27; согласие «обнаружен / не обнаружен»: 26 (96.3 %), расхождений: 1.
 
+#### vitest-default/hooks
+
+| Mootant \ эталон | killed | killed-timeout | timeout | survived | всего |
+|---|---:|---:|---:|---:|---:|
+| Killed | 7 | 0 | 0 | 0 | 7 |
+| Survived | 0 | 0 | 0 | 3 | 3 |
+| NoCoverage | 0 | 0 | 0 | 1 | 1 |
+
+Сравнимых (без Error): 11; согласие «обнаружен / не обнаружен»: 11 (100.0 %), расхождений: 0.
+
+#### vitest-default/fscache
+
+| Mootant \ эталон | killed | killed-timeout | timeout | survived | всего |
+|---|---:|---:|---:|---:|---:|
+| Killed | 1 | 0 | 0 | 0 | 1 |
+| Survived | 1 | 0 | 0 | 1 | 2 |
+| NoCoverage | 3 | 0 | 0 | 3 | 6 |
+
+Сравнимых (без Error): 9; согласие «обнаружен / не обнаружен»: 5 (55.6 %), расхождений: 4.
+
 #### vitest-fast/state
 
 | Mootant \ эталон | killed | killed-timeout | timeout | survived | всего |
@@ -227,6 +247,16 @@
 
 Сравнимых (без Error): 27; согласие «обнаружен / не обнаружен»: 26 (96.3 %), расхождений: 1.
 
+#### vitest-fast/hooks
+
+| Mootant \ эталон | killed | killed-timeout | timeout | survived | всего |
+|---|---:|---:|---:|---:|---:|
+| Killed | 7 | 0 | 0 | 0 | 7 |
+| Survived | 0 | 0 | 0 | 3 | 3 |
+| NoCoverage | 0 | 0 | 0 | 1 | 1 |
+
+Сравнимых (без Error): 11; согласие «обнаружен / не обнаружен»: 11 (100.0 %), расхождений: 0.
+
 #### node-test/state
 
 | Mootant \ эталон | killed | killed-timeout | timeout | survived | всего |
@@ -267,15 +297,16 @@
 
 Сравнимых (без Error): 21; согласие «обнаружен / не обнаружен»: 21 (100.0 %), расхождений: 0.
 
-#### node-test/crash
+#### node-test/crash (strict)
 
 | Mootant \ эталон | killed | killed-timeout | timeout | survived | всего |
 |---|---:|---:|---:|---:|---:|
-| Killed | 32 | 0 | 0 | 0 | 32 |
-| Survived | 0 | 0 | 0 | 21 | 21 |
-| NoCoverage | 0 | 0 | 0 | 9 | 9 |
+| Killed | 39 | 0 | 0 | 0 | 39 |
+| Timeout | 0 | 0 | 2 | 0 | 2 |
+| Survived | 0 | 0 | 0 | 28 | 28 |
+| NoCoverage | 0 | 0 | 0 | 12 | 12 |
 
-Сравнимых (без Error): 62; согласие «обнаружен / не обнаружен»: 62 (100.0 %), расхождений: 0.
+Сравнимых (без Error): 81; согласие «обнаружен / не обнаружен»: 81 (100.0 %), расхождений: 0.
 
 #### node-test/slow (strict)
 
@@ -287,6 +318,16 @@
 | NoCoverage | 0 | 0 | 0 | 1 | 1 |
 
 Сравнимых (без Error): 27; согласие «обнаружен / не обнаружен»: 27 (100.0 %), расхождений: 0.
+
+#### node-test/hooks
+
+| Mootant \ эталон | killed | killed-timeout | timeout | survived | всего |
+|---|---:|---:|---:|---:|---:|
+| Killed | 7 | 0 | 0 | 0 | 7 |
+| Survived | 0 | 0 | 0 | 3 | 3 |
+| NoCoverage | 0 | 0 | 0 | 1 | 1 |
+
+Сравнимых (без Error): 11; согласие «обнаружен / не обнаружен»: 11 (100.0 %), расхождений: 0.
 
 #### real-default/mootant core-text
 
