@@ -1,9 +1,55 @@
 # 5. Тесты самого проекта
 
-> Черновик, заполняется по ходу работы. Коммит `170ec52`. Статический разбор —
-> по `git ls-files` (без мусора вроде `test/fixtures/**/node_modules/.vite`).
-> Машина: 4 vCPU, во время прогонов load average 20–30 (≈10 агентов), см. §5.3.
-> Скрипты: `analysis/tools/tests/`, сырые данные: `analysis/data/tests/`.
+> Коммит `170ec52`. Статический разбор — по `git ls-files` (без мусора вроде
+> `test/fixtures/**/node_modules/.vite`). Прогоны — в worktree
+> `/home/user/wt/tests-e` (от `170ec52`), Node 22.23.4, Vitest 5.0.5, root,
+> 4 vCPU; во время прогонов load average был 18–35 (≈10 агентов), поэтому
+> абсолютные времена под нагрузкой раздуты, а ранжирование и механизмы
+> падений — нет. Скрипты: `analysis/tools/tests/`, данные:
+> `analysis/data/tests/`, диффы тестов: `analysis/experiments/tests-*-gaps.diff`,
+> баги: `analysis/bugs/tests.md` (BUG-850…BUG-863), промпты:
+> `analysis/bug-prompts/BUG-850.md`, `BUG-851.md`, `BUG-856.md`.
+
+## 5.0. Резюме
+
+- **Соотношение тест/код нормальное, тесты не хрупкие.** 88 тыс. строк
+  тестов на 60 тыс. строк исходников. По «телу», без JSDoc и пустых строк,
+  выходит ≈ 2×. Но это таблицы «фрагмент кода → мутанты» (840 таблиц
+  `it.each`) на настоящем парсере. Моки модулей проекта есть в 5,5 % файлов,
+  inline-снапшотов 18, копипасты и дублей фикстур практически нет. Цена стиля
+  «одна функция — один файл» — 206 тест-файлов на хелперы с единственным
+  вызывающим (§5.1).
+- **Рефакторинг раздела 1 тестам почти не мешает.** По его картам слияния
+  137–186 тест-файлов меняют только путь импорта (кодмод; типизированные
+  `vi.mock(import())` ловит `tsc`), по смыслу ломаются **2** теста.
+  Опасный шаг — сужение экспорта. В семействе логирования 13 % мутантов
+  приватных хелперов убивают только их собственные тесты, а 100 % покрытия
+  этого не покажет. Поэтому до сужения нужен замер мутантами (протокол
+  в §5.2).
+- **Время.** В тишине 250,8 с (tests 81 %, import 12 %); под нагрузкой
+  1 382 с. Критический путь — один файл, `test/adapters/vitest/index.test.ts`:
+  71,6 % суммарного времени файлов под нагрузкой. Разрезать его — S, больше
+  всего пользы (§5.3).
+- **Нестабильность.** Под нагрузкой падают 22 теста. 20 из них — время:
+  дефолтные 5 с у «тестов масштаба» (300 000 строк и т. п.), лимиты по стене
+  в оракулах (1 с у `runProgram`, 4 с у эталона node:test) и таймауты
+  вложенных прогонов. Ещё один — сравнение float, один — root. Падение «node:test
+  verdict equivalence» — это таймаут эталона на **исходной** копии, а не
+  расхождение вердиктов. Зависимости от машины: `TERM` (4 теста), root
+  (1), **`NODE_OPTIONS` (порог coverage падает при зелёных тестах, BUG-850)**,
+  глобальный `core.hooksPath` в git (8 тестов) (§5.4).
+- **Дыры, найденные мутантами (подтверждены новыми тестами).**
+  `core/git`: 84,45 % → 90,3 % после 61 строки тестов (14 из 37 выживших).
+  Главное: тест `parse-unified-diff.test.ts:81-94` не может упасть по своей
+  причине, и вся логика пропуска строк ханка для `--since` не защищена
+  (удаление строки проходит сьют). `cli/terminal`: 88,7 % → 93,7 % после
+  67 строк (15 из 34): кадр спиннера после `print()`, края `stripAnsi` и
+  другое. Оставшиеся 39 выживших — эквивалентные и шумовые, и по ним видны
+  5 доказуемых правил для эвристик Mootant (§5.5).
+- **Что сделано хорошо** (§5.6): оракулы, не зависящие от реализации
+  (эквивалентность вердиктов с физически применёнными мутантами, приёмочный
+  эталон `list`), property-based проверка генерации с детерминированным ГСЧ,
+  строгий линт тестов, тесты на настоящих процессах и git.
 
 ## 5.1. Соотношение тест/код: нормально или признак хрупкости
 
@@ -395,7 +441,8 @@ dry run → раунды isolated», плюс эталонный прогон н
 
 ### Что даст больше всего
 
-(уточняется по тихому прогону quiet-2, см. ниже)
+Оценки ниже сделаны по load-1. Тихого прогона с длительностями по файлам
+(quiet-2 координатора) к моменту написания не было.
 
 1. **Разрезать `test/adapters/vitest/index.test.ts` на 3–4 файла** по
    `describe`: `vitest adapter`, `verdict equivalence`, `vitest adapter with
@@ -404,7 +451,8 @@ dry run → раунды isolated», плюс эталонный прогон н
    всего `test:unit`. По load-1: остальные 636 файлов дают 537 с суммарно,
    то есть ≈ 180 с на трёх воркерах. Значит, после разреза wall упирается в
    самую длинную часть, а не в 1 355 с. Под нагрузкой ожидаемый выигрыш
-   ×2–2,5. В тишине — пропорционально доле этого файла (уточню по quiet-2).
+   ×2–2,5. В тишине — пропорционально доле этого файла, которую покажет
+   quiet-2.
    Трудоёмкость S: перенос `describe` и общих хелперов файла (`runAllPaths`,
    `expectAgreement`, …) в `test/helpers`. Риск: суммарная нагрузка растёт,
    потому что вложенные прогоны идут с `concurrency: 2` одновременно. На
@@ -418,11 +466,12 @@ dry run → раунды isolated», плюс эталонный прогон н
    (≈ 300 файлов без `vi.mock`) и `integration` с изоляцией для остального.
    Трудоёмкость M. Проверка: дважды прогнать `unit` в разном порядке
    (`--sequence.shuffle`), должно быть зелено.
-3. **Удешевить «тесты масштаба»**: 300 000 строк → достаточно чуть выше
-   лимита аргументов V8 (≈ 120 000 при стандартном стеке), либо явно задать
-   таймаут этим тестам. Сейчас один тест — 44,8 с под нагрузкой, в тишине
-   доли секунды. На wall в тишине почти не влияет, зато это главный
-   источник нестабильности (§5.4).
+3. **Удешевить «тесты масштаба»**: вместо 200–300 тыс. элементов достаточно
+   чуть больше лимита spread в V8 (на этой машине — 130 000 элементов,
+   проверено `Math.max(...array)`), либо явно задать таймаут этим тестам.
+   Сейчас один такой тест идёт 44,8 с под нагрузкой; в тишине все они
+   укладываются в 5 с (этап 0 их прошёл). На wall в тишине почти не влияет,
+   зато это главный источник нестабильности (§5.4).
 4. **Не трогать coverage ради скорости**: доля `transform` 3–4 %, v8-coverage
    дёшев. Шардинг (`--shard`) в CI имеет смысл только после п. 1: сейчас
    любой шард, получивший `vitest/index.test.ts`, будет самым долгим.
@@ -436,11 +485,11 @@ root), load-1 (22 падения в 12 файлах, `TERM=xterm-256color`) и �
 | # | Тест | Как падает | Механизм (причина) | Класс |
 | ---: | --- | --- | --- | --- |
 | 1 | 10 тестов `test/adapters/vitest/index.test.ts` («verdict equivalence …», «… with the cache …», «runs every mutant … isolated», «… fast mode») | `Test timed out in 30000/60000/120000ms` | явные таймауты `}, 30_000)` … `}, 180_000)` (`:529-1919`) на вложенных прогонах Mootant+Vitest; под load 30 тест идёт 30–120 с | таймаут под нагрузкой |
-| 2 | `test/adapters/node-test/index.test.ts:344` «node:test verdict equivalence agrees with mutants applied by hand» | `expected false to be true` на `:350` (`expect(original).toBe(true)`), в моём прогоне — таймаут 60 с | **не расхождение вердиктов**: эталонный прогон `node --test` исходной копии фикстуры получает лимит 4 000 мс по стене (`:140`, `test/helpers/run-node-test-reference.ts:150-153`) и под нагрузкой не успевает → `'Timeout'` → `original = false` | таймаут оракула |
+| 2 | `test/adapters/node-test/index.test.ts:344` «node:test verdict equivalence agrees with mutants applied by hand» | `expected false to be true` на `:350` (`expect(original).toBe(true)`); в моём прогоне упал через 63,8 с при лимите теста 60 с | **не расхождение вердиктов**: эталонный прогон `node --test` исходной копии фикстуры получает лимит 4 000 мс по стене (`:140`, `test/helpers/run-node-test-reference.ts:150-153`) и под нагрузкой не успевает → `'Timeout'` → `original = false` | таймаут оракула |
 | 3 | `test/core/generate/generate-file-mutants.test.ts:4825` «runProgram › observes function f() { return new Promise(() => {}) }» | `expected [ 'hung' ] …` | `test/helpers/run-program.ts:8` `TIME_LIMIT = 1000` мс по стене на запуск программы в воркере; под нагрузкой старт воркера + исполнение > 1 с → `hung` | таймаут хелпера |
 | 4 | `test/core/instrument/instrument-file.test.ts:404` «switches function f(text) { … like each mutant applied alone» | ожидали `'hung'` первым элементом | тот же лимит 1 с: на этот раз не успел **эталонный** прогон исходной программы (`:419`), а переключённый успел | таймаут хелпера |
 | 5 | `test/adapters/vitest/runner.test.ts:654` «records coverage, stray errors and flips in a dry run with beats» | `2049.9999999999995` вместо `2050` (`:693`) | **плавающая точка, а не нагрузка**: `adapters/vitest/runner.ts:991-997` считает `watch = now + 50 + timeout + hooks`, затем `beatDry(now)` → `watch - now`. Результат точен не для всех `now`. Моделирование: ≈ 1 % при `performance.now()` в 0,1–1 с от старта воркера и ≈ 23 % при 1–10 с, что бывает под нагрузкой. Тот же файл на `:1499` уже округляет (`Math.round(beat.budget / 10) * 10`), а на `:693` — нет | недетерминизм |
-| 6–12 | `test/cli/index.test.ts:211` (10,0 с); `test/cli/report/format-header.test.ts:21` (44,8 с); `test/cli/terminal/get-max-display-width.test.ts:17` (13,9 с); `test/core/cache/prune-cache-entries.test.ts:48` (6,5 с); `test/cli/html/client/start-report.test.ts:476` (6,8 с); `test/core/run-mutants.test.ts:822` (5,3 с, загрузка компиляторов Svelte/Vue); `generate-file-mutants.test.ts` «keeps no weak mutant and covers every fault of if (!((((!(y1 > x1) …» (7,4 с) | `Test timed out in 5000ms` | CPU-тяжёлые тесты на дефолтном `testTimeout` 5 с, в тишине с запасом в 1,5–10 раз меньше | таймаут под нагрузкой |
+| 6–12 | `test/cli/index.test.ts:211` (10,0 с); `test/cli/report/format-header.test.ts:21` (44,8 с); `test/cli/terminal/get-max-display-width.test.ts:17` (13,9 с); `test/core/cache/prune-cache-entries.test.ts:48` (6,5 с); `test/cli/html/client/start-report.test.ts:476` (6,8 с); `test/core/run-mutants.test.ts:822` (5,3 с, загрузка компиляторов Svelte/Vue); `generate-file-mutants.test.ts` «keeps no weak mutant and covers every fault of if (!((((!(y1 > x1) …» (7,4 с) | `Test timed out in 5000ms` | CPU-тяжёлые тесты на дефолтном `testTimeout` 5 с; в тихом прогоне этапа 0 они уложились в 5 с | таймаут под нагрузкой |
 | 13 | `test/adapters/node-test/score-node-test.test.ts:98` «skips test files it cannot read» | `expected 1 to be +0` | `chmod 000` не мешает читать root'у | окружение: uid |
 | 14–17 | `test/cli/run-list.test.ts` (2), `test/cli/run-mutation.test.ts` (2) | ASCII `*`, `->`, `!` вместо `●`, `→`, `▲` | `cli/terminal/is-unicode-supported.ts:13`; тесты стабят `NO_COLOR` (`run-list.test.ts:126`, `run-mutation.test.ts:62`), но не `TERM` | окружение: `TERM` |
 | 18 | порог coverage: branches 99,98 % < 100 % | `ERROR: Coverage for branches … does not meet global threshold` при **всех зелёных тестах** | `adapters/node-test/start-node-test-session.ts:119,167` — `environment['NODE_OPTIONS'] ?? ''`: если `NODE_OPTIONS` задан в окружении машины, правая ветка недостижима. **Подтверждено**: `start-node-test-session.test.ts` с `NODE_OPTIONS=--use-openssl-ca` → Branch 94,11 % (32/34), Uncovered 119,167; с `env -u NODE_OPTIONS` → 100 % (34/34), 12/12 тестов зелёные в обоих случаях | окружение: `NODE_OPTIONS` |
@@ -448,8 +497,9 @@ root), load-1 (22 падения в 12 файлах, `TERM=xterm-256color`) и �
 Где воспроизведено: 1–13 — load-1; 2 и `cli/index.test.ts:211` — ещё и мой
 прогон 14 файлов под load 27; 14–17 — этап 0; 18 — §5.4.1 ниже.
 
-Следствие для пользователя-разработчика: на машине с load average выше
-≈ 10 `pnpm test` падает в 6–12 тестах, на машине с `NODE_OPTIONS`
+Следствие для разработчика: при load average 20–30 на 4 vCPU `pnpm test`
+падает примерно в 20 тестах (порог, где падения начинаются, я не искал). На
+машине с `NODE_OPTIONS`
 (отладчик VS Code через auto-attach, `--max-old-space-size` в CI,
 `--use-openssl-ca` за корпоративным прокси) падает порог покрытия, под root
 (Docker по умолчанию) падает один тест, на консоли Linux — четыре. Кроме
@@ -602,65 +652,6 @@ as headers») проверяет, что строки ханка, похожие
 что пропускать их наравне с логами не стоит. Но ранжировать ниже — стоит.
 Сейчас они идут в общий список выживших наравне с пропуском `maxBuffer`.
 
-## 5.6. Что в тестах сделано хорошо
-
-Без оговорок: тест-сьют Mootant — сильная сторона проекта, лучше, чем у
-большинства инструментов этого класса.
-
-1. **Оракулы, не зависящие от реализации.**
-   - Эквивалентность вердиктов с физически применёнными мутантами:
-     `test/adapters/vitest/index.test.ts:801-855` («agrees with mutants applied
-     by hand in the default and fast modes») и такой же блок у node:test. Хелпер
-     `test/helpers/run-reference-mutants.ts` копирует проект, применяет
-     каждого мутанта текстом и запускает обычный Vitest. Расхождения
-     перечислены поимённо и объяснены комментариями (`:830-846`). Это ровно
-     та проверка, которую раздел 2 строил отдельно.
-   - Инструментирование против применения по одному:
-     `test/core/instrument/instrument-file.test.ts:404-432` выполняет программу
-     с переключаемым кодом под каждым мутантом и с физически применённым
-     мутантом и сравнивает наблюдения.
-   - Приёмочный эталон `list --json`: `test/fixtures/list/derive-expected-mutants.mjs`
-     выводит ожидаемый отчёт из ручного `expectations.json` и «never imports
-     the implementation» (`:1-13`).
-2. **Property-based проверка генерации.** `test/helpers/find-weak-mutants.ts`,
-   `find-unsound-skips.ts`, `generate-formula.ts`, `get-kill-set.ts`:
-   случайные read-once-формулы, их классические альтернативы и сетка входов.
-   Проверяется, что выданные мутанты не эквивалентны и не дублируют друг
-   друга, а пропуски `equivalent`/`duplicate`/`subsumed`/`owned`
-   обоснованы выходами (`test/core/generate/generate-file-mutants.test.ts:3402-3440`).
-   ГСЧ детерминирован (`test/helpers/create-random.ts:24`, LCG с
-   фиксированным seed), поэтому случаи воспроизводимы и не дают
-   нестабильности.
-3. **Табличные тесты на настоящем коде.** 840 таблиц `it.each`, фрагменты
-   разбираются настоящим парсером (`test/helpers/create-test-file.ts`), моков
-   AST нет. Мутаторы тестируются по id через конвейер
-   (`test/helpers/run-mutator.ts`), то есть по наблюдаемому поведению, а не по
-   внутренним хелперам.
-4. **Строгий линт тестов** (`@azat-io/eslint-config`, правила
-   `@vitest/eslint-plugin`): `no-conditional-in-test`, `no-conditional-expect`,
-   `no-disabled-tests`, `no-focused-tests`, `prefer-each`,
-   `require-top-level-describe` и др. В коде нет ни одного `it.skip`/`it.only`
-   и всего три условных теста (`it.skipIf`/`it.runIf` на версию Node и наличие
-   `fs.glob`).
-5. **Типизированные моки** `vi.mock(import('…'))` — 83 из 84. Опечатка в
-   пути или переименование ловятся `tsc`.
-6. **Настоящие процессы и git, а не моки.** Группы процессов, сигналы, git с
-   изоляцией пользовательского конфига (`test/helpers/create-git-repository.ts:53-65`:
-   `user.name`, `user.email`, `commit.gpgSign=false`; для теста владения —
-   `GIT_CONFIG_GLOBAL=/dev/null`, `test/core/git/find-git-root.test.ts:59-61`).
-7. **Регрессии на масштаб**: 300 000 строк в заголовке
-   (`test/cli/report/format-header.test.ts:21-29`), 200 000 текстов
-   (`test/cli/terminal/get-max-display-width.test.ts:17-22`), 300 000 id
-   (`test/cli/report/get-short-id-length.test.ts:24`) — защита от `RangeError`
-   при spread большого массива. Намерение правильное, но цена под нагрузкой
-   высокая (§5.4).
-8. **Порог 100 % по четырём метрикам действительно соблюдается**, и мутанты
-   это подтверждают: `core/git` — 84 % «сырого» score, а без эквивалентных и
-   шумовых мутантов — 92 %; семейство логирования — 94 % на 10 тестах.
-   Найденные дыры тонкие: граничные форматы git и один тест, который не
-   проверяет то, что заявляет. Слабых тестов, которые просто «проходят по
-   коду» ради покрытия, я не встретил.
-
 ### `cli/terminal`: 301 мутант, score 88,7 %
 
 Первая попытка с конфигом проекта оборвалась в dry run: «Tests fail without
@@ -730,6 +721,88 @@ Timeout 2 (бесконечные циклы в `fit-parts.ts:21,26` пойма�
    `stop()` (`create-spinner.ts:118` ×2, `:171`). Такого сценария в коде нет:
    `cli/create-run-progress.ts:158,408` запускает и останавливает спиннер
    один раз.
+
+### Показательные выжившие: 18 примеров
+
+| # | Мутант | Класс | Что делать |
+| ---: | --- | --- | --- |
+| 1 | `core/git/parse-unified-diff.ts:47` удаление `remaining = Number(removed) + count` | дыра: тест `:81-94` не может упасть по своей причине | тест «skips the last line of a hunk that looks like a +++ header» (убит) |
+| 2 | `core/git/read-changed-lines.ts:77` `[...NUMSTAT_OPTIONS, base]` → `[...NUMSTAT_OPTIONS]` | дыра: бинарный файл, закоммиченный на ветке | `src/blob.ts` с `\0` в коммите `feature` (убит) |
+| 3 | `core/git/run-git.ts:47` удалён `maxBuffer` | дыра: вывод больше 1 МиБ | `git show` файла 2 МиБ (убит) |
+| 4 | `core/git/parse-unified-diff.ts:8` `(?<added>\d+)` → `(?<added>[^]+)` | дыра: контекст функции после `@@` с ` @@` внутри | заголовок `@@ -30,0 +34,1 @@ let s = 'a +1 @@'` (убит) |
+| 5 | `core/git/unquote-git-path.ts:39` `index + 4` → `index + 5` | дыра: октальный escape перед цифрой | `"b/\001\0012.ts"` (убит) |
+| 6 | `cli/terminal/create-spinner.ts:184` удаление `rows = countTerminalRows(…)` | дыра: старый кадр остаётся после `print()` | тест на следующий кадр после `print` (убит) |
+| 7 | `cli/terminal/strip-ansi.ts:13` `=== 0x1b` → `<= 0x1b` | дыра: управляющий символ перед `[` | `stripAnsi('a\t[1mb')` (убит) |
+| 8 | `cli/terminal/wrap-text.ts:16` убрано `line !== '' &&` | дыра: первое слово шире ширины даёт пустую строку | `wrapText('abcdef gh', 3)` (убит) |
+| 9 | `core/syntax/is-plain-message.ts:21` убрано `&& isPlainMessage(argument.left)` | дыра в тестах семейства: непростой левый операнд `+` | `isPlainMessage(f() + 'a')` → `false` (не проверено на полном сьюте) |
+| 10 | `core/git/find-git-root.ts:16` `result.code !== 0` → `> 0` | эквивалентный: код выхода ≥ 0 | принять или `mootant-ignore` с причиной |
+| 11 | `core/git/unquote-git-path.ts:33` `'utf8'` → `''` | эквивалентный: Node читает `''` как `utf8` | правило пропуска (BUG-857) |
+| 12 | `core/git/parse-binary-paths.ts:17` `split('\t', 2)` → `3` | эквивалентный: деструктурируются 2 элемента | правило пропуска (BUG-858) |
+| 13 | `cli/terminal/get-text-style.ts:28` `stream.columns ?? 0` → `stream.columns` | эквивалентный: `undefined > 0` ложно, как и `0 > 0` | правило пропуска (BUG-860) |
+| 14 | `cli/terminal/strip-ansi.ts:14` `i + 1 < string.length` → `<=` | эквивалентный: следом `string[i + 1] === '['` | правило пропуска (BUG-861) |
+| 15 | `core/git/run-git.ts:6` `256` → `257` в `256 * 1024 * 1024` | шум: лимит размера | правило шума (BUG-859) |
+| 16 | `cli/terminal/colors.ts:81` `index === -1` → `false` | эквивалентный: быстрый путь, общий даёт тот же результат | честный выживший |
+| 17 | `core/git/get-merge-base.ts:23` `head.stderr.trim()` → `head.stderr` | слабая проверка: `toThrow('подстрока')` | сравнить сообщение целиком или принять; инструменту — ранжировать ниже |
+| 18 | `cli/terminal/create-spinner.ts:15` `'⠼'` → `''` (и ещё 5 кадров) | косметика: проверены только первые 4 кадра | один тест на полный цикл кадров убил все 6 |
+
+## 5.6. Что в тестах сделано хорошо
+
+Без оговорок: тест-сьют Mootant — сильная сторона проекта, лучше, чем у
+большинства инструментов этого класса.
+
+1. **Оракулы, не зависящие от реализации.**
+   - Эквивалентность вердиктов с физически применёнными мутантами:
+     `test/adapters/vitest/index.test.ts:801-855` («agrees with mutants applied
+     by hand in the default and fast modes») и такой же блок у node:test. Хелпер
+     `test/helpers/run-reference-mutants.ts` копирует проект, применяет
+     каждого мутанта текстом и запускает обычный Vitest. Расхождения
+     перечислены поимённо и объяснены комментариями (`:830-846`). Это ровно
+     та проверка, которую раздел 2 строил отдельно.
+   - Инструментирование против применения по одному:
+     `test/core/instrument/instrument-file.test.ts:404-432` выполняет программу
+     с переключаемым кодом под каждым мутантом и с физически применённым
+     мутантом и сравнивает наблюдения.
+   - Приёмочный эталон `list --json`: `test/fixtures/list/derive-expected-mutants.mjs`
+     выводит ожидаемый отчёт из ручного `expectations.json` и «never imports
+     the implementation» (`:1-13`).
+2. **Property-based проверка генерации.** `test/helpers/find-weak-mutants.ts`,
+   `find-unsound-skips.ts`, `generate-formula.ts`, `get-kill-set.ts`:
+   случайные read-once-формулы, их классические альтернативы и сетка входов.
+   Проверяется, что выданные мутанты не эквивалентны и не дублируют друг
+   друга, а пропуски `equivalent`/`duplicate`/`subsumed`/`owned`
+   обоснованы выходами (`test/core/generate/generate-file-mutants.test.ts:3402-3440`).
+   ГСЧ детерминирован (`test/helpers/create-random.ts:24`, LCG с
+   фиксированным seed), поэтому случаи воспроизводимы и не дают
+   нестабильности.
+3. **Табличные тесты на настоящем коде.** 840 таблиц `it.each`, фрагменты
+   разбираются настоящим парсером (`test/helpers/create-test-file.ts`), моков
+   AST нет. Мутаторы тестируются по id через конвейер
+   (`test/helpers/run-mutator.ts`), то есть по наблюдаемому поведению, а не по
+   внутренним хелперам.
+4. **Строгий линт тестов** (`@azat-io/eslint-config`, правила
+   `@vitest/eslint-plugin`): `no-conditional-in-test`, `no-conditional-expect`,
+   `no-disabled-tests`, `no-focused-tests`, `prefer-each`,
+   `require-top-level-describe` и др. В коде нет ни одного `it.skip`/`it.only`
+   и всего три условных теста (`it.skipIf`/`it.runIf` на версию Node и наличие
+   `fs.glob`).
+5. **Типизированные моки** `vi.mock(import('…'))` — 83 из 84. Опечатка в
+   пути или переименование ловятся `tsc`.
+6. **Настоящие процессы и git, а не моки.** Группы процессов, сигналы, git с
+   изоляцией пользовательского конфига (`test/helpers/create-git-repository.ts:53-65`:
+   `user.name`, `user.email`, `commit.gpgSign=false`; для теста владения —
+   `GIT_CONFIG_GLOBAL=/dev/null`, `test/core/git/find-git-root.test.ts:59-61`).
+7. **Регрессии на масштаб**: 300 000 строк в заголовке
+   (`test/cli/report/format-header.test.ts:21-29`), 200 000 текстов
+   (`test/cli/terminal/get-max-display-width.test.ts:17-22`), 300 000 id
+   (`test/cli/report/get-short-id-length.test.ts:24`) — защита от `RangeError`
+   при spread большого массива. Намерение правильное, но цена под нагрузкой
+   высокая (§5.4).
+8. **Порог 100 % по четырём метрикам действительно соблюдается**, и мутанты
+   это подтверждают: `core/git` — 84 % «сырого» score, а без эквивалентных и
+   шумовых мутантов — 92 %; семейство логирования — 94 % на 10 тестах.
+   Найденные дыры тонкие: граничные форматы git и один тест, который не
+   проверяет то, что заявляет. Слабых тестов, которые просто «проходят по
+   коду» ради покрытия, я не встретил.
 
 ## 5.7. Рекомендации
 

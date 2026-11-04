@@ -21,7 +21,7 @@ optional chaining, `delete`/`typeof`, цели присваивания, дир�
 `active=null` дали ровно те же результаты, что на оригинале (ufo 487 тестов,
 defu 23, фикстуры Vue и Svelte). Активация мутанта через runtime совпала с
 физическим применением по каждому тесту на всех 322 проверенных мутантах
-(ufo 200, Vue 70, Svelte 52) и на 1 054 мутантах ловушек — кроме узкого
+(ufo 200, Vue 70, Svelte 52) и на 1 105 мутантах ловушек — кроме узкого
 класса с выводом имени функции (BUG-103).
 
 Найденные проблемы лежат на краях, но две из них реальны для популярного кода:
@@ -96,8 +96,8 @@ CLI `mootant list --json --verbose` (тот же конфиг и пресет, �
 пользователя), компиляторы Vue/Svelte — те же загрузчики, что в
 `core/run-mutants.ts:390-393`.
 
-1. **Ловушки (trap-run.mjs).** 20 модулей (`analysis/data/instrument/trap-modules/`),
-   1 054 мутанта (strict). Для каждого модуля: original vs switched без
+1. **Ловушки (trap-run.mjs).** 21 модуль (`analysis/data/instrument/trap-modules/`),
+   1 105 мутантов (strict). Для каждого модуля: original vs switched без
    runtime vs switched с `active=null` (каждый вариант в свежем worker,
    TS/JSX через `transformWithOxc`), и для каждого мутанта: switched с
    `active=X` (реальный `installMutantRuntime` из dist) vs физически
@@ -116,7 +116,7 @@ CLI `mootant list --json --verbose` (тот же конфиг и пресет, �
    (фрагменты, spread, key), TS (parameter properties, `as`, `satisfies`, `!`,
    generics, enum, legacy-декораторы), объектные литералы с `__proto__`,
    методами с `super` и computed keys, регулярные выражения с флагами `u`/`v`,
-   затенение `globalThis`. Результат: (а) 0 расхождений без активного
+   затенение `globalThis`, `using` (с понижением oxc до ES2022). Результат: (а) 0 расхождений без активного
    мутанта, кроме t16 (BUG-101); (б) расхождения только в t07 (BUG-103) и
    t15/t16 (BUG-101).
 2. **I1 + структурный аудит (i1-check.mjs)** — switched-текст парсится oxc,
@@ -139,7 +139,7 @@ CLI `mootant list --json --verbose` (тот же конфиг и пресет, �
    | vuejs/core (reactivity, shared, runtime-core, runtime-dom, compiler-core, compiler-sfc) | 162 | 28 805 | 1/1/0/0/0 — `shared/src/escapeHtml.ts` (BUG-106) | 2 NamedEvaluation (`runtime-core/src/hydrationStrategies.ts:7,9`) |
    | sveltejs/svelte `packages/svelte/src` без `entities.js` | 374 | 44 982 | 3/3/0/0/— — `compiler/phases/1-parse/index.js`, `compiler/preprocess/index.js`, `internal/server/renderer.test.ts` (BUG-106) | 1 NamedEvaluation (`compiler/state.js:150`) |
    | svelte `compiler/phases/1-parse/utils/entities.js` | 1 | 4 462 | switched 92 МБ — не разбирался (BUG-104) | |
-   | ловушки | 20 | 1 104 | 1 compile (V8 Node 22 не знает `(?i:)` — ошибка в оригинале фикстуры) | 9 NamedEvaluation, 2 `globalThis` |
+   | ловушки и пробные файлы (`src/traps`, `src/t`, регулярные выражения с `u`/`v`) | 21 | 1 104 | 0 (одна ошибка compile — `(?i:)` в самой фикстуре, Node 22 его не знает; после удаления 0) | 9 NamedEvaluation, 2 `globalThis` |
    | **Итого (без ловушек)** | **1 466** | **123 867** | **4 файла не разбираются (все — BUG-106), 0 compile, 0 сайтов, 0 raw** | **5 NamedEvaluation** |
 
    Для runtime-core Vue и Svelte проверка разбора каждого физически
@@ -190,6 +190,30 @@ CLI `mootant list --json --verbose` (тот же конфиг и пресет, �
    file, the current directory is the root»), поэтому не баг, но ловушка:
    `--mutant <id>` и кэш (`node_modules/.cache/mootant` в корне) из другого
    каталога не находятся. В проектах с конфигом id стабильны.
+
+### Как перезапустить
+
+Нужен собранный Mootant с `node_modules` (по умолчанию
+`MOOTANT_ROOT=/home/user/wt/instrument`: worktree 170ec52, `pnpm install
+--frozen-lockfile --ignore-scripts`, dist из `pnpm run build`). Проекты —
+с установленными `mootant` (tgz), `vitest@5.0.5`, `vite@8.3.5`.
+
+```bash
+T=analysis/tools/instrument
+# ловушки: original/switched/null и active=X vs физический X
+node $T/trap-run.mjs <project> out.json src/traps/t01-hoist.cjs …   # TRAP_WORK=<каталог внутри проекта> для TS-декораторов
+# I1 + аудит (большие корпуса — по частям, --raw no экономит память)
+node --expose-gc --max-old-space-size=3072 --experimental-vm-modules $T/i1-check.mjs <root> out.json <paths…> [--preset strict] [--raw no]
+# I2 / I3 (файлы проекта меняются на месте и восстанавливаются)
+node $T/project-diff.mjs --project <dir> --paths src --out i2.json --mode i2
+node $T/project-diff.mjs --project <dir> --paths src --out i3.json --mode i3 --sample 200 --seed 7 [--mirror test]
+# вердикты mootant run против физического применения (по строкам i3)
+node $T/compare-verdicts.mjs i3.json mootant-run.json out.json
+# I4, сдвиг строк, размер switched-текста
+node $T/i4-determinism.mjs <root> out.json <sub-dir> <paths…>
+node $T/line-shift.mjs <root> out.json <paths…>
+(cd <project> && PRESET=strict node $T/switch-size.mjs <file>)
+```
 
 ## Подробности по находкам
 
