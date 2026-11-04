@@ -1,0 +1,13 @@
+## before signal (t=3s): mootant pid=20421 leader=20417
+20417 20389 20417 Ss         3 script -qfec bash -c 'node /home/user/projects/cli/nt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache; echo $? >
+20419 20417 20419 Ss+        3 bash -c node /home/user/projects/cli/nt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache; echo $? > rc.txt; sleep
+20421 20419 20419 Sl+        3 node /home/user/projects/cli/nt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache
+20618 20421 20618 Rsl        1 /opt/node22/bin/node --import file:///home/user/projects/cli/nt-hang-long/node_modules/mootant/dist/adapters/node-test/preload/pr
+## after: leader exit=mootant:143
+20417 20389 20417 Ss         6 script -qfec bash -c 'node /home/user/projects/cli/nt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache; echo $? >
+## work dirs left in TMPDIR: 1 mootant-48T9ET 
+## files in them: 3
+## cache dir: 
+## tail of output:
+ved[39m [90m0[39m · [90m1.5s[39m[?25l[1G[2K[1G[92m-[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m1.5s[39m[?25l[1G[2K[1G[92m\[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m1.6s[39m[?25l[1G[2K[1G[92m|[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m1.7s[39m[?25l[1G[2K[1G[92m/[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m1.8s[39m[1G[2K[1G[?25h+ dry run  1 test in 0.4s
+/home/user/mootant/analysis/tools/cli/signal-test.sh: line 63: 20417 Killed                  setsid script -qfec "bash -c '$BIN; echo \$? > rc.txt; sleep 20'" /dev/null > out.txt 2>&1 < /dev/null

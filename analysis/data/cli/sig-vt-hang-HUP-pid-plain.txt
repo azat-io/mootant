@@ -1,0 +1,11 @@
+## before signal (t=4s): mootant pid=19449 leader=19449
+19449 19413 19449 Ssl        4 node /home/user/projects/cli/vt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache
+19764 19449 19449 Rl         2 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/projects/cli/vt-hang-long/node_modules/vitest/suppre
+/home/user/mootant/analysis/tools/cli/signal-test.sh: line 49: 19449 Hangup                  setsid $BIN > out.txt 2> err.txt < /dev/null
+## after: leader exit=129
+19764     1 19449 Rl         4 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/projects/cli/vt-hang-long/node_modules/vitest/suppre
+## work dirs left in TMPDIR: 2 Ige1pxFJcmdLo6b_s5GQ4 mootant-7zzCBV 
+## files in them: 11
+## cache dir: 
+## tail of output:
++ dry run  1 test in 0.5s

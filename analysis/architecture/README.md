@@ -53,7 +53,7 @@ SVG-файла в этом каталоге. Полные графы `data/depcr
 | `layers.mmd`, `core.mmd`, `folders.mmd`                          | Mermaid                                                              |
 | `folders-archi.dot`, `folders-src-archi.dot`                     | Граф папок для Graphviz                                              |
 | `startup-bench.txt`                                              | Сырые замеры старта                                                  |
-| `jscpd-summary.json`                                             | Отчёты jscpd                                                         |
+| `jscpd-summary.json`                                             | Сводка клонов jscpd при двух порогах                                 |
 
 ## Прочее
 
