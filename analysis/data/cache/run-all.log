@@ -903,3 +903,13 @@ Auto-merging src/lines.ts
     "src/кириллица.ts": lines 4
 === binary_file (05:13:23)
   EXPECT: whole file (git counts it as binary)
+  [nul] --since HEAD exit=0
+    "src/lines.ts": lines 1,2,3,4,5,6,7
+=== tests_only (05:13:27)
+  EXPECT (documented): nothing
+  [tests] --since HEAD exit=0
+    (no mutants selected)
+=== detached_and_worktree (05:13:30)
+  EXPECT: lines 2 and 5
+  [detached] --since main exit=0
+    "src/lines.ts": lines 5
