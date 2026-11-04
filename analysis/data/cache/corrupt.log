@@ -40,3 +40,27 @@
   summary: total=4 killed=2 survived=2 cached=0 score=50
   diag warning cache-write-failed: The cache could not be saved to node_modules/.cache/mootant/run-v3.json (EISDIR: illegal operation on a directory, rename '/home/user/projects/cache/corrupt-directory/node_modules/.cache/mootant/run-v3.json.15879.tmp' -> '/home/user/projects/cache/corrupt-directory/node_modules/.cache/mootant/run-v3.json'); the next run will not reuse the verdicts of this one.
 === concurrent (05:12:26)
+[corrupt-concurrent/a] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[corrupt-concurrent/b] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+  entries after both runs: 4
+    total 12
+    drwxr-xr-x 2 root root 4096 Nov  4 05:12 .
+    drwxr-xr-x 3 root root 4096 Nov  4 05:12 ..
+    -rw-r--r-- 1 root root 1423 Nov  4 05:12 run-v3.json
+[corrupt-concurrent/c] exit=0 args=src
+  a073vwf4fehh Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=true src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=4 score=50
+=== interrupted (05:12:40)
