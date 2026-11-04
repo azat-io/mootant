@@ -20,8 +20,8 @@ optional chaining, `delete`/`typeof`, цели присваивания, дир�
 аудит не нашёл ни одной цели в «чувствительной» позиции. Тест-сьюты на switched-коде без runtime и с
 `active=null` дали ровно те же результаты, что на оригинале (ufo 487 тестов,
 defu 23, фикстуры Vue и Svelte). Активация мутанта через runtime совпала с
-физическим применением по каждому тесту на всех 322 проверенных мутантах
-(ufo 200, Vue 70, Svelte 52) и на 1 105 мутантах ловушек — кроме узкого
+физическим применением по каждому тесту на всех 422 проверенных мутантах
+(ufo 200, Mootant 100, Vue 70, Svelte 52) и на 1 105 мутантах ловушек — кроме узкого
 класса с выводом имени функции (BUG-103).
 
 Найденные проблемы лежат на краях, но две из них реальны для популярного кода:
@@ -162,17 +162,27 @@ CLI `mootant list --json --verbose` (тот же конфиг и пресет, �
    | Vue-фикстура (`Cart.vue`, шаблон + script setup, @vue/test-utils) | 5 | 70 | 0 / 0 |
    | Svelte-фикстура (`Counter.svelte` с рунами, `tally.svelte.js`) | 4 | 52 | 0 / 0 |
 
+   Копии проектов (`/home/user/projects/instrument/{ufo,defu,eslint-plugin-perfectionist}`,
+   shallow-клоны на 2026-11-04: ufo `f06c800`, defu `82632b6`, perfectionist
+   `486c3c8`): в ufo и defu Vitest обновлён с 4.1.x до 5.0.5, devDependencies
+   сокращены до `mootant` (tgz 170ec52), `vitest`, `vite@8.3.5`, lockfile pnpm
+   заменён npm (`--legacy-peer-deps`); `vitest --typecheck` (тесты типов ufo)
+   не запускался. Фикстуры Vue/Svelte — `/home/user/projects/instrument/{vue,svelte}`.
+
 4. **I3 (project-diff.mjs i3)** — для выборки мутантов: `vitest related` по
-   мутированному файлу при физически применённом мутанте vs switched-файлы с
-   `active=X`, установленным до загрузки модулей. Расхождение
-   перепроверяется повтором обеих сторон.
+   мутированному файлу (для Mootant — его собственный тест-файл, `--mirror
+   test`) при физически применённом мутанте vs switched-файлы с `active=X`,
+   установленным до загрузки модулей (как в isolated-юните Mootant,
+   `adapters/vitest/runner.ts:548-551`). Расхождение перепроверяется
+   повтором обеих сторон; зависший прогон убивается группой процессов.
 
    | Проект | Мутантов | Убиты физически | Убиты switched | Расхождений |
    | --- | ---: | ---: | ---: | ---: |
    | unjs/ufo (seed 7, 14 мутаторов, в среднем 467 тестов на прогон) | 200 | 151 | 151 | 0 |
    | Vue-фикстура (все, из них 27 в шаблоне) | 70 | 55 | 55 | 0 |
    | Svelte-фикстура (все: компонент с рунами и `.svelte.js`) | 52 | 35 | 35 | 0 |
-   | **Итого** | **322** | **241** | **241** | **0** |
+   | Mootant `core/text`, `core/regex`, `core/tree` (seed 3, 15 мутаторов, 38 файлов; `--mirror test`: собственный тест-файл модуля, в среднем 28 тестов) | 100 | 77 | 77 | 0 |
+   | **Итого** | **422** | **318** | **318** | **0** |
 
    Совпадение — по каждому тесту (не только «убит/выжил»).
 
@@ -467,5 +477,21 @@ switched … and pass without it» (фикстура `BUG-106/run.sh`: 9/9 `Erro
   только после понижения oxc до ES2022 — ловушка t21, 30 мутантов без
   расхождений); Vitest 5 на Vite 6/7 проверен только для BUG-106 (на Vite
   7.3.1 не проявляется); Windows-пути.
-- Полный I2 на собственном тест-сьюте Mootant и на perfectionist (машина была
-  перегружена соседними агентами, load average 25–33).
+- Полный I2 (весь тест-сьют на switched-файлах) для Mootant и
+  eslint-plugin-perfectionist: машина была перегружена соседними агентами
+  (load average 25–46), а с 07:00 UTC — окно замеров. Все тяжёлые прогоны
+  этого раздела завершены в 06:08 UTC. Команды для координатора:
+
+  ```bash
+  cd /home/user/mootant/analysis/tools/instrument
+  # perfectionist (Vitest 5.0.5 уже стоит в /home/user/projects/instrument/eslint-plugin-perfectionist)
+  node project-diff.mjs --project /home/user/projects/instrument/eslint-plugin-perfectionist \
+    --paths rules,utils,index.ts --out /home/user/projects/instrument/i2-perfectionist.json --mode i2 --timeout 1800000
+  # Mootant: все файлы core/ switched, тесты test/core (файлы восстанавливаются; worktree /home/user/wt/instrument)
+  node project-diff.mjs --project /home/user/wt/instrument --paths core \
+    --out /home/user/projects/instrument/i2-mootant.json --mode i2 --timeout 3600000 --vitest-args "test/core"
+  ```
+
+  Ожидание: 0 расхождений по тестам; тесты Mootant, которые сами ставят
+  `globalThis.__mootant`, могут расходиться в режиме `active=null` (сетап
+  харнесса ставит runtime до них) — такие расхождения разбирать вручную.

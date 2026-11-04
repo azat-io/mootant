@@ -1,0 +1,1414 @@
+diff --git a/core/cache/check-dry-snapshot.ts b/core/cache/check-dry-snapshot.ts
+new file mode 100644
+index 0000000..a5c63c7
+--- /dev/null
++++ b/core/cache/check-dry-snapshot.ts
+@@ -0,0 +1,47 @@
++import type { DrySnapshot } from '../../types/cache/dry-snapshot'
++
++import { listVariableHashes } from './list-variable-hashes'
++import { hashProjectTree } from './hash-project-tree'
++import { createDigest } from './create-digest'
++import { hashFiles } from './hash-files'
++
++/**
++ * Tells whether a dry run snapshot (`DrySnapshot`) still holds for a run,
++ * cheapest check first: the key of the run, the environment variables of the
++ * main process, the files the dry run and the cache depended on, then every
++ * file under the project root (`hashProjectTree`).
++ *
++ * @param snapshot - Snapshot of an earlier run.
++ * @param run - Key, root and environment of this run.
++ * @param run.key - Key of this run (`getDrySnapshotKey`).
++ * @param run.root - Project root.
++ * @param run.environment - Environment variables of the main process as the
++ *   run started, before a test runner could set any.
++ * @returns Null when the snapshot holds, else what changed.
++ */
++export async function checkDrySnapshot(
++  snapshot: DrySnapshot,
++  run: { environment: NodeJS.ProcessEnv; root: string; key: string },
++): Promise<string | null> {
++  if (snapshot.key !== run.key) {
++    return 'the mutants, settings or versions changed'
++  }
++  let variables = listVariableHashes(
++    snapshot.variables.map(([name]) => name),
++    run.environment,
++  )
++  if (createDigest(variables) !== createDigest(snapshot.variables)) {
++    return 'an environment variable changed'
++  }
++  let hashes = await hashFiles(snapshot.files.map(([file]) => file))
++  let changed = snapshot.files.find(
++    ([file, hash]) => (hashes.get(file) ?? null) !== hash,
++  )
++  if (changed !== undefined) {
++    return `${changed[0]} changed`
++  }
++  if ((await hashProjectTree(run.root)) !== snapshot.tree) {
++    return 'a file of the project was added, removed or changed'
++  }
++  return null
++}
+diff --git a/core/cache/create-run-cache.ts b/core/cache/create-run-cache.ts
+index 8ade0bc..1b3d97f 100644
+--- a/core/cache/create-run-cache.ts
++++ b/core/cache/create-run-cache.ts
+@@ -80,6 +80,13 @@ interface RunCacheInput {
+    */
+   incremental: boolean
+ 
++  /**
++   * Whether isolated timeouts by the hit limit are stored too (prototype, with
++   * `MOOTANT_REUSE_DRY_RUN`): the count of site evaluations does not depend on
++   * the load of the machine, so such a timeout is as repeatable as a kill.
++   */
++  hitLimits?: boolean
++
+   /**
+    * Entries and inputs read from the cache file.
+    */
+@@ -141,7 +148,8 @@ interface Address {
+  * an environment variable only it reads: evidence stores those inputs, and is
+  * valid only while each of them is unchanged too. Evidence of a run whose
+  * inputs are unknown is not stored. Kills by a crash depend on the load of the
+- * machine and are never stored, and neither are timeouts and errors.
++ * machine and are never stored, and neither are timeouts and errors, but with
++ * `hitLimits` an isolated timeout by the hit limit, which does not.
+  *
+  * @param input - Stored entries, test file keys, source hashes, mutant regions,
+  *   the mode and the dry run.
+@@ -269,6 +277,7 @@ export function createRunCache(input: RunCacheInput): RunCache {
+     let entry = stored.entries.get(address.slot)
+     if (
+       entry === undefined ||
++      (entry.status === 'Timeout' && input.hitLimits !== true) ||
+       !isCurrent(entry, address) ||
+       (entry.test !== null && !analysis.tests.has(entry.test)) ||
+       (entry.inputs !== null &&
+@@ -290,9 +299,9 @@ export function createRunCache(input: RunCacheInput): RunCache {
+     return {
+       file: analysis.testFiles.get(address.file)!.file,
+       message: entry.message,
++      status: entry.status,
+       cause: entry.cause,
+       test: entry.test,
+-      status: 'Killed',
+     }
+   }
+ 
+@@ -310,12 +319,14 @@ export function createRunCache(input: RunCacheInput): RunCache {
+     recorded: CacheEvidence,
+   ): void {
+     let { verdict: evidence, inputs: seen } = recorded
+-    if (
+-      address === null ||
+-      !seen ||
+-      (evidence !== 'survived' &&
+-        (evidence.status !== 'Killed' || evidence.cause === 'crash'))
+-    ) {
++    let storable =
++      evidence === 'survived' ||
++      (evidence.status === 'Killed' && evidence.cause !== 'crash') ||
++      (input.hitLimits === true &&
++        origin.path === 'isolated' &&
++        evidence.status === 'Timeout' &&
++        evidence.cause === 'hit-limit')
++    if (address === null || !seen || !storable) {
+       return
+     }
+     let known = new Set(input.dependencies.get(address.file))
+@@ -351,6 +362,7 @@ export function createRunCache(input: RunCacheInput): RunCache {
+           used: now,
+         }
+       : {
++          status: evidence.status === 'Timeout' ? 'Timeout' : 'Killed',
+           incremental: address.incremental,
+           message: evidence.message,
+           cause: evidence.cause,
+@@ -358,7 +370,6 @@ export function createRunCache(input: RunCacheInput): RunCache {
+           test: evidence.test,
+           path: origin.path,
+           key: address.key,
+-          status: 'Killed',
+           inputs: null,
+           used: now,
+         },
+diff --git a/core/cache/create-snapshot-session.ts b/core/cache/create-snapshot-session.ts
+new file mode 100644
+index 0000000..bb0bc6f
+--- /dev/null
++++ b/core/cache/create-snapshot-session.ts
+@@ -0,0 +1,37 @@
++import type { AdapterSession } from '../../types/adapter/adapter-session'
++import type { DrySnapshot } from '../../types/cache/dry-snapshot'
++
++import { DryReuseMiss } from './dry-reuse-miss'
++
++/**
++ * Stands in for the session of the test runner in a run that replays a dry
++ * run snapshot: it lists the test files and tells the cache inputs, version,
++ * workers and warnings of the session that saved it, and refuses to run
++ * anything, so a run that would need the test runner starts over with it
++ * (`DryReuseMiss`).
++ *
++ * @param snapshot - Snapshot of an earlier run that still holds.
++ * @returns Session without a test runner.
++ */
++export function createSnapshotSession(snapshot: DrySnapshot): AdapterSession {
++  let { session } = snapshot
++  /**
++   * Refuses a run of the test runner.
++   *
++   * @returns Never resolves.
++   */
++  function refuse(): Promise<never> {
++    return Promise.reject(new DryReuseMiss('a mutant needs the test runner'))
++  }
++  return {
++    listTestFiles: () => Promise.resolve([...snapshot.testFiles]),
++    cacheInputs: () => Promise.resolve(session.inputs),
++    ...(session.version !== null && { version: session.version }),
++    ...(session.workers !== null && { workers: session.workers }),
++    diagnostics: session.diagnostics,
++    close: () => Promise.resolve(),
++    runIsolated: refuse,
++    runBatch: refuse,
++    dryRun: refuse,
++  }
++}
+diff --git a/core/cache/dry-reuse-miss.ts b/core/cache/dry-reuse-miss.ts
+new file mode 100644
+index 0000000..26bf868
+--- /dev/null
++++ b/core/cache/dry-reuse-miss.ts
+@@ -0,0 +1,17 @@
++/**
++ * Thrown inside a run that replays a dry run snapshot (`DrySnapshot`) as soon as
++ * it turns out the snapshot cannot decide the run: it is stale, or a mutant has
++ * no valid cached verdict and would need the test runner. The run then starts
++ * over with the test runner; nothing ran or was written before.
++ */
++export class DryReuseMiss extends Error {
++  /**
++   * Creates the error.
++   *
++   * @param reason - Why the snapshot cannot decide the run.
++   */
++  public constructor(reason: string) {
++    super(`The saved dry run cannot be reused: ${reason}.`)
++    this.name = 'DryReuseMiss'
++  }
++}
+diff --git a/core/cache/dry-snapshot-version.ts b/core/cache/dry-snapshot-version.ts
+new file mode 100644
+index 0000000..0fea4c2
+--- /dev/null
++++ b/core/cache/dry-snapshot-version.ts
+@@ -0,0 +1,6 @@
++/**
++ * Version of the format of the dry run snapshot (`DrySnapshot`) and of the
++ * recipe of its key; it is part of the file name. Bump it when either changes,
++ * and with `CACHE_VERSION`.
++ */
++export const DRY_SNAPSHOT_VERSION = 1
+diff --git a/core/cache/get-dry-snapshot-key.ts b/core/cache/get-dry-snapshot-key.ts
+new file mode 100644
+index 0000000..a1fef68
+--- /dev/null
++++ b/core/cache/get-dry-snapshot-key.ts
+@@ -0,0 +1,66 @@
++import { createHash } from 'node:crypto'
++import { stat } from 'node:fs/promises'
++
++import type { ActiveMutator } from '../../types/mutator/active-mutator'
++import type { SwitchedFile } from '../../types/adapter/switched-file'
++import type { TestAdapter } from '../../types/adapter/test-adapter'
++import type { LimitSettings } from '../../types/run/run-state'
++
++import { INSTRUMENTER_VERSION } from '../instrument/instrumenter-version'
++import { DRY_SNAPSHOT_VERSION } from './dry-snapshot-version'
++import { RUNTIME_VERSION } from '../runtime/runtime-version'
++import { getPortablePath } from './get-portable-path'
++import { CACHE_VERSION } from './cache-version'
++import { createDigest } from './create-digest'
++import { version } from '../../package.json'
++
++/**
++ * Builds the key of a dry run snapshot (`DrySnapshot`) over what the dry run
++ * was asked to do and how the run reads it: the versions of mootant, its build,
++ * the snapshot format, the cache, the instrumenter and the runtime; the adapter;
++ * the version of Node.js with the platform; the project root; fast mode, which
++ * repeats every test; the try limits; the preset and its mutators; and the
++ * switched files with their texts, which name every hosted mutant.
++ *
++ * @param input - Settings, adapter and switched files of the run.
++ * @param input.setup - Preset, active mutators and preset settings.
++ * @param input.switched - Switched files the dry run would serve, in order.
++ * @param input.limits - How try limits grow from the dry run.
++ * @param input.adapter - Adapter of the run.
++ * @param input.fast - Whether the run is in fast mode.
++ * @param input.root - Project root.
++ * @returns SHA-256 in hex.
++ */
++export async function getDrySnapshotKey(input: {
++  setup: { mutators: ActiveMutator[]; settings: unknown; preset: string }
++  switched: readonly SwitchedFile[]
++  limits: LimitSettings
++  adapter: TestAdapter
++  fast: boolean
++  root: string
++}): Promise<string> {
++  let { setup, root } = input
++  return createDigest([
++    DRY_SNAPSHOT_VERSION,
++    CACHE_VERSION,
++    version,
++    (await stat(import.meta.filename)).mtimeMs,
++    INSTRUMENTER_VERSION,
++    RUNTIME_VERSION,
++    [input.adapter.name, input.adapter.version ?? null],
++    [process.version, process.platform, process.arch],
++    root,
++    input.fast,
++    input.limits,
++    [
++      setup.mutators.map(mutator => [mutator.id, mutator.options]),
++      setup.settings,
++      setup.preset,
++    ],
++    input.switched.map(file => [
++      getPortablePath(file.file, root),
++      createHash('sha256').update(file.switched).digest('hex'),
++      createHash('sha256').update(file.original).digest('hex'),
++    ]),
++  ])
++}
+diff --git a/core/cache/get-dry-snapshot-path.ts b/core/cache/get-dry-snapshot-path.ts
+new file mode 100644
+index 0000000..30be7be
+--- /dev/null
++++ b/core/cache/get-dry-snapshot-path.ts
+@@ -0,0 +1,21 @@
++import path from 'node:path'
++
++import { DRY_SNAPSHOT_VERSION } from './dry-snapshot-version'
++
++/**
++ * Builds the path of the dry run snapshot of a project (`DrySnapshot`), next
++ * to the cache file.
++ *
++ * @param root - Project root.
++ * @returns Absolute path, such as
++ *   `<root>/node_modules/.cache/mootant/dry-v1.json`.
++ */
++export function getDrySnapshotPath(root: string): string {
++  return path.join(
++    root,
++    'node_modules',
++    '.cache',
++    'mootant',
++    `dry-v${DRY_SNAPSHOT_VERSION}.json`,
++  )
++}
+diff --git a/core/cache/hash-project-tree.ts b/core/cache/hash-project-tree.ts
+new file mode 100644
+index 0000000..b5ac139
+--- /dev/null
++++ b/core/cache/hash-project-tree.ts
+@@ -0,0 +1,60 @@
++import { readlink, readdir } from 'node:fs/promises'
++import path from 'node:path'
++
++import { compareCodeUnits } from '../compare-code-units'
++import { getPortablePath } from './get-portable-path'
++import { createDigest } from './create-digest'
++import { hashFiles } from './hash-files'
++
++/**
++ * Directories the hash of a project tree leaves out, at any depth: installed
++ * packages, whose changes the lockfile stands for, git's own files, and the
++ * reports mootant writes.
++ */
++const SKIPPED = new Set(['node_modules', '.mootant', '.git'])
++
++/**
++ * Hashes every file under the project root with its contents, so that adding,
++ * removing, renaming or changing any file changes the hash: a new test file, a
++ * test file the dry run did not run that now imports a mutated file, or a file
++ * that now shadows a module a test imports. Directories in `SKIPPED` are left
++ * out; a symbolic link counts by its target, never followed.
++ *
++ * @param root - Directory whose files are hashed: the project root.
++ * @returns SHA-256 in hex of the sorted portable paths and their hashes.
++ */
++export async function hashProjectTree(root: string): Promise<string> {
++  let files: string[] = []
++  let links: [string, string][] = []
++  /**
++   * Lists the files of a directory and of the directories in it.
++   *
++   * @param directory - Absolute path of the directory.
++   * @returns Resolves when the directory is listed.
++   */
++  async function walk(directory: string): Promise<void> {
++    let entries = await readdir(directory, { withFileTypes: true })
++    await Promise.all(
++      entries.map(async entry => {
++        let file = path.join(directory, entry.name)
++        if (entry.isSymbolicLink()) {
++          links.push([getPortablePath(file, root), await readlink(file)])
++        } else if (entry.isDirectory()) {
++          if (!SKIPPED.has(entry.name)) {
++            await walk(file)
++          }
++        } else {
++          files.push(file)
++        }
++      }),
++    )
++  }
++  await walk(root)
++  let hashes = await hashFiles(files)
++  return createDigest({
++    files: files
++      .map(file => [getPortablePath(file, root), hashes.get(file) ?? null])
++      .toSorted(([left], [right]) => compareCodeUnits(left!, right!)),
++    links: links.toSorted(([left], [right]) => compareCodeUnits(left, right)),
++  })
++}
+diff --git a/core/cache/list-variable-hashes.ts b/core/cache/list-variable-hashes.ts
+new file mode 100644
+index 0000000..9e9756b
+--- /dev/null
++++ b/core/cache/list-variable-hashes.ts
+@@ -0,0 +1,41 @@
++import { createHash } from 'node:crypto'
++
++import { compareCodeUnits } from '../compare-code-units'
++
++/**
++ * Variables that change verdicts whatever reads them (dates, collation, the
++ * mode libraries pick up, Node's own flags); the adapters key their settings on
++ * the same ones.
++ */
++const VERDICT_VARIABLES = /^(?:LANG|NODE_ENV|NODE_OPTIONS|LC_.+|TZ)$/u
++
++/**
++ * Hashes the values of environment variables of the main process for a dry run
++ * snapshot (`DrySnapshot.variables`): the given names, which test files read,
++ * and every variable that changes verdicts whatever reads it, set or not.
++ *
++ * @param names - Names the test files read.
++ * @param environment - Environment variables of the main process.
++ * @returns Name and SHA-256 in hex of each value, or null when unset, by name.
++ */
++export function listVariableHashes(
++  names: Iterable<string>,
++  environment: NodeJS.ProcessEnv = process.env,
++): [string, string | null][] {
++  let all = new Set(names)
++  for (let name of Object.keys(environment)) {
++    if (VERDICT_VARIABLES.test(name)) {
++      all.add(name)
++    }
++  }
++  all.add('NODE_OPTIONS')
++  return [...all].toSorted(compareCodeUnits).map(name => {
++    let value = environment[name]
++    return [
++      name,
++      value === undefined ? null : (
++        createHash('sha256').update(value).digest('hex')
++      ),
++    ]
++  })
++}
+diff --git a/core/cache/prepare-run-cache.ts b/core/cache/prepare-run-cache.ts
+index bd28640..9e6320a 100644
+--- a/core/cache/prepare-run-cache.ts
++++ b/core/cache/prepare-run-cache.ts
+@@ -66,6 +66,12 @@ interface PrepareInput {
+    */
+   adapter: TestAdapter
+ 
++  /**
++   * Whether isolated timeouts by the hit limit are stored and reused too
++   * (`RunCacheInput.hitLimits`).
++   */
++  hitLimits?: boolean
++
+   /**
+    * The dry run, with the dependencies of every test file.
+    */
+@@ -207,6 +213,7 @@ export async function prepareRunCache(
+       [...dependencies].filter(([file]) => fileKeys.has(file)),
+     ),
+     regions: new Map(input.files.flatMap(file => [...(file.regions ?? [])])),
++    hitLimits: input.hitLimits === true,
+     incremental: input.incremental,
+     analysis: input.analysis,
+     environment: files,
+diff --git a/core/cache/read-dry-snapshot.ts b/core/cache/read-dry-snapshot.ts
+new file mode 100644
+index 0000000..be28924
+--- /dev/null
++++ b/core/cache/read-dry-snapshot.ts
+@@ -0,0 +1,48 @@
++import { readFile } from 'node:fs/promises'
++
++import type { DrySnapshot } from '../../types/cache/dry-snapshot'
++
++import { DRY_SNAPSHOT_VERSION } from './dry-snapshot-version'
++import { isRecord } from '../plugins/is-record'
++
++/**
++ * Reads the dry run snapshot of a project (`DrySnapshot`). A missing or
++ * unreadable file, invalid JSON, another version or a value without the parts
++ * of a snapshot gives none: a snapshot only ever makes a run faster.
++ *
++ * @param file - Absolute path of the snapshot file.
++ * @returns The snapshot, or null.
++ */
++export async function readDrySnapshot(
++  file: string,
++): Promise<DrySnapshot | null> {
++  let content: unknown
++  try {
++    content = JSON.parse(await readFile(file, 'utf8'))
++  } catch {
++    return null
++  }
++  return isSnapshot(content) ? content : null
++}
++
++/**
++ * Tells whether a value read from a snapshot file has the parts of a snapshot
++ * of this version; the parts themselves are trusted, as mootant wrote them.
++ *
++ * @param content - Parsed content of the file.
++ * @returns Whether it is a snapshot.
++ */
++function isSnapshot(content: unknown): content is DrySnapshot {
++  return (
++    isRecord(content) &&
++    content['version'] === DRY_SNAPSHOT_VERSION &&
++    typeof content['key'] === 'string' &&
++    typeof content['tree'] === 'string' &&
++    Array.isArray(content['files']) &&
++    Array.isArray(content['variables']) &&
++    Array.isArray(content['testFiles']) &&
++    isRecord(content['session']) &&
++    isRecord(content['phase']) &&
++    isRecord(content['phase']['dry'])
++  )
++}
+diff --git a/core/cache/read-reuse-dry-run.ts b/core/cache/read-reuse-dry-run.ts
+new file mode 100644
+index 0000000..3058bcc
+--- /dev/null
++++ b/core/cache/read-reuse-dry-run.ts
+@@ -0,0 +1,20 @@
++/**
++ * Name of the environment variable that turns the reuse of a dry run on in
++ * this prototype; a release would make it part of the cache.
++ */
++const VARIABLE = 'MOOTANT_REUSE_DRY_RUN'
++
++/**
++ * Tells whether a run saves its dry run for later runs and reuses the dry run
++ * of an earlier one when nothing changed (`DrySnapshot`): only when
++ * `MOOTANT_REUSE_DRY_RUN` is `1` or `true`.
++ *
++ * @param environment - Environment variables to read.
++ * @returns Whether the reuse is on.
++ */
++export function readReuseDryRun(
++  environment: NodeJS.ProcessEnv = process.env,
++): boolean {
++  let value = environment[VARIABLE]
++  return value === '1' || value === 'true'
++}
+diff --git a/core/cache/read-run-cache.ts b/core/cache/read-run-cache.ts
+index ddf49d6..2cf94c6 100644
+--- a/core/cache/read-run-cache.ts
++++ b/core/cache/read-run-cache.ts
+@@ -10,7 +10,7 @@ import { isRecord } from '../plugins/is-record'
+ /**
+  * Statuses an entry may store.
+  */
+-const STATUSES = new Set<unknown>(['Survived', 'Killed'])
++const STATUSES = new Set<unknown>(['Survived', 'Timeout', 'Killed'])
+ 
+ /**
+  * Paths an entry may come from.
+diff --git a/core/cache/write-dry-snapshot.ts b/core/cache/write-dry-snapshot.ts
+new file mode 100644
+index 0000000..abaff0f
+--- /dev/null
++++ b/core/cache/write-dry-snapshot.ts
+@@ -0,0 +1,132 @@
++import { writeFile, rename, mkdir, rm } from 'node:fs/promises'
++import path from 'node:path'
++
++import type { AdapterSession } from '../../types/adapter/adapter-session'
++import type { DryRunResult } from '../../types/adapter/dry-run-result'
++import type { DrySnapshot } from '../../types/cache/dry-snapshot'
++import type { Diagnostic } from '../../types/mutant/diagnostic'
++import type { RunCache } from '../../types/cache/run-cache'
++
++import { DRY_SNAPSHOT_VERSION } from './dry-snapshot-version'
++import { listVariableHashes } from './list-variable-hashes'
++import { compareCodeUnits } from '../compare-code-units'
++import { hashProjectTree } from './hash-project-tree'
++import { hashFiles } from './hash-files'
++
++/**
++ * What a dry run snapshot is written from.
++ */
++interface SnapshotInput {
++  /**
++   * Outcome of the dry phase of the run.
++   */
++  phase: {
++    unrepeatableFiles: ReadonlySet<string>
++    errors: ReadonlyMap<string, string>
++    diagnostics: Diagnostic[]
++    dry: DryRunResult
++  }
++
++  /**
++   * Environment variables of the main process as the run started, before the
++   * test runner could set any, such as `NODE_ENV`.
++   */
++  environment: NodeJS.ProcessEnv
++
++  /**
++   * Live session of the run, before it closes.
++   */
++  session: AdapterSession
++
++  /**
++   * Test files and setup files of the session.
++   */
++  testFiles: string[]
++
++  /**
++   * Cache of the run after it was saved: the files its keys were built from,
++   * with the hashes they had after the dry run.
++   */
++  cache: RunCache
++
++  /**
++   * Absolute path of the snapshot file.
++   */
++  file: string
++
++  /**
++   * Project root.
++   */
++  root: string
++
++  /**
++   * Key of the run (`getDrySnapshotKey`).
++   */
++  key: string
++}
++
++/**
++ * Saves the dry run of a run, after its cache was saved, so that a later run
++ * whose inputs are all unchanged can skip the test runner (`DrySnapshot`). The
++ * files the keys were built from are hashed again; nothing is saved when one of
++ * them changed during the run, when a test file of the dry run cannot tell what
++ * it depended on or read every environment variable, or when the adapter tells
++ * nothing for the cache. The file is written to a temporary file and renamed,
++ * so a reader never sees half of it.
++ *
++ * @param input - Dry phase, cache, session and where to save.
++ * @returns Null when saved, else why nothing was saved.
++ */
++export async function writeDrySnapshot(
++  input: SnapshotInput,
++): Promise<string | null> {
++  let { session, phase, cache, root } = input
++  let { dry } = phase
++  if (dry.files.some(file => !Array.isArray(file.dependencies))) {
++    return 'a test file cannot tell what it depended on'
++  }
++  let names = new Set(dry.files.flatMap(file => file.environment ?? []))
++  if (names.has('*')) {
++    return 'a test file read every environment variable'
++  }
++  if (session.cacheInputs === undefined) {
++    return 'the adapter tells nothing for the cache'
++  }
++  let paths = [...cache.hashes.keys()].toSorted(compareCodeUnits)
++  let hashes = await hashFiles(paths)
++  if (paths.some(file => hashes.get(file) !== cache.hashes.get(file))) {
++    return 'a file the tests depend on changed during the run'
++  }
++  let snapshot: DrySnapshot = {
++    phase: {
++      unrepeatableFiles: [...phase.unrepeatableFiles].toSorted(
++        compareCodeUnits,
++      ),
++      diagnostics: phase.diagnostics,
++      errors: [...phase.errors],
++      dry,
++    },
++    session: {
++      diagnostics: [...(session.diagnostics ?? [])],
++      inputs: await session.cacheInputs(),
++      version: session.version ?? null,
++      workers: session.workers ?? null,
++    },
++    files: paths.map(file => [file, hashes.get(file) ?? null]),
++    variables: listVariableHashes(names, input.environment),
++    tree: await hashProjectTree(root),
++    version: DRY_SNAPSHOT_VERSION,
++    testFiles: input.testFiles,
++    key: input.key,
++  }
++  let temporary = `${input.file}.${process.pid}.tmp`
++  try {
++    await mkdir(path.dirname(input.file), { recursive: true })
++    await writeFile(temporary, JSON.stringify(snapshot))
++    await rename(temporary, input.file)
++  } catch (error) {
++    await rm(temporary, { force: true })
++    return `the snapshot could not be written (${(error as Error).message})`
++  }
++  return null
++}
+diff --git a/core/run-mutants.ts b/core/run-mutants.ts
+index abb3c9e..c32595f 100644
+--- a/core/run-mutants.ts
++++ b/core/run-mutants.ts
+@@ -7,6 +7,7 @@ import type { SinceRevision } from '../types/git/since-revision'
+ import type { TestAdapter } from '../types/adapter/test-adapter'
+ import type { FileMutants } from '../types/mutant/file-mutants'
+ import type { RunSettings } from '../types/config/run-settings'
++import type { DrySnapshot } from '../types/cache/dry-snapshot'
+ import type { Diagnostic } from '../types/mutant/diagnostic'
+ import type { DryAnalysis } from '../types/run/dry-analysis'
+ import type { RunResult } from '../types/run/run-result'
+@@ -16,19 +17,26 @@ import type { RunEvent } from '../types/run/run-event'
+ 
+ import { createSwitchedFiles } from './instrument/create-switched-files'
+ import { getComponentFramework } from './parser/get-component-framework'
++import { createSnapshotSession } from './cache/create-snapshot-session'
+ import { selectChangedMutants } from './files/select-changed-mutants'
++import { getDrySnapshotPath } from './cache/get-dry-snapshot-path'
+ import { loadSvelteCompiler } from './parser/load-svelte-compiler'
+ import { resolveRunSettings } from './config/resolve-run-settings'
+ import { getPackageDirectory } from './run/get-package-directory'
+ import { createWorkDirectory } from './run/create-work-directory'
+ import { previewIsolatedUnit } from './run/preview-isolated-unit'
++import { getDrySnapshotKey } from './cache/get-dry-snapshot-key'
+ import { resolveMutantIds } from './identity/resolve-mutant-ids'
+ import { markOutsideMutants } from './run/mark-outside-mutants'
++import { checkDrySnapshot } from './cache/check-dry-snapshot'
++import { writeDrySnapshot } from './cache/write-dry-snapshot'
+ import { applyCachedBatch } from './cache/apply-cached-batch'
+ import { applyCachedUnits } from './cache/apply-cached-units'
+ import { runIsolatedRounds } from './run/run-isolated-rounds'
+ import { computeStaticCost } from './run/compute-static-cost'
++import { readReuseDryRun } from './cache/read-reuse-dry-run'
+ import { loadVueCompiler } from './parser/load-vue-compiler'
++import { readDrySnapshot } from './cache/read-dry-snapshot'
+ import { prepareRunCache } from './cache/prepare-run-cache'
+ import { listFileMutants } from './files/list-file-mutants'
+ import { readChangedLines } from './git/read-changed-lines'
+@@ -40,6 +48,7 @@ import { createRunState } from './run/create-run-state'
+ import { getDisplayPath } from './run/get-display-path'
+ import { selectRunFiles } from './run/select-run-files'
+ import { resolveAdapter } from './run/resolve-adapter'
++import { DryReuseMiss } from './cache/dry-reuse-miss'
+ import { saveRunCache } from './cache/save-run-cache'
+ import { readRunCache } from './cache/read-run-cache'
+ import { getCachePath } from './cache/get-cache-path'
+@@ -170,6 +179,7 @@ export async function runMutants(
+ ): Promise<RunResult> {
+   let started = performance.now()
+   let startedAt = Date.now()
++  let environment = { ...process.env }
+   let setup = await prepareRun(options)
+   let { root, run } = setup
+   let { fast: requestedFast, ...runSettings } = resolveRunSettings(options, run)
+@@ -268,6 +278,27 @@ export async function runMutants(
+       root,
+     }
+   }
++  let reuse = runSettings.cache && !fast && readReuseDryRun()
++  if (reuse) {
++    let replayed = await replayDrySnapshot({
++      diagnostics: listing.diagnostics,
++      listed: listing.files,
++      environment,
++      runSettings,
++      startedAt,
++      listedIds,
++      adapter,
++      options,
++      started,
++      files,
++      since,
++      setup,
++      html,
++    })
++    if (replayed !== null) {
++      return replayed
++    }
++  }
+   let work = await createWorkDirectory()
+   try {
+     let switched: SwitchedFile[] = []
+@@ -302,6 +333,8 @@ export async function runMutants(
+       return await execute({
+         diagnostics: listing.diagnostics,
+         listed: listing.files,
++        snapshot: null,
++        environment,
+         runSettings,
+         startedAt,
+         listedIds,
+@@ -310,6 +343,7 @@ export async function runMutants(
+         adapter,
+         options,
+         started,
++        reuse,
+         files,
+         since,
+         setup,
+@@ -350,12 +384,22 @@ export async function runMutants(
+  *   mode and whether the cache is on, resolved by `resolveRunSettings`.
+  * @param context.live - Holder of the state of the run once it exists, so the
+  *   units that end count in the live verdict counts.
++ * @param context.reuse - Whether the run saves its dry run for later runs
++ *   (`MOOTANT_REUSE_DRY_RUN`).
++ * @param context.environment - Environment variables of the main process as
++ *   the run started, before the test runner could set any.
++ * @param context.snapshot - Dry run snapshot of an earlier run to replay in
++ *   place of the dry phase, with a session that runs nothing, or null for a run
++ *   with the test runner. A replay throws `DryReuseMiss` when the snapshot is
++ *   stale or a mutant would need the test runner.
+  * @returns Result of the run.
+  */
+ async function execute(context: {
+   setup: Awaited<ReturnType<typeof prepareRun>>
+   runSettings: Omit<RunSettings, 'fast'>
+   live: { state: RunState | null }
++  environment: NodeJS.ProcessEnv
++  snapshot: DrySnapshot | null
+   since: SinceRevision | null
+   options: RunMutantsOptions
+   diagnostics: Diagnostic[]
+@@ -368,9 +412,10 @@ async function execute(context: {
+   listedIds: string[]
+   startedAt: number
+   started: number
++  reuse: boolean
+   fast: boolean
+ }): Promise<RunResult> {
+-  let { runSettings, session, options, setup, fast } = context
++  let { runSettings, snapshot, session, options, setup, fast } = context
+   let { limits } = runSettings
+   let { root } = setup
+   let cachePath = getCachePath(root)
+@@ -408,16 +453,46 @@ async function execute(context: {
+   )
+ 
+   let dryStarted = performance.now()
+-  let dryPhase = await runDryPhase(session, {
+-    mutantFiles: new Map(
+-      hosted.map(mutant => [mutant.id, absolutes.get(mutant.file)!]),
+-    ),
+-    report: event => options.onProgress?.(event),
+-    switched: context.switched,
+-    repeat: fast,
+-    displays,
+-    root,
+-  })
++  let snapshotKey =
++    context.reuse ?
++      await getDrySnapshotKey({
++        adapter: context.adapter,
++        switched: built.switched,
++        limits,
++        setup,
++        fast,
++        root,
++      })
++    : null
++  if (snapshot !== null) {
++    let stale = await checkDrySnapshot(snapshot, {
++      environment: context.environment,
++      key: snapshotKey!,
++      root,
++    })
++    if (stale !== null) {
++      throw new DryReuseMiss(stale)
++    }
++  }
++  let dryPhase =
++    snapshot === null ?
++      await runDryPhase(session, {
++        mutantFiles: new Map(
++          hosted.map(mutant => [mutant.id, absolutes.get(mutant.file)!]),
++        ),
++        report: event => options.onProgress?.(event),
++        switched: context.switched,
++        repeat: fast,
++        displays,
++        root,
++      })
++    : {
++        unrepeatableFiles: new Set(snapshot.phase.unrepeatableFiles),
++        diagnostics: snapshot.phase.diagnostics,
++        errors: new Map(snapshot.phase.errors),
++        dry: snapshot.phase.dry,
++        runs: 0,
++      }
+   options.onProgress?.({
+     duration: performance.now() - dryStarted,
+     tests: dryPhase.dry.tests.length,
+@@ -446,6 +521,7 @@ async function execute(context: {
+           .files,
+         incremental: runSettings.incremental,
+         started: context.startedAt,
++        hitLimits: context.reuse,
+         adapter: context.adapter,
+         dry: dryPhase.dry,
+         analysis,
+@@ -487,6 +563,16 @@ async function execute(context: {
+     options.onProgress?.({ message: describeUnrepeatable(state), kind: 'note' })
+   }
+   reuseCachedVerdicts(state, fast)
++  if (snapshot !== null) {
++    if (hasWorkLeft(state)) {
++      throw new DryReuseMiss('a mutant has no valid cached verdict')
++    }
++    options.onProgress?.({
++      message:
++        'Reused the dry run of an earlier run, as nothing it depended on changed; the test runner did not start.',
++      kind: 'note',
++    })
++  }
+ 
+   let batchStarted = performance.now()
+   if (fast) {
+@@ -527,6 +613,30 @@ async function execute(context: {
+     if (skipped !== null) {
+       diagnostics.push(skipped)
+     }
++    if (
++      snapshot === null &&
++      snapshotKey !== null &&
++      skipped === null &&
++      diagnostics.every(diagnostic => diagnostic.severity !== 'error')
++    ) {
++      let unsaved = await writeDrySnapshot({
++        environment: context.environment,
++        file: getDrySnapshotPath(root),
++        key: snapshotKey,
++        phase: dryPhase,
++        testFiles,
++        session,
++        cache,
++        root,
++      })
++      options.onProgress?.({
++        message:
++          unsaved === null ?
++            'Saved the dry run for later runs.'
++          : `The dry run was not saved for later runs: ${unsaved}.`,
++        kind: 'note',
++      })
++    }
+   }
+   let finished = performance.now()
+ 
+@@ -614,6 +724,62 @@ function reportFastLimits(input: {
+   return diagnostics
+ }
+ 
++/**
++ * Tries to decide a run from the dry run snapshot of an earlier run
++ * (`DrySnapshot`) without starting the test runner: replays the phases with the
++ * snapshot's dry run and a session that refuses to run anything
++ * (`createSnapshotSession`), holding the events of the run back until it ends.
++ * When the snapshot is missing or stale, or a mutant has no valid cached
++ * verdict, the events are dropped with a note and the run starts over with the
++ * test runner; nothing ran or was written before.
++ *
++ * @param context - The run as `runMutants` prepared it, without a session.
++ * @returns Result of the run, or null when the test runner has to start.
++ */
++async function replayDrySnapshot(
++  context: Omit<
++    Parameters<typeof execute>[0],
++    'snapshot' | 'switched' | 'session' | 'reuse' | 'live' | 'fast'
++  >,
++): Promise<RunResult | null> {
++  let { onProgress } = context.options
++  let snapshot = await readDrySnapshot(getDrySnapshotPath(context.setup.root))
++  if (snapshot === null) {
++    onProgress?.({ message: 'No saved dry run to reuse.', kind: 'note' })
++    return null
++  }
++  let events: RunEvent[] = []
++  try {
++    let result = await execute({
++      ...context,
++      options: {
++        ...context.options,
++        ...(onProgress !== undefined && {
++          onProgress: event => {
++            events.push(event)
++          },
++        }),
++      },
++      session: createSnapshotSession(snapshot),
++      live: { state: null },
++      switched: [],
++      reuse: true,
++      fast: false,
++      snapshot,
++    })
++    for (let event of events) {
++      onProgress?.(event)
++    }
++    return result
++  } catch (error) {
++    if (!(error instanceof DryReuseMiss)) {
++      throw error
++    }
++    onProgress?.({ message: error.message, kind: 'note' })
++    return null
++  }
++}
++
+ /**
+  * Keeps only the mutants given with `--mutant`, and only the files that still
+  * have mutants. Ids are resolved against every listed mutant, so an id means
+@@ -710,3 +876,20 @@ function reuseCachedVerdicts(state: RunState, fast: boolean): void {
+     })
+   }
+ }
++
++/**
++ * Tells whether a mutant still needs the test runner after the cache was
++ * applied: an undecided mutant on the isolated path with test files left, or
++ * one on the batch path with tests left.
++ *
++ * @param state - State of the run after `reuseCachedVerdicts`.
++ * @returns Whether an isolated or batch run would have work.
++ */
++function hasWorkLeft(state: RunState): boolean {
++  return [...state.mutants.values()].some(
++    mutant =>
++      mutant.verdict === null &&
++      ((mutant.path === 'isolated' && mutant.files.length > 0) ||
++        (mutant.path === 'batch' && mutant.queue.length > 0)),
++  )
++}
+diff --git a/test/core/cache/check-dry-snapshot.test.ts b/test/core/cache/check-dry-snapshot.test.ts
+new file mode 100644
+index 0000000..f7e00a3
+--- /dev/null
++++ b/test/core/cache/check-dry-snapshot.test.ts
+@@ -0,0 +1,69 @@
++import { afterEach, describe, expect, it, vi } from 'vitest'
++import { writeFile, mkdtemp, rm } from 'node:fs/promises'
++import { tmpdir } from 'node:os'
++import path from 'node:path'
++
++import type { DrySnapshot } from '../../../types/cache/dry-snapshot'
++
++import { listVariableHashes } from '../../../core/cache/list-variable-hashes'
++import { checkDrySnapshot } from '../../../core/cache/check-dry-snapshot'
++import { hashProjectTree } from '../../../core/cache/hash-project-tree'
++import { hashFiles } from '../../../core/cache/hash-files'
++
++describe('checkDrySnapshot', () => {
++  let directories: string[] = []
++
++  afterEach(async () => {
++    vi.unstubAllEnvs()
++    await Promise.all(
++      directories.map(directory =>
++        rm(directory, { recursive: true, force: true }),
++      ),
++    )
++    directories = []
++  })
++
++  it('names the first input that changed, cheapest first', async () => {
++    let root = await mkdtemp(path.join(tmpdir(), 'mootant-snapshot-'))
++    let outside = await mkdtemp(path.join(tmpdir(), 'mootant-outside-'))
++    directories.push(root, outside)
++    let dependency = path.join(outside, 'lib.js')
++    await writeFile(dependency, 'one')
++    await writeFile(path.join(root, 'a.test.ts'), 'test')
++    vi.stubEnv('MOOTANT_SNAPSHOT_VARIABLE', 'a')
++    let hashes = await hashFiles([dependency])
++    let snapshot = {
++      variables: listVariableHashes(['MOOTANT_SNAPSHOT_VARIABLE']),
++      files: [[dependency, hashes.get(dependency)!]],
++      tree: await hashProjectTree(root),
++      key: 'key',
++    } as DrySnapshot
++
++    await expect(
++      checkDrySnapshot(snapshot, { environment: process.env, key: 'other', root }),
++    ).resolves.toBe('the mutants, settings or versions changed')
++    await expect(
++      checkDrySnapshot(snapshot, { environment: process.env, key: 'key', root }),
++    ).resolves.toBeNull()
++
++    vi.stubEnv('MOOTANT_SNAPSHOT_VARIABLE', 'b')
++
++    await expect(
++      checkDrySnapshot(snapshot, { environment: process.env, key: 'key', root }),
++    ).resolves.toBe('an environment variable changed')
++
++    vi.stubEnv('MOOTANT_SNAPSHOT_VARIABLE', 'a')
++    await writeFile(dependency, 'two')
++
++    await expect(
++      checkDrySnapshot(snapshot, { environment: process.env, key: 'key', root }),
++    ).resolves.toBe(`${dependency} changed`)
++
++    await writeFile(dependency, 'one')
++    await writeFile(path.join(root, 'b.test.ts'), 'test')
++
++    await expect(
++      checkDrySnapshot(snapshot, { environment: process.env, key: 'key', root }),
++    ).resolves.toBe('a file of the project was added, removed or changed')
++  })
++})
+diff --git a/test/core/cache/create-run-cache.test.ts b/test/core/cache/create-run-cache.test.ts
+index 8fbcb8f..2700180 100644
+--- a/test/core/cache/create-run-cache.test.ts
++++ b/test/core/cache/create-run-cache.test.ts
+@@ -271,6 +271,39 @@ describe('createRunCache', () => {
+     expect(cache.pending.size).toBe(0)
+   })
+ 
++  it('stores and reuses isolated timeouts by the hit limit only with hitLimits', async () => {
++    let state = await createState()
++    let mutant = state.mutants.get('m1')!
++    let timeout: MutantVerdict = {
++      ...kill,
++      cause: 'hit-limit',
++      status: 'Timeout',
++    }
++    let writer = create(state, { hitLimits: true })
++    writer.recordUnit(mutant, '/t/a.test.ts', { verdict: timeout, inputs: read })
++    writer.recordUnit(state.mutants.get('m2')!, '/t/a.test.ts', {
++      verdict: { ...timeout, cause: 'time-limit' },
++      inputs: read,
++    })
++    writer.recordBatch(mutant, 'a1', { verdict: timeout, inputs: read })
++
++    expect([...writer.entries.values()].map(entry => entry.status)).toStrictEqual(
++      ['Timeout'],
++    )
++    expect(
++      create(state, {
++        stored: storedOf(writer.entries),
++        hitLimits: true,
++      }).lookupUnit(mutant, '/t/a.test.ts'),
++    ).toStrictEqual(timeout)
++    expect(
++      create(state, { stored: storedOf(writer.entries) }).lookupUnit(
++        mutant,
++        '/t/a.test.ts',
++      ),
++    ).toBeNull()
++  })
++
+   it('keeps what a run read beyond the dry run of its test file', async () => {
+     let state = await createState()
+     let cache = create(state, {
+diff --git a/test/core/cache/hash-project-tree.test.ts b/test/core/cache/hash-project-tree.test.ts
+new file mode 100644
+index 0000000..642652f
+--- /dev/null
++++ b/test/core/cache/hash-project-tree.test.ts
+@@ -0,0 +1,44 @@
++import { writeFile, mkdtemp, symlink, mkdir, rm } from 'node:fs/promises'
++import { afterEach, describe, expect, it } from 'vitest'
++import { tmpdir } from 'node:os'
++import path from 'node:path'
++
++import { hashProjectTree } from '../../../core/cache/hash-project-tree'
++
++describe('hashProjectTree', () => {
++  let root = ''
++
++  afterEach(async () => {
++    await rm(root, { recursive: true, force: true })
++  })
++
++  it('changes with any file but those of skipped directories', async () => {
++    root = await mkdtemp(path.join(tmpdir(), 'mootant-tree-'))
++    await mkdir(path.join(root, 'src'))
++    await mkdir(path.join(root, 'node_modules', 'a'), { recursive: true })
++    await mkdir(path.join(root, '.git'))
++    await mkdir(path.join(root, '.mootant'))
++    await writeFile(path.join(root, 'src/a.ts'), 'a')
++    let first = await hashProjectTree(root)
++
++    await writeFile(path.join(root, 'node_modules/a/index.js'), 'x')
++    await writeFile(path.join(root, '.git/HEAD'), 'x')
++    await writeFile(path.join(root, '.mootant/report.html'), 'x')
++
++    await expect(hashProjectTree(root)).resolves.toBe(first)
++
++    await writeFile(path.join(root, 'src/a.ts'), 'b')
++    let changed = await hashProjectTree(root)
++
++    expect(changed).not.toBe(first)
++
++    await writeFile(path.join(root, 'src/b.ts'), '')
++    let added = await hashProjectTree(root)
++
++    expect(added).not.toBe(changed)
++
++    await symlink('src', path.join(root, 'link'))
++
++    await expect(hashProjectTree(root)).resolves.not.toBe(added)
++  })
++})
+diff --git a/test/core/cache/list-variable-hashes.test.ts b/test/core/cache/list-variable-hashes.test.ts
+new file mode 100644
+index 0000000..479bff5
+--- /dev/null
++++ b/test/core/cache/list-variable-hashes.test.ts
+@@ -0,0 +1,42 @@
++import { describe, expect, it } from 'vitest'
++import { createHash } from 'node:crypto'
++
++import { listVariableHashes } from '../../../core/cache/list-variable-hashes'
++
++/**
++ * Hashes a value as the snapshot does.
++ *
++ * @param value - Value of a variable.
++ * @returns SHA-256 in hex.
++ */
++function hash(value: string): string {
++  return createHash('sha256').update(value).digest('hex')
++}
++
++describe('listVariableHashes', () => {
++  it('hashes the names read and every variable that changes verdicts', () => {
++    expect(
++      listVariableHashes(['B', 'A'], {
++        LC_ALL: 'C',
++        OTHER: 'x',
++        TZ: 'UTC',
++        A: '1',
++      }),
++    ).toStrictEqual([
++      ['A', hash('1')],
++      ['B', null],
++      ['LC_ALL', hash('C')],
++      ['NODE_OPTIONS', null],
++      ['TZ', hash('UTC')],
++    ])
++  })
++
++  it('reads the environment of the process by default', () => {
++    expect(listVariableHashes([])).toContainEqual([
++      'NODE_OPTIONS',
++      process.env['NODE_OPTIONS'] === undefined ? null : (
++        hash(process.env['NODE_OPTIONS'])
++      ),
++    ])
++  })
++})
+diff --git a/test/core/cache/read-reuse-dry-run.test.ts b/test/core/cache/read-reuse-dry-run.test.ts
+new file mode 100644
+index 0000000..b938749
+--- /dev/null
++++ b/test/core/cache/read-reuse-dry-run.test.ts
+@@ -0,0 +1,18 @@
++import { describe, expect, it } from 'vitest'
++
++import { readReuseDryRun } from '../../../core/cache/read-reuse-dry-run'
++
++describe('readReuseDryRun', () => {
++  it('turns the reuse on only for 1 and true', () => {
++    expect(readReuseDryRun({ MOOTANT_REUSE_DRY_RUN: '1' })).toBe(true)
++    expect(readReuseDryRun({ MOOTANT_REUSE_DRY_RUN: 'true' })).toBe(true)
++    expect(readReuseDryRun({ MOOTANT_REUSE_DRY_RUN: 'yes' })).toBe(false)
++    expect(readReuseDryRun({})).toBe(false)
++  })
++
++  it('reads the environment of the process by default', () => {
++    expect(readReuseDryRun()).toBe(
++      ['true', '1'].includes(process.env['MOOTANT_REUSE_DRY_RUN'] ?? ''),
++    )
++  })
++})
+diff --git a/test/core/cache/read-run-cache.test.ts b/test/core/cache/read-run-cache.test.ts
+index cce57f4..738b44c 100644
+--- a/test/core/cache/read-run-cache.test.ts
++++ b/test/core/cache/read-run-cache.test.ts
+@@ -74,7 +74,7 @@ describe('readRunCache', () => {
+     let stored = await read(
+       JSON.stringify({
+         entries: {
+-          s3: { ...kill, status: 'Timeout' },
++          s3: { ...kill, status: 'Error' },
+           s12: { ...kill, incremental: 1 },
+           s10: { ...kill, inputs: 'i2' },
+           s13: { ...kill, first: 'no' },
+diff --git a/test/core/run-mutants.test.ts b/test/core/run-mutants.test.ts
+index a20d856..d51328b 100644
+--- a/test/core/run-mutants.test.ts
++++ b/test/core/run-mutants.test.ts
+@@ -948,6 +948,42 @@ describe('runMutants', () => {
+       })
+     })
+ 
++    it('replays the saved dry run of an unchanged project without the test runner', async () => {
++      vi.stubEnv('MOOTANT_REUSE_DRY_RUN', '1')
++      let added = path.join(root, 'added.txt')
++      try {
++        let events: RunEvent[] = []
++        let first = await run(createWorld())
++        let second = await run(createWorld(), {
++          onProgress: event => {
++            events.push(event)
++          },
++        })
++        await writeFile(added, 'a new file anywhere in the project')
++        let third = await run(createWorld())
++
++        expect(first.fake.context).not.toBeNull()
++        expect(second.fake.context).toBeNull()
++        expect(second.fake.calls.dry).toStrictEqual([])
++        expect(second.result.runs).toStrictEqual({})
++        expect(
++          second.result.results.map(entry => [entry.mutant.id, entry.status]),
++        ).toStrictEqual(
++          first.result.results.map(entry => [entry.mutant.id, entry.status]),
++        )
++        expect(events).toContainEqual({
++          message:
++            'Reused the dry run of an earlier run, as nothing it depended on changed; the test runner did not start.',
++          kind: 'note',
++        })
++        expect(third.fake.calls.dry).toHaveLength(1)
++        expect(third.result.runs).toStrictEqual({ dry: 1 })
++      } finally {
++        vi.unstubAllEnvs()
++        await rm(added, { force: true })
++      }
++    })
++
+     it('reuses verdicts through a change outside their region only in incremental runs', async () => {
+       let flag = path.join(root, 'src/flag.ts')
+       let math = path.join(root, 'src/math.ts')
+diff --git a/types/cache/cache-entry.d.ts b/types/cache/cache-entry.d.ts
+index 8ea935d..02503c7 100644
+--- a/types/cache/cache-entry.d.ts
++++ b/types/cache/cache-entry.d.ts
+@@ -8,9 +8,10 @@ export interface CacheEntry {
+   /**
+    * `Killed` with the test of the kill, or `Survived` for an isolated unit that
+    * reached the mutant and passed, or for a batch try that passed, whether it
+-   * reached the mutant or not.
++   * reached the mutant or not; `Timeout` only for an isolated unit over its hit
++   * limit, stored with `MOOTANT_REUSE_DRY_RUN` (prototype).
+    */
+-  status: 'Survived' | 'Killed'
++  status: 'Survived' | 'Timeout' | 'Killed'
+ 
+   /**
+    * Path the evidence came from; batch entries are only reused in fast mode.
+diff --git a/types/cache/dry-snapshot.d.ts b/types/cache/dry-snapshot.d.ts
+new file mode 100644
+index 0000000..de553b7
+--- /dev/null
++++ b/types/cache/dry-snapshot.d.ts
+@@ -0,0 +1,75 @@
++import type { DryRunResult } from '../adapter/dry-run-result'
++import type { CacheInputs } from '../adapter/cache-inputs'
++import type { Diagnostic } from '../mutant/diagnostic'
++
++/**
++ * What a run saw of its test runner up to and including the dry phase, saved
++ * next to the cache file so that a later run whose inputs are all unchanged can
++ * decide its mutants from cached verdicts without starting the test runner
++ * (prototype, `MOOTANT_REUSE_DRY_RUN`). Paths are absolute: the key includes
++ * the project root.
++ */
++export interface DrySnapshot {
++  /**
++   * Outcome of the dry phase: the final dry run, the keys of the unrepeatable
++   * test files, the messages of the files whose mutants get no verdict, by
++   * display path, and the diagnostics of the phase.
++   */
++  phase: {
++    unrepeatableFiles: string[]
++    errors: [string, string][]
++    diagnostics: Diagnostic[]
++    dry: DryRunResult
++  }
++
++  /**
++   * What the session reported besides its runs: its version, workers and
++   * warnings, and what verdicts depend on beyond each test file
++   * (`AdapterSession.cacheInputs`).
++   */
++  session: {
++    diagnostics: Diagnostic[]
++    version: string | null
++    workers: number | null
++    inputs: CacheInputs
++  }
++
++  /**
++   * Names of the environment variables that test files read or that change
++   * verdicts whatever reads them, with the hash of their value in the main
++   * process, or null when unset.
++   */
++  variables: [string, string | null][]
++
++  /**
++   * Absolute paths with the hash of their contents of the files the dry run
++   * and the cache depended on: the files of `session.inputs`, the lockfile,
++   * `package.json`, the root `tsconfig` and `.env` files and every dependency
++   * of every test file of the dry run, inside the root or not.
++   */
++  files: [string, string | null][]
++
++  /**
++   * Absolute paths of the test files and setup files of the session
++   * (`AdapterSession.listTestFiles`).
++   */
++  testFiles: string[]
++
++  /**
++   * Version of the format (`DRY_SNAPSHOT_VERSION`).
++   */
++  version: number
++
++  /**
++   * Hash of every file and its contents under the project root, but
++   * `node_modules`, `.git` and `.mootant` (`hashProjectTree`): a file added,
++   * removed or changed anywhere, such as a new test file or a helper of a test
++   * file the dry run did not run, makes the snapshot stale.
++   */
++  tree: string
++
++  /**
++   * Hash of what the dry run was asked to do (`getDrySnapshotKey`).
++   */
++  key: string
++}

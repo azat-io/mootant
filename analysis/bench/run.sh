@@ -92,9 +92,11 @@ mootant_run() {
     --concurrency "$BENCH_CONCURRENCY" --json --all --verbose "$@"
 }
 
-# Id of the first listed mutant: `--mutant` with it runs the whole dry run
-# (it hosts every mutant of the files, core/run-mutants.ts:340-342) and one
-# mutant, so the point measures the floor of a run: startup + dry run.
+# Id of the first listed mutant. `--mutant <id>` is the re-check of one
+# mutant, as an agent runs it after writing a test: startup, the dry run of
+# the tests related to the file of that mutant (only files with a selected
+# mutant are switched, core/run-mutants.ts:633-664 and :379-393; the dry run
+# hosts every mutant of those files, :340-342) and one mutant.
 first_mutant() {
   [ -d "$PROJECT_DIR" ] || return 0
   (cd "$PROJECT_DIR" && node "$MOOTANT_BIN" list "${MUTATE[@]}" --json 2>/dev/null) |
