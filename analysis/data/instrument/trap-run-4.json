@@ -1,0 +1,40 @@
+{
+ "summary": {
+  "files": 4,
+  "mutants": 242,
+  "aDiffs": 0,
+  "bDiffs": 0,
+  "bLooseOnly": 0,
+  "rawUnparsable": 0
+ },
+ "results": [
+  {
+   "file": "src/traps/t17-jsx.jsx",
+   "mutants": 51,
+   "original": "{\"tree\":{\"type\":\"Fragment\",\"props\":{},\"children\":[{\"type\":\"ul\",\"props\":{\"title\":\"x1\",\"class\":\"many\"},\"children\":[{\"type\":\"Item\",\"props\":{\"key\":1,\"label\":\"a\",\"count\":1},\"children\":[]},{\"type\":\"Item\",\"props\":{\"key\":2,\"label\":\"b\",\"count\":2},\"children\":[]}]},null]},\"$expand\":\"function\"}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t18-decorators.ts",
+   "mutants": 27,
+   "original": "{\"$load\":\"SyntaxError: Invalid or unexpected token\"}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t19-objects.js",
+   "mutants": 107,
+   "original": "{\"a\":[\"base!\",20,2,6,1,[\"greet\",\"g\",\"other\",\"k1\",\"spread\"]],\"b\":[\"base?\",false,[\"greet\",\"g\",\"other\",\"k1\"]],\"args\":[[1,2,1,99],[1,5,2,99]],\"tf\":[\"small\",\"caught\",\"override\"],\"sites\":[false,3,\"a\"]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t20-async-gen.js",
+   "mutants": 57,
+   "original": "{\"out\":[3,4,\"none\"],\"first\":[1,false],\"early\":[\"stop\",true],\"race\":[2,\"neg-2\",6],\"log\":[\"inner-finally2\",\"inner-finally0\"]}",
+   "a": [],
+   "b": []
+  }
+ ]
+}

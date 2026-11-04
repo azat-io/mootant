@@ -89,7 +89,7 @@ async function runVariant(code, display, active) {
   let js = code
   try {
     let lang = /\.tsx$/u.test(display) ? 'tsx' : /\.[cm]?ts$/u.test(display) ? 'ts' : /\.jsx$/u.test(display) ? 'jsx' : 'js'
-    let result = await transformWithOxc(code, display.replace(/\.c?js$/u, '.js'), { lang, sourcemap: false, jsx: { runtime: 'classic', pragma: 'h', pragmaFrag: 'Fragment' } })
+    let result = await transformWithOxc(code, display.replace(/\.c?js$/u, '.js'), { lang, sourcemap: false, jsx: { runtime: 'classic', pragma: 'h', pragmaFrag: 'Fragment' }, ...(lang.startsWith('ts') && { decorator: { legacy: true } }) })
     js = result.code
   } catch (error) {
     return { ok: false, observation: JSON.stringify({ $transform: String(error.message).split('\n')[0] }) }

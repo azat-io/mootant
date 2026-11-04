@@ -49,7 +49,8 @@ npx mootant run src/cart --json > .mootant/mutants.json
     marks text cut from a long line
   - `testFiles`: where to add the test, likeliest first, each with the number
     of its tests that reach the mutant
-  - `test`: a covering test to start from (`file`, `line`, `name`)
+  - `test`: a covering test to start from (`file`, `name`; `line` only when
+    the runner reports it, Vitest does, `node:test` does not)
   - `recheck`: the command that runs this mutant alone
   - `message`: the reason of an `Error`
 - Add `--verbose` for `original`, `replacement` and every covering test

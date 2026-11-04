@@ -79,3 +79,39 @@ BUG-901; отдельно не воспроизводил (**гипотеза**:
 | H7 | node:test: `process.exit(0)` посреди теста — файл «прошёл» и у Mootant, и у `node --test` | `adapters/node-test/preload/create-try-tracker.ts:173-180` | подтверждено, это согласие, не баг: `nt/crash` `5nbbr7jm` — `Survived`, эталон `survived` (`node --test` сам даёт exit 0). В Vitest тот же мутант `Killed` у обоих: Vitest бросает «process.exit unexpectedly called» |
 
 (разделы с матрицами — ниже)
+
+## Стресс-фикстуры: что говорит Mootant и что эталон
+
+Фикстуры для Vitest (`vt/*`) и эквивалентные для node:test (`nt/*`), исходники
+и тесты одинаковые, кроме API раннера. «Mootant» — режим по умолчанию;
+отличия `--fast` указаны отдельно. Мутант — короткий id из отчёта.
+
+| Класс | Фикстура, мутант | Vitest: Mootant / эталон | node:test: Mootant / эталон |
+|---|---|---|---|
+| общее модульное состояние, мутант не сбрасывает его | `state`, `09w15scc` `count = 0` → `;` | Survived / survived; **`--fast`: Killed [batch]** | Survived / survived |
+| модульный кэш, мемоизация отключена | `state`, `prd6tx8n`, `jngxgvvz` | **Timeout (hit-limit)** / survived (BUG-200) | **Timeout (hit-limit)** / survived |
+| кэш прячет мутанта в batch | `state`, `twzenj03` `n < 2` → `n <= 2` | Killed / killed; `--fast`: survived в batch → isolated → Killed | Killed / killed |
+| `globalThis`, `process.env`, прототипы (top-level, static) | `state/src/registry.js`, 12 мутантов | совпадают все | совпадают все |
+| `vi.mock` с фабрикой, `{ spy: true }`, `vi.doMock`, `vi.spyOn` | `mocks`, 10 мутантов | совпадают все в полном прогоне; **`--mutant`/узкий путь — NoCoverage** (BUG-201) | — (node:test без моков модулей) |
+| вычисляемый `import()` через переменную | `dynamic`, `y1rmnxcp` `a + b` → `a` | **Survived** / killed (тест не выбран, документировано как «may not be selected») | Killed / killed |
+| шаблонный `import(\`../src/${name}.js\`)` | `dynamic`, `tzcw9x1g`, `tw7j08nf` | Killed / killed (Vite делает из него glob) | Killed / killed |
+| `createRequire` CJS-файла | `dynamic`, `src/legacy.cjs`, 4 мутанта | **NoCoverage** / killed + неточный `never-served` (BUG-205) | Killed / killed |
+| дочерний процесс, worker_threads | `dynamic`, `cli.js`, `worker.js`, `scale` | **NoCoverage** / killed (документировано) | **NoCoverage** / killed (документировано) |
+| код при загрузке модуля (static) | `load/src/constants.js`, 11 мутантов | совпадают все | совпадают все |
+| `setupFiles` / `--import` setup импортирует мутируемый модуль | `load/src/greeting.js` | Killed [static] / killed | Killed [static] / killed |
+| `globalSetup` импортирует мутируемый модуль | `load/src/seed.js`, 2 мутанта | Error (`outside-workers`) / killed — документировано, в score не идёт, но exit 1 | — |
+| `import()` внутри теста, `vi.resetModules()` | `load/src/lazy.js`, 5 мутантов | совпадают все (не static, достигаются в тесте) | совпадают все |
+| `test.concurrent`, fake timers, `retry`, `repeats`, `skip`/`todo`/`only`, `test.fails` | `modes`, 21 мутант | совпадают все, кроме снапшота ниже; `--fast` то же | совпадают все (`only` без `--test-only` в Node 22 игнорируется и в эталоне, и в Mootant) |
+| новый ключ снапшота (`toMatchSnapshot` в цикле, мутант добавил итерацию) | `modes`, `x90jyavh` `index < count` → `index <= count` | Killed («Snapshot … 3 mismatched») / **survived без CI** (Vitest дописал снапшот), **killed с `CI=1`** — Mootant ведёт себя как CI, это задокументировано («Snapshots are never written»), не баг | — |
+| `process.exit(0)` в тесте | `crash`, `5nbbr7jm` | Killed / killed (Vitest бросает «process.exit unexpectedly called») | Survived / survived (`node --test` сам считает файл прошедшим) |
+| `process.exitCode = 1` | `crash`, `t8tvwwbe` | Survived / survived (Vitest код воркера не смотрит) | Killed (hook-error) / killed |
+| бросок при загрузке модуля | `crash`, `1q7p1tzs` `JSON.parse('')` | Killed (load-error) [static] / killed | Killed (load-error) [static] / killed |
+| unhandled rejection, uncaught exception в микрозадаче | `crash`, `d2dn1btq`, `6cm2bm5g` | Killed (stray-error) / killed | Killed (stray-error) / killed |
+| то же при `dangerouslyIgnoreUnhandledErrors: true` | `unhandled`, `knkyemhs`, `7mkvyn7b` | **Killed (stray-error)** / survived (BUG-203) | — |
+| бесконечный синхронный цикл (strict) | `crash`, `mqzeg79s` `index++` → `index--`, `s4b8m9bv` | Timeout (hit-limit) / timeout | см. ниже (nt strict) |
+| бесконечная рекурсия | `crash`, `vge39vdq` `count - 1` → `count + 1` | Killed (RangeError) / killed | Killed / killed |
+| бесконечный асинхронный цикл на таймерах (strict) | `slow`, `6nb7t7bq`, `05ztzkkx` | Timeout (time-limit) / killed-timeout | Timeout (hang) / timeout (у node:test нет таймаута теста по умолчанию) |
+| неразрешающийся промис | `slow`, `c54q4t9c`, `ytg8ja3g` | Timeout (time-limit) / killed-timeout | Killed (assertion) / killed (node:test: «Promise resolution is still pending…») |
+| конечное замедление теста до ~2 с | `slow`, `9trb33kh` `Math.min` → `Math.max` | **Timeout (time-limit)** / survived (BUG-204) | Survived / survived |
+| огромное выделение памяти (OOM при `--max-old-space-size=512`, strict) | `crash`, `gt34y7x6` `block++` → `block--` | Killed (crash) / killed | см. ниже (nt strict) |
+| массовый вывод (20 000 строк по 210 символов) | `crash`, `eb0ye9vm` `verbose` → `true` | Survived / survived; **`--fast`: Timeout (hit-limit)** (BUG-202) | Survived / survived |

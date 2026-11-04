@@ -1,0 +1,4 @@
+✔ dry run  213 tests in 7.4s
+✔ testing 68 mutants  68/68 test runs in 33.3s
+✔ testing 4 survivors with more test files  4/4 test runs in 2.6s
+✔ testing 3 survivors with more test files  6/6 test runs in 3.0s

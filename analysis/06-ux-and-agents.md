@@ -534,7 +534,7 @@ frontmatter, имя = каталог, меньше 500 строк, ссылки)
 
 ### Черновик skill
 
-`analysis/ux/SKILL.draft.md` (128 строк, 1,7 тыс. токенов o200k): frontmatter
+`analysis/ux/SKILL.draft.md` (129 строк, 1,7 тыс. токенов o200k): frontmatter
 по формату Agent Skills, подготовка (версия, зелёные тесты, маленькая
 область, `.gitignore`), поиск мутантов через `--json` с разбором кодов выхода,
 решение «тест / эквивалентный / no coverage / error» с предупреждением о
@@ -624,10 +624,11 @@ frontmatter, имя = каталог, меньше 500 строк, ссылки)
 
 | Чего нет | Зачем агенту | Как добавить |
 | --- | --- | --- |
-| JSON при ошибке (cli.mdx:125-126) | различить «порог не пройден», «тесты падают без мутантов», «неизвестный id» без разбора stderr | `{"error": {"code": "baseline-failed", "message": …, "tests": [...]}}` в stdout при `--json`, разные коды выхода |
+| JSON при ошибке (cli.mdx:125-126; `--mutant zzzz --json` → пустой stdout, `Error: Unknown mutant id "zzzz".`, exit 1 — `analysis/ux/first-run/09-json-edge-cases.txt`) | различить «порог не пройден», «тесты падают без мутантов», «неизвестный id» без разбора stderr | `{"error": {"code": "baseline-failed", "message": …, "tests": [...]}}` в stdout при `--json`, разные коды выхода |
 | работающая команда | `recheck` без `npx` не запускается (BUG-652) | префикс по менеджеру пакетов или массив `recheckArgs` |
 | файл для нового теста | у `src/format.ts` нет `testFiles` | `newTestFile: "test/format.test.ts"` по шаблону имён существующих тестов |
 | команда покрывающего теста | быстрый прогон своего теста до перепроверки | `testCommand` от адаптера: `vitest run <file> -t <name>` / `node --test --test-name-pattern …` |
+| строка покрывающего теста у `node:test` | у Vitest `test.line` есть, у `node:test` поля нет (проверено на `/home/user/projects/ux/node-test-run`) | строка из `node:test` reporter (`test:pass`/`test:fail` несут `line`) |
 | как убить | раздел «Kill a surviving mutant» | `docs: "https://mootant.org/mutators/<id>#kill-a-surviving-mutant"` или `references/` в skill |
 | `original`/`replacement` в слим-отчёте | точное изменение без сравнения строк, когда на строке несколько одинаковых подстрок | вернуть два коротких поля (есть в `--verbose`) |
 | почему выжил | все покрывающие тесты прошли — но какие значения видел код | значения в точке мутации у покрывающих тестов (`observed: total = [150, 50]`) — идея, L |
@@ -739,7 +740,7 @@ CLI-справочник полон. Сверка примеров «Kill a surv
 | D1 | До публикации 0.1.0 — плашка «ещё не на npm» и установка из исходников в readme и getting-started; после публикации — убрать | U-01: документированная установка не работает | critical | S |
 | D2 | Страница `/agent-skill` (установка, что делает, пример сессии, ограничения) или убрать пункт меню; в getting-started — `--skill mootant` и как проверить установку | BUG-650, BUG-651 | high | S (после появления skill) |
 | D3 | Страница «CI»: готовый workflow (`fetch-depth: 0` или `2` + `HEAD^1`), кэш с ключом по ОС, Node и lockfile, аннотации и сводка, комментарий в PR и ограничение форков, артефакт HTML, `timeout-minutes`; честно: пока кэш сбрасывается после `npm ci` | 6.2: каждая из этих деталей ломает первый CI | high | S |
-| D4 | FAQ: `--fast` (когда брать: локальная разведка; почему не для порога в CI; его убийства кэшируются отдельно, и обычный прогон их не берёт — `core/cache/apply-cached-batch.ts:10-29`, `apply-cached-units.ts:5-18`); кэш (где лежит, что его сбрасывает: версия Mootant, переустановка пакета, мажор Node, lockfile, конфиг; чем `--no-cache` отличается от удаления каталога; когда `--incremental` устаревает); «сколько это займёт» | на эти вопросы сейчас отвечает только код | medium | S |
+| D4 | FAQ: `--fast` (когда брать: локальная разведка; почему не для порога в CI; его убийства кэшируются отдельно, и обычный прогон их не берёт — `core/cache/apply-cached-batch.ts:10-29`, `apply-cached-units.ts:5-18`); кэш (где лежит, что его сбрасывает: версия Mootant, переустановка пакета, мажор Node, lockfile, конфиг; чем `--no-cache` отличается от удаления каталога; когда `--incremental` устаревает); «сколько это займёт» | на эти вопросы сейчас отвечает только код; на `first-run` `--fast` — 20,3 с против 38,6 с без него, отчёт предупреждает «39 kills and timeouts come from batch tries and may be false», но когда это допустимо, документация не говорит (`analysis/ux/first-run/10-fast.stdout.txt`) | medium | S |
 | D5 | Эквивалентные мутанты: как распознать, что делать, гранулярность игнора (комментарий выключает весь мутатор на строке) | U-04, шаг 6 | medium | S |
 | D6 | Указатель правил пропуска: все правила (`O1…O19`, `R2…R6`, `solitary`, `comparison-region`, `log-message`, …) с категорией, флагом `heuristic`, примером и ссылкой на страницу мутатора; как вернуть (`coarseMutants`, `timeouts`, опции) | `--skipped` печатает правило кодом, а описание есть только в таблицах страниц мутаторов; на самом Mootant 5476 из 16 195 пропусков — эвристика `solitary` | medium | M |
 | D7 | Миграция со Stryker: таблица `mutate` → пути и `run.paths`, `thresholds.break` → `threshold`, `coverageAnalysis: perTest` → по умолчанию, `incremental` → кэш и `--incremental`, `// Stryker disable next-line X: reason` → `// mootant-ignore-next-line x: reason` с соответствием имён мутаторов (таблица из раздела 3), репортёры → `--html`/`--json`; чего нет (дашборд, проверка типов, раннеры кроме Vitest 5 и `node:test`) | пользователи придут со Stryker | medium | M |

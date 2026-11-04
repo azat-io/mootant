@@ -1,0 +1,126 @@
+diff --git a/test/core/git/parse-unified-diff.test.ts b/test/core/git/parse-unified-diff.test.ts
+index 9fd8ac2..cfee33c 100644
+--- a/test/core/git/parse-unified-diff.test.ts
++++ b/test/core/git/parse-unified-diff.test.ts
+@@ -93,6 +93,45 @@ describe('parseUnifiedDiff', () => {
+     ).toStrictEqual({ 'tricky.ts': [1, 2] })
+   })
+ 
++  it('skips the last line of a hunk that looks like a +++ header', () => {
++    expect(
++      parse([
++        '--- a/tricky.ts',
++        '+++ b/tricky.ts',
++        '@@ -1,2 +1,2 @@',
++        '--- a/x',
++        String.raw`\ No newline at end of file`,
++        '-@@ -1 +1 @@',
++        '+@@ -7 +7 @@',
++        '+++ b/other.ts',
++        '--- a/default.ts',
++        '+++ b/default.ts',
++        '@@ -3 +3,2 @@',
++        '-a',
++        '+b',
++        '+++ b/c.ts',
++      ]),
++    ).toStrictEqual({ 'default.ts': [3, 4], 'tricky.ts': [1, 2] })
++  })
++
++  it('reads every hunk of a file after a hunk without removed lines', () => {
++    expect(
++      parse([
++        '--- a/src/math.ts',
++        '+++ b/src/math.ts',
++        '@@ -10,0 +11,3 @@',
++        '+one',
++        '+two',
++        '+three',
++        "@@ -30,0 +34,1 @@ let s = 'a +1 @@'",
++        '+four',
++        '@@ -40 +45 @@',
++        '-x',
++        '+y',
++      ]),
++    ).toStrictEqual({ 'src/math.ts': [11, 12, 13, 34, 45] })
++  })
++
+   it('reads renamed, quoted and spaced paths, and skips files without hunks', () => {
+     expect(
+       parse([
+diff --git a/test/core/git/read-changed-lines.test.ts b/test/core/git/read-changed-lines.test.ts
+index 229e038..973a4ac 100644
+--- a/test/core/git/read-changed-lines.test.ts
++++ b/test/core/git/read-changed-lines.test.ts
+@@ -76,12 +76,14 @@ describe('readChangedLines', () => {
+     await write('src/same.ts', createLines(3))
+     await write('src/binary.ts', 'let a = 1 // \0\n')
+     await write('src/vendor.js', createLines(3))
++    await write('src/blob.ts', 'let b = 1 // \0\n')
+     await write('.gitattributes', 'src/vendor.js -diff\n')
+     git('add', '.')
+     git('commit', '--quiet', '-m', 'base')
+     let base = git('rev-parse', 'HEAD').trim()
+     git('switch', '--quiet', '-c', 'feature')
+     await write('src/committed.ts', createLines(5, { 2: 'changed' }))
++    await write('src/blob.ts', 'let b = 2 // \0\n')
+     git('commit', '--quiet', '-am', 'feature')
+     git('switch', '--quiet', 'main')
+     await write('src/same.ts', createLines(3, { 1: 'on main' }))
+@@ -115,6 +117,7 @@ describe('readChangedLines', () => {
+         'src/committed.ts': [2],
+         'src/staged.ts': [3, 4],
+         'src/binary.ts': 'all',
++        'src/blob.ts': 'all',
+         'src/vendor.js': 'all',
+       },
+       base,
+diff --git a/test/core/git/run-git.test.ts b/test/core/git/run-git.test.ts
+index f948fc3..c22c82b 100644
+--- a/test/core/git/run-git.test.ts
++++ b/test/core/git/run-git.test.ts
+@@ -52,8 +52,11 @@ describe('runGit', () => {
+       ['rev-parse', '--verify', 'nope'],
+       repository.root,
+     )
+-    expect(failed.code).toBe(128)
+-    expect(failed.stderr).toContain('fatal')
++    expect(failed).toStrictEqual({
++      stderr: expect.stringContaining('fatal') as unknown,
++      stdout: '',
++      code: 128,
++    })
+   })
+ 
+   it('passes the environment on without optional locks, in English', async () => {
+@@ -75,6 +78,17 @@ describe('runGit', () => {
+     )
+   })
+ 
++  it('reads output larger than the default buffer of execFile', async () => {
++    await repository.write('big.txt', 'x'.repeat(2 * 1024 * 1024))
++    repository.git('add', 'big.txt')
++    repository.git('commit', '--quiet', '-m', 'big')
++
++    let result = await runGit(['show', 'HEAD:big.txt'], repository.root)
++
++    expect(result.code).toBe(0)
++    expect(result.stdout).toHaveLength(2 * 1024 * 1024)
++  })
++
+   it('fails when git is missing or cannot run', async () => {
+     vi.stubEnv('PATH', '')
+     await expect(runGit(['status'], repository.root)).rejects.toThrow(
+diff --git a/test/core/git/unquote-git-path.test.ts b/test/core/git/unquote-git-path.test.ts
+index 83745f8..9065404 100644
+--- a/test/core/git/unquote-git-path.test.ts
++++ b/test/core/git/unquote-git-path.test.ts
+@@ -14,5 +14,8 @@ describe('unquoteGitPath', () => {
+       'b/\u{7}\b\f\r\v.ts',
+     )
+     expect(unquoteGitPath(String.raw`"b/é😀\q.ts"`)).toBe('b/é😀q.ts')
++    expect(unquoteGitPath(String.raw`"b/\001\0012.ts"`)).toBe(
++      'b/\u{1}\u{1}2.ts',
++    )
+   })
+ })
