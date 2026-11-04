@@ -256,7 +256,7 @@ JSDoc-описание семантики). Ядро вызывает адапт
 | `incomplete: 'crash'` вызван мутантом | **`Killed` без проверки `reached`**, даже если процесс убит извне (OOM, `kill`) — см. BUG-602 | `core/run/read-isolated-unit.ts:42-44` |
 | `DryFile.dependencies` полны | устаревший кэш | `core/cache/prepare-run-cache.ts:129-135` |
 | Покрытие полно | мутант без покрытия или не тот файл первым | `core/run/read-dry-run.ts:82-95` |
-| `dryRun({files: null, related})` находит **все** тестовые файлы, которые могут загрузить мутируемые | ложный `NoCoverage`; у Vitest набор зависит даже от выбора мутантов (BUG-201, `data/isolation.md`) | `types/adapter/dry-run-request.d.ts` (`related`), `adapters/vitest/run-dry.ts:231-236`; ср. node-test: `adapters/node-test/run-dry.ts:75-80` |
+| `dryRun({files: null, related})` находит **все** тестовые файлы, которые могут загрузить мутируемые | ложный `NoCoverage`; у Vitest набор зависит даже от выбора мутантов (BUG-201, `data/isolation.md`) | `types/adapter/dry-run-request.d.ts:26-32`, `adapters/vitest/run-dry.ts:231-236`; ср. node-test: `adapters/node-test/run-dry.ts:75-80` |
 | `DryRunRequest.repeat` поддержан, если `batch: true` | исключение из адаптера и падение `--fast` | `core/run-mutants.ts:234`, `core/run/run-dry-phase.ts:197`; `node-test` бросает: `adapters/node-test/run-dry.ts:58-62` |
 
 ### 3.5. Как ядро узнаёт, умеет ли раннер выбирать тест или только файл
@@ -461,7 +461,7 @@ data/isolation.md]**. Его разбор механизмов по коду н�
   (`adapters/vitest/run-dry.ts:231-236`), и тест, достающий модуль через
   `vi.importActual` в хелпере, выпадает (`NoCoverage` вместо `Killed`,
   BUG-201 в `data/isolation.md`), хотя контракт обещает «those that may
-  import them run» (`types/adapter/dry-run-request.d.ts`); node-test в
+  import them run» (`types/adapter/dry-run-request.d.ts:26-32`); node-test в
   первом dry run гоняет все файлы и этой проблемы не имеет; (2) лимит
   вычислений сайтов превращает медленного, но проходящего мутанта (мемо
   выключено → экспонента) в `Timeout (hit-limit)`, тогда как эталон
