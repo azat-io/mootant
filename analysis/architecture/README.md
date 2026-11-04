@@ -28,6 +28,7 @@ SVG-файла в этом каталоге. Полные графы `data/depcr
 | `simulate-grouping.mjs`                | Симуляция правила группировки §6.3 (`EXTENDED=1` — расширенный вариант)                                                                           |
 | `dot-to-svg.mjs`                       | dot → SVG через Graphviz в wasm                                                                                                                   |
 | `startup-bench.sh`, `preload-bench.sh` | Замер старта CLI и preload `node:test`: dist против бандла                                                                                        |
+| `madge-tsconfig.json`                  | Минимальный tsconfig для madge (проектный наследует пакет, которого нет без `node_modules`)                                                       |
 | `run-all.sh`                           | Всё по порядку                                                                                                                                    |
 
 ## Данные (`data/`)
@@ -38,6 +39,7 @@ SVG-файла в этом каталоге. Полные графы `data/depcr
 | `files.tsv`                                                      | Fan-in/fan-out каждого файла (значения и типы отдельно)              |
 | `folders.tsv`, `folder-edges.tsv`                                | Агрегаты и рёбра по папкам                                           |
 | `single-importer.tsv`                                            | Файлы с одним импортёром                                             |
+| `madge-circular.txt`                                             | Циклы по данным madge (перепроверка `scc.txt`)                       |
 | `scc.txt`                                                        | Сильно связные компоненты                                            |
 | `reach.tsv`                                                      | Охват точек входа                                                    |
 | `style-files.tsv`, `style-areas.tsv`, `style-summary.json`       | Метрики стиля                                                        |
@@ -51,7 +53,7 @@ SVG-файла в этом каталоге. Полные графы `data/depcr
 | `layers.mmd`, `core.mmd`, `folders.mmd`                          | Mermaid                                                              |
 | `folders-archi.dot`, `folders-src-archi.dot`                     | Граф папок для Graphviz                                              |
 | `startup-bench.txt`                                              | Сырые замеры старта                                                  |
-| `jscpd-strict/`, `jscpd-weak/`                                   | Отчёты jscpd                                                         |
+| `jscpd-summary.json`                                             | Отчёты jscpd                                                         |
 
 ## Прочее
 

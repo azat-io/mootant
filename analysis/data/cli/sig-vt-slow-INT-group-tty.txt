@@ -1,3 +1,10 @@
 ## before signal (t=2s): mootant pid=16545 leader=16543
 16543 16536 16543 Ss         2 script -qfec node /home/user/projects/cli/vt-slow/node_modules/mootant/bin/mootant.js run src --no-cache /dev/null
 16545 16543 16545 Rsl+       2 node /home/user/projects/cli/vt-slow/node_modules/mootant/bin/mootant.js run src --no-cache
+## after: leader exit=130
+<no processes left>
+## work dirs left in TMPDIR: 1 mootant-S0YA89 
+## files in them: 0
+## cache dir: 
+## tail of output:
+[?25l[1G[92m-[39m preparing  [90m0.0s[39m[?25l[1G[2K[1G[92m\[39m preparing  [90m0.2s[39m[?25l[1G[2K[1G[92m|[39m preparing 9 mutants  [90m0.3s[39m[?25l[1G[2K[1G[92m/[39m preparing 9 mutants  [90m1.1s[39m[?25l[1G[2K[1G[92m-[39m preparing 9 mutants  [90m1.2s[39m[?25l[1G[2K[1G[92m\[39m dry run  [90m0.1s[39m[1G[2K[1G[?25h

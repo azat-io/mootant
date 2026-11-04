@@ -1,0 +1,9 @@
+## before signal (t=2s): mootant pid=17115 leader=17115
+17115 17109 17115 Ssl        2 node /home/user/projects/cli/nt-slow/node_modules/mootant/bin/mootant.js run src --no-cache
+17174 17115 17174 Ssl        1 /opt/node22/bin/node --import file:///home/user/projects/cli/nt-slow/node_modules/mootant/dist/adapters/node-test/preload/preload
+## after: leader exit=143
+<no processes left>
+## work dirs left in TMPDIR: 1 mootant-Dk4MmK 
+## files in them: 3
+## cache dir: 
+## tail of output:

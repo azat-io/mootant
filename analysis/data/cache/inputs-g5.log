@@ -1,0 +1,7 @@
+=== snapshot_change (04:33:18)
+[snapshot-change/r1] exit=0 args=src
+  a073vwf4fehh Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=3 survived=1 cached=0 score=75

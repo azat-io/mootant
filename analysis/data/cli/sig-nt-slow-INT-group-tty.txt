@@ -1,0 +1,11 @@
+## before signal (t=2s): mootant pid=17574 leader=17571
+17571 17562 17571 Ss         2 script -qfec node /home/user/projects/cli/nt-slow/node_modules/mootant/bin/mootant.js run src --no-cache /dev/null
+17574 17571 17574 Ssl+       2 node /home/user/projects/cli/nt-slow/node_modules/mootant/bin/mootant.js run src --no-cache
+17613 17574 17613 Ssl        1 /opt/node22/bin/node --import file:///home/user/projects/cli/nt-slow/node_modules/mootant/dist/adapters/node-test/preload/preload
+## after: leader exit=130
+<no processes left>
+## work dirs left in TMPDIR: 1 mootant-PdJW42 
+## files in them: 3
+## cache dir: 
+## tail of output:
+[?25l[1G[2K[1G[92m-[39m dry run  [90m0.8s[39m[?25l[1G[2K[1G[92m\[39m dry run  [90m0.9s[39m[?25l[1G[2K[1G[92m|[39m dry run  [90m1.0s[39m[?25l[1G[2K[1G[92m/[39m dry run  [90m1.0s[39m[?25l[1G[2K[1G[92m-[39m dry run  [90m1.1s[39m[?25l[1G[2K[1G[92m\[39m dry run  [90m1.2s[39m[?25l[1G[2K[1G[92m|[39m dry run  [90m1.3s[39m[?25l[1G[2K[1G[92m/[39m dry run  [90m1.4s[39m[?25l[1G[2K[1G[92m-[39m dry run  [90m1.5s[39m[?25l[1G[2K[1G[92m\[39m dry run  [90m1.5s[39m[?25l[1G[2K[1G[92m|[39m dry run  [90m1.6s[39m[1G[2K[1G[?25h
