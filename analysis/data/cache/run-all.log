@@ -641,3 +641,10 @@
   STALE wmgd2bwwp6r1 cached-run=Killed (cached=true) fresh-run=Survived src/math.js:2
   => 2 verdict(s) differ between the cached run and the fresh run
 === property_write_elsewhere (05:10:30)
+[inc-property-write/r1] exit=0 args=src
+  569qg05zk12y Survived   cached=false src/math.ts:1 number-literal "18" -> "19"
+  6xzwgnmmsbfj Survived   cached=false src/math.ts:4 comparison-operator "age >= config.boundary" -> "age > config.boundary"
+  sz0dz5p6hxwc Killed     cached=false src/math.ts:4 comparison-operator "age >= config.boundary" -> "age == config.boundary"
+  fdvp5tman4t7 Killed     cached=false src/math.ts:4 comparison-operator "age >= config.boundary" -> "true"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:8 arithmetic-operator "a + b" -> "a - b"
+  summary: total=5 killed=3 survived=2 cached=0 score=60
