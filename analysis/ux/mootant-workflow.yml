@@ -24,7 +24,7 @@ jobs:
       contents: read
       pull-requests: write # sticky comment; read-only for PRs from forks
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # --since needs the base branch and the merge base locally. The
           # default fetch-depth 1 gives "unknown git revision". fetch-depth 2
@@ -32,7 +32,7 @@ jobs:
           # first parent of GitHub's merge commit is the base branch tip).
           fetch-depth: 0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -40,11 +40,18 @@ jobs:
       # npm ci deletes node_modules, so the verdict cache is restored after it.
       - run: npm ci
 
-      # Verdicts live in node_modules/.cache/mootant/run-v2.json with paths
+      # Workaround for BUG-407 (analysis/bugs/cache-since.md): Mootant 0.1.0
+      # keys its cache by the mtime of one of its own files, and npm ci sets
+      # every mtime to the install time, so without this no verdict is ever
+      # reused (analysis/ux/ci-cache-check.txt). Remove once the build id no
+      # longer depends on mtime.
+      - run: find node_modules/mootant -exec touch -d '1985-10-26T08:15:00Z' {} +
+
+      # Verdicts live in node_modules/.cache/mootant/run-v3.json with paths
       # relative to the root; they are reused only with the same Node.js major,
       # OS, arch, lockfile, runner config and Mootant build. Keys are immutable,
       # hence the run id suffix; PRs read the caches of main.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: node_modules/.cache/mootant
           key: mootant-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}-${{ github.run_id }}
@@ -64,14 +71,15 @@ jobs:
         run: npx mootant run src --threshold 80 --json > mootant.json
 
       # Save even when the threshold fails the job: the verdicts are still valid.
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: always()
         with:
           path: node_modules/.cache/mootant
           key: mootant-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}-${{ github.run_id }}
 
       # Mootant 0.1.0 has no GitHub, SARIF or Markdown output; this step
-      # converts its JSON. A run that stops early prints no JSON at all.
+      # converts its JSON with analysis/ux/mootant-github.mjs, copied to
+      # .github/scripts/. A run that stops early prints no JSON at all.
       - name: Annotations and job summary
         if: always()
         run: |
@@ -90,7 +98,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: gh pr comment "$PR" --body-file comment.md --edit-last --create-if-none
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: mootant-report

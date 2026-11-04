@@ -1,0 +1,1 @@
+{ "name": "nt-modes", "private": true, "type": "module", "scripts": { "test": "node --test" } }

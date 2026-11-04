@@ -11,9 +11,10 @@ mkdir -p "$data"
   virtual_module watched_real_module outside_root inside_root \
   node_modules_patch env_config_setting future_mtime future_mtime_dependency \
   write_back_package_json reinstall_stamp error_diagnostic custom_environment \
-  volatile_provide spawn_star glob_new_file monorepo_workspace mootant_setting \
+  volatile_provide volatile_define spawn_star glob_new_file monorepo_workspace mootant_setting \
   snapshot_change setup_file_change mocks_appear dotenv_change \
   env_variable_change move_project renames node_major tsconfig_root_change \
+  tsconfig_reference mode_switch \
   nt_outside_root nt_node_modules_patch nt_load_env_file \
   2>&1 | tee "$data/inputs.log"
 

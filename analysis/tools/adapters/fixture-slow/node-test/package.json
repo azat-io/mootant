@@ -1,0 +1,8 @@
+{
+  "name": "adapters-slow-node-test",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,1 @@
+{ "name": "nt-load", "private": true, "type": "module", "scripts": { "test": "node --import ./test/setup.js --test" } }

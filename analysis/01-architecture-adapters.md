@@ -388,7 +388,8 @@ sequenceDiagram
 Прогоны отмены — `tools/signal-case.sh` на `fixture-slow` (в dry run идут
 синхронный цикл 5 с и `await` 3 с; сигнал через 1 с после `dryRun:call`),
 приватный `TMPDIR`; живые процессы ищутся по `cwd` фикстуры. Сценарий
-«зависший юнит + SIGTERM» — `fixture-hang/vitest`: мутант
+«зависший юнит + SIGTERM/SIGHUP» — `tools/hang-signal.sh` на
+`fixture-hang/{vitest,node-test}`: мутант
 `if (fast)` → `if (false)` даёт шаг 0 и бесконечный цикл в немутируемом
 модуле `lib/walk.js`, где нет сайтов, поэтому лимит вычислений не
 срабатывает и останавливает только сторож.
@@ -423,7 +424,12 @@ SIGINT/SIGTERM/SIGHUP в CLI, который прерывает прогон, в
 
 Эксперимент с эталоном (физически применённые мутации, оба порядка, batch,
 параллельно) проводит агент-оракул: **[данные эксперимента:
-data/isolation.md]**. Здесь — механизмы по коду и то, что из них следует.
+data/isolation.md]**. На 04:59 UTC в `analysis/data/isolation.md` опубликован
+только его разбор механизмов по коду — он независимо приходит к тем же
+выводам (процесс на юнит у Vitest 5 при `isolate: true`; batch может дать
+только ложные Killed/Timeout, но не ложные Survived; `crash` и `load-error`
+→ Killed без проверки `reached`); результаты прогонов — там же, когда
+появятся. Здесь — механизмы по коду и то, что из них следует.
 
 ### 5.1. Механизмы
 
@@ -693,11 +699,14 @@ Stryker на Vitest: **переключение мутантов в рантай
 
 ### 8.2. Rstest 0.12.6 через текущий контракт
 
+Пути `dist/*` — в опубликованном пакете `@rstest/core@0.12.6`,
+`packages/*` и `website/*` — в репозитории на `21898a1`.
+
 | # | Чем закрывается | Источник |
 |---|---|---|
 | R1 | `createRstest({ cwd, config })` из `@rstest/core/api`; `loadConfig` из `@rstest/core`; всё помечено `@experimental` «may change before Rstest 1.0.0» | [instance.mdx](https://github.com/web-infra-dev/rstest/blob/21898a134cccf60e61aaa9bb2200fdd1659bfeab/website/docs/en/api/javascript-api/instance.mdx), `dist/api/index.d.ts:406, 1358-1367` |
 | R2 | `rstest.listTests({ filesOnly: true })` + `context.config.setupFiles/globalSetup` | там же, `dist/api/index.d.ts:634-646, 802-813` |
-| R3 | Rsbuild-плагин в `plugins` (`api.transform` с ранним порядком); тесты исполняются **бандлами Rspack** (`packages/core/src/runtime/worker/runInPool.ts:646-697` грузит `codeContent` из `assetFiles`) — переключение один раз на сборку, мутант по-прежнему в рантайме | `RstestConfig.plugins` (`dist/api/index.d.ts:1340-1349`) |
+| R3 | Rsbuild-плагин в `plugins` (`api.transform` с ранним порядком); тесты исполняются **бандлами Rspack** (`packages/core/src/runtime/worker/runInPool.ts:646-697` грузит `codeContent` из `assetFiles`) — переключение один раз на сборку, мутант по-прежнему в рантайме | `RstestConfig.plugins` (`dist/api/index.d.ts:1343`) |
 | R4 | `rstest.run({ filters, related: true })` — `--related` «resolves related tests from the build module graph» (аналог Vitest); покрытие на попытку — через **свой setup-файл** первым в `setupFiles`: `beforeEach`/`afterEach`/`onTestFinished` переключают `runtime.coverage`, как `create-try-tracker.ts` у node-test | [cli.mdx](https://github.com/web-infra-dev/rstest/blob/21898a134cccf60e61aaa9bb2200fdd1659bfeab/website/docs/en/guide/basic/cli.mdx) (раздел «Run related tests»), `dist/index.d.ts:24-28, 271-275, 2765-2769` |
 | R5 | `isolate: true` (по умолчанию) + пул `forks`: воркер утилизируется после каждого файла (`packages/core/src/pool` — `disposeRunnerInBackground` при `isolate !== false`); setup-файлы исполняются до файла теста (`runInPool.ts:646-685`) — значит, мутант можно активировать из setup-файла. **Но** `filters` выбирают файлы, один файл дважды за `run()` не запустить → юниты одного файла придётся раскладывать по «волнам», по одному `run()` на волну, а каждый `run()` строит движок заново (`packages/core/src/api/createRstest.ts:200-238`, `withEngine` → `build`) | [isolate.mdx](https://github.com/web-infra-dev/rstest/blob/21898a134cccf60e61aaa9bb2200fdd1659bfeab/website/docs/en/config/test/isolate.mdx) |
 | R6 | pid есть в воркере (`process.pid`), пульс — из того же setup-файла; убийство — как у vitest-адаптера (`stop-hung-worker.ts`) | — |
@@ -717,15 +726,15 @@ node-test — трекер попыток на хуках (`preload/create-try-t
 `cli/parse-arguments.ts:40-41` (справка), `knip`/доки; при новых кодах
 диагностик — `types/mutant/diagnostic.d.ts`.
 **Если возможности нет:** без пути теста в setup-файле до загрузки файла
-(проверить `expect.getState().testPath`, тип есть: `dist/index.d.ts:2012`) —
-по одному `run()` на юнит с `env: { MOOTANT_UNIT }` (конфиг `env`), то есть
+(в 0.12.6 он есть — `expect.getState().testPath`, `dist/index.d.ts:2012`,
+проверено ниже) пришлось бы делать по одному `run()` на юнит с `env: { MOOTANT_UNIT }` (конфиг `env`), то есть
 полная сборка на каждый юнит — неприемлемо медленно; без pid — нет сторожа,
 и зависший мутант вешает прогон (остаются только таймауты самого Rstest,
 которые не прерывают синхронный цикл).
 
 **Оценка через текущий контракт: L (3–5 дней)** — допущения: экспериментальный
-API не меняется в 0.12.x (версию придётся пинить); setup-файл видит путь
-теста до его загрузки; пересборка движка на каждую волну isolated-юнитов
+API не меняется в 0.12.x (версию придётся пинить); путь теста в
+setup-файле (проверено) остаётся доступным; пересборка движка на каждую волну isolated-юнитов
 терпима при `performance.buildCache: true`; без batch и без кэша на первой
 итерации (`cacheInputs` необязателен).
 
@@ -841,7 +850,7 @@ export interface AdapterContext {
   workDirectory: string
   concurrency: number | null
   files: readonly SwitchedFile[]
-  /** Отмена прогона (Ctrl+C, SIGTERM, ошибка ядра): адаптер останавливает все процессы. */
+  /** Отмена прогона (SIGINT, SIGTERM, SIGHUP, ошибка ядра): адаптер останавливает все процессы. */
   signal: AbortSignal
   onUnitEnd?(end: UnitEnd): void
   onOutput?(text: string, file: string | null): void
@@ -878,14 +887,15 @@ export interface DryTest {
   ownTimeout?: number | null
 }
 
-// types/adapter/isolated-result.d.ts — crash отделён от «сбоя инфраструктуры»
+// types/adapter/isolated-result.d.ts — чем закончился процесс юнита
 export interface IsolatedFacts {
   // …как сейчас…
   /**
-   * `crash` — процесс юнита умер сам после достижения мутанта (kill);
-   * `lost` — умер, не достигнув мутанта, или убит извне (повтор, затем Error).
+   * Код выхода или сигнал процесса юнита, когда адаптер их знает. Ядро
+   * подтверждает `incomplete: 'crash'` повтором юнита (как таймаут) и сразу
+   * считает сбоем инфраструктуры SIGKILL/SIGTERM, которых не посылал сторож.
    */
-  incomplete: 'crash' | 'hang' | 'lost' | null
+  exit?: { code: number | null; signal: string | null } | null
 }
 ```
 
@@ -958,7 +968,7 @@ export { createTryTracker } from './adapters/shared/try-tracker'          // т�
 * **Тесты эквивалентности с вручную применёнными мутантами** для обоих
   адаптеров (`test/adapters/vitest/index.test.ts:801-...`,
   `test/adapters/node-test/index.test.ts:332-...`) — это уже почти
-  контрактные тесты; их не хватает только в общем виде (раздел 10, шаг 1).
+  контрактные тесты; их не хватает только в общем виде (раздел 10, шаг 0).
 * **Контракт компонуем**: декоратор-трассировщик (раздел 0) — 100 строк на
   публичных типах, без доступа к внутренностям.
 

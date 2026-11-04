@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`file snapshot 1`] = `"$19.99"`;
+
+exports[`snapshot per item 1`] = `"boxs"`;
+
+exports[`snapshot per item 2`] = `"box"`;

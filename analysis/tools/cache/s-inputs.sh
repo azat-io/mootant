@@ -813,6 +813,17 @@ EOF2
   compare_runs tsconfig-reference r2 r3
 }
 
+# K10: default -> --fast -> default -> --concurrency 1: verdicts are shared
+# between the modes and concurrency is not part of the key. Control.
+mode_switch() {
+  local d
+  d=$(new_project mode-switch)
+  run_mootant "$d" r1-default src
+  run_mootant "$d" r2-fast src --fast
+  run_mootant "$d" r3-default src
+  run_mootant "$d" r4-concurrency1 src --concurrency 1
+}
+
 # ---- node:test ----
 
 TEMPLATE_NODE=$CACHE_ROOT/template-node
