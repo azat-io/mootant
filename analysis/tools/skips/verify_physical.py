@@ -11,7 +11,7 @@ Usage: verify_physical.py JOINED.jsonl RUN.json CHECKOUT OUT.jsonl \
           [--class HIDDEN] [--rule R ...] [--all-tests GLOB] -- CMD...
 CMD is the test command; the test files are appended to it.
 """
-import argparse, json, os, subprocess, sys, time
+import argparse, json, os, signal, subprocess, sys, time
 
 sys.path.insert(0, os.path.dirname(__file__))
 from apply_mutant import splice_utf16  # noqa: E402
@@ -49,8 +49,13 @@ def main():
             continue
         if r['id'] in done:
             continue
-        m = run.get(r['id'])
-        files = sorted((m or {}).get('testFiles') or {})
+        m = run.get(r['id']) or {}
+        files = sorted(m.get('testFiles') or {})
+        if not files and m.get('killedIn'):
+            files = [m['killedIn']]
+        if not files:
+            out.write(json.dumps({'id': r['id'], 'status': 'no-test-files'}) + '\n')
+            continue
         path = os.path.join(args.checkout, r['file'])
         with open(path, encoding='utf-8', newline='') as handle:
             text = handle.read()
@@ -59,6 +64,14 @@ def main():
             out.write(json.dumps({'id': r['id'], 'status': 'mismatch'}) + '\n')
             continue
         started = time.time()
+
+        def restore(*_):
+            with open(path, 'w', encoding='utf-8', newline='') as handle:
+                handle.write(text)
+            sys.exit(130)
+
+        signal.signal(signal.SIGTERM, restore)
+        signal.signal(signal.SIGINT, restore)
         try:
             with open(path, 'w', encoding='utf-8', newline='') as handle:
                 handle.write(mutated)
