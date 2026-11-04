@@ -5,13 +5,5 @@ rules/sort-heritage-clauses/sort-heritage-clause.ts
 rules/sort-switch-case.ts
 rules/sort-switch-case/build-case-block-comparator-by-options-computer.ts
 rules/sort-switch-case/is-condition-expression.ts
-rules/sort-enums.ts
-rules/sort-enums/build-comparator-by-options-computer.ts
-rules/sort-enums/compute-dependencies-by-sorting-node.ts
-rules/sort-enums/compute-dependencies.ts
-rules/sort-enums/compute-expression-number-value.ts
-rules/sort-enums/compute-matched-context-options.ts
-rules/sort-enums/compute-node-name.ts
-rules/sort-enums/sort-enum.ts
 rules/sort-export-attributes.ts
 rules/sort-sets.ts
