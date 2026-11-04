@@ -538,3 +538,52 @@
   rcg87hr1ngex Killed     cached=false packages/web/src/math.ts:13 return-value "this.stored" -> "0"
   h00478et0j28 Killed     cached=true packages/web/src/math.ts:19 number-literal "5" -> "6"
   summary: total=6 killed=3 survived=3 cached=4 score=50
+[tsconfig-reference/r3] exit=0 args=packages/web/src --no-cache
+  pa2de01va9w6 Killed     cached=false packages/web/src/math.ts:2 arithmetic-operator "value * 2" -> "value / 2"
+  147q84zqzz7f Killed     cached=false packages/web/src/math.ts:2 number-literal "2" -> "3"
+  bycewh700bdg Survived   cached=false packages/web/src/math.ts:6 number-literal "0" -> "1"
+  1gsnepxxgxaq Killed     cached=false packages/web/src/math.ts:9 statement-removal "this.stored = double(value)" -> ";"
+  rcg87hr1ngex Killed     cached=false packages/web/src/math.ts:13 return-value "this.stored" -> "0"
+  h00478et0j28 Killed     cached=false packages/web/src/math.ts:19 number-literal "5" -> "6"
+  summary: total=6 killed=5 survived=1 cached=null score=83.33
+  STALE pa2de01va9w6 cached-run=Survived (cached=true) fresh-run=Killed packages/web/src/math.ts:2
+  STALE 147q84zqzz7f cached-run=Survived (cached=true) fresh-run=Killed packages/web/src/math.ts:2
+  => 2 verdict(s) differ between the cached run and the fresh run
+=== mode_switch (05:09:49)
+[mode-switch/r1-default] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[mode-switch/r2-fast] exit=0 args=src --fast
+  a073vwf4fehh Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=true src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=4 score=50
+[mode-switch/r3-default] exit=0 args=src
+  a073vwf4fehh Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=true src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=4 score=50
+[mode-switch/r4-concurrency1] exit=0 args=src --concurrency 1
+  a073vwf4fehh Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=true src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=4 score=50
+=== nt_outside_root (05:10:01)
+[nt-outside-root/r1] exit=0 args=src
+  kkdjmf7aa2n0 Survived   cached=false src/math.js:2 comparison-operator "age >= 18" -> "age > 18"
+  wmgd2bwwp6r1 Killed     cached=false src/math.js:2 comparison-operator "age >= 18" -> "age == 18"
+  wnz4qe9kj0e3 Survived   cached=false src/math.js:2 comparison-operator "age >= 18" -> "age >= 17"
+  y1rmnxcp1zgc Killed     cached=false src/math.js:6 arithmetic-operator "a + b" -> "a"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[nt-outside-root/r2] exit=0 args=src
+  kkdjmf7aa2n0 Survived   cached=true src/math.js:2 comparison-operator "age >= 18" -> "age > 18"
+  wmgd2bwwp6r1 Killed     cached=true src/math.js:2 comparison-operator "age >= 18" -> "age == 18"
+  wnz4qe9kj0e3 Survived   cached=true src/math.js:2 comparison-operator "age >= 18" -> "age >= 17"
+  y1rmnxcp1zgc Killed     cached=true src/math.js:6 arithmetic-operator "a + b" -> "a"
+  summary: total=4 killed=2 survived=2 cached=4 score=50

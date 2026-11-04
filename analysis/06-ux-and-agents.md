@@ -666,7 +666,9 @@ killed, 3 timeout, 3 survived; отчёт `--json --verbose --all`, снятый
 (`core/identity/create-mutant-id.ts:51-73`), без строк и столбцов. Правка
 теста или другой функции id не меняет; меняет переименование файла или
 функции, правка самого выражения и появление такого же мутанта выше в той же
-области. Агенту, который правит только тесты, этого достаточно. Короткий id
+области. Агенту, который правит только тесты, этого достаточно. Id не
+зависит от машины: `q31p780qv6yk` из документации совпал с id того же мутанта
+в моём прогоне копии `docs/demo`. Короткий id
 текстового отчёта — кратчайший уникальный префикс (`--mutant` принимает от 4
 символов, `core/identity/resolve-mutant-ids.ts`), поэтому агенту надо брать
 полный id из JSON.
@@ -773,7 +775,7 @@ CLI-справочник полон. Сверка примеров «Kill a surv
 | D7 | Миграция со Stryker: таблица `mutate` → пути и `run.paths`, `thresholds.break` → `threshold`, `coverageAnalysis: perTest` → по умолчанию, `incremental` → кэш и `--incremental`, `// Stryker disable next-line X: reason` → `// mootant-ignore-next-line x: reason` с соответствием имён мутаторов (таблица из раздела 3), репортёры → `--html`/`--json`; чего нет (дашборд, проверка типов, раннеры кроме Vitest 5 и `node:test`) | пользователи придут со Stryker | medium | M |
 | D8 | Troubleshooting: «Tests fail without mutants», `never-served`, `unknown git revision` в CI, `command not found` у подсказки, кэш не переиспользуется в CI, неподдерживаемые пулы и режимы Vitest, загрузчики `node:test` | сейчас эти сообщения ведут в никуда | medium | S |
 | D9 | «Как писать тест на выжившего»: обе стороны границы, точные значения вместо `toBeTruthy`, тип ошибки вместо одного сообщения (`rejects.toThrow('x')` проходит при `throw undefined`) | шаги 5–6 | low | S |
-| D10 | Мелкие расхождения: `hero-output.ansi` — `vitest 5.0.4`, `recheck-output.ansi` — `vitest 5.0.5`; JSDoc `get-cache-path.ts:11` — `run-v2.json`, а файл `run-v3.json` | косметика | low | S |
+| D10 | Пример вывода в getting-started (`docs/components/hero-output.ansi`: `mutants 26 in 3 files`, 1 выживший, score 96.15 %, `re-check one: … q31p`) не совпадает с прогоном демо из того же репозитория: `mootant run src` в копии `docs/demo` на `170ec52` даёт 99 мутантов в 8 файлах, 21 выживший, 11 без покрытия, score 67.35 %, `re-check one: … 0x8h` (`analysis/ux/demo-run.txt`); сам мутант `q31p780qv6yk` и его дифф совпадают с документацией. Ещё: `hero-output.ansi` — `vitest 5.0.4`, `recheck-output.ansi` — `vitest 5.0.5`; JSDoc `get-cache-path.ts:11` — `run-v2.json`, а файл `run-v3.json` | пользователь, повторивший пример на демо, видит другую картину | low | S |
 
 ## 6.7. Рекомендации
 

@@ -1,5 +1,5 @@
-✔ isAdult (5.315219ms)
-✔ add (0.63834ms)
+✔ isAdult (14.266811ms)
+✔ add (0.87996ms)
 ℹ tests 2
 ℹ suites 0
 ℹ pass 2
@@ -7,6 +7,6 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 40.727657
+ℹ duration_ms 46.024778
 + dry run  2 tests in 0.3s
 Reused cached verdicts for 4 of 4 mutants.
