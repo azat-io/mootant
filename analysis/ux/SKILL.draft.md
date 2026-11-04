@@ -34,6 +34,7 @@ current code and fails on the mutant, then let Mootant confirm the kill.
 ## 1. Find the mutants to act on
 
 ```sh
+mkdir -p .mootant
 npx mootant run src/cart --json > .mootant/mutants.json
 ```
 
@@ -65,6 +66,8 @@ return value, thrown error or side effect?
   user and suggest an ignore comment with the reason; do not add it yourself
   unless asked:
   `// mootant-ignore-next-line <mutator>: <why it cannot change behavior>`.
+  The comment turns off every mutant of that mutator on the line, so kill the
+  others on the line first and name them to the user.
 - **Survived**: a test runs the code but does not check this difference.
   Usually an assertion is too weak or a boundary value is missing.
 - **NoCoverage**: no test runs this code. Write a test that calls it. When
@@ -93,8 +96,10 @@ mutant"):
 
 - Add it to `testFiles[0]` (or the file of `test`), in the style of that file;
   reuse the setup of `test`.
-- Assert exact values (`toBe`, `toEqual`, `toThrow(message)`), never only
-  `toBeDefined()`, `toBeTruthy()` or a length.
+- Assert exact values (`toBe`, `toEqual`), never only `toBeDefined()`,
+  `toBeTruthy()` or a length. For errors, check the type or shape as well:
+  `toThrow('text')` also passes when `undefined` is thrown; use
+  `toThrow(TypeError)` or `rejects.toMatchObject({ message: 'text' })`.
 - Name the test after the behavior, not the mutant id. One behavior per test.
 - Do not change the source code to kill a mutant, and do not weaken, skip or
   delete existing tests, unless the user asks. Do not use snapshots: Mootant

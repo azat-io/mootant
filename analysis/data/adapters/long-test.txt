@@ -1,0 +1,7 @@
+## long-node-test
+exit=1 after 63 s
+Error: Tests hang without mutants: "waits 65 s, then checks" in test/slow.test.js did not finish within 60 s plus its own timeout and the timeouts of its hooks, and its worker was stopped.
+## long-vitest
+exit=0 after 134 s
++ dry run  1 test in 1m 06s
++ testing 1 mutant  1/1 test runs in 1m 05s

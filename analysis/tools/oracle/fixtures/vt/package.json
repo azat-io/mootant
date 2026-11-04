@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "devDependencies": {
-    "mootant": "file:../../../artifacts/mootant-0.1.0-170ec52.tgz",
-    "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "mootant": "file:/home/user/artifacts/mootant-0.1.0-170ec52.tgz",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
   }
 }

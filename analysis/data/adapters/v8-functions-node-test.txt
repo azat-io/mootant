@@ -1,0 +1,34 @@
+## coverage-15371-1793766775628-0.json modules-with-calls: 268
+  adapters/node-test        43  build-dry-file build-isolated-facts check-node-support check-todo-bail check-typescript collect-node-dependencies create-glob-pattern drop-todo-errors filter-exec-argv find-test-command get-default-patterns get-dry-deadline get-node-cache-inputs get-preload-path get-test-id get-unit-deadline hash-environment includes-tsx index list-file-errors list-flag-values list-loaded-files list-node-test-files list-package-files list-running-tries list-setup-files parse-command place-preload read-node-runtime read-test-timeout read-tries resolve-command run-dry run-in-pool run-isolated run-test-file run-test-process split-node-arguments start-node-test-session stop-live-process-groups stop-process-group track-process-group write-switch-plan
+  adapters/shared            2  index-environment-hashes read-test-scripts
+  cli                        6  built-in-adapters create-run-progress create-time-estimator index parse-arguments run-mutation
+  cli/diff                   2  get-diff-lines separate-replacement
+  cli/report                 6  build-list-report build-run-report format-command format-duration format-run-report get-short-id-length
+  cli/terminal               6  colors create-spinner get-symbols get-text-style is-interactive-terminal is-unicode-supported
+  core                       2  compare-code-units run-mutants
+  core/cache                 3  apply-cached-units create-digest get-cache-path
+  core/config                5  import-config load-config prepare-run resolve-run-settings validate-config
+  core/files                 3  expand-paths is-source-file list-file-mutants
+  core/generate              9  apply-solitary-rule collect-candidates compare-candidates deduplicate-candidates generate-file-mutants get-replacement-kind group-replacement pick-focus validate-replacement
+  core/hints                 7  analyze-scopes create-inferred-type create-syntactic-type-provider create-type-hints infer-binding-type infer-expression-type infer-operator-type
+  core/identity              5  assert-unique-ids assign-mutant-ids create-mutant-id get-scope-path resolve-mutant-ids
+  core/ignore                3  create-ignore-rules find-ignore-rule parse-ignore-directives
+  core/instrument            6  create-switched-files find-statement-starts get-site-check group-mutant-ranges instrument-file render-mutant-range
+  core/mutators             60  arithmetic-operator array-element assignment-operator bitwise-operator boolean-literal comparison-operator condition logical-operator method-call missing-await number-literal object-property optional-chaining regex-flag regex-pattern return-value create-run-context create-static-run-context get-branch-copy-skip get-branch-pair get-callback-owner get-callback-result get-comparison-plan get-condition-constants get-innermost get-leave-now-value get-literal-mutator get-literal-skip get-literal-value get-negation-top get-number-text get-or-default-skip get-owned-constants get-owner-constant get-proven-comparison-value get-return-switch get-return-value-kind get-returned-value get-running-value get-shifted-literal get-toward-mutant get-type-view is-always-nullish is-always-truthy is-and-or is-boolean-mode-operand is-comparator-result is-comparison-operand is-comparison is-negation is-no-op-callback-constant is-no-op-callback-literal is-number-literal is-plain-return-value is-void-operand is-whole-body statement-removal string-literal unary-operator update-operator
+  core/parser                8  get-component-framework get-parser-options get-shared-scopes get-source-blocks get-template-language is-declaration-file parse-component-template parse-file
+  core/plugins               4  create-mutator-registry is-kebab-case-name is-record resolve-preset
+  core/regex                 3  create-regex-visitors read-regex-call read-regex-literal
+  core/run                  39  apply-isolated-result classify-mutants classify-try compute-score compute-static-cost count-run count-statuses count-verdicts create-run-state create-work-directory decide-evidence decide-results get-display-path get-file-cost get-final-status get-html-path get-package-directory get-test-file-key get-try-limits get-unit-evidence index-module-tests mark-outside-mutants number-chains order-covering-tests plan-isolated preview-isolated-unit rank-mutant-files rank-test-file read-dry-run read-isolated-unit read-test-imports resolve-adapter route-isolated run-dry-phase run-isolated-rounds select-run-files sort-test-files sort-tests validate-adapter
+  core/syntax               24  create-syntax-helpers find-compiler-pins find-logging-calls get-count-map get-enclosing-function get-exited-loops get-fixed-initializer get-member-root get-value-bound is-boolean-context is-comparison-operator is-condition-test is-error-message is-function is-log-message is-loop-advance-value is-loop-test is-statement is-tested-loop is-timer-delay is-value-position is-write-target passes-truthiness solve-value-bounds
+  core/text                 12  create-source-code edit-text find-last-start find-token-start get-line-starts get-operator-range get-source-position needs-grouping needs-separator parse-expression pluralize replace-operator
+  core/tree                 10  get-callee-name get-context-slot get-raw-slot get-slot index-tree is-expression-wrapper is-name-position unwrap-expression unwrap-parentheses walk-tree
+## coverage-15481-1793766775068-0.json modules-with-calls: 18
+  adapters/node-test        12  create-file-recorder create-load-hook create-record-writer create-report-reader create-source-switcher create-try-tracker install-marker-receivers install-module-hooks patch-module-compile preload read-unit reporter
+  adapters/shared            4  capture-clock track-environment track-file-reads track-inputs
+  core/instrument            1  resolve-switched-text
+  core/runtime               1  install-mutant-runtime
+## coverage-15504-1793766775291-0.json modules-with-calls: 20
+  adapters/node-test        13  create-bail-error create-file-recorder create-load-hook create-record-writer create-report-reader create-source-switcher create-try-tracker install-marker-receivers install-module-hooks patch-module-compile preload read-unit reporter
+  adapters/shared            5  capture-clock get-error-message track-environment track-file-reads track-inputs
+  core/instrument            1  resolve-switched-text
+  core/runtime               1  install-mutant-runtime

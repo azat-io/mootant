@@ -78,6 +78,46 @@ EOF
   compare_runs virtual-module$SUFFIX r2 r3
 }
 
+# V3: a virtual module that imports the real file instead of inlining it (as
+# plugins that generate imports of locale files do): the worker evaluates the
+# file itself, so it is a dependency. Control for V1.
+virtual_module_import() {
+  local d
+  d=$(new_project virtual-module-import)
+  cat >"$d/vitest.config.ts" <<'EOF2'
+import path from 'node:path'
+
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  plugins: [
+    {
+      name: 'limits',
+      resolveId(id) {
+        return id === 'virtual:limits' ? '\0virtual:limits' : null
+      },
+      load(id) {
+        if (id !== '\0virtual:limits') {
+          return null
+        }
+        let file = path.resolve(import.meta.dirname, 'limits.json')
+        return `import limits from ${JSON.stringify(file)}\nexport default limits`
+      },
+    },
+  ],
+  test: { include: ['test/**/*.test.ts'] },
+})
+EOF2
+  echo '{ "age": 30 }' >"$d/limits.json"
+  cp "$CACHE_ROOT/virtual-module/test/math.test.ts" "$d/test/math.test.ts"
+  commit_all "$d" virtual-import
+  run_mootant "$d" r1 src
+  echo '{ "age": 18 }' >"$d/limits.json"
+  run_mootant "$d" r2 src
+  run_mootant "$d" r3 src --no-cache
+  compare_runs virtual-module-import r2 r3
+}
+
 # V2: the same plugin data, but read by a real module (src-side config.ts)
 # that the plugin transforms with this.addWatchFile(): control for V1.
 watched_real_module() {

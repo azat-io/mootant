@@ -1,0 +1,47 @@
+## sig-node-test-group-int
+exit=130
+--- processes 0.5 s after exit:
+--- processes 6.5 s after exit:
+--- leftover work directories:
+/home/user/projects/adapters/out/sig-node-test-group-int/tmp/mootant-U5sath
+.
+## sig-node-test-main-term
+exit=143
+--- processes 0.5 s after exit:
+--- processes 6.5 s after exit:
+--- leftover work directories:
+/home/user/projects/adapters/out/sig-node-test-main-term/tmp/mootant-CXPD45
+.
+## sig-node-test-tty-ctrl-c
+ctrl-c sent after 1.9s
+exit: code=130 signal=None
+tail: 0.4s- dry run  0.5s\ dry run  0.5s| dry run  0.6s/ dry run  0.7s- dry run  0.8s\ dry run  0.9s| dry run  0.9s^C
+--- processes 0.5 s after exit:
+--- processes 6.5 s after exit:
+--- leftover work directories:
+/home/user/projects/adapters/out/sig-node-test-tty-ctrl-c/tmp/mootant-hFUbtz
+.
+## sig-vitest-group-int
+exit=130
+--- processes 0.5 s after exit:
+--- processes 6.5 s after exit:
+--- leftover work directories:
+/home/user/projects/adapters/out/sig-vitest-group-int/tmp/mootant-nsijG1
+.
+## sig-vitest-main-term
+exit=143
+--- processes 0.5 s after exit:
+19368     1 19206 Rl         2 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/projects/adapters/fixture/vitest/node_modules/vitest
+--- processes 6.5 s after exit:
+--- leftover work directories:
+/home/user/projects/adapters/out/sig-vitest-main-term/tmp/mootant-MTn9gR
+.
+## sig-vitest-tty-ctrl-c
+ctrl-c sent after 2.4s
+exit: code=130 signal=None
+tail: 0.4s| dry run  0.5s/ dry run  0.6s- dry run  0.7s\ dry run  0.8s| dry run  0.8s/ dry run  0.9s- dry run  1.0s^C
+--- processes 0.5 s after exit:
+--- processes 6.5 s after exit:
+--- leftover work directories:
+/home/user/projects/adapters/out/sig-vitest-tty-ctrl-c/tmp/mootant-K7e08O
+.

@@ -8,7 +8,7 @@ data=/home/user/mootant/analysis/data/cache
 mkdir -p "$data"
 
 "$here/s-inputs.sh" \
-  virtual_module watched_real_module outside_root inside_root \
+  virtual_module virtual_module_import watched_real_module outside_root inside_root \
   node_modules_patch env_config_setting future_mtime future_mtime_dependency \
   write_back_package_json reinstall_stamp error_diagnostic custom_environment \
   volatile_provide volatile_define spawn_star glob_new_file monorepo_workspace mootant_setting \

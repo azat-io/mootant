@@ -1,0 +1,26 @@
+##### node-test SIGTERM
+mootant exit=143
+1 s after:
+28401 28400 S          6  0.3 bash tools/hang-signal.sh node-test SIGTERM
+11 s after:
+28401 28400 S         17  0.2 bash tools/hang-signal.sh node-test SIGTERM
+/bin/bash: line 1: 28400 Killed                  timeout 120 tools/hang-signal.sh $v $s
+##### node-test SIGHUP
+tools/hang-signal.sh: line 13: 31337 Hangup                  TMPDIR="$out/tmp" TRACE_DIR="$out/trace" setsid node node_modules/mootant/bin/mootant.js run --config mootant.trace.config.js --mutant ef33xd3qqj1e > "$out/stdout.txt" 2> "$out/stderr.txt" < /dev/null
+mootant exit=129
+1 s after:
+31332 31331 S          6  0.1 bash tools/hang-signal.sh node-test SIGHUP
+31546     1 Rsl        4 28.2 /opt/node22/bin/node --import file:///home/user/projects/adapters/fixture/node-t
+11 s after:
+31332 31331 S         17  0.3 bash tools/hang-signal.sh node-test SIGHUP
+31546     1 Rsl       16 33.0 /opt/node22/bin/node --import file:///home/user/projects/adapters/fixture/node-t
+/bin/bash: line 1: 31331 Killed                  timeout 120 tools/hang-signal.sh $v $s
+##### vitest SIGTERM
+mootant exit=143
+1 s after:
+ 2089     1 Rl         4 30.2 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/pro
+11 s after:
+ 2089     1 Rl        15 29.9 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/pro
+tools/hang-signal.sh: line 17: syntax error near unexpected token `;'
+tools/hang-signal.sh: line 17: `; echo "1 s after:"; list'
+##### vitest SIGHUP

@@ -51,13 +51,14 @@
 
 ## 0. Методика
 
-1. **Фикстура** `/home/user/projects/adapters/fixture/{vitest,node-test}`: один и
+1. **Фикстура** `analysis/tools/adapters/fixture/{vitest,node-test}` (рабочая
+   копия с `node_modules` — `/home/user/projects/adapters/fixture`): один и
    тот же `src/price.js` (две функции, 3 теста) и эквивалентные тесты на
    Vitest 5.0.5 и `node:test`. Mootant поставлен из
    `/home/user/artifacts/mootant-0.1.0-170ec52.tgz`.
 2. **Трассировка границы ядро ↔ адаптер без пересборки mootant.** Контракт
    позволяет передать в `run.runner` объект-адаптер, поэтому я написал
-   декоратор `tools/trace-adapter.js` (в `/home/user/projects/adapters/tools`),
+   декоратор `analysis/tools/adapters/tools/trace-adapter.js`,
    который оборачивает `vitestAdapter()` / `nodeTestAdapter()` и пишет каждый
    вызов сессии (запрос, результат, `onUnitEnd`, `onOutput`), снимок рабочего
    каталога после каждого вызова и аргументы каждого `spawn` (для `node:test`
@@ -69,9 +70,25 @@
    mootant сохраняет структуру «файл на модуль» (`dist/core/run/*.js` и т. д.),
    поэтому из покрытия напрямую видно, какие модули `core/*`,
    `adapters/shared/*` и адаптера выполнялись в каком процессе
-   (`tools/v8-modules.mjs`).
+   (`analysis/tools/adapters/tools/v8-functions.py`; для воркера Vitest —
+   `import-closure.py`).
 4. **Статический анализ импортов** адаптеров в `core/*` и `adapters/shared/*`
    (раздел 2) и чтение мест вызова в ядре.
+5. **Эксперименты с отказами**: прерывание сигналами, зависший юнит,
+   внешнее убийство процесса юнита, долгий тест, таймаут хука, пустые
+   `tries` в результате адаптера (разделы 4.4, 5, 7.1, `bugs/adapters.md`) и
+   проба Rstest 0.12.6 (8.2).
+
+**Воспроизведение.** Скрипты и исходники всех фикстур (без `node_modules`)
+скопированы в `analysis/tools/adapters/` (`tools/` — декоратор, разбор
+покрытия, сигналы; `fixture*/` — варианты проекта), сырые результаты — в
+`analysis/data/adapters/`. Установка в каждом варианте:
+`npm i -D --legacy-peer-deps <mootant.tgz> vitest@5.0.5 vite@8.3.5`
+(npm 10.9 без `--legacy-peer-deps` падает на `Cannot read properties of
+null (reading 'edgesOut')`; у Vitest 5 `vite` — обязательный peer). Трасса:
+`TRACE_DIR=<каталог> npx mootant run --config mootant.trace.config.js
+--mutant <id> --json --all`; неисправности — `TRACE_KILL_AFTER=<мс>`
+(SIGKILL процессам юнита) и `TRACE_BREAK=empty-tries`.
 
 ## 1. Путь одного мутанта от ядра до вердикта
 
@@ -79,7 +96,7 @@
 `price + …`), `mootant run --mutant qm8g8eqrtwnn`. Идентификаторы мутантов
 у двух вариантов фикстуры **совпадают** (все 10), то есть идентичность не
 зависит от раннера. Время `t` — от `start()` по журналу декоратора
-(`/home/user/projects/adapters/out/{vitest,nt}-trace/calls.jsonl`), один
+(`analysis/data/adapters/trace-{vitest,node-test}-one-mutant.jsonl`), один
 прогон на нагруженной машине (load ≈ 6 на 4 vCPU) — **индикативно**, не
 замер производительности.
 
@@ -117,7 +134,8 @@
 ## 2. Где адаптеры обращаются к `adapters/shared` и внутренностям ядра
 
 Сводка по V8-покрытию прогона (модули, в которых выполнилась хотя бы одна
-именованная функция; `/home/user/projects/adapters/out/*-functions.txt`) и,
+именованная функция; `analysis/data/adapters/v8-functions-*.txt`,
+`vitest-worker-import-closure.txt`) и,
 для воркера Vitest, по статическому замыканию импортов `runner.js`: в этом
 прогоне fork-воркеры Vitest файлов покрытия не оставили (вероятно, Vitest
 завершает их не обычным выходом — не проверял).
@@ -385,10 +403,11 @@ sequenceDiagram
 
 ### 4.4. Кто и что очищает: успех, таймаут, падение воркера, отмена
 
-Прогоны отмены — `tools/signal-case.sh` на `fixture-slow` (в dry run идут
+Прогоны отмены — `analysis/tools/adapters/tools/signal-case.sh` на `fixture-slow` (в dry run идут
 синхронный цикл 5 с и `await` 3 с; сигнал через 1 с после `dryRun:call`),
-приватный `TMPDIR`; живые процессы ищутся по `cwd` фикстуры. Сценарий
-«зависший юнит + SIGTERM/SIGHUP» — `tools/hang-signal.sh` на
+приватный `TMPDIR`; живые процессы ищутся по `cwd` фикстуры; выводы —
+`analysis/data/adapters/signals.txt`, `hang-signals.txt`. Сценарий
+«зависший юнит + SIGTERM/SIGHUP» — `analysis/tools/adapters/tools/hang-signal.sh` на
 `fixture-hang/{vitest,node-test}`: мутант
 `if (fast)` → `if (false)` даёт шаг 0 и бесконечный цикл в немутируемом
 модуле `lib/walk.js`, где нет сайтов, поэтому лимит вычислений не
@@ -738,9 +757,9 @@ setup-файле (проверено) остаётся доступным; пе�
 терпима при `performance.buildCache: true`; без batch и без кэша на первой
 итерации (`cacheInputs` необязателен).
 
-**Проверка на фикстуре [подтверждено].** `/home/user/projects/adapters/fixture-rstest`
+**Проверка на фикстуре [подтверждено].** `analysis/tools/adapters/fixture-rstest`
 (`@rstest/core` 0.12.6, тот же `src/price.js` и эквивалентные тесты;
-скрипт `probe.mjs`): `createRstest` + Rsbuild-плагин с `api.transform`,
+скрипт `probe.mjs`, вывод — `analysis/data/adapters/rstest-probe.txt`): `createRstest` + Rsbuild-плагин с `api.transform`,
 подающий переключённый текст с `globalThis.__mootant.hit('m1')`, и
 setup-файл, который читает план по `expect.getState().testPath` и ставит
 `runtime.active` до загрузки файла теста, отслеживая попытки через
