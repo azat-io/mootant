@@ -12,3 +12,12 @@
   [staged] --since main exit=0
     (no mutants selected)
 === staged_unstaged_untracked (05:12:56)
+  EXPECT: lines.ts 2 (staged) and 5 (unstaged); untracked.ts whole; generated/ignored.ts: ? (docs say untracked files)
+  [mixed] --since HEAD exit=0
+    "src/lines.ts": lines 2,5
+    "src/untracked.ts": lines 1,2,3,4,5,6
+=== deleted_lines (05:12:59)
+  EXPECT: lines around the gap: new lines 2 and 3 (old b and d)
+  [middle] --since HEAD exit=0
+    "src/lines.ts": lines 2,3
+  EXPECT: new line 5 (the line before the gap at the end)
