@@ -88,7 +88,16 @@ arborist в `#loadPeerSet` при разборе peer-зависимости
    Node 24. Серьёзность: low (только сайт документации).
 4. Coverage-пороги (100%) в этом прогоне не проверились: при упавших тестах
    Vitest не строит отчёт (`coverage.reportOnFailure` по умолчанию `false`).
-   Повторный прогон — в разделе 5.
+   Повторный прогон с `--coverage.reportOnFailure` показал branches 99,98% <
+   100%. Причина **не в упавших тестах, а в окружении** (подтвердил агент
+   раздела 5). Прокси сессии ставит `NODE_OPTIONS=--use-openssl-ca`, и правая
+   ветка `environment['NODE_OPTIONS'] ?? ''` в
+   `adapters/node-test/start-node-test-session.ts:119` и `:167` становится
+   недостижимой. С `env -u NODE_OPTIONS` покрытие файла 100%. Значит,
+   `pnpm test:unit` и `release:check` красные на любой машине с
+   `NODE_OPTIONS`: VS Code auto-attach, `--max-old-space-size` в CI,
+   `--use-openssl-ca` за корпоративным прокси. Серьёзность: low (тестовая
+   гигиена), но это третий после `TERM` и root тест, зависящий от окружения.
 
 ### Наблюдения по CI проекта
 

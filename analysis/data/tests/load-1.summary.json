@@ -1,0 +1,492 @@
+{
+ "load-1": {
+  "files": 637,
+  "tests": 10491,
+  "byStatus": {
+   "passed": 10469,
+   "failed": 22
+  },
+  "fileSeconds": 1891.6,
+  "testSeconds": 1876.6,
+  "startTime": 1793767701442,
+  "slowFiles": [
+   [
+    1354.73,
+    33,
+    "test/adapters/vitest/index.test.ts"
+   ],
+   [
+    127.06,
+    9,
+    "test/adapters/node-test/index.test.ts"
+   ],
+   [
+    101.51,
+    987,
+    "test/core/generate/generate-file-mutants.test.ts"
+   ],
+   [
+    44.92,
+    6,
+    "test/cli/report/format-header.test.ts"
+   ],
+   [
+    23.56,
+    14,
+    "test/cli/index.test.ts"
+   ],
+   [
+    17.08,
+    21,
+    "test/cli/html/client/start-report.test.ts"
+   ],
+   [
+    13.91,
+    3,
+    "test/cli/terminal/get-max-display-width.test.ts"
+   ],
+   [
+    13.84,
+    56,
+    "test/core/instrument/instrument-file.test.ts"
+   ],
+   [
+    7.66,
+    31,
+    "test/core/run-mutants.test.ts"
+   ],
+   [
+    6.89,
+    2,
+    "test/core/cache/prune-cache-entries.test.ts"
+   ],
+   [
+    4.96,
+    89,
+    "test/core/mutators/logical-operator.test.ts"
+   ],
+   [
+    4.93,
+    118,
+    "test/core/mutators/number-literal.test.ts"
+   ],
+   [
+    4.75,
+    7,
+    "test/core/config/load-typescript-config.test.ts"
+   ],
+   [
+    4.59,
+    18,
+    "test/core/hints/create-syntactic-type-provider.test.ts"
+   ],
+   [
+    4.24,
+    16,
+    "test/core/list-mutants.test.ts"
+   ],
+   [
+    4.12,
+    3,
+    "test/core/parser/load-svelte-compiler.test.ts"
+   ],
+   [
+    4.01,
+    87,
+    "test/core/mutators/comparison-operator.test.ts"
+   ],
+   [
+    4,
+    4,
+    "test/core/git/get-merge-base.test.ts"
+   ],
+   [
+    3.84,
+    9,
+    "test/core/syntax/get-logical-chain.test.ts"
+   ],
+   [
+    3.79,
+    14,
+    "test/cli/run-mutation.test.ts"
+   ],
+   [
+    3.51,
+    4,
+    "test/cli/report/get-short-id-length.test.ts"
+   ],
+   [
+    3.23,
+    96,
+    "test/core/mutators/method-call.test.ts"
+   ],
+   [
+    2.7,
+    5,
+    "test/core/files/list-file-mutants.test.ts"
+   ],
+   [
+    2.59,
+    99,
+    "test/core/syntax/get-value-bound.test.ts"
+   ],
+   [
+    2.46,
+    182,
+    "test/core/mutators/shared/get-comparison-plan.test.ts"
+   ]
+  ],
+  "slowTests": [
+   [
+    120.01,
+    "test/adapters/vitest/index.test.ts",
+    "verdict equivalence > agrees with mutants applied by hand in Vue components and templates"
+   ],
+   [
+    75.36,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > runs mutants again after a change of a file loaded outside Vite"
+   ],
+   [
+    72.79,
+    "test/adapters/node-test/index.test.ts",
+    "node:test verdict equivalence > agrees with mutants applied by hand"
+   ],
+   [
+    63.06,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > keeps the cache of tests with side effects true to what they read"
+   ],
+   [
+    60.94,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > reuses every verdict of an unchanged project"
+   ],
+   [
+    60.62,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > runs the mutants of a changed source file again"
+   ],
+   [
+    60.25,
+    "test/adapters/vitest/index.test.ts",
+    "verdict equivalence > skips only the message mutants of logging calls and runs the rest as by hand"
+   ],
+   [
+    60.09,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > runs every mutant again when the test runner configuration changes"
+   ],
+   [
+    60.05,
+    "test/adapters/vitest/index.test.ts",
+    "verdict equivalence > agrees with mutants applied by hand in Svelte components, templates and modules"
+   ],
+   [
+    60.03,
+    "test/adapters/vitest/index.test.ts",
+    "verdict equivalence > counts errors of worker-scoped fixture cleanup against the mutant"
+   ],
+   [
+    60,
+    "test/adapters/vitest/index.test.ts",
+    "verdict equivalence > agrees with mutants applied by hand in the default and fast modes"
+   ],
+   [
+    58.31,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > runs the units of a test file again when its snapshot changes"
+   ],
+   [
+    57.96,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > neither reads nor writes the cache when it is off"
+   ],
+   [
+    57.68,
+    "test/adapters/vitest/index.test.ts",
+    "verdict equivalence > counts errors of the environment teardown against the mutant"
+   ],
+   [
+    51.86,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > reuses batch kills in fast mode only"
+   ],
+   [
+    49.87,
+    "test/adapters/vitest/index.test.ts",
+    "verdict equivalence > keeps concurrent tests concurrent by default, and warns that fast mode does not"
+   ],
+   [
+    45.71,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > runs only the units of a changed test file again"
+   ],
+   [
+    44.84,
+    "test/cli/report/format-header.test.ts",
+    "formatHeader > handles a body of more lines than a function takes arguments"
+   ],
+   [
+    40.37,
+    "test/adapters/vitest/index.test.ts",
+    "verdict equivalence > runs the test file named after the module first, takes its verdict first, and stops a unit at its first kill"
+   ],
+   [
+    38.8,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > keeps what teardown and recursive listings read in the cache keys"
+   ],
+   [
+    30.21,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter > runs every mutant of a project isolated by default"
+   ],
+   [
+    30,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter > runs the mutants of a project on the batch and isolated paths in fast mode"
+   ],
+   [
+    29.47,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter > reports controls, hung workers and crashes"
+   ],
+   [
+    29.36,
+    "test/adapters/vitest/index.test.ts",
+    "vitest adapter with the cache > runs mutants again after a change of what tests read at runtime"
+   ],
+   [
+    28.89,
+    "test/adapters/vitest/index.test.ts",
+    "verdict equivalence > never runs a test file twice at once"
+   ]
+  ],
+  "failed": [
+   {
+    "file": "test/cli/index.test.ts",
+    "name": "run > keeps every script block of each fixture file parseable with each mutant applied",
+    "seconds": 10.032013232,
+    "failure": "Error: Test timed out in 5000ms."
+   },
+   {
+    "file": "test/core/run-mutants.test.ts",
+    "name": "runMutants > checks switched components with the compiler of their framework",
+    "seconds": 5.280265257999999,
+    "failure": "Error: Test timed out in 5000ms."
+   },
+   {
+    "file": "test/adapters/vitest/index.test.ts",
+    "name": "vitest adapter > runs every mutant of a project isolated by default",
+    "seconds": 30.213519628999997,
+    "failure": "Error: Test timed out in 30000ms."
+   },
+   {
+    "file": "test/adapters/vitest/index.test.ts",
+    "name": "vitest adapter > runs the mutants of a project on the batch and isolated paths in fast mode",
+    "seconds": 30.004993221000003,
+    "failure": "Error: Test timed out in 30000ms."
+   },
+   {
+    "file": "test/adapters/vitest/index.test.ts",
+    "name": "verdict equivalence > agrees with mutants applied by hand in the default and fast modes",
+    "seconds": 60.00099072999999,
+    "failure": "Error: Test timed out in 60000ms."
+   },
+   {
+    "file": "test/adapters/vitest/index.test.ts",
+    "name": "verdict equivalence > counts errors of worker-scoped fixture cleanup against the mutant",
+    "seconds": 60.029851467999976,
+    "failure": "Error: Test timed out in 60000ms."
+   },
+   {
+    "file": "test/adapters/vitest/index.test.ts",
+    "name": "verdict equivalence > agrees with mutants applied by hand in Vue components and templates",
+    "seconds": 120.00886735499999,
+    "failure": "Error: Test timed out in 120000ms."
+   },
+   {
+    "file": "test/adapters/vitest/index.test.ts",
+    "name": "verdict equivalence > agrees with mutants applied by hand in Svelte components, templates and modules",
+    "seconds": 60.04848088799999,
+    "failure": "Error: Test timed out in 60000ms."
+   },
+   {
+    "file": "test/adapters/vitest/index.test.ts",
+    "name": "verdict equivalence > skips only the message mutants of logging calls and runs the rest as by hand",
+    "seconds": 60.25194690500002,
+    "failure": "Error: Test timed out in 60000ms."
+   },
+   {
+    "file": "test/adapters/vitest/index.test.ts",
+    "name": "vitest adapter with the cache > reuses every verdict of an unchanged project",
+    "seconds": 60.94109306099999,
+    "failure": "Error: Test timed out in 60000ms."
+   },
+   {
+    "file": "test/adapters/vitest/index.test.ts",
+    "name": "vitest adapter with the cache > runs the mutants of a changed source file again",
+    "seconds": 60.62125642799994,
+    "failure": "Error: Test timed out in 60000ms."
+   },
+   {
+    "file": "test/adapters/vitest/index.test.ts",
+    "name": "vitest adapter with the cache > runs every mutant again when the test runner configuration changes",
+    "seconds": 60.094227894000014,
+    "failure": "Error: Test timed out in 60000ms."
+   },
+   {
+    "file": "test/adapters/vitest/runner.test.ts",
+    "name": "mootantRunner > records coverage, stray errors and flips in a dry run with beats",
+    "seconds": 0.21644617700000027,
+    "failure": "AssertionError: expected [ [ 1100, null, null ], …(2) ] to deeply equal [ [ 1100, null, null ], …(2) ]"
+   },
+   {
+    "file": "test/adapters/node-test/index.test.ts",
+    "name": "node:test verdict equivalence > agrees with mutants applied by hand",
+    "seconds": 72.789992594,
+    "failure": "AssertionError: expected false to be true // Object.is equality"
+   },
+   {
+    "file": "test/adapters/node-test/score-node-test.test.ts",
+    "name": "scoreNodeTest > skips test files it cannot read",
+    "seconds": 0.02435948099999996,
+    "failure": "Error: expected 1 to be +0 // Object.is equality"
+   },
+   {
+    "file": "test/cli/report/format-header.test.ts",
+    "name": "formatHeader > handles a body of more lines than a function takes arguments",
+    "seconds": 44.844400633999996,
+    "failure": "Error: Test timed out in 5000ms."
+   },
+   {
+    "file": "test/cli/terminal/get-max-display-width.test.ts",
+    "name": "getMaxDisplayWidth > takes more texts than a function takes arguments",
+    "seconds": 13.906966537,
+    "failure": "Error: Test timed out in 5000ms."
+   },
+   {
+    "file": "test/core/generate/generate-file-mutants.test.ts",
+    "name": "generateFileMutants > keeps no weak mutant and covers every fault of if (!((((!(y1 > x1) || a) || x2 === y2) && …)",
+    "seconds": 7.401895964999996,
+    "failure": "Error: Test timed out in 5000ms."
+   },
+   {
+    "file": "test/core/generate/generate-file-mutants.test.ts",
+    "name": "runProgram > observes function f() { return new Promise(() => {}) }",
+    "seconds": 1.2275180729999993,
+    "failure": "Error: expected [ 'hung' ] to strictly equal [ Array(1) ]"
+   },
+   {
+    "file": "test/core/cache/prune-cache-entries.test.ts",
+    "name": "pruneCacheEntries > keeps the 200 000 most recently used entries",
+    "seconds": 6.548453511,
+    "failure": "Error: Test timed out in 5000ms."
+   },
+   {
+    "file": "test/core/instrument/instrument-file.test.ts",
+    "name": "instrumentFile > switches function f(text) { under recommended like each mutant applied alone",
+    "seconds": 2.2929721209999987,
+    "failure": "Error: expected [ …(5) ] to strictly equal [ 'hung', …(4) ]"
+   },
+   {
+    "file": "test/cli/html/client/start-report.test.ts",
+    "name": "startReport > adds a page of tests after a test the search opened far down",
+    "seconds": 6.766524948999999,
+    "failure": "Error: Test timed out in 5000ms."
+   }
+  ],
+  "failedFiles": []
+ },
+ "unstable": [
+  {
+   "test": "test/cli/index.test.ts > run > keeps every script block of each fixture file parseable with each mutant applied",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/core/run-mutants.test.ts > runMutants > checks switched components with the compiler of their framework",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/index.test.ts > vitest adapter > runs every mutant of a project isolated by default",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/index.test.ts > vitest adapter > runs the mutants of a project on the batch and isolated paths in fast mode",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/index.test.ts > verdict equivalence > agrees with mutants applied by hand in the default and fast modes",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/index.test.ts > verdict equivalence > counts errors of worker-scoped fixture cleanup against the mutant",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/index.test.ts > verdict equivalence > agrees with mutants applied by hand in Vue components and templates",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/index.test.ts > verdict equivalence > agrees with mutants applied by hand in Svelte components, templates and modules",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/index.test.ts > verdict equivalence > skips only the message mutants of logging calls and runs the rest as by hand",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/index.test.ts > vitest adapter with the cache > reuses every verdict of an unchanged project",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/index.test.ts > vitest adapter with the cache > runs the mutants of a changed source file again",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/index.test.ts > vitest adapter with the cache > runs every mutant again when the test runner configuration changes",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/vitest/runner.test.ts > mootantRunner > records coverage, stray errors and flips in a dry run with beats",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/node-test/index.test.ts > node:test verdict equivalence > agrees with mutants applied by hand",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/adapters/node-test/score-node-test.test.ts > scoreNodeTest > skips test files it cannot read",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/cli/report/format-header.test.ts > formatHeader > handles a body of more lines than a function takes arguments",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/cli/terminal/get-max-display-width.test.ts > getMaxDisplayWidth > takes more texts than a function takes arguments",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/core/generate/generate-file-mutants.test.ts > generateFileMutants > keeps no weak mutant and covers every fault of if (!((((!(y1 > x1) || a) || x2 === y2) && …)",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/core/generate/generate-file-mutants.test.ts > runProgram > observes function f() { return new Promise(() => {}) }",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/core/cache/prune-cache-entries.test.ts > pruneCacheEntries > keeps the 200 000 most recently used entries",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/core/instrument/instrument-file.test.ts > instrumentFile > switches function f(text) { under recommended like each mutant applied alone",
+   "load-1": "failed"
+  },
+  {
+   "test": "test/cli/html/client/start-report.test.ts > startReport > adds a page of tests after a test the search opened far down",
+   "load-1": "failed"
+  }
+ ]
+}
