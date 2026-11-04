@@ -7,7 +7,7 @@
 > абсолютные времена под нагрузкой раздуты, а ранжирование и механизмы
 > падений — нет. Скрипты: `analysis/tools/tests/`, данные:
 > `analysis/data/tests/`, диффы тестов: `analysis/experiments/tests-*-gaps.diff`,
-> баги: `analysis/bugs/tests.md` (BUG-850…BUG-863), промпты:
+> баги: `analysis/bugs/tests.md` (BUG-850…BUG-864), промпты:
 > `analysis/bug-prompts/BUG-850.md`, `BUG-851.md`, `BUG-856.md`.
 
 ## 5.0. Резюме
@@ -925,7 +925,7 @@ L — несколько дней, XL — больше недели.
 
 | # | Что сделать | Трудоёмкость | Польза |
 | ---: | --- | --- | --- |
-| T1 | Сделать сьют независимым от машины: `NODE_OPTIONS` в `start-node-test-session.test.ts` (BUG-850), `TERM`/`CI` в тестах CLI (BUG-853), без `chmod` для root (BUG-854), `core.hooksPath=/dev/null` в git-хелпере (BUG-863), общий setup-файл, нормализующий `TERM`, `CI`, `NO_COLOR`, `FORCE_COLOR`, `NODE_OPTIONS` | S | `pnpm test` и `release:check` зелёные в Docker, в консоли, с отладчиком VS Code, за прокси |
+| T1 | Сделать сьют независимым от машины: `NODE_OPTIONS` в `start-node-test-session.test.ts` (BUG-850), `TERM`/`CI` в тестах CLI (BUG-853), без `chmod` для root (BUG-854), `core.hooksPath=/dev/null` в git-хелпере (BUG-863), `test/fixtures/.mootantrc` против чужого конфига выше по дереву (BUG-864), общий setup-файл, нормализующий `TERM`, `CI`, `NO_COLOR`, `FORCE_COLOR`, `NODE_OPTIONS` | S | `pnpm test` и `release:check` зелёные в Docker, в консоли, с отладчиком VS Code, за прокси |
 | T2 | Устойчивость к нагрузке (BUG-851, BUG-852): лимиты по стене в оракулах ×5, «тесты масштаба» до 140–150 тыс. элементов или явные таймауты, `testTimeout` 15–20 с, округление в `runner.test.ts:693` | S–M | исчезают все падения по времени (22 разных теста за два прогона под нагрузкой), догфудинг перестаёт обрываться в dry run |
 | T3 | Добавить тесты-находки: `analysis/experiments/tests-git-gaps.diff` (BUG-856) и `tests-terminal-gaps.diff` (BUG-862) | S | закрыта регрессия «`--since` теряет строки ханка» и ещё 20+ непроверенных поведений |
 | T4 | Разрезать `test/adapters/vitest/index.test.ts` на 3–4 файла | S | wall `test:unit` упирается в самый долгий кусок, а не в 1 файл (71,6 % суммарного времени под нагрузкой) |
