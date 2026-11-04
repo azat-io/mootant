@@ -124,6 +124,8 @@ define_point() {
     m-cold)
       CMD=$(mootant_run)
       CLEANUP="$state snapshot; $state restore"
+      # Dogfood core/text did not finish in 42 minutes (00-baseline.md).
+      if [ "$NAME" = mootant-self ]; then POINT_RUNS=${BENCH_LONG_RUNS:-1}; fi
       ;;
     m-nocache) CMD=$(mootant_run --no-cache) ;;
     m-one)
@@ -173,6 +175,8 @@ define_point() {
       KIND=stryker
       [ -f "$PROJECT_CONF/stryker.command.json" ] || return 1
       CMD=$(stryker_run stryker.bench.command.json)
+      # The whole suite per mutant: hours for three runs (README, "Plan").
+      POINT_RUNS=${BENCH_LONG_RUNS:-1}
       ;;
     *) return 1 ;;
   esac
