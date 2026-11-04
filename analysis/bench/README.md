@@ -41,11 +41,11 @@ Stryker — `STRYKER_VERSION=10.1.1`. Все пути переопределяю
 | `prepare/state.sh <project> <state>` | состояние перед прогоном (`--prepare` hyperfine): `clean`, `warm`, `edit`, `since`, `stryker-inc-edit`, `snapshot`, `restore` |
 | `run.sh` | точки замера по плану, hyperfine с `--prepare`/`--setup`/`--cleanup`; каждый прогон — через `lib/measure-one.sh` |
 | `lib/measure-one.sh` | один прогон: GNU time, JSON-отчёт, stdout/stderr, сэмплер памяти, трассировщик юнитов; файлы `run-k.*` |
-| `lib/memtree.mjs` | сумма RSS (каждые 0,5 с) и PSS (каждую 1 с) всего дерева процессов, число процессов во времени |
+| `lib/memtree.mjs` | сумма RSS (каждую 1 с) и PSS (каждые 2 с) всего дерева процессов, число процессов во времени |
 | `lib/trace-units.mjs` | пассивная трасса рабочего каталога Mootant (`$TMPDIR/mootant-*`): claim/start/done каждого юнита каждого запуска раннера |
 | `lib/units-report.mjs` | по трассе: занятость слотов, ожидание очереди тест-файла, хвост, самая длинная последовательная цепочка, загрузка против тестов на юнит |
 | `summarize.mjs [dir]` | таблицы Markdown из всего сохранённого |
-| `profile.sh <project> [list main workers vitest]` | CPU-профили главного процесса, всех процессов (воркеры Vitest, процессы node:test), `mootant list` (текст и JSON) и разбивка самого Vitest |
+| `profile.sh <project> [list run vitest]` | CPU-профили главного процесса, всех процессов (воркеры Vitest, процессы node:test), `mootant list` (текст и JSON) и разбивка самого Vitest |
 | `lib/cpuprofile-top.mjs` | топ функций по self time, агрегация по пакетам/модулям (группы `mootant/core/hints` и т.д.), инклюзивное время выбранных функций |
 | `baseline-tests.sh` | (не часть стенда) базовая линия тестов самого Mootant, этап 0 |
 
@@ -136,7 +136,7 @@ squirrelchat/smol-toml `bba6a4bb` (Vitest 5).
   (воркеры Vitest, процессы node:test, test runner-ы Stryker).
 - **Память**: `RSS max проц.` — `%M` GNU time, это пик *одного самого большого
   процесса* дерева, дочерние не суммируются; `PSS дерева` — пик суммы PSS всех
-  процессов дерева по `/proc/<pid>/smaps_rollup` раз в секунду
+  процессов дерева по `/proc/<pid>/smaps_rollup` раз в 2 с
   (`lib/memtree.mjs`; разделяемые страницы делятся между процессами, поэтому
   сумма не завышена бинарником node в каждом воркере).
 - **Мутанты**: всего; с вердиктом = всего − Ignored; **запущено** = Killed +
@@ -219,17 +219,33 @@ node analysis/bench/summarize.mjs > analysis/bench/results.md
 
 ## Профилирование
 
-`profile.sh <project> [list main workers vitest]` — отдельно от замеров
+`profile.sh <project> [list run vitest]` — отдельно от замеров
 (профилировщик замедляет процессы на 5–15 %), на подмножестве `PROFILE_MUTATE`
 из `project.sh` (или на `MUTATE`, если подмножества нет). Результат —
 `$BENCH_RESULTS/profiles/<project>/<mode>/` и сводка `summary.md` рядом.
 
 | режим | как снимается | что даёт |
 |---|---|---|
-| `list` | `node --cpu-prof mootant list ...` и `... --json` | поиск файлов (`expandPaths`), парсинг (`prepareFilePrograms` → oxc-parser), генерация мутантов и эвристики (`collectFileCandidates`; self-время групп `mootant/core/mutators`, `mootant/core/hints`, `mootant/core/skips`, `mootant/core/syntax` …), дедупликация, id, отчёт и его форматирование (`formatReport`; наблюдение из догфудинга: текст в ~2,8 раза медленнее JSON) |
-| `main` | `node --cpu-prof mootant run --no-cache ...` (только главный процесс) | CPU главного процесса по фазам: инклюзивное время `listFileMutants`, `startVitestSession`, `createSwitchedFiles` (инструментирование), `runDryPhase`, `readDryRun`, `prepareRunCache`/`saveRunCache` (кэш), `runIsolatedRounds`, `runPlan`/`writePlanFiles`/`readOutFiles` (файловый IPC с воркерами), `collectDependencies`/`readUnitInputs` (входы для кэша), `buildRunReport`/`formatRunReport` (отчёт); self-время по пакетам: `vite`/`rolldown`/`oxc` (трансформации Vite в главном процессе) против `mootant/*`; `(idle)` — ожидание воркеров |
-| `workers` | `NODE_OPTIONS="--cpu-prof --cpu-prof-dir=…"` для всего дерева | профили каждого форка Vitest (и каждого процесса node:test): `node:internal/modules` и `vitest` (загрузка и запуск раннера), `project/*` (тесты и код проекта), `mootant/adapters` (раннер Mootant: учёт попыток, запись out-файлов), `(garbage collector)`. Профиль пишется при нормальном выходе процесса; воркер, убитый сигналом (зависший юнит), профиля не оставит — сводка печатает, сколько профилей вернулось |
-| `vitest` | обычный `vitest run --reporter=default` | собственная разбивка Vitest: `Duration … (transform, setup, import, tests, environment)` — сколько в обычном прогоне уходит на трансформации и импорт против тестов |
+| `list` | `node --cpu-prof mootant list ...` и `... --json` | поиск файлов (`core/files/expand-paths.js`), парсинг (oxc-parser), генерация мутантов и эвристики (`core/generate/collect-candidates.js`; self-время групп `mootant/core/mutators`, `mootant/core/hints`, `mootant/core/skips`, `mootant/core/syntax` …), дедупликация, id, построение и форматирование отчёта |
+| `run` | `mootant run --no-cache` под `node --cpu-prof` и с тем же флагом в `NODE_OPTIONS` | профиль главного процесса (по pid) и профили всех форков Vitest / процессов node:test. Главный: self-время по пакетам (`vite`/`rolldown` — трансформации Vite в главном процессе, `node:internal/child_process` — запуск воркеров, `mootant/*`, `(idle)` — ожидание воркеров) и инклюзивное время модулей фаз; воркеры (слитно): `node:internal/modules` и `(native)` (загрузка модулей), `vitest` (раннер), `mootant/adapters` (раннер Mootant: учёт попыток, out-файлы), код проекта и его зависимостей, `(garbage collector)` |
+| `vitest` | обычный `vitest run --reporter=default` / `node --test --test-reporter=spec` | собственная разбивка Vitest: `Duration … (transform, setup, import, tests, environment)` — сколько в обычном прогоне уходит на трансформации и импорт против тестов |
+
+Как это работает и что проверено смоуком:
+
+- `--cpu-prof` у главного процесса доходит до форков Vitest через `execArgv`
+  (cheerio, `src/api/forms.ts`: 1 профиль главного + 36 воркеров за прогон), а
+  один `NODE_OPTIONS` до них не дошёл (0 профилей воркеров) — поэтому заданы
+  оба; процессы node:test наследуют `NODE_OPTIONS` (fast-json-stringify: 297
+  профилей тест-процессов за прогон).
+- Dist Mootant минифицирован: имена функций в профиле — `o`, `i`, …, но
+  модульная структура сохранена и в каждом файле одна экспортируемая функция,
+  поэтому `cpuprofile-top.mjs --focus` принимает пути модулей
+  (`core/run/run-dry-phase.js` = `runDryPhase`), а таблицы показывают файл и
+  строку.
+- Инклюзивное время асинхронных функций (`runMutants`, `runDryPhase`,
+  `runIsolatedRounds`) профиль V8 не связывает через `await`: оно считается
+  только по синхронным участкам. Для фаз это даёт CPU главного процесса, а
+  длительности фаз — из `summary.duration` и трассы.
 
 Доля запуска раннера и трансформаций против тестов в прогоне Mootant
 считается из трёх источников: (1) Vitest-разбивка обычного прогона (`vitest`);
@@ -247,9 +263,6 @@ Vitest, сами модули проекта, `node_modules`.
 последовательная цепочка; пример — `node lib/units-report.mjs run-1.units.json
 --workers 3`.
 
-Проверено на смоуке: `--cpu-prof` главного процесса пишет профиль; с
-`NODE_OPTIONS` профили пишут и форки Vitest (они наследуют окружение) — см.
-«Смоук-проверка» ниже.
 
 ## Известные ограничения стенда
 
