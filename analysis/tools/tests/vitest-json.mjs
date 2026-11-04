@@ -1,13 +1,15 @@
 // Summarizes and compares Vitest JSON reports (--reporter=json) of repeated
 // runs: durations per file and per test, statuses, failures with messages.
-// Usage: node vitest-json.mjs <root-prefix> <label>=<file.json> [...]
+// Usage: node vitest-json.mjs <root-prefix|auto> <label>=<file.json> [...]
+// With `auto`, paths are cut to start at their last `test/` directory, so runs
+// of different worktrees compare.
 import { readFileSync, writeFileSync } from 'node:fs'
 let [prefix, ...pairs] = process.argv.slice(2)
 let runs = pairs.map(pair => {
   let [label, file] = pair.split('=')
   let report = JSON.parse(readFileSync(file, 'utf8'))
   let files = report.testResults.map(result => ({
-    file: result.name.replace(prefix, ''),
+    file: prefix === 'auto' ? result.name.slice(result.name.lastIndexOf('/test/') + 1) : result.name.replace(prefix, ''),
     status: result.status,
     seconds: (result.endTime - result.startTime) / 1000,
     message: result.message || '',

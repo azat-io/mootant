@@ -18,7 +18,8 @@
 //     Only the test files `vitest related <mutated file>` selects are run.
 
 import { writeFileSync, readFileSync, rmSync, mkdtempSync, existsSync } from 'node:fs'
-import { spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
+import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
@@ -36,7 +37,8 @@ let workers = flags.get('workers') ?? '2'
 let preset = flags.get('preset') ?? 'strict'
 let bin = flags.get('bin') ?? path.join(MOOTANT_ROOT, 'bin/mootant.js')
 let extraArgs = (flags.get('vitest-args') ?? '').split(' ').filter(Boolean)
-let timeoutMs = Number(flags.get('timeout') ?? 300_000)
+let timeoutMs = Number(flags.get('timeout') ?? 120_000)
+let vitestBin = path.join(path.dirname(createRequire(path.join(project, 'package.json')).resolve('vitest/package.json')), 'vitest.mjs')
 let mirror = flags.get('mirror') ?? null
 function findMirror(file) {
   let relative = path.relative(project, file).replace(/\.[cm]?[jt]sx?$/u, '')
@@ -80,6 +82,7 @@ function restore() {
 }
 process.on('exit', restore)
 process.on('SIGINT', () => { restore(); process.exit(130) })
+process.on('SIGTERM', () => { restore(); process.exit(143) })
 
 function writeAll(kind, except = null) {
   for (let [absolute, source] of originals) {
@@ -88,38 +91,54 @@ function writeAll(kind, except = null) {
   }
 }
 
-/** Runs vitest and returns per-test outcomes { "file > name": status }. */
+/**
+ * Runs vitest in its own process group and returns per-test outcomes
+ * { "file > name": status }. On timeout the whole group is killed (a mutant
+ * that loops synchronously blocks a fork that Vitest's testTimeout cannot
+ * stop) and the run is recorded as `<run>: timeout`.
+ */
 function runVitest({ active, related }) {
   let json = path.join(tmp, `r${Date.now()}${Math.random()}.json`)
   // --mirror <dir>: run only <dir>/<path without extension>.test.<ext> (one test
   // file per source file, as in mootant itself) instead of `vitest related`.
   let mirrored = mirror && related ? related.map(file => findMirror(file)).filter(Boolean) : null
   let selection = mirrored ? ['run', ...mirrored] : [related ? 'related' : 'run', ...(related ?? [])]
-  let args = ['vitest', ...selection, '--run', '--reporter=json', `--outputFile=${json}`, '--pool=forks', `--maxWorkers=${workers}`, '--testTimeout=10000', '--coverage.enabled=false', ...extraArgs]
+  let args = [vitestBin, ...selection, '--run', '--reporter=json', `--outputFile=${json}`, '--pool=forks', `--maxWorkers=${workers}`, '--testTimeout=10000', '--coverage.enabled=false', ...extraArgs]
   let started = Date.now()
-  let result = spawnSync('npx', args, {
-    env: { ...process.env, DIFF_ACTIVE: active, NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import ${pathToFileURL(setup).href}`.trim(), FORCE_COLOR: '0' },
-    cwd: project,
-    encoding: 'utf8',
-    timeout: timeoutMs,
-    maxBuffer: 1 << 28,
+  return new Promise(resolve => {
+    let child = spawn(process.execPath, args, {
+      env: { ...process.env, DIFF_ACTIVE: active, NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import ${pathToFileURL(setup).href}`.trim(), FORCE_COLOR: '0' },
+      stdio: ['ignore', 'ignore', 'pipe'],
+      cwd: project,
+      detached: true,
+    })
+    let stderr = ''
+    child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-4000) })
+    let timedOut = false
+    let killGroup = () => { try { process.kill(-child.pid, 'SIGKILL') } catch {} }
+    let timer = setTimeout(() => { timedOut = true; killGroup() }, timeoutMs)
+    child.on('close', code => {
+      clearTimeout(timer)
+      killGroup()
+      let ms = Date.now() - started
+      let outcomes = {}
+      let ok = true
+      try {
+        if (timedOut) throw new Error('timeout')
+        let parsed = JSON.parse(readFileSync(json, 'utf8'))
+        for (let file of parsed.testResults) {
+          let relative = path.relative(project, file.name)
+          if (file.status === 'failed' && file.assertionResults.length === 0) outcomes[`${relative} > <load>`] = 'failed'
+          for (let test of file.assertionResults) outcomes[`${relative} > ${test.fullName}`] = test.status
+        }
+      } catch {
+        ok = false
+        outcomes['<run>'] = timedOut ? 'timeout' : `exit:${code}`
+      }
+      rmSync(json, { force: true })
+      resolve({ ok, ms, outcomes, stderr: ok ? '' : stderr.slice(-2000) })
+    })
   })
-  let ms = Date.now() - started
-  let outcomes = {}
-  let ok = true
-  try {
-    let parsed = JSON.parse(readFileSync(json, 'utf8'))
-    for (let file of parsed.testResults) {
-      let relative = path.relative(project, file.name)
-      if (file.status === 'failed' && file.assertionResults.length === 0) outcomes[`${relative} > <load>`] = 'failed'
-      for (let test of file.assertionResults) outcomes[`${relative} > ${test.fullName}`] = test.status
-    }
-    rmSync(json, { force: true })
-  } catch {
-    ok = false
-    outcomes['<run>'] = result.error ? `error:${result.error.code}` : `exit:${result.status}`
-  }
-  return { ok, ms, outcomes, stderr: ok ? '' : String(result.stderr).slice(-2000) }
 }
 
 function diff(left, right) {
@@ -137,10 +156,10 @@ let result = { project, paths, mode, preset, files: byFile.size, pending: pendin
 try {
   if (mode === 'i2') {
     writeAll('original')
-    let base = runVitest({ active: 'none' })
+    let base = await runVitest({ active: 'none' })
     writeAll('switched')
-    let plain = runVitest({ active: 'none' })
-    let nulled = runVitest({ active: 'null' })
+    let plain = await runVitest({ active: 'none' })
+    let nulled = await runVitest({ active: 'null' })
     result.i2 = {
       tests: Object.keys(base.outcomes).length,
       baseFailed: failedSet(base.outcomes),
@@ -159,17 +178,17 @@ try {
       let absolute = path.join(project, mutant.file)
       let related = [absolute]
       writeAll('original', { absolute, text: applyRaw(originals.get(absolute), mutant) })
-      let physical = runVitest({ active: 'none', related })
+      let physical = await runVitest({ active: 'none', related })
       writeAll('switched')
-      let switched = runVitest({ active: mutant.id, related })
+      let switched = await runVitest({ active: mutant.id, related })
       let changes = diff(physical.outcomes, switched.outcomes)
       let row = { id: mutant.id, file: mutant.file, line: mutant.line, mutator: mutant.mutator, kind: mutant.kind, original: mutant.original.slice(0, 160), replacement: mutant.replacement.slice(0, 160), physicalFailed: failedSet(physical.outcomes).length, switchedFailed: failedSet(switched.outcomes).length, tests: Object.keys(physical.outcomes).length, ms: physical.ms + switched.ms }
       if (changes.length > 0) {
         // Re-run both once: nondeterminism is not a switching bug.
         writeAll('original', { absolute, text: applyRaw(originals.get(absolute), mutant) })
-        let physical2 = runVitest({ active: 'none', related })
+        let physical2 = await runVitest({ active: 'none', related })
         writeAll('switched')
-        let switched2 = runVitest({ active: mutant.id, related })
+        let switched2 = await runVitest({ active: mutant.id, related })
         let changes2 = diff(physical2.outcomes, switched2.outcomes)
         row.changes = changes.slice(0, 20)
         row.confirmed = changes2.length > 0
