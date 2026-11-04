@@ -43,6 +43,10 @@ PLAN=$(cat <<'EOF'
 1 fast-json-stringify test
 1 fast-json-stringify m-cold
 1 fast-json-stringify s-cold
+2 path-to-regexp m-one
+2 cheerio m-one
+2 perfectionist m-one
+2 fast-json-stringify m-one
 2 path-to-regexp m-warm
 2 cheerio m-warm
 2 perfectionist m-warm
@@ -78,8 +82,16 @@ EOF
 )
 
 mootant_run() {
-  echo node node_modules/mootant/bin/mootant.js run "${MUTATE[@]}" \
+  echo node "$MOOTANT_BIN" run "${MUTATE[@]}" \
     --concurrency "$BENCH_CONCURRENCY" --json --all --verbose "$@"
+}
+
+# Id of the first listed mutant: `--mutant` with it runs the whole dry run
+# (it hosts every mutant of the files, core/run-mutants.ts:340-342) and one
+# mutant, so the point measures the floor of a run: startup + dry run.
+first_mutant() {
+  (cd "$PROJECT_DIR" && node "$MOOTANT_BIN" list "${MUTATE[@]}" --json 2>/dev/null) |
+    node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let r=JSON.parse(s);console.log(r.mutants[0]?.id??"")})'
 }
 
 stryker_run() {
@@ -107,6 +119,12 @@ define_point() {
       CLEANUP="$state snapshot; $state restore"
       ;;
     m-nocache) CMD=$(mootant_run --no-cache) ;;
+    m-one)
+      local id
+      id=$(first_mutant)
+      [ -n "$id" ] || return 1
+      CMD=$(mootant_run --no-cache --mutant "$id")
+      ;;
     m-fast) CMD=$(mootant_run --fast) ;;
     m-warm)
       CMD=$(mootant_run)
@@ -127,7 +145,7 @@ define_point() {
     m-list-text | m-list-json)
       KIND=plain
       POINT_RUNS=${BENCH_TEST_RUNS:-5}
-      CMD="node node_modules/mootant/bin/mootant.js list ${MUTATE[*]}"
+      CMD="node $MOOTANT_BIN list ${MUTATE[*]}"
       if [ "$point" = m-list-json ]; then CMD="$CMD --json"; fi
       ;;
     s-cold)

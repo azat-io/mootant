@@ -23,7 +23,7 @@ paths=("${MUTATE[@]}")
 if declare -p PROFILE_MUTATE >/dev/null 2>&1; then paths=("${PROFILE_MUTATE[@]}"); fi
 OUT=$BENCH_RESULTS/profiles/$NAME
 TOP="node $BENCH_HOME/lib/cpuprofile-top.mjs"
-MOOTANT=node_modules/mootant/bin/mootant.js
+MOOTANT=$MOOTANT_BIN
 STATE="bash $BENCH_HOME/prepare/state.sh $NAME"
 # Inclusive time of the phases of the main process (core/run-mutants.ts,
 # core/files/list-file-mutants.ts, core/generate/generate-file-mutants.ts).

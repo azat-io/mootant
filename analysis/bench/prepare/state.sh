@@ -33,7 +33,7 @@ reset_tree() {
 prime_mootant_cache() {
   echo "priming the Mootant cache of $NAME (untimed run)" >&2
   reset_tree
-  node node_modules/mootant/bin/mootant.js run "${MUTATE[@]}" \
+  node "$MOOTANT_BIN" run "${MUTATE[@]}" \
     --concurrency "$BENCH_CONCURRENCY" --json >/dev/null 2>"$SNAP.prime.err" || true
   save_mootant_cache
 }

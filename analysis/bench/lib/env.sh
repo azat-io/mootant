@@ -44,6 +44,9 @@ bench_project() {
   SINCE_FROM=
   SINCE_TO=
   TSC_CHECKER=0
+  # Mootant's CLI as the project installed it (a devDependency, as
+  # adapters/vitest/check-vitest-copy.ts requires).
+  MOOTANT_BIN=node_modules/mootant/bin/mootant.js
   unset PROFILE_MUTATE
   # shellcheck source=/dev/null
   . "$file"

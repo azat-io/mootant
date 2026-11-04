@@ -1,0 +1,174 @@
+* mootant run src                                                       vitest 5.1.0
+
+dry run         25 tests in 4.0s
+mutants         99 in 8 files, 1 ignored
+time            53.4s (start 1.1s, dry run 4.0s, isolated 48.3s)
+most test time  src/coupon.ts 28%, src/shipping.ts 20%, src/price.ts 14%
+
+killed          65
+survived        21
+timeout         1
+no coverage     11
+score           67.35% (covered 75.86%)
+
+survived 21
+
+src/coupon.ts
+  6:16   regex-pattern        0x8h
+    - let pattern = /^([A-Z]+)-(\d{1,2})$/u
+    + let pattern = /([A-Z]+)-(\d{1,2})$/u
+    test: test/coupon.test.ts
+
+  6:18   regex-pattern        xvqd
+    - let pattern = /^([A-Z]+)-(\d{1,2})$/u
+    + let pattern = /^([^]+)-(\d{1,2})$/u
+    test: test/coupon.test.ts
+
+  6:27   regex-pattern        q5xr
+    - let pattern = /^([A-Z]+)-(\d{1,2})$/u
+    + let pattern = /^([A-Z]+)-([^]{1,2})$/u
+    test: test/coupon.test.ts
+
+  6:35   regex-pattern        qdae
+    - let pattern = /^([A-Z]+)-(\d{1,2})$/u
+    + let pattern = /^([A-Z]+)-(\d{1,2})/u
+    test: test/coupon.test.ts
+
+  9:28   method-call          s53z
+    - let match = pattern.exec(input.trim().toUpperCase())
+    + let match = pattern.exec(input.toUpperCase())
+    test: test/coupon.test.ts
+
+  14:7   logical-operator     kfav
+    - if (percent === 0 || percent > 50) {
+    + if (percent > 50) {
+    test: test/coupon.test.ts
+
+  14:7   comparison-operator  37ds
+    - if (percent === 0 || percent > 50) {
+    + if (percent <= 0 || percent > 50) {
+    test: test/coupon.test.ts
+
+  14:24  comparison-operator  q5tm
+    - if (percent === 0 || percent > 50) {
+    + if (percent === 0 || percent >= 50) {
+    test: test/coupon.test.ts
+
+  14:24  comparison-operator  73h1
+    - if (percent === 0 || percent > 50) {
+    + if (percent === 0 || percent > 51) {
+    test: test/coupon.test.ts
+
+src/discount.ts
+  2:7  comparison-operator  q31p
+    - if (total >= 100 || isMember) {
+    + if (total > 100 || isMember) {
+    test: test/discount.test.ts
+
+src/price.ts
+  3:8    string-literal       gj5d
+    - GBP: '£',
+    + GBP: '',
+    test: test/price.test.ts
+
+  12:14  comparison-operator  4wx3
+    - let sign = amount < 0 ? '-' : ''
+    + let sign = amount <= 0 ? '-' : ''
+    test: test/price.test.ts
+
+  12:14  comparison-operator  m4c0
+    - let sign = amount < 0 ? '-' : ''
+    + let sign = amount < -1 ? '-' : ''
+    test: test/price.test.ts
+
+src/receipt.ts
+  8:7    string-literal       e2h5
+    - `${item.name} × ${item.quantity}  ${formatPrice(item.price * item.quantity)}`,
+    + `${item.name}${item.quantity}${formatPrice(item.price * item.quantity)}`,
+    test: test/receipt.test.ts
+
+  8:55   arithmetic-operator  4vbs
+    - `${item.name} × ${item.quantity}  ${formatPrice(item.price * item.quantity)}`,
+    + `${item.name} × ${item.quantity}  ${formatPrice(item.price / item.quantity)}`,
+    test: test/receipt.test.ts
+
+  11:3   statement-removal    qbbh
+    - lines.push('Thank you for shopping with us!')
+    + ;
+    test: test/receipt.test.ts
+
+  13:21  string-literal       fa1e
+    - return lines.join('\n')
+    + return lines.join('')
+    test: test/receipt.test.ts
+
+src/shipping.ts
+  3:22   number-literal       695r
+    - const PARCEL_LIMIT = 20
+    + const PARCEL_LIMIT = 21
+    test: test/shipping.test.ts
+
+  7:10   comparison-operator  apr6
+    - return weight > HEAVY ? rate * 3 : rate
+    + return weight >= HEAVY ? rate * 3 : rate
+    test: test/shipping.test.ts
+
+  13:10  comparison-operator  q5an
+    - while (left > 0) {
+    + while (left > 1) {
+    test: test/shipping.test.ts
+
+src/tax.ts
+  3:7  number-literal  mq1n
+    - FR: 0.2,
+    + FR: 1.2,
+    test: test/tax.test.ts
+
+no coverage 11
+
+src/stock.ts
+  7:10   method-call          ymjr
+    - return Math.max(stock.total - stock.reserved, 0)
+    + return Math.min(stock.total - stock.reserved, 0)
+
+  7:19   arithmetic-operator  2a7x
+    - return Math.max(stock.total - stock.reserved, 0)
+    + return Math.max(stock.total + stock.reserved, 0)
+
+  7:49   number-literal       r6fd
+    - return Math.max(stock.total - stock.reserved, 0)
+    + return Math.max(stock.total - stock.reserved, 1)
+
+  11:7   logical-operator     7n1y
+    - if (quantity <= 0 || quantity > getAvailable(stock)) {
+    + if (quantity <= 0) {
+
+  11:7   comparison-operator  ex6c
+    - if (quantity <= 0 || quantity > getAvailable(stock)) {
+    + if (quantity < 0 || quantity > getAvailable(stock)) {
+
+  11:7   comparison-operator  yb82
+    - if (quantity <= 0 || quantity > getAvailable(stock)) {
+    + if (quantity == 0 || quantity > getAvailable(stock)) {
+
+  11:7   comparison-operator  h6ww
+    - if (quantity <= 0 || quantity > getAvailable(stock)) {
+    + if (quantity <= 1 || quantity > getAvailable(stock)) {
+
+  11:24  comparison-operator  atze
+    - if (quantity <= 0 || quantity > getAvailable(stock)) {
+    + if (quantity <= 0 || quantity >= getAvailable(stock)) {
+
+  11:24  comparison-operator  tpnv
+    - if (quantity <= 0 || quantity > getAvailable(stock)) {
+    + if (quantity <= 0 || quantity != getAvailable(stock)) {
+
+  14:10  object-property      fw2s
+    - return { ...stock, reserved: stock.reserved + quantity }
+    + return { reserved: stock.reserved + quantity }
+
+  14:32  arithmetic-operator  h06y
+    - return { ...stock, reserved: stock.reserved + quantity }
+    + return { ...stock, reserved: stock.reserved - quantity }
+
+re-check one: mootant run src --mutant 0x8h

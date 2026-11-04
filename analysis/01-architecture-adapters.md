@@ -46,7 +46,9 @@
 * Производительность: главное переиспользование уже есть (рантайм-
   переключение + общий кэш трансформаций Vite); на каждый юнит заново
   создаётся процесс и инициализируется раннер, и на маленьких файлах это
-  доминирует (индикативно 454/91 мс у Vitest). Контракт мешает потоковому
+  доминирует (индикативно 454/91 мс у Vitest), а юниты одного тестового
+  файла идут строго по очереди — на целевых прогонах (`--since`, один
+  модуль, цикл агента) параллелизм падает до 1. Контракт мешает потоковому
   исполнению и префорку — места для цифр раздела 4 отмечены.
 * Rstest 0.12.6 подключается через текущий контракт за **L** (проверено на
   фикстуре: путь теста в setup-файле, активация мутанта, свежий процесс; но
@@ -321,27 +323,27 @@ sequenceDiagram
   Core->>A: start(context) [run-mutants.ts:275]
   A->>V: createVitest(plugins:[mootant], reporters, cache:false) [start-vitest-session.ts:91-117]
   V-->>A: configureVitest → configureProject: pool, isolate:true, runner [configure-project.ts:46-55]
-  A->>A: installMutantRuntime(); coverage = outside [start-vitest-session.ts:134-136]
+  A->>A: installMutantRuntime(), coverage = outside [start-vitest-session.ts:134-136]
   Core->>A: listTestFiles() [run-mutants.ts:378]
   Core->>Core: createSwitchedFiles → context.files.push [run-mutants.ts:390-394]
   Core->>A: dryRun({files:null, related, repeat, timeouts}) [run-dry-phase.ts:482]
-  A->>V: config.related = related; getRelevantTestSpecifications() [run-dry.ts:231-236]
-  A->>WD: resetRunDirectory; provide('mootant',{mode:'dry'}) [run-dry.ts:67, run-specifications.ts:35-39]
+  A->>V: config.related = related, getRelevantTestSpecifications() [run-dry.ts:231-236]
+  A->>WD: resetRunDirectory, provide('mootant',{mode:'dry'}) [run-dry.ts:67, run-specifications.ts:35-39]
   V->>W: fork на тестовый файл
   W->>W: onBeforeCollect: coverage = loadCovers, beat [runner.ts:511-529]
   W->>V: fetchModule → transform → plugin: переключённый текст [create-mootant-plugin.ts:33-50]
   W->>WD: out/*.jsonl (попытки + covers), end, done/* [runner.ts:1116, 924, 943]
-  A->>WD: waitForWorkers; readOutFiles [run-specifications.ts:42, run-dry.ts:146]
+  A->>WD: waitForWorkers, readOutFiles [run-specifications.ts:42, run-dry.ts:146]
   A->>V: collectDependencies по графу модулей Vite [collect-dependencies.ts:76-155]
   A-->>Core: DryRunResult
   Core->>Core: readDryRun, classifyMutants, rankMutantFiles
   loop раунды 1,1,2,4… [run-isolated-rounds.ts:69]
     Core->>A: runIsolated({units}) [run-isolated-rounds.ts:101]
-    A->>WD: plan/<hash>.json; createSpecification на юнит [run-plan.ts:62-65]
+    A->>WD: plan/HASH.json, createSpecification на юнит [run-plan.ts:62-65]
     V->>W: fork на юнит (isolate:true)
-    W->>WD: claim/<hash>-<n> (O_EXCL), waitForTurn [claim-unit.ts:19-42, wait-for-turn.ts:32-49]
+    W->>WD: claim/HASH-N (O_EXCL), waitForTurn [claim-unit.ts:19-42, wait-for-turn.ts:32-49]
     W->>W: runtime.active = mutant ДО загрузки файла [runner.ts:550]
-    W->>WD: beat/<pid>.json (бюджет юнита) [runner.ts:570]
+    W->>WD: beat/PID.json (бюджет юнита) [runner.ts:570]
     A->>A: watchHeartbeats(250 мс) → stopHungWorker(SIGKILL) [watch-heartbeats.ts:19, stop-hung-worker.ts:13-34]
     W->>WD: out (попытки), end после teardown, done [runner.ts:913-955]
     A->>WD: waitForWorkers (10 мс опрос, ≤70 с) [wait-for-workers.ts:13, 20]
@@ -366,12 +368,12 @@ sequenceDiagram
   A->>A: findTestCommand, readNodeRuntime (execFile node -p), filterExecArgv, listNodeTestFiles, checkTypeScript [start-node-test-session.ts:71-151]
   Core->>A: listTestFiles() → files + setup [start-node-test-session.ts:212]
   Core->>A: dryRun({files:null, related, repeat:false}) [run-dry-phase.ts:482]
-  A->>WD: switched/plan.json + switched/<i>.json [run-dry.ts:212-227, write-switch-plan.ts:16-31]
+  A->>WD: switched/plan.json + switched/I.json [run-dry.ts:212-227, write-switch-plan.ts:16-31]
   Note over A: первый dry run запускает ВСЕ тестовые файлы: графа импортов ещё нет [run-dry.ts:75-80]
   A->>P: spawn(node, preload, флаги, reporters, file), env MOOTANT_UNIT={mode:'dry'} [run-test-file.ts:42-54, run-test-process.ts:117-123]
   H->>H: readUnit, installMutantRuntime, registerHooks/register, patch _compile [preload.ts:40-70]
-  H->>WD: out/<n>.jsonl: start, load/served, open/close, try (covers), error, end [create-record-writer.ts]
-  A->>WD: опрос out-файла каждые 50 мс; дедлайн → SIGKILL группы [run-test-process.ts:16, 133-139]
+  H->>WD: out/N.jsonl: start, load/served, open/close, try (covers), error, end [create-record-writer.ts]
+  A->>WD: опрос out-файла каждые 50 мс, дедлайн → SIGKILL группы [run-test-process.ts:16, 133-139]
   A-->>Core: DryRunResult (только файлы, загрузившие related) [run-dry.ts:127-129]
   loop раунды
     Core->>A: runIsolated({units}) [run-isolated-rounds.ts:101]
