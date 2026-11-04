@@ -892,3 +892,14 @@ Auto-merging src/lines.ts
   run --json with an unknown ref (is stdout valid JSON?):
     exit=1 stdout= stderr=Error: --since: unknown git revision "no-such-branch".
 === odd_paths (05:13:20)
+  EXPECT: line 4 in every file
+  [odd] --since HEAD exit=0
+    "src/-dash.ts": lines 4
+    "src/back\\slash.ts": lines 4
+    "src/lines.ts": lines 4
+    "src/quote\"d.ts": lines 4
+    "src/tab\there.ts": lines 4
+    "src/with space.ts": lines 4
+    "src/кириллица.ts": lines 4
+=== binary_file (05:13:23)
+  EXPECT: whole file (git counts it as binary)
