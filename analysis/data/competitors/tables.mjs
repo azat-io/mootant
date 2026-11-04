@@ -130,11 +130,11 @@ const verdicts = ['equivalent', 'noise', 'same-gap', 'lost']
 let strykerRows = review.filter(r => r.set !== 'mootant-only')
 console.log(
   table(
-    ['проект', 'класс', 'разобрано', ...verdicts],
+    ['проект', 'класс', 'разобрано', 'эквивалентен', 'шум', 'тот же пробел виден', 'потерян'],
     [...new Set(strykerRows.map(r => `${r.project}|${r.set}`))].sort().map(key => {
       let [project, set] = key.split('|')
       let rows = strykerRows.filter(r => r.project === project && r.set === set)
-      return [project, set, rows.length, ...verdicts.map(v => rows.filter(r => r.verdict === v).length)]
+      return [project, set === 'stryker-b' ? '(б)' : '(в)', rows.length, ...verdicts.map(v => rows.filter(r => r.verdict === v).length)]
     }),
   ),
 )
@@ -165,12 +165,13 @@ console.log(`Mootant-only useful по мутаторам (все): ${Object.entr
 console.log('## Время (hyperfine, 3 прогона)\n')
 console.log(
   table(
-    ['проект', 'Mootant, с (mean ± σ)', 'Stryker, с (mean ± σ)', 'M / S', 'с/мутант M', 'с/мутант S', 'с/useful M', 'с/useful S'],
+    ['проект', 'Mootant, с (mean ± σ)', 'Stryker, с (mean ± σ)', 'M / S', 'CPU M, с', 'CPU S, с', 'с/мутант M', 'с/мутант S', 'с/useful M', 'с/useful S'],
     projects.map(p => {
       let m = p.timing.mootant
       let s = p.timing.stryker
       return [
         p.project, `${fmt(m.mean)} ± ${fmt(m.stddev)}`, `${fmt(s.mean)} ± ${fmt(s.stddev)}`, fmt(m.mean / s.mean, 2),
+        fmt(m.user + m.system, 0), fmt(s.user + s.system, 0),
         fmt(m.perMutant, 2), fmt(s.perMutant, 2), fmt(m.perUseful, 2), fmt(s.perUseful, 2),
       ]
     }),
@@ -186,7 +187,7 @@ console.log('фазы Stryker (run 1, с): ' + projects.map(p => {
 }).join('; '))
 console.log('стоимость юнитов Mootant по статусам (run 1): ' + projects.map(p => {
   let u = p.timing.mootant.unitCost
-  if (!u) return `${p.project}: нет трассы`
+  if (!u || Object.keys(u.byStatus).length === 0) return `${p.project}: нет трассы (node:test)`
   return `${p.project}: ${Object.entries(u.byStatus).map(([k, v]) => `${k} ${v.mutants} мут., ${v.units} юн., ${fmt(v.busySeconds, 0)} с`).join('; ')}`
 }).join(' | '))
 
@@ -205,13 +206,55 @@ review
   .filter(r => r.sampled === 'true' && r.set !== 'mootant-only')
   .forEach((r, i) => {
     let id = r.key.split(':').pop()
-    console.log(`| ${i + 1} | ${r.project} | \`${r.place}\` | ${r.mutator} #${id}: ${code(r.original, 40)} → ${code(r.replacement, 28)} | ${cell(r.mootant)} | ${VERDICT[r.verdict] ?? r.verdict} | ${cell(r.why)}${r.test ? ` Тест: ${code(r.test, 160, true)}` : ''} |`)
+    let did = r.mootant.startsWith('skipped ') ? `пропустил: \`${r.mootant.slice(8)}\`` : 'не создаёт'
+    console.log(`| ${i + 1} | ${r.project} | \`${r.place}\` | ${r.mutator} #${id}: ${code(r.original, 40)} → ${code(r.replacement, 28)} | ${did} | ${VERDICT[r.verdict] ?? r.verdict} | ${cell(r.why)}${r.test ? ` Тест: ${code(r.test, 160, true)}` : ''} |`)
   })
 console.log('\n## Выборка: только у Mootant\n')
-console.log('| # | проект | место | мутатор: мутация | вердикт | обоснование |')
-console.log('| ---: | --- | --- | --- | --- | --- |')
+console.log('| # | проект | место | мутатор: мутация | выживший Stryker в том же месте | вердикт | обоснование |')
+console.log('| ---: | --- | --- | --- | --- | --- | --- |')
 review
   .filter(r => r.sampled === 'true' && r.set === 'mootant-only')
   .forEach((r, i) => {
-    console.log(`| ${i + 1} | ${r.project} | \`${r.place}\` | ${r.mutator}: ${code(r.original, 40)} → ${code(r.replacement, 28)} | ${VERDICT[r.verdict] ?? r.verdict} | ${cell(r.why)}${r.test ? ` Тест: ${code(r.test, 160, true)}` : ''} |`)
+    console.log(`| ${i + 1} | ${r.project} | \`${r.place}\` | ${r.mutator}: ${code(r.original, 40)} → ${code(r.replacement, 28)} | ${r.strykerUsefulAround ? cell(r.strykerUsefulAround.split('; ').map(x => x.split(' ').slice(0, 2).join(' ')).join(', ')) : '—'} | ${VERDICT[r.verdict] ?? r.verdict} | ${cell(r.why)}${r.test ? ` Тест: ${code(r.test, 160, true)}` : ''} |`)
   })
+
+// Totals over the projects, for the conclusions.
+{
+  let t = (f) => sum(projects.map(f))
+  let total = {
+    mootantMutants: t(p => p.counts.mootant.total),
+    strykerMutants: t(p => p.counts.stryker.total),
+    mootantUseful: t(p => p.mootantUseful.total),
+    strykerUseful: t(p => p.strykerUseful.total),
+    a: t(p => p.strykerUseful.byClass.a ?? 0),
+    aMootantUseful: t(p => p.strykerUseful.a.mootantUseful),
+    b: t(p => p.strykerUseful.byClass.b ?? 0),
+    c: t(p => p.strykerUseful.byClass.c ?? 0),
+    exact: t(p => p.matching.strykerMatchedToMootant.exact + p.matching.strykerMatchedToSkippedOnly.exact),
+    approx: t(p => p.matching.strykerMatchedToMootant.approx + p.matching.strykerMatchedToSkippedOnly.approx),
+    unmatched: t(p => p.matching.strykerUnmatched),
+    mootantOnlyUseful: t(p => p.mootantUseful.only),
+    mootantOnlyUsefulOverlap: t(p => p.mootantUseful.onlyStrykerUsefulOverlap),
+    disagreements: t(p => p.disagreements.total),
+  }
+  let audit = {}
+  for (let p of projects) for (let [k, v] of Object.entries(p.skipAudit)) {
+    let a = (audit[k] ??= { twins: 0, alsoEmitted: 0, strykerStatuses: {} })
+    a.twins += v.twins
+    a.alsoEmitted += v.alsoEmitted
+    for (let [st, n] of Object.entries(v.strykerStatuses)) a.strykerStatuses[st] = (a.strykerStatuses[st] ?? 0) + n
+  }
+  let auditOnly = Object.values(audit).map(a => a.twins - a.alsoEmitted)
+  let auditUseful = Object.values(audit).map(a => (a.strykerStatuses.Survived ?? 0) + (a.strykerStatuses.NoCoverage ?? 0))
+  console.log('\n## Итоги по всем проектам\n')
+  console.log(JSON.stringify(total))
+  console.log(`пропуски Mootant с двойником у Stryker (без дублей выданных мутантов): ${sum(auditOnly)}, из них у Stryker выжили ${sum(auditUseful)}`)
+  console.log(
+    table(
+      ['правило (* — эвристика)', 'двойников у Stryker', 'из них дубли выданного мутанта', 'Killed/Timeout у Stryker', 'Survived/NoCoverage у Stryker'],
+      Object.entries(audit)
+        .sort((a, b) => b[1].twins - a[1].twins)
+        .map(([k, a]) => [k, a.twins, a.alsoEmitted, (a.strykerStatuses.Killed ?? 0) + (a.strykerStatuses.Timeout ?? 0) + (a.strykerStatuses.RuntimeError ?? 0), (a.strykerStatuses.Survived ?? 0) + (a.strykerStatuses.NoCoverage ?? 0)]),
+    ),
+  )
+}

@@ -1595,28 +1595,652 @@ Mootant лучше оставаться детерминированным. LLM 
 
 ## Эмпирическая проверка
 
-> _Заполняется по данным раздела 4 (бенчмарки на реальных проектах: запуски
-> Stryker и Mootant)._
+> **Данные.** Ярус 1 стенда раздела 4 (`analysis/bench/`, README там же),
+> эксклюзивное окно 2026-11-04 08:35–11:00 UTC. Машина: 4 vCPU Xeon
+> 2.1 GHz, Node 22.23.4. Версии: Mootant `170ec52`
+> (`mootant-0.1.0-170ec52.tgz`), StrykerJS 10.1.1.
+>
+> **Скрипты и сводки** — [`data/competitors/`](data/competitors/):
+> - `compare.mjs` — сопоставление, классы, время → `summary.json` и CSV;
+> - `tables.mjs` — таблицы этого подраздела → `tables.md`;
+> - `review.json` — ручной разбор, `review.csv` — он же вместе с данными;
+> - `lists/` — `mootant list --skipped` по проектам (вход `compare.mjs`).
+>
+> Прогоны лежат в `$BENCH_RESULTS` (по умолчанию
+> `/home/user/projects/bench/results`, см. README стенда). Перезапуск:
+> `node compare.mjs && node tables.mjs > tables.md`.
 
-Что сюда нужно (предложение для агента раздела 4):
+### Кратко
 
-1. Сколько мутантов создаёт каждый инструмент на одних и тех же файлах:
-   Stryker с `coverageAnalysis: perTest`, Mootant с `recommended` и
-   `strict`. Пересечение считать скриптом из приложения (`stryker-list.mjs` и
-   сравнение по диапазону и замене).
-2. Какую долю выживших у Stryker Mootant не создаёт (отсеял). Ручной разбор
-   выборки из 20–30 мутантов: верно отсеян (эквивалентный, непродуктивный,
-   поглощённый) или потерян реальный пробел.
-3. Выжившие, которых нашёл только один инструмент, с ручной оценкой
-   полезности. Особенно мутаторы, которых нет у Stryker: `number-literal`,
-   `missing-await`, `return-value`.
-4. Ложные пропуски `solitary`. На `strict` (`coarseMutants: true`)
-   посчитать грубых мутантов, которые выжили при убитых мелких мутантах
-   внутри.
-5. Доля выживших Mootant, которые не проходят `tsc`. Прогнать
-   `typecheck-mutants.mjs` только по выжившим; это обоснование §6.1.
-6. Время на мутанта и время на «полезного» мутанта, то есть выжившего,
-   который после разбора требует теста.
+1. **Мутантов.** На одних и тех же файлах четырёх проектов Stryker создал
+   2111 мутантов, Mootant — 1460, в 1,2–1,7 раза меньше на проект. Выживших
+   (Survived + NoCoverage) почти поровну: 222 у Stryker и 241 у Mootant.
+   - Score у Mootant ниже на 3–8 п. п. Причина не в тестах: у Stryker больше
+     мутантов, которых легко убить. Например, `BlockStatement` — 339
+     мутантов, из них выжили 8.
+2. **Совпадение наборов.** Сопоставление идёт по AST изменённого кода.
+   - Точный двойник среди мутантов Mootant есть у 36 % мутантов Stryker,
+     ещё у 22 % — только среди пропусков Mootant.
+   - 36 % Mootant не создаёт вовсе.
+   - Неуверенных (приближённых) пар 9 %.
+3. **Вердикты общих мутантов совпадают.** У 135 выживших Stryker есть
+   двойник у Mootant, и 133 из них выжили и у Mootant. Два расхождения —
+   ложные Survived у Stryker в fast-json-stringify: песочница Stryker вместе с
+   самоссылкой пакета грузит немутированный код.
+   - Mootant детерминирован: 0 расхождений вердиктов в 3 прогонах.
+   - У Stryker вердикт менялся у 4 мутантов.
+4. **Выжившие Stryker, которых нет в отчёте Mootant.** Их 87, разобраны все:
+   - 46 — тот же пробел уже виден через выжившего мутанта Mootant;
+   - 34 эквивалентны;
+   - 4 — шум;
+   - 3 потеряны: две мутации регулярок и одно отрицание сравнения. Таких
+     форм нет в `recommended`.
+
+   Правомерно отброшено 84 из 87 (97 %). Потеряно 3 из 222 выживших Stryker
+   (1,4 %). Среди 48 мутантов, которые Mootant пропустил по правилу, а Stryker
+   оставил живыми, ложных пропусков нет.
+5. **Выжившие только у Mootant.** Их 111, разобраны 74:
+   - 38 полезны, из них 14 — в местах, где у Stryker вообще нет выживших;
+   - 34 эквивалентны;
+   - 2 — шум.
+
+   Эквивалентных выживших у самого Mootant не меньше, чем он отсеивает у
+   Stryker: 34 только среди 74 разобранных против 34 эквивалентных и 4
+   шумовых среди 87 отсеянных. Источники: сравнения на значениях, которые не
+   выходят за границу (`index !== len - 1` → `<`); `1` → `2` в компараторе,
+   где важен только знак; отбрасывание избыточных защит.
+6. **Время.** Mootant медленнее на всех четырёх проектах: в 1,04–1,62 раза
+   по общему времени, в 1,7–2,1 раза на мутанта. На полезного мутанта — от
+   0,99 до 1,44 раза.
+   - Узкое место — планирование. Юниты одного тест-файла идут строго по
+     очереди, а выживших Mootant перепроверяет раундами на остальных файлах.
+   - На path-to-regexp и cheerio Mootant тратит **меньше CPU**, чем Stryker,
+     но проигрывает по wall.
+7. **Тезисы.**
+   - «Меньше шума» подтверждается для дублей и отсева: 84 из 87 выживших
+     Stryker отброшены правомерно. Для эквивалентных выживших в целом он не
+     подтверждается.
+   - Тезис о скорости на этом коммите не подтверждается.
+
+### Методика
+
+**Что запускалось.** Оба инструмента работали на одних и тех же файлах
+(`MUTATE` из `analysis/bench/projects/<проект>/project.sh`) с одинаковой
+конкурентностью: `--concurrency 3` и `"concurrency": 3`. Каждый прогон
+повторялся 3 раза под hyperfine.
+
+- **Mootant** — пресет `recommended`, обычный режим, холодный кэш:
+  `mootant run <MUTATE> --concurrency 3 --json --all --verbose` (точка
+  `m-cold`).
+- **Stryker** — `coverageAnalysis: "perTest"`, без checker и incremental
+  (точка `s-cold`). В Vitest-проектах использовался `vitest-runner`. В
+  fast-json-stringify — `tap-runner`: у него покрытие по тест-файлам, а не по
+  тестам; command runner здесь не участвует.
+- **Вердикты для сравнения** брались из прогона 1. Детерминизм проверен по
+  всем трём прогонам.
+- **Пропущенные кандидаты Mootant** получены одним вызовом
+  `mootant list <MUTATE> --json --verbose --skipped` на проект, из того же
+  tarball. Набор мутантов совпал с `run` по id, диапазонам и заменам во всех
+  четырёх проектах (314, 342, 496, 308).
+
+**Как сопоставлялись мутанты.**
+
+1. **Координаты.** У Mootant `start`/`end` — смещения UTF-16. У Stryker
+   `location` — строка и колонка, обе считаются с 1, конец не включается.
+   Позиции Stryker переведены в смещения по исходнику из его же отчёта
+   (`files[f].source`). Все `original` Mootant совпали с этим текстом, 0
+   расхождений.
+2. **Правка** сжимается до символов, которые действительно меняются: общий
+   префикс и суффикс исходного фрагмента и замены отбрасываются.
+3. **Сравнение по AST.** Top-level statement, в котором лежит правка,
+   разбирается с применённой правкой парсером oxc-parser 0.156.0 — тем же, что
+   у Mootant. Затем AST сериализуется без позиций, комментариев, скобок,
+   сырого текста литералов (кавычки, экранирование) и пустых statement. Шаблон
+   без выражений приравнивается к строке.
+4. **Точная пара** — тот же файл, тот же statement и одинаковый
+   сериализованный AST. Это значит, что оба мутанта дают одну и ту же
+   программу с точностью до форматирования. Так снимается разница в
+   гранулярности:
+   - `case 'keep': break` → `case 'keep':` у Stryker совпадает с удалением
+     `break` у Mootant;
+   - `{ f() }` → `{}` совпадает с удалением единственного statement;
+   - `ConditionalExpression` `a === b` → `false` совпадает с
+     `comparison-operator`.
+5. **Приближённая, или неуверенная, пара** — совпадение только после одной
+   из пяти именованных переписок мутанта Stryker:
+   - `filler-string`: `"Stryker was here!"` ↔ `'mootant'`;
+   - `filler-array`: `["Stryker was here"]` ↔ `[undefined]`;
+   - `unary-plus`: `-x` → `+x` ↔ `-x` → `x`;
+   - `arrow-undefined`: `(…) => e` → `() => undefined` ↔ `return-value`
+     `e` → `undefined`;
+   - `empty-body-undefined`: тело `{ return e }` → `{}` ↔ `e` → `undefined`.
+
+   Такие мутанты не тождественны: отличается наполнитель или число параметров
+   функции. Одна пара из-за этого получила разные вердикты (ниже).
+6. **Пропуски Mootant.** Тем же способом каждый мутант Stryker сравнивался с
+   пропущенными кандидатами Mootant.
+7. **Что не сопоставляется.** Мутанты, одинаковые по смыслу, но не по
+   записи, парой не считаются. Пример: `idx === 0` → `idx >= 0` у Mootant и
+   `idx === 0 || …` → `true` у Stryker, когда в цикле `idx ≥ 0`. Сторона
+   выбрана консервативная: такие мутанты попадают в «нет у Mootant», а
+   совпадение находит ручной разбор.
+
+**Классы выживших Stryker** (Survived + NoCoverage — «полезные» по
+определению стенда):
+
+- **(а)** у Mootant есть двойник среди мутантов;
+- **(б)** двойник есть только среди пропусков Mootant. Для таких мутантов
+  известны категория, правило и «владелец» — мутант, на которого ссылается
+  пропуск. Для `solitary` владелец находится по id, для остальных правил — по
+  мутатору и позиции узла. Если владелец сам пропущен, прослеживается цепочка
+  (`O4` → `O3` → `logical-operator`);
+- **(в)** двойника нет совсем.
+
+Для (б) и (в) скрипт дополнительно отмечает, **виден ли пробел** в отчёте
+Mootant: выжил ли владелец или мутант Mootant внутри диапазона мутанта
+Stryker.
+
+**Ручной разбор.** Разобраны:
+
+- все выжившие классов (б) и (в) — 87 штук;
+- все выжившие «только у Mootant» в perfectionist, path-to-regexp и
+  cheerio — 70;
+- выборка из 4 таких выживших в fast-json-stringify.
+
+Вердикты:
+
+- **эквивалентен** — ни один тест его не убьёт;
+- **шум** — убить можно, но тест того не стоит: текст ошибки, метаданные,
+  ветка, которую авторы сами исключили из покрытия;
+- **тот же пробел виден** — у Mootant выжил мутант того же кода, и тест,
+  который убьёт его, убьёт и этот. Чаще всего это вообще один и тот же
+  мутант в другой записи;
+- **потерян** — полезный мутант, на пробел которого не указывает ни один
+  выживший Mootant;
+- **полезен** (для выживших только у Mootant) — настоящий пробел, на который
+  стоит написать тест.
+
+Для полезных и потерянных указан короткий тест. В таблицах ниже —
+стратифицированная выборка из 30 + 15 элементов (`compare.mjs`, seed
+20261104): квоты делятся поровну между проектами, страты внутри проекта
+(класс и правило или мутатор) обходятся по кругу. Полный разбор — в
+`review.csv`.
+
+**Ограничения.**
+
+- Разбор сделан чтением кода и тестов. В окне замеров тесты запускать было
+  нельзя, поэтому предложенные тесты не прогонялись. Мутанты физически не
+  применялись, в отличие от `bugs/skips.md`.
+- Проверка типов выживших (`typecheck-mutants.mjs`) не делалась по той же
+  причине.
+- Прогона Mootant с пресетом `strict` нет. Поэтому аудит `solitary` на
+  грубых мутантах `strict` (`coarseMutants`) заменён проверкой правил
+  пропуска по вердиктам Stryker (ниже).
+
+### Мутанты и вердикты
+
+| проект | Mootant: мутантов | Killed | Timeout | Survived | NoCoverage | score | Stryker: мутантов | Killed | Timeout | Survived | NoCoverage | Runtime/CompileError | score | вердикт менялся в 3 прогонах (M / S) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| perfectionist | 314 | 259 | 2 | 47 | 6 | 83 % | 380 | 324 | 2 | 43 | 10 | 1 | 86 % | 0 / 1 |
+| path-to-regexp | 342 | 307 | 3 | 29 | 3 | 91 % | 509 | 462 | 19 | 24 | 4 | 0 | 94 % | 0 / 0 |
+| cheerio | 496 | 404 | 4 | 86 | 2 | 82 % | 828 | 733 | 11 | 80 | 4 | 0 | 90 % | 0 / 0 |
+| fast-json-stringify | 308 | 240 | 0 | 68 | 0 | 78 % | 394 | 336 | 1 | 57 | 0 | 0 | 86 % | 0 / 3 |
+
+Мутаторы, все четыре проекта. В скобках — Survived + NoCoverage.
+
+- **Mootant:** comparison-operator 340 (67), string-literal 198 (39),
+  condition 177 (16), logical-operator 176 (40), statement-removal 116 (11),
+  return-value 85 (0), number-literal 73 (11), object-property 72 (8),
+  arithmetic-operator 39 (5), boolean-literal 37 (14), regex-pattern 32 (10),
+  method-call 29 (6), array-element 25 (3), unary-operator 21 (1),
+  assignment-operator 16 (6), update-operator 11 (0), regex-flag 8 (4),
+  optional-chaining 5 (0).
+- **Stryker:** ConditionalExpression 662 (77), StringLiteral 347 (53),
+  BlockStatement 339 (8), EqualityOperator 254 (22), BooleanLiteral 89 (14),
+  LogicalOperator 86 (11), ObjectLiteral 47 (4), CallExpression 46 (7),
+  Regex 43 (9), AssignmentOperator 33 (1), ArrayDeclaration 32 (3),
+  ArrowFunction 30 (1), MethodExpression 29 (6), UpdateOperator 26 (0),
+  ArithmeticOperator 22 (5), UnaryOperator 21 (1), OptionalChaining 5 (0).
+
+Разбивка по проектам — в `summary.json` (`counts.*.byMutator`,
+`usefulByMutator`).
+
+- **Мутантов у Stryker больше, выживших — нет.** Лишние мутанты Stryker в
+  основном легко убиваются: `BlockStatement` выживает в 2 % случаев (8 из
+  339), `UpdateOperator` — ни разу.
+
+  У Mootant ни разу не выжил `return-value` (0 из 85). Значения по типу,
+  которые он подставляет, тесты ловят все.
+- **Детерминизм.** У Mootant все вердикты совпали в трёх прогонах на всех
+  проектах. У Stryker вердикт менялся у четырёх мутантов:
+  - perfectionist, `utils/compare/compare-by-custom-sort.ts:38`:
+    Killed/Killed/Timeout.
+  - fast-json-stringify, `lib/validator.js:7` (два мутанта `rfdc({ proto:
+    true })`) и `:31` (`validateSchema: false` → `true`):
+    Survived/Killed/Survived и Survived/Survived/Killed. Мутанты `rfdc` по
+    разбору эквивалентны, а двойник мутанта `:31` у Mootant выжил во всех
+    трёх прогонах, так что «убийство» в одном из прогонов Stryker похоже на
+    случайное. Вероятная причина — три раннера Stryker в одной песочнице
+    одновременно пишут `test/fixtures/standalone.js` (README стенда,
+    «Известные ограничения», п. 8). Mootant юниты одного тест-файла
+    сериализует и здесь стабилен.
+
+### Совпадение наборов
+
+| проект | Stryker | двойник среди мутантов Mootant: точно | приближённо | только среди пропусков Mootant: точно | приближённо | нет у Mootant | мутантов Mootant с двойником у Stryker | неуверенных пар |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| perfectionist | 380 | 130 (34 %) | 27 | 75 (20 %) | 4 | 144 (38 %) | 152 из 314 (48 %) | 31 из 236 (13 %) |
+| path-to-regexp | 509 | 191 (38 %) | 27 | 129 (25 %) | 0 | 162 (32 %) | 218 из 342 (64 %) | 27 из 347 (8 %) |
+| cheerio | 828 | 286 (35 %) | 28 | 191 (23 %) | 13 | 310 (37 %) | 309 из 496 (62 %) | 41 из 518 (8 %) |
+| fast-json-stringify | 394 | 147 (37 %) | 18 | 77 (20 %) | 4 | 148 (38 %) | 161 из 308 (52 %) | 22 из 246 (9 %) |
+
+Каких мутантов Stryker нет у Mootant, по мутаторам Stryker:
+
+- `BlockStatement` 217;
+- `EqualityOperator` 208 — все 208 отрицания: `===` → `!==`, `<` → `>=`;
+- `ConditionalExpression` 91:
+  - 26 опустошённых `case`, когда в ветке больше одного statement;
+  - 65 констант `true`/`false`, в основном для групп `&&`/`||`. Mootant
+    делает константой всю группу один раз (`&&` → `false`, `||` → `true`),
+    а Stryker — каждую подгруппу и в обе стороны;
+- `LogicalOperator` 86 — `&&` ↔ `||` и `??` → `&&`;
+- `BooleanLiteral` 48 — `!x` → `x`;
+- `ObjectLiteral` 40 — `{…}` → `{}`;
+- `Regex` 29 — отрицание класса и удаление квантификатора;
+- `ArrowFunction` 16;
+- остальные 29.
+
+- **Неуверенных пар — 9 %** (121 из 1347). Почти две трети из них —
+  наполнитель пустой строки и пустое тело функции против
+  `return undefined`. По вердиктам разошлась одна такая пара. В
+  perfectionist (`rules/sort-switch-case.ts:263`, `fix: … ? [] : …`) мутант
+  Stryker `[]` → `["Stryker was here"]` убит: ESLint падает на строке вместо
+  объекта исправления. Мутант Mootant `[]` → `[undefined]` выжил. Вероятно,
+  он эквивалентен: «исправления нет» получается и так.
+- **Двойник у Stryker есть у 58 % мутантов Mootant** (840 из 1460).
+  Остальное — формы, которых у Stryker нет:
+  - `number-literal`;
+  - типизированный `return-value`;
+  - отбрасывание операнда `&&`/`||`/`??`;
+  - сравнения `<=`/`!=` и сдвиг литерала;
+  - `optional → required` и флаги регулярок;
+  - логические присваивания.
+- **Вердикты общих мутантов почти совпадают.** У 135 выживших мутантов Stryker
+  есть двойник среди мутантов Mootant. Из них у Mootant выжили 133.
+  Расходятся два мутанта в fast-json-stringify, `lib/validator.js:129-130`:
+  удаление `validator.ajv.addSchema(ajvSchema, id)` в `restoreFromState`.
+  Mootant убил его тестом `test/standalone-mode.test.js` («test ajv schema»:
+  `no schema with key or ref "__fjs_root_1#/if"`), у Stryker он Survived.
+
+  Вердикт Stryker здесь ложный. Сгенерированный тестом standalone-модуль
+  делает `require('fast-json-stringify/lib/validator')`. В копии проекта
+  `node_modules/fast-json-stringify` — самоссылка `-> ..`, её создаёт npm
+  (`"link": true` в `.package-lock.json`). В песочнице Stryker `node_modules`
+  — симлинк на исходный проект (`symlinkNodeModules: true`), поэтому
+  standalone-путь загружает немутированный `lib/validator.js` из оригинала.
+  Mootant мутирует модули на месте, и этой ловушки у него нет. В обратную
+  сторону расходится одна пара — приближённая, описанная выше. Для двух
+  инструментов с разной изоляцией, выбором тестов и таймаутами это сильная
+  взаимная проверка вердиктов.
+
+### Выжившие у Stryker: что сделал с ними Mootant
+
+| проект | выживших у Stryker | (а) есть у Mootant | из них у Mootant тоже выжил | (б) Mootant пропустил | из них владелец Mootant выжил | (в) Mootant не создаёт | из них внутри выживает мутант Mootant |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| perfectionist | 53 | 37 | 37 | 9 | 7 | 7 | 6 |
+| path-to-regexp | 28 | 20 | 20 | 7 | 5 | 1 | 1 |
+| cheerio | 84 | 49 | 49 | 20 | 19 | 15 | 14 |
+| fast-json-stringify | 57 | 29 | 27 | 12 | 8 | 16 | 14 |
+
+Класс (б) по правилам (* — эвристика): `O3` 16, `O4` 9, `O19` 5, `O1` 5,
+`comparison-region` 4, `solitary`* 3, `error-message`* 3,
+`tail-return-false` 1, `case-label` 1, `O8`* 1.
+
+Класс (в) по мутаторам Stryker: `ConditionalExpression` 14,
+`LogicalOperator` 11, `Regex` 4, `EqualityOperator` 3, `ObjectLiteral` 2,
+`BlockStatement` 2, по одному `AssignmentOperator`, `ArrowFunction`,
+`ArrayDeclaration`.
+
+**Аудит правил пропуска по вердиктам Stryker.** Если Stryker тоже создал
+кандидата, которого Mootant пропустил, его вердикт — внешняя проверка правила:
+выживший кандидат при убитом владельце был бы ложным пропуском. Считались
+только кандидаты, которых Mootant не выдал другим мутатором. Таких 507; тесты
+Stryker убили 457, выжили 50 (это 48 мутантов Stryker класса (б), все
+разобраны вручную ниже).
+
+| правило (* — эвристика) | двойников у Stryker | из них дубли выданного мутанта | Killed/Timeout у Stryker | Survived/NoCoverage у Stryker |
+| --- | ---: | ---: | ---: | ---: |
+| owned/O1 | 299 | 226 | 68 | 5 |
+| subsumed/O4 | 91 | 0 | 82 | 9 |
+| owned/O3 | 66 | 0 | 50 | 16 |
+| subsumed/solitary* | 58 | 0 | 55 | 3 |
+| owned/O19 | 56 | 8 | 43 | 5 |
+| noise/case-label | 31 | 0 | 30 | 1 |
+| subsumed/comparison-region | 30 | 0 | 26 | 4 |
+| timeout/loop-advance | 26 | 0 | 26 | 0 |
+| noise/non-numeric-plus* | 25 | 0 | 25 | 0 |
+| noise/error-message* | 21 | 0 | 18 | 3 |
+| subsumed/R2 | 18 | 0 | 16 | 2 |
+| subsumed/R4 | 11 | 0 | 11 | 0 |
+| subsumed/R6 | 4 | 0 | 4 | 0 |
+| owned/O8* | 2 | 0 | 1 | 1 |
+| noise/tail-return-false | 1 | 0 | 0 | 1 |
+| subsumed/R5 | 1 | 0 | 1 | 0 |
+| timeout/loop-running* | 1 | 0 | 1 | 0 |
+
+- **`timeout/loop-advance`.** У Stryker такие мутанты ни разу не выжили,
+  но и зависали не всегда: из 26 кандидатов Timeout получили 12, остальные
+  14 были убиты. В основном это счётчики `i++` → `i--`, которые за доли
+  секунды падают на `arr[-1]`. Утверждение правила «мутант подвесит тест»
+  выполнилось примерно в половине случаев. Это тот же вывод, что BUG-303 и
+  BUG-310 в `bugs/skips.md`, только на другом классе кода. Пробелов такой
+  пропуск не прячет.
+- **`noise/case-label` и `noise/non-numeric-plus`.** Stryker убил все
+  кандидаты, кроме одного `case 'trunc'`, а тот эквивалентен. Шум здесь
+  означает только «тест не нужен»: выжившими эти мутанты не стали бы.
+
+**Ручной разбор** — все выжившие классов (б) и (в):
+
+| проект | класс | разобрано | эквивалентен | шум | тот же пробел виден | потерян |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| cheerio | (б) | 20 | 8 | 1 | 11 | 0 |
+| cheerio | (в) | 15 | 3 | 0 | 11 | 1 |
+| fast-json-stringify | (б) | 12 | 8 | 0 | 4 | 0 |
+| fast-json-stringify | (в) | 16 | 8 | 0 | 6 | 2 |
+| path-to-regexp | (б) | 7 | 1 | 2 | 4 | 0 |
+| path-to-regexp | (в) | 1 | 0 | 0 | 1 | 0 |
+| perfectionist | (б) | 9 | 4 | 0 | 5 | 0 |
+| perfectionist | (в) | 7 | 2 | 1 | 4 | 0 |
+| **всего** | | **87** | **34** | **4** | **46** | **3** |
+
+**Выборка** — 30 элементов из 87:
+
+| # | проект | место | мутация Stryker | что сделал Mootant | вердикт | обоснование |
+| ---: | --- | --- | --- | --- | --- | --- |
+| 1 | perfectionist | `rules/sort-switch-case/build-case-block-comparator-by-options-computer.ts:35` | BlockStatement #10: `{ return -1 }` → `{}` | пропустил: `owned/O19` | тот же пробел виден | Ветка `if (b === lastBlockToKeepInPlace) { return -1 }` не исполняется ни одним тестом и помечена авторами `/* v8 ignore if */`. Mootant показывает это двумя NoCoverage-мутантами `-1` внутри блока; удаление `return -1` у него `owned` (O19) мутантом `if (false)`. |
+| 2 | perfectionist | `rules/sort-switch-case/is-condition-expression.ts:21` | ConditionalExpression #22: `case AST_NODE_TYPES.UnaryExpression: re…` → `case AST_NODE_TYPES.UnaryEx…` | не создаёт | тот же пробел виден | Опустошённый `case UnaryExpression:` проваливается в `case Literal:` и для `!x` даёт `false` — то же поведение, что у выжившего Mootant `node.operator === '!'` → `false`. Тест: `switch (!a) { case b: f(); break; case a: g() } не сортируется (нет ошибки)` |
+| 3 | perfectionist | `rules/sort-switch-case/is-condition-expression.ts:22` | StringLiteral #26: `'!'` → `""` | пропустил: `subsumed/O4` | тот же пробел виден | `node.operator === ''` всегда ложно, то есть совпадает с выжившим владельцем `node.operator === '!'` → `false` (правило O4). |
+| 4 | perfectionist | `rules/sort-switch-case/is-condition-expression.ts:25` | ConditionalExpression #32: `default: return false` → `default:` | пропустил: `noise/tail-return-false` | эквивалентен | Без `return false` функция возвращает `undefined`. Оба вызова (`rules/sort-switch-case.ts:67,70`) используют результат только в `\|\|`/`&&`, поэтому для правила мутант эквивалентен. Убить его может только юнит-тест хелпера с `toBe(false)`, которого в проекте нет. Mootant: `noise/tail-return-false`. |
+| 5 | perfectionist | `rules/sort-switch-case.ts:39` | ObjectLiteral #36: `{ type: 'unsorted' }` → `{}` | пропустил: `subsumed/solitary*` | эквивалентен | `computeComparators` строит запасной компаратор из `{ ...options, ...options.fallbackSort }` (`utils/compare/compute-comparators.ts:34-37`). С `fallbackSort: {}` это тот же компаратор, что основной: он возвращает 0 там же, где основной. Mootant пропустил по `solitary` (владелец `'unsorted'` → `''` убит падением «Unreachable case»): итог верный, причина в отчёте — нет. |
+| 6 | perfectionist | `rules/sort-switch-case.ts:94` | ConditionalExpression #82: `index !== switchNode.cases.length - 1` → `true` | пропустил: `owned/O3` | эквивалентен | `index` в `reduce` не больше `cases.length - 1`. С `true` после последнего `case` добавляется пустая группа, на которой `sortNodes`, `some` и `pairwise` ничего не делают. Эквивалентны и три выживших Mootant на этом условии (`!==` → `<`, `- 1` → `+ 1`, отбрасывание правого операнда): здесь шум у обоих инструментов. |
+| 7 | perfectionist | `utils/compare/build-subgroup-order-comparator.ts:23` | LogicalOperator #263: `!subgroupContainingA \|\| !subgroupContai…` → `!subgroupContainingA && !su…` | не создаёт | эквивалентен | `!A && !B \|\| A !== B` ≡ `!A \|\| !B \|\| A !== B`: если `null` ровно один из двух, неравенство даёт тот же `return 0`. Эквивалентны и два выживших Mootant, отбрасывающих `!A` или `!B`: шум у обоих инструментов. |
+| 8 | path-to-regexp | `src/index.ts:270` | StringLiteral #161: `", "` → `""` | пропустил: `noise/error-message*` | шум | Разделитель в тексте ошибки `Missing parameters: ${missing.join(", ")}`; Mootant: `noise/error-message` (эвристика). Тест проекта проверяет сообщение только с одним пропущенным параметром. Граничный случай: формат сообщения с несколькими параметрами — часть поведения, но не логики. Тест: `expect(() => compile('/:a/:b')({})).toThrow('Missing parameters: a, b')` |
+| 9 | path-to-regexp | `src/index.ts:333` | BlockStatement #201: `{ missing.push(token.name); return ""; }` → `{}` | не создаёт | тот же пробел виден | Без блока `{ missing.push(...); return "" }` пустой wildcard падает дальше на `!Array.isArray(value)` с другим TypeError — то же поведение, что у выжившего Mootant `value == null` → `false` (стр. 333). Тест: `expect(() => compile('/*path')({})).toThrow(new TypeError('Missing parameters: path'))` |
+| 10 | path-to-regexp | `src/index.ts:368` | ConditionalExpression #248: `typeof value !== "string"` → `false` | пропустил: `owned/O3` | тот же пробел виден | `typeof value !== "string"` → `false` ≡ отбрасывание левого операнда; этот мутант Mootant (`value.length === 0`) выжил (O3). Нестроковое значение параметра проходит и кодируется. Тест: `expect(() => compile('/:id')({ id: 123 })).toThrow(TypeError)` |
+| 11 | path-to-regexp | `src/index.ts:599` | StringLiteral #435: `ˋUnknown token type: ${(token as any).t…` → `ˋˋ` | пропустил: `noise/error-message*` | шум | Текст ошибки в недостижимой защитной ветке `throw new TypeError(`Unknown token type: …`)` (NoCoverage у обоих); Mootant: `noise/error-message`. |
+| 12 | path-to-regexp | `src/index.ts:616` | ConditionalExpression #455: `b.length > 1` → `false` | пропустил: `subsumed/comparison-region` | тот же пробел виден | `b.length > 1` → `false` в `negate`: на той же границе выживают мутанты Mootant `>= 1` и `> 2`, а строка 616 у обоих инструментов NoCoverage (`comparison-region`). |
+| 13 | path-to-regexp | `src/index.ts:616` | StringLiteral #458: `ˋ(?:(?!${escape(a)}\|${escape(b)})[^])ˋ` → `ˋˋ` | пропустил: `subsumed/solitary*` | тот же пробел виден | Шаблон на строке 616 не исполняется ни одним тестом; Mootant показывает это своим NoCoverage-мутантом того же шаблона (`solitary`, владелец NoCoverage). |
+| 14 | path-to-regexp | `src/index.ts:617` | ConditionalExpression #459: `a.length > 1` → `true` | пропустил: `subsumed/comparison-region` | тот же пробел виден | `a.length > 1` → `true`: на той же границе выживают три мутанта Mootant (`>= 1`, `!= 1`, `> 2`). |
+| 15 | cheerio | `src/api/attributes.ts:218` | StringLiteral #130: `'Bad combination of arguments.'` → `""` | пропустил: `noise/error-message*` | шум | Текст ошибки `'Bad combination of arguments.'` (NoCoverage); Mootant: `noise/error-message`. Сам пробел (нет теста на неверные аргументы) виден через выжившего владельца соседнего `{ throw … }`. |
+| 16 | cheerio | `src/api/attributes.ts:79` | ConditionalExpression #60: `elem.name === 'input'` → `true` | пропустил: `owned/O3` | тот же пробел виден | `elem.name === 'input'` → `true` ≡ отбрасывание левого операнда; этот мутант Mootant выжил (O3). Не-`input` с `type="checkbox"` без `value` получит `'on'`. Тест: `expect($('<div type="checkbox">').attr('value')).toBeUndefined()` |
+| 17 | cheerio | `src/api/attributes.ts:457` | LogicalOperator #233: `typeof URL !== 'undefined' && (name ===…` → `typeof URL !== 'undefined' …` | не создаёт | тот же пробел виден | `typeof URL !== 'undefined' \|\| …` всегда `true` (`URL` определён) — то же поведение, что у выжившего Mootant `4bb49tq0f2t9` (отброшена проверка тега). Тест: `с baseURI: expect($('<div href="x">').prop('href')).toBe('x')` |
+| 18 | cheerio | `src/api/attributes.ts:551` | ConditionalExpression #310: `typeof name === 'string' && value !== u…` → `true` | пропустил: `owned/O1` | эквивалентен | `setData` вызывается только из `data()` (`attributes.ts:724-725`), где строковое имя проходит лишь при `value !== undefined` (стр. 721), поэтому условие на стр. 551 всегда истинно. Эквивалентны и два выживших Mootant (отбрасывание любого операнда) — шум у обоих. |
+| 19 | cheerio | `src/api/attributes.ts:798` | StringLiteral #426: `'object'` → `""` | пропустил: `subsumed/O4` | тот же пробел виден | `typeof value === ''` → условие `… && false` ≡ `false`; этот мутант Mootant (`7m8ehjrsrqdr`, вся группа → `false`) выжил: для `<select>` без `multiple` массив значений не игнорируется. Тест: `expect($('<select><option selected>a</option><option>b</option></select>').val(['b']).val()).toBe('a')` |
+| 20 | cheerio | `src/api/attributes.ts:798` | BlockStatement #427: `{ return this; }` → `{}` | пропустил: `owned/O19` | тот же пробел виден | Удаление `{ return this }` ≡ `if (false)`; выживший мутант Mootant `7m8ehjrsrqdr` (O19) — то же поведение. |
+| 21 | cheerio | `src/api/attributes.ts:849` | ConditionalExpression #459: `elem.attribs && Object.hasOwn(elem.attr…` → `true` | не создаёт | эквивалентен | То же условие → `true`: без раннего выхода `delete` несуществующего свойства ничего не меняет (см. S#458). |
+| 22 | cheerio | `src/api/attributes.ts:13` | Regex #0: `/\s+/` → `/\s/` | не создаёт | **потерян** | `rspace = /\s+/` → `/\s/`: `addClass('a  b')` даёт `class="a  b"` (пустое имя между пробелами), то же в `toggleClass`. Ни один выживший Mootant на это не указывает: удаление квантификатора есть только в `strict` (`regex-pattern`, опция `quantifiers`), а в `recommended` единственный мутант этой регулярки (`\s` → `[^]`) убит. Тест: `expect($('<div>').addClass('a  b').attr('class')).toBe('a b')` |
+| 23 | fast-json-stringify | `lib/location.js:13` | Regex #3: `/[~/]/` → `/[^~/]/` | не создаёт | тот же пробел виден | `/[~/]/` → `/[^~/]/`: имя свойства из одних `~` и `/` перестаёт экранироваться в JSON pointer. На этой же строке выживают пять мутантов Mootant: `/[~/]/.test(name)` → `false`, флаги `g`, `'~0'`/`'~1'` → `''`. Экранирование имён в указателе не проверено. Тест с именем `/` убивает и этого мутанта, тест с `a/b` — только мутантов Mootant. Тест: `схема с anyOf и свойством '/', сериализация через ссылку на это свойство` |
+| 24 | fast-json-stringify | `lib/serializer.js:29` | ConditionalExpression #48: `point < 32 \|\| (point >= 0xD800 && point…` → `true` | пропустил: `owned/O1` | эквивалентен | Условие выхода из цикла → `true`: на любом символе, кроме `"` и `\`, функция отдаёт `JSON.stringify(str)` — эталонный результат. Меняется только скорость. |
+| 25 | fast-json-stringify | `lib/serializer.js:64` | BlockStatement #105: `{ return '' + i }` → `{}` | не создаёт | эквивалентен | Без `{ return '' + i }` целое идёт через `Math.trunc` (или другое округление), проверку на `Infinity`/`NaN` и тот же `'' + integer`; для целых `trunc(i) === i`, `-0` и там и там печатается как `0`. Эквивалентен и выживший Mootant `Number.isInteger(i)` → `false`. |
+| 26 | fast-json-stringify | `lib/serializer.js:55` | StringLiteral #100: `'trunc'` → `""` | пропустил: `noise/case-label` | эквивалентен | `case 'trunc':` стоит прямо перед `default:` с тем же телом: `case ''` проваливается туда же. Mootant: `noise/case-label`. |
+| 27 | fast-json-stringify | `lib/serializer.js:149` | StringLiteral #230: `'string'` → `""` | пропустил: `subsumed/O4` | эквивалентен | `typeof value !== ''` всегда истинно: медленный путь с первого элемента даёт тот же результат. Эквивалентен и выживший владелец Mootant (`… !== 'string'` → `true`, O4) — шум у обоих. |
+| 28 | fast-json-stringify | `lib/validator.js:49` | LogicalOperator #327: `ajvOptions \|\| {}` → `ajvOptions && {}` | не создаёт | тот же пробел виден | `ajvOptions && {}` даёт `{}` при заданных опциях — то же поведение, что у выжившего Mootant с отброшенным левым операндом. |
+| 29 | fast-json-stringify | `lib/validator.js:60` | ConditionalExpression #347: `this.ajv.schemas[schemaKey] === undefin…` → `true` | пропустил: `owned/O3` | тот же пробел виден | `schemas[key] === undefined` → `true` ≡ отбрасывание правого операнда; этот мутант Mootant выжил (O3). |
+| 30 | fast-json-stringify | `lib/validator.js:99` | StringLiteral #376: `'object'` → `""` | пропустил: `owned/O8*` | тот же пробел виден | `includes('object')` → `includes('')` всегда `false` для массива типов, то есть `!…` → `true`; это отбрасывание третьего операнда, и этот мутант Mootant (`w5mxm613rcwg`) выжил. Mootant пропустил по эвристике O8 («пустой ключ поиска делает проверку константой»), и здесь она верна. |
+
+Что показал разбор.
+
+1. **Три потерянных полезных мутанта.** Все три — формы, которых нет в
+   `recommended`; правила пропуска здесь ни при чём.
+   - **cheerio `src/api/attributes.ts:13`, `/\s+/` → `/\s/`.** `rspace` делит
+     списки классов и атрибутов в `addClass`, `removeClass`, `toggleClass` и
+     `removeAttr`. С мутантом `addClass('a  b')` даёт `class="a  b"`.
+   - **fast-json-stringify `lib/serializer.js:4`, `STR_ESCAPE` с отрицанием
+     класса.** Строка длиной 42–4999 символов, состоящая только из символов,
+     требующих экранирования, уходит в быстрый путь без экранирования и даёт
+     невалидный JSON.
+   - **fast-json-stringify `lib/serializer.js:149`, `typeof value !==
+     'string'` → `===` в цикле `asPlainStringArray`.** `[1, 'a']` даёт
+     `[1,"a"]` вместо `["1","a"]`.
+
+   Удаление квантификатора и отрицание класса у Mootant есть только в
+   `strict` (`regex-pattern`, `quantifiers` и `negations`).
+   - **Квантификатор зависит от контекста.** В perfectionist та же мутация
+     на `replaceAll(/[^a-z…]+/giu, '')` эквивалентна
+     (`utils/compare/build-string-formatter.ts:38`, Stryker #242). Отсюда довод за
+     узкое правило в `recommended`: снимать `+` в аргументе `split` и в
+     `replace` с непустой заменой.
+   - **Отрицание сравнения в цикле.** Достаточный набор §5.4 опирается на
+     одно вычисление предиката. В цикле отрицание не поглощается
+     константами: `false` здесь убит, `true` эквивалентен, а отрицание
+     отличается только при нестроке в начале массива.
+2. **В 46 случаях пробел виден и в отчёте Mootant.** Чаще всего это тот же
+   мутант в другой записи:
+   - `x === 'a'` → `false` или `'a'` → `''` у Stryker (`O4`) против
+     `x === 'a'` → `false` у Mootant;
+   - `A && B` → `A || B` против отбрасывания операнда;
+   - `{ return x }` → `{}` против `if (false)` (`O19`);
+   - опустошённый `case` против константы условия.
+
+   Тест, убивающий выжившего Mootant, убивает и мутанта Stryker. Это
+   подтверждает тезис §2.4 об `owned`/`subsumed`: пользователь теряет только
+   дубль.
+3. **34 эквивалентных и 4 шумовых мутанта Mootant отсеял правомерно.**
+   Эквивалентность здесь почти всегда держится на инварианте вызывающего
+   кода, а не на локальной форме выражения:
+   - `setData` вызывается только с определённым значением;
+   - `URL` всегда определён;
+   - индекс `reduce` не выходит за длину массива;
+   - пустой массив даёт ту же ошибку дальше по коду;
+   - запасной компаратор с `{}` равен основному;
+   - пороги быстрых путей `asString` (`len < 42`, `len < 5000`) меняют только
+     скорость.
+
+   Шум — тексты ошибок (`error-message`) и метаданные правила ESLint
+   (`meta.docs`).
+4. **Отсеянный эквивалентный мутант часто возвращается в другой записи.**
+   Эквивалентный мутант Stryker пропущен, но рядом выживает эквивалентный же
+   мутант Mootant:
+   - perfectionist `rules/sort-switch-case.ts:94`,
+     `utils/compare/build-subgroup-order-comparator.ts:23`;
+   - cheerio `attributes.ts:551`, `:849`, `css.ts:84`;
+   - fast-json-stringify `serializer.js:10`, `:149`, `validator.js:7`.
+
+   Форма у этих мутантов своя: `!==` → `<`, отбрасывание операнда, сдвиг
+   порога. «Отсеял эквивалентного» тут значит «показал эквивалентного в
+   другой форме», и шум от этого не исчезает.
+5. **Сверка с `bugs/skips.md`.**
+   - `solitary`-пропуск `fallbackSort: { type: 'unsorted' }` → `{}` в
+     perfectionist — механизм BUG-300: владелец `'unsorted'` → `''` убит
+     падением «Unreachable case», а не наблюдением удаляемого кода. Но сам
+     мутант эквивалентен, как и 10 из 13 «скрытых» `solitary` в разборе
+     `skips.md` (значения по умолчанию).
+   - `tail-return-false` — та же политика, что в `skips.md`.
+   - Под `error-message` здесь только тексты, а не коды, то есть случаев
+     BUG-306 нет.
+   - Эвристика `O8` (`includes('')` даёт константу) на `validator.js:99`
+     сработала верно.
+   - Других классов BUG-300…312 среди выживших Stryker не встретилось.
+
+### Выжившие только у Mootant
+
+| проект | выживших только у Mootant | разобрано | полезен | эквивалентен | шум |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| perfectionist | 19 | 19 | 6 | 12 | 1 |
+| path-to-regexp | 12 | 12 | 7 | 4 | 1 |
+| cheerio | 39 | 39 | 23 | 16 | 0 |
+| fast-json-stringify | 41 | 4 | 2 | 2 | 0 |
+| **всего** | **111** | **74** | **38** | **34** | **2** |
+
+Выжившие только у Mootant по мутаторам, все 111: logical-operator 38,
+comparison-operator 29, number-literal 11, object-property 8,
+assignment-operator 6, statement-removal 5, regex-pattern 5, condition 4,
+regex-flag 4, string-literal 1. У 68 из 111 диапазон пересекается с
+выжившим мутантом Stryker.
+
+**Выборка** — 15 элементов:
+
+| # | проект | место | мутатор: мутация | выживший Stryker в том же месте | вердикт | обоснование |
+| ---: | --- | --- | --- | --- | --- | --- |
+| 1 | perfectionist | `rules/sort-switch-case.ts:94` | comparison-operator: `index !== switchNode.cases.length - 1` → `index < switchNode.cases.le…` | #82 ConditionalExpression:Survived, #84 ArithmeticOperator:Survived | эквивалентен | `index !== cases.length - 1` → `index < cases.length - 1`: индекс `reduce` никогда не больше `length - 1`. |
+| 2 | perfectionist | `utils/compare/build-subgroup-order-comparator.ts:23` | logical-operator: `!subgroupContainingA \|\| !subgroupContai…` → `!subgroupContainingA \|\| !su…` | #263 LogicalOperator:Survived, #266 ConditionalExpression:Survived | эквивалентен | Отброшен `subgroupContainingA !== subgroupContainingB`: внутри одной группы обе подгруппы — один массив (см. S#266). |
+| 3 | perfectionist | `utils/compare/compare-naturally.ts:45` | object-property: `{ specialCharacters, ignoreCase, }` → `{ specialCharacters, }` | — | полезен | Из форматтера `compareNaturally` удалено свойство `ignoreCase`: натуральная сортировка становится чувствительной к регистру для строк, которые отличаются только регистром. Ни один тест `natural` + `ignoreCase` это не проверяет; у Stryker здесь только `{}` (убит падением). Тест: `type: 'natural', ignoreCase: true: case 'a' и case 'A' в обоих порядках — без ошибки` |
+| 4 | path-to-regexp | `src/index.ts:5` | regex-pattern: `/^[$_\p{ID_Start}][$\u200c\u200d\p{ID_C…` → `/^[$_\p{ID_Start}][$\u200c\…` | — | полезен | `ID` с `*` → `+`: однобуквенное имя параметра перестаёт быть идентификатором, и `stringify` берёт его в кавычки. Регулярка `ID` используется только в `stringifyName` (стр. 677); у Stryker все её мутанты убиты. Тест: `expect(stringify(parse('/:a'))).toBe('/:a')` |
+| 5 | path-to-regexp | `src/index.ts:338` | logical-operator: `!Array.isArray(value) \|\| value.length =…` → `!Array.isArray(value)` | #208 ConditionalExpression:Survived | эквивалентен | Отброшен `value.length === 0`: пустой массив всё равно даёт ту же ошибку на стр. 353-355 (см. Stryker S#208, тоже выжил). |
+| 6 | path-to-regexp | `src/index.ts:460` | comparison-operator: `combinations >= 256` → `combinations == 256` | #303 EqualityOperator:Survived | эквивалентен | `combinations >= 256` → `== 256`: счётчик растёт на 1 (стр. 472), и при 256 бросается ошибка, так что больше 256 он не бывает. |
+| 7 | path-to-regexp | `src/index.ts:666` | regex-flag: `/["\\]/g` → `/["\\]/` | — | полезен | Флаг `g` в `quoteName`: экранируется только первая кавычка или обратная косая черта в имени. Тест: `expect(stringify({ tokens: [{ type: 'param', name: 'a"b"c' }] })).toBe(':"a\\"b\\"c"')` |
+| 8 | cheerio | `src/api/attributes.ts:20` | regex-pattern: `/^{[\s\S]*}$\|^\[[\s\S]*]$/` → `/^{[\s\S]*}$\|^\[[\s\S]+]$/` | #5 Regex:Survived, #6 Regex:Survived, #11 Regex:Survived, #12 Regex:Survived | полезен | `rbrace` `^\[[\s\S]*]$` → `+`: строка `"[]"` в `data-*` перестаёт разбираться как JSON-массив. У Stryker в этой регулярке тоже есть выжившие (S#5, S#6). Тест: `expect($('<div data-x="[]">').data('x')).toEqual([])` |
+| 9 | cheerio | `src/api/attributes.ts:1137` | number-literal: `1` → `2` | — | эквивалентен | `stateVal ? 1 : -1` → `2`: `state` сравнивается только с нулём (`state >= 0`, `state <= 0`, стр. 1153, 1155). |
+| 10 | cheerio | `src/api/css.ts:210` | comparison-operator: `trimmed.length > 0` → `trimmed.length > 1` | — | полезен | `trimmed.length > 0` → `> 1` в разборе `style`: односимвольный хвост после `;` без `:` (например, `font-family: a;b`) теряется вместо того, чтобы дописаться к значению. Граничный случай разбора, тестов на него нет. Тест: `expect($('<div style="font-family: a;b">').css('font-family')).toBe('a;b')` |
+| 11 | cheerio | `src/api/attributes.ts:735` | assignment-operator: `dataEl.data ??= {}` → `dataEl.data` | — | эквивалентен | `dataEl.data ??= {}` в `data()` избыточен: `readData` и `readAllData` сами делают `el.data ??= {}` (стр. 566, 594). |
+| 12 | fast-json-stringify | `lib/location.js:13` | regex-flag: `/~/g` → `/~/` | — | полезен | Без флага `g` в `name.replace(/~/g, '~0')` экранируется только первая `~` в имени свойства, и JSON pointer для `a~b~c` неверный. У Stryker на этом месте выживших нет. Тот же случай для `/` (`/\//g`, `ash0m3fgpa66`) тоже выжил. Тест: `схема с anyOf и свойством 'a~b~c'` |
+| 13 | fast-json-stringify | `lib/serializer.js:18` | number-literal: `-1` → `0` | — | эквивалентен | `let last = -1` → `0`: при первой кавычке `last === -1 && (last = 0)` и так ставит 0, а без кавычек `'"' + result + str.slice(0) + '"'` даёт ту же строку, что и ветка `last === -1`. |
+| 14 | fast-json-stringify | `lib/validator.js:94` | statement-removal: `schema.fjs_type = 'string'` → `;` | #365 StringLiteral:Survived | полезен | Удалено `schema.fjs_type = 'string'` для `type: 'string'`: схема получает тип `['string', 'object']` без проверки `toJSON`, и в `anyOf` строковая ветка начинает принимать обычные объекты. Такое же удаление для массива типов (стр. 101) тесты убивают. У Stryker на этой строке выжил только `'string'` → `''` (#365), и он, вероятно, эквивалентен: код ключевого слова `fjs_type` (`validator.js:38-46`) значение не читает. Тест: `anyOf: [{ type: 'string' }, { type: 'object', properties: { a: { type: 'number' } } }]: expect(stringify({ a: 1 })).toBe('{"a":1}')` |
+| 15 | fast-json-stringify | `lib/validator.js:23` | condition: `inlineValidators` → `true` | — | эквивалентен | `inlineValidators ? {code…} : {}` → `true`: ajv всегда хранит исходный код валидаторов (`source: true`, `esm: false` и так по умолчанию). Поведение то же, растёт только память. |
+
+- **Полезных — 38 из 74 разобранных.** У 24 из них в том же месте выжил
+  мутант Stryker. Чаще всего это тождественный мутант в другой записи:
+  `x && y` → `y` у Mootant ≡ `x` → `true` у Stryker.
+
+  14 полезных стоят там, где у Stryker нет ни одного выжившего. Эти пробелы
+  видит только Mootant:
+  - perfectionist: `lastBlock.cases.at(-1)` → `at(0)`;
+    `hasUnsortedNodes` → `false` в `fix`; «не присваивать» для
+    `indexOfB ??= Infinity`; удалённое свойство `ignoreCase` в
+    `compareNaturally`;
+  - path-to-regexp: `*` → `+` в регулярке `ID`; флаг `g` в `quoteName`;
+  - cheerio: однобуквенный класс в `hasClass` (`> 0` → `> 1`);
+    `toggleClass('')`; `!xmlMode` в `setProp`; граница `> 0` → `> 1` в
+    разборе `style`; три защитных `isTag` у API, вызванного на текстовом
+    узле;
+  - fast-json-stringify: флаг `g` при экранировании `~` в JSON pointer.
+- **Эквивалентных — 34 из 74, это собственный шум Mootant.** Источники
+  повторяются:
+  - `===` → `>=`/`<=` и `!==` → `<` на значениях, которые не выходят за
+    границу: индекс цикла или `reduce`, растущий счётчик, `missing.length`;
+  - `1` → `2` и `-1` → `0` там, где важен только знак или значение
+    перезаписывается;
+  - отбрасывание операнда у избыточной защиты (`elem.attribs &&`,
+    `typeof URL !== 'undefined' &&`);
+  - повторная инициализация `x ??= {}`;
+  - `{ ...options, groups: options.groups }` → `{ ...options }`.
+
+  Правило `lower-bound` ловит часть таких сравнений, но только с литералом.
+  Ограниченность переменной и «важен только знак» Mootant не видит. Это
+  кандидаты в эвристики того же рода, что §6.5 (аудит правил).
+
+### Время
+
+| проект | Mootant, с (mean ± σ) | Stryker, с (mean ± σ) | M / S | CPU M, с | CPU S, с | с/мутант M | с/мутант S | с/выжившего M | с/выжившего S |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| perfectionist | 952,5 ± 40,7 | 661,1 ± 5,0 | 1,44 | 2450 | 1788 | 3,03 | 1,74 | 17,97 | 12,47 |
+| path-to-regexp | 93,9 ± 1,5 | 76,9 ± 0,6 | 1,22 | 179 | 239 | 0,27 | 0,15 | 2,93 | 2,75 |
+| cheerio | 164,3 ± 1,8 | 158,4 ± 9,9 | 1,04 | 365 | 483 | 0,33 | 0,19 | 1,87 | 1,89 |
+| fast-json-stringify | 402,3 ± 9,1 | 248,2 ± 4,8 | 1,62 | 898 | 755 | 1,31 | 0,63 | 5,92 | 4,35 |
+
+- **Mootant медленнее на всех четырёх проектах.** По общему времени — в
+  1,04–1,62 раза, на мутанта — в 1,7–2,1 раза.
+  - На полезного мутанта разрыв меньше: cheerio 1,87 против 1,89 с,
+    path-to-regexp 2,93 против 2,75 с. Mootant прогоняет в 1,2–1,7 раза
+    меньше мутантов при том же числе выживших.
+  - На perfectionist и fast-json-stringify проигрыш на полезного — в 1,44 и
+    1,36 раза.
+- **Узкое место — планирование, а не вычисления.** На path-to-regexp и
+  cheerio Mootant тратит меньше CPU, чем Stryker (179 против 239 и 365 против
+  483 CPU-с), но проигрывает по wall. Причина видна в трассе юнитов
+  (`run-1.units.json`, `analysis/bench/lib/units-report.mjs`): юниты одного
+  тест-файла идут строго по очереди
+  (`types/adapter/adapter-session.d.ts:14-20`,
+  `adapters/vitest/worker/wait-for-turn.ts`).
+
+  | проект | тест-файл | юнитов в цепочке | цепочка, с | длина раунда, с |
+  | --- | --- | ---: | ---: | ---: |
+  | path-to-regexp | `src/index.spec.ts` | 339 (весь раунд) | 89–93 | 89–93 |
+  | cheerio | `src/api/attributes.spec.ts` | 391 | 130,5 | 130,7 |
+  | perfectionist | `test/rules/sort-switch-case.test.ts` | 207 | 302,7 | 302,9 |
+
+  На path-to-regexp слоты заняты на 31 %, ещё 51 % времени занятый слот ждёт
+  очереди файла. Stryker переключает мутантов в трёх тёплых процессах
+  раннера, и такой очереди у него нет.
+- **Выжившие у Mootant дорогие.** Выжившего Mootant перепроверяет на
+  остальных тест-файлах, которые достают мутированный модуль, раундами
+  («testing N survivors with more test files»).
+  - perfectionist: `utils/compare` импортируют все тест-файлы правил. 47
+    выживших заняли 1221 с из 1724 с слотов (71 %): около 26 с на выжившего
+    против 1,4 с на убитого. В прогоне 1 пять раундов перепроверки заняли
+    547 с из 913.
+  - fast-json-stringify: после первого раунда (308 юнитов, 157 с) остались
+    126 «выживших», шесть раундов перепроверки дали ещё 1780 юнитов и 227 с
+    из 391. В конце выжили 68.
+  - cheerio: 78 с из 190 с слотов.
+
+  Stryker с `perTest` гоняет для мутанта только покрывающие его тесты. На
+  fast-json-stringify tap-runner тоже запускает по процессу на тест-файл, но
+  без очереди файла.
+- **Где Mootant быстрее.**
+  - Dry run: perfectionist 48 с против 108 с начального прогона Stryker с
+    покрытием по тестам.
+  - Static-мутанты: Stryker предупреждает, что 30 static-мутантов
+    perfectionist займут «50 % времени тестов», в cheerio — 28 и 56 %.
+    Mootant отдельной обработки для них не требует (§3.1).
+- Прототип `parallel-units` из раздела 4 (`analysis/tools/perf-proto/`)
+  атакует первую причину. Его замеры в этом окне идут после яруса 3 и в этот
+  подраздел не вошли.
+
+### Итог
+
+**«Меньше шума».** Подтверждается для дублей и отсева, но не для
+эквивалентных выживших в целом.
+
+- **За.** Из 87 выживших Stryker, которых Mootant не показывает:
+  - 46 дублируют пробел, который Mootant уже показывает своим выжившим;
+  - 34 эквивалентны;
+  - 4 — шум.
+
+  Это 97 % правомерных отсевов. Потеряны 3 полезных мутанта: 1,4 % всех
+  выживших Stryker. Все три — формы, которых нет в `recommended`
+  (квантификатор, отрицание класса, отрицание сравнения в цикле), а не
+  ошибки правил пропуска. Аудит по вердиктам Stryker поддерживает правила
+  `owned`/`subsumed`/`noise`: из 507 пропущенных кандидатов, которые Stryker
+  тоже создал, выжили 50, и ни один из них не оказался ложным пропуском.
+- **Против.** Мутаторы Mootant добавляют своих выживших: 111, против 87
+  отсеянных у Stryker. Из 74 разобранных 34 эквивалентны, и это доля того же
+  порядка, что у отсеянных выживших Stryker (38 из 87 — эквивалентные и шум).
+  Итого в отчёте Mootant выживших не меньше, чем у Stryker: 241 против 222.
+  Зато в нём есть 14 пробелов, которых Stryker не видит вовсе.
+- **Что из этого следует для §6.** Правила эквивалентности для
+  собственных мутаторов Mootant:
+  - сравнение на значении, ограниченном циклом или монотонным счётчиком;
+  - результат компаратора, у которого важен только знак;
+  - избыточная защита перед уже гарантированным условием.
+
+  И узкие правила для регулярок в `recommended`: квантификатор в `split`,
+  отрицание класса в регулярке-детекторе для `.test()`.
+
+**Скорость.** На этом коммите не подтверждается: Mootant медленнее на всех
+четырёх проектах, на полезного мутанта — от паритета до 1,44 раза.
+
+- Проигрыш даёт планирование: очередь юнитов одного тест-файла и раунды
+  перепроверки выживших. Вычисления ни при чём: на двух проектах из четырёх
+  Mootant тратит меньше CPU.
+- Отсюда ускорение не на проценты, а в разы, если параллелить юниты одного
+  файла и перепроверять выживших без раундов-барьеров (идеи 2 и 3 раздела 4).
+
+**Надёжность вердиктов.** Здесь данные на стороне Mootant:
+
+- 0 расхождений в трёх прогонах;
+- два ложных Survived у Stryker в standalone-режиме fast-json-stringify;
+- четыре недетерминированных вердикта у Stryker.
+
+**Что не сделано.**
+
+- Тесты из разбора не прогонялись: окно замеров.
+- Типы выживших не проверялись.
+- Пресет `strict` не запускался.
+- Выжившие «только у Mootant» в fast-json-stringify разобраны выборкой: 4
+  из 41.
+- Класс (а) (135 общих выживших) вручную не разбирался, и доля
+  эквивалентных среди них неизвестна.
 
 ## 9. Источники
 

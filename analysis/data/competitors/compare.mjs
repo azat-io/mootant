@@ -6,7 +6,8 @@
 //   $BENCH_RESULTS/<project>/m-cold/run-{1,2,3}.json  mootant run --json --all --verbose
 //   $BENCH_RESULTS/<project>/s-cold/run-{1,2,3}.json  Stryker JSON report (sources included)
 //   $BENCH_RESULTS/<project>/{m-cold,s-cold}/hyperfine.json, run-k.out, run-k.err
-//   $LISTS/<project>-list.json                        mootant list <MUTATE> --json --verbose --skipped
+//   $BENCH_RESULTS/<project>/m-cold/run-1.units.json   unit trace (analysis/bench/lib/trace-units.mjs)
+//   lists/<project>-list.json ($LISTS)                mootant list <MUTATE> --json --verbose --skipped
 //   oxc-parser 0.156.0, the parser of Mootant 170ec52 (from a bench copy; $OXC_PARSER)
 //   review.json (this directory)                      manual review of the sample, if present
 // Outputs (this directory):
@@ -17,6 +18,8 @@
 //   mootant-only-useful.csv      Mootant Survived/NoCoverage without a Stryker counterpart
 //   verdict-disagreements.csv    matched pairs whose verdicts differ (useful vs not)
 //   sample.csv                   stratified sample for the manual review (seed below)
+//   review.csv                   review.json joined with the data (when review.json exists)
+//   tables.mjs prints the Markdown tables of the report from these files.
 //
 // Matching. Both tools' mutants and Mootant's skipped candidates become an edit
 // of the file text (offsets: Mootant start/end are UTF-16 offsets; Stryker
@@ -37,7 +40,9 @@ import path from 'node:path'
 
 const HERE = path.dirname(new URL(import.meta.url).pathname)
 const RESULTS = process.env.BENCH_RESULTS ?? '/home/user/projects/bench/results'
-const LISTS = process.env.LISTS ?? '/home/user/projects/competitors'
+// `mootant list <MUTATE> --json --verbose --skipped` of each project, copied
+// here from /home/user/projects/competitors (one run per project, same tarball).
+const LISTS = process.env.LISTS ?? path.join(HERE, 'lists')
 const BENCH = process.env.BENCH_PROJECTS ?? '/home/user/projects/bench'
 const OUT = process.env.OUT ?? HERE
 const PROJECTS = ['perfectionist', 'path-to-regexp', 'cheerio', 'fast-json-stringify']
@@ -454,6 +459,11 @@ function analyse(project) {
   }
   for (let m of mEntries) {
     m.sAround = sEntries.filter(x => inside(x, m) && !m.sMatch.some(p => p.x === x))
+    // Stryker's useful mutants whose range overlaps this mutant's range either
+    // way (a sub-expression of it or an enclosing expression)
+    m.sOverlapUseful = sEntries.filter(
+      x => x.file === m.file && isUseful(x.status) && x.s < m.e && m.s < x.e && !m.sMatch.some(p => p.x === x),
+    )
   }
   let mById = new Map(mEntries.map(m => [m.id, m]))
   // The mutants a skipped candidate points at: the justifier's id when the list
@@ -556,7 +566,9 @@ function analyse(project) {
       runs: mRuns.map(({ report }) => report.summary.runs),
       stderr: mRuns.map(({ k }) => {
         let file = path.join(mDir, `run-${k}.err`)
-        return existsSync(file) ? stripAnsi(readFileSync(file, 'utf8')).trim().split('\n') : null
+        // only Mootant's round summaries ('+ dry run …', '+ testing …'): the
+        // rest of stderr is the test output of node:test
+        return existsSync(file) ? stripAnsi(readFileSync(file, 'utf8')).split('\n').filter(l => l.startsWith('+ ')) : null
       }),
     },
     stryker: sTime && {
@@ -637,6 +649,7 @@ function analyse(project) {
       only: mOnlyUseful.length,
       onlyByMutator: tally(mOnlyUseful, m => m.mutator),
       onlyStrykerSeesRegion: mOnlyUseful.filter(m => m.sAround.some(x => isUseful(x.status))).length,
+      onlyStrykerUsefulOverlap: mOnlyUseful.filter(m => m.sOverlapUseful.length > 0).length,
       matchedStrykerStatuses: tally(mUseful.filter(m => m.sMatch.length > 0), m => m.sMatch.map(p => p.x.status).join('+')),
     },
     // Mootant's skipped candidates that Stryker made too: Stryker's verdict for
@@ -727,6 +740,7 @@ function mootantRow(project, m) {
     stryker: m.sMatch.map(p => `${p.x.id} ${short(p.x)}${p.rule ? ` (${p.rule})` : ''}`).join('; '),
     strykerAround: m.sAround.map(x => `${x.id} ${short(x)}`).join('; '),
     strykerUsefulAround: m.sAround.filter(x => isUseful(x.status)).length,
+    strykerUsefulOverlap: m.sOverlapUseful.map(x => `${x.id} ${x.mutator}:${x.status} L${x.line}`).join('; '),
     killedBy: m.killedBy,
     cause: m.cause,
     message: m.message,
@@ -893,7 +907,7 @@ if (review) {
       mootant: x ? (x.cls === 'b' ? `skipped ${x.skip.category}/${x.skip.rule}${x.skip.heuristic ? '*' : ''}` : 'not generated') : '',
       ownerStatus: x?.skip?.ownerStatus ?? '',
       mootantUsefulInside: x ? x.mUsefulInside.map(i => `${i.mutator}:${i.status} L${i.line}`).join('; ') : '',
-      strykerUsefulAround: m ? m.sAround.filter(a => isUseful(a.status)).map(a => `${a.mutator}:${a.status} L${a.line}`).join('; ') : '',
+      strykerUsefulAround: m ? m.sOverlapUseful.map(a => `#${a.id} ${a.mutator}:${a.status} L${a.line}`).join('; ') : '',
       verdict: item.verdict,
       why: item.why,
       test: item.test ?? '',

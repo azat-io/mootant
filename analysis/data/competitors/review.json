@@ -330,8 +330,8 @@
   },
   "perfectionist:mootant:452n4m50s18n": {
    "verdict": "useful",
-   "why": "Из форматтера `compareNaturally` удалён `ignoreCase`: натуральная сортировка становится чувствительной к регистру для строк, которые отличаются только регистром. Ни один тест `natural` + `ignoreCase` это не проверяет; у Stryker здесь только `{}` (убит падением).",
-   "test": "type: 'natural', ignoreCase: true: switch (x) { case 'A': …; case 'a': … } — без ошибки"
+   "why": "Из форматтера `compareNaturally` удалено свойство `ignoreCase`: натуральная сортировка становится чувствительной к регистру для строк, которые отличаются только регистром. Ни один тест `natural` + `ignoreCase` это не проверяет; у Stryker здесь только `{}` (убит падением).",
+   "test": "type: 'natural', ignoreCase: true: case 'a' и case 'A' в обоих порядках — без ошибки"
   },
   "perfectionist:mootant:dxhh2ww1rav8": {
    "verdict": "equivalent",
@@ -411,6 +411,290 @@
    "verdict": "useful",
    "why": "Отброшен `elem.name === 'input'`: не-`input` с `type=\"checkbox\"` без `value` получает `'on'`. Тождественен выжившему Stryker S#60.",
    "test": "expect($('<div type=\"checkbox\">').attr('value')).toBeUndefined()"
+  },
+  "cheerio:mootant:c647ez05vxxt": {
+   "verdict": "useful",
+   "why": "Без флага `i` у `rboolean` булев атрибут, заданный в другом регистре (`prop('CHECKED', true)`), записывается строкой `'true'` (`setProp`, стр. 271), и `attr('CHECKED')` возвращает `'true'` вместо имени атрибута. Граничный случай.",
+   "test": "expect($('<input>').prop('CHECKED', true).attr('CHECKED')).toBe('CHECKED')"
+  },
+  "cheerio:mootant:0ctj0xdjgkzj": {
+   "verdict": "useful",
+   "why": "`^{[\\s\\S]*}$` → `+`: `data-x=\"{}\"` перестаёт разбираться как JSON-объект.",
+   "test": "expect($('<div data-x=\"{}\">').data('x')).toEqual({})"
+  },
+  "cheerio:mootant:rxxanvynxmm7": {
+   "verdict": "useful",
+   "why": "Без `isTag` в `getAttr` текстовый узел получает `attribs = {}`, и `attr()` возвращает `{}` вместо `undefined`. Граничный случай API.",
+   "test": "expect($('<div>t</div>').contents().attr()).toBeUndefined()"
+  },
+  "cheerio:mootant:mth3crzcpp5e": {
+   "verdict": "useful",
+   "why": "Отброшен `name === 'value'`: `<option>` отдаёт свой текст для любого отсутствующего атрибута. Тождественен выжившему Stryker S#51.",
+   "test": "expect($('<option>a</option>').attr('id')).toBeUndefined()"
+  },
+  "cheerio:mootant:qa5web3bf6mq": {
+   "verdict": "useful",
+   "why": "Отброшен `!xmlMode`: в XML-режиме булевы имена атрибутов получают `''` вместо строки значения; ветка XML в `setProp` не проверена.",
+   "test": "expect(load('<input/>', { xml: true })('input').prop('checked', true).attr('checked')).toBe('true')"
+  },
+  "cheerio:mootant:tg34490qbrb0": {
+   "verdict": "useful",
+   "why": "Отброшен `prop !== undefined`: у `<a>` без `href` при baseURI получается `…/undefined`. Тождественен выжившему Stryker S#241."
+  },
+  "cheerio:mootant:syg8c7jv9jm8": {
+   "verdict": "equivalent",
+   "why": "Отброшен `typeof URL !== 'undefined'`: `URL` определён во всех поддерживаемых средах (см. Stryker S#234)."
+  },
+  "cheerio:mootant:4bb49tq0f2t9": {
+   "verdict": "useful",
+   "why": "Отброшена проверка тега `hrefTags/srcTags`: `prop('href')` разрешается и для `<div href>`. Тот же пробел, что у выживших Stryker S#230-233.",
+   "test": "с baseURI: expect($('<div href=\"x\">').prop('href')).toBe('x')"
+  },
+  "cheerio:mootant:mx7fdbzq5vw5": {
+   "verdict": "equivalent",
+   "why": "Отброшен `typeof name === 'string'` в `setData`: условие и так всегда истинно (см. Stryker S#310)."
+  },
+  "cheerio:mootant:ea700s51968b": {
+   "verdict": "equivalent",
+   "why": "Отброшен `value !== undefined` в `setData` — то же (см. S#310)."
+  },
+  "cheerio:mootant:jt903tz9sy72": {
+   "verdict": "equivalent",
+   "why": "`el.data ??= {}` в `readAllData` избыточен: единственный вызов (стр. 739) идёт после `dataEl.data ??= {}` (стр. 735)."
+  },
+  "cheerio:mootant:rctz5ybenhnp": {
+   "verdict": "equivalent",
+   "why": "`el.data ??= {}` в `readData` избыточен по той же причине (вызов на стр. 742)."
+  },
+  "cheerio:mootant:jphnqknmm8gt": {
+   "verdict": "useful",
+   "why": "Отброшен `name != null`: `data(null)` возвращает объект Cheerio вместо данных. Тождественен выжившему Stryker S#367. Граничный случай."
+  },
+  "cheerio:mootant:djm1fv18c0x8": {
+   "verdict": "useful",
+   "why": "Без `isTag` в `data()` текстовый узел получает `data = {}`, и вызов не возвращает `undefined`. Граничный случай API.",
+   "test": "expect($('<div>t</div>').contents().data()).toBeUndefined()"
+  },
+  "cheerio:mootant:nethxb0xwq4e": {
+   "verdict": "useful",
+   "why": "Без `isTag` в `val()` сеттер на текстовом узле возвращает `undefined` вместо `this` (цепочка вызовов рвётся). Граничный случай API.",
+   "test": "const $t = $('<div>t</div>').contents(); expect($t.val('x')).toBe($t)"
+  },
+  "cheerio:mootant:gzf3309jarxh": {
+   "verdict": "equivalent",
+   "why": "Отброшен `elem.attribs` в `removeAttribute`: у тегов `attribs` всегда есть (см. Stryker S#458)."
+  },
+  "cheerio:mootant:g8ymp59px3n9": {
+   "verdict": "equivalent",
+   "why": "Отброшен `Object.hasOwn(…)`: `delete` несуществующего свойства ничего не делает (см. S#458)."
+  },
+  "cheerio:mootant:fsnn21k2ht3a": {
+   "verdict": "useful",
+   "why": "`className.length > 0` → `> 1`: `hasClass` с однобуквенным классом всегда даёт `false`. У Stryker на этом месте выживших нет.",
+   "test": "expect($('<div class=\"a\">').hasClass('a')).toBe(true)"
+  },
+  "cheerio:mootant:feymkkcra9yq": {
+   "verdict": "equivalent",
+   "why": "`indexOf(className, idx + 1)` → `idx + 2`: вхождение, начинающееся в `idx + 1`, не может быть правильным совпадением, потому что слева от него стоит первый символ имени класса, а не пробел."
+  },
+  "cheerio:mootant:r6czsmma3rsw": {
+   "verdict": "equivalent",
+   "why": "`idx === 0` → `idx <= 0`: в цикле `idx > -1`."
+  },
+  "cheerio:mootant:5dakq55vmfpd": {
+   "verdict": "useful",
+   "why": "`idx === 0` → `idx >= 0` всегда истинно: левая граница класса не проверяется. Тождественен выжившему Stryker S#496.",
+   "test": "expect($('<div class=\"foobar\">').hasClass('bar')).toBe(false)"
+  },
+  "cheerio:mootant:0q2z0twtdh9d": {
+   "verdict": "equivalent",
+   "why": "`end === clazz.length` → `>=`: `end` не больше длины строки."
+  },
+  "cheerio:mootant:x1q75nzva8f6": {
+   "verdict": "useful",
+   "why": "Отброшен `!value`: `addClass('')` выставляет пустой `class`. Тот же пробел, что у выжившего Stryker S#528.",
+   "test": "expect($('<div>').addClass('').attr('class')).toBeUndefined()"
+  },
+  "cheerio:mootant:ccx0hra92x47": {
+   "verdict": "useful",
+   "why": "Отброшен `typeof value !== 'string'`: `addClass(5)` падает. Тождественен выжившему Stryker S#530.",
+   "test": "expect(() => $('<div>').addClass(5)).not.toThrow()"
+  },
+  "cheerio:mootant:44wj310pa3at": {
+   "verdict": "useful",
+   "why": "Отброшен `|| ''` в `removeClass(fn)`: колбэк получает `undefined` вместо `''` для элемента без класса. Тот же пробел у Stryker показывает выживший `''` → `\"Stryker was here!\"` на этой строке (#578).",
+   "test": "$('<div>').removeClass(function (i, cls) { seen = cls }); expect(seen).toBe('')"
+  },
+  "cheerio:mootant:ksptv7sy6vcf": {
+   "verdict": "useful",
+   "why": "`el.attribs['class'] || ''` → `''`: колбэк `toggleClass` не получает текущий класс. Тот же пробел, что у выживших Stryker S#624-626."
+  },
+  "cheerio:mootant:h8yn7ew47cvp": {
+   "verdict": "useful",
+   "why": "Отброшен `|| ''`: колбэк `toggleClass` получает `undefined` для элемента без класса. Тот же пробел, что у S#624-626."
+  },
+  "cheerio:mootant:9njarhras51g": {
+   "verdict": "useful",
+   "why": "Отброшен `!value` в `toggleClass`: `toggleClass('')` добавляет пустое имя класса (лишний пробел в `class`). У Stryker на этом месте выживших нет.",
+   "test": "expect($('<div class=\"a\">').toggleClass('').attr('class')).toBe('a')"
+  },
+  "cheerio:mootant:bfpmq2az8ap2": {
+   "verdict": "useful",
+   "why": "Отброшен `prop != null`: `css(undefined, 'red')` пишет свойство `undefined`. Тождественен выжившему Stryker S#685."
+  },
+  "cheerio:mootant:c55sbcdg9es2": {
+   "verdict": "equivalent",
+   "why": "Отброшен `el` в `getCss`: все вызовы передают определённый элемент (`css()` проверяет длину, `setCss` получает элемент из `domEach`)."
+  },
+  "cheerio:mootant:r6t822ynnrzq": {
+   "verdict": "useful",
+   "why": "Отброшен `isTag(el)`: `getCss` падает на текстовом узле. Тождественен выжившим Stryker S#739-742.",
+   "test": "expect($('<div>t</div>').contents().css('color')).toBeUndefined()"
+  },
+  "cheerio:mootant:114g74fn3mw8": {
+   "verdict": "equivalent",
+   "why": "Удалено `styles = (styles || '').trim()`: пустая строка и `undefined` всё равно дают `{}`, а ключи и значения разбора и так обрезаются (`css.ts:209-215`)."
+  },
+  "cheerio:mootant:nmkxqp5rjz3c": {
+   "verdict": "equivalent",
+   "why": "`n === str.length - 1` → `>=`: индекс `:` не больше `length - 1`."
+  },
+  "cheerio:mootant:hpmx65nmazm7": {
+   "verdict": "equivalent",
+   "why": "Отброшен `isTag(elem)`: у не-тегов нет `name === 'form'`."
+  },
+  "fast-json-stringify:stryker:3": {
+   "verdict": "same-gap",
+   "why": "`/[~/]/` → `/[^~/]/`: имя свойства из одних `~` и `/` перестаёт экранироваться в JSON pointer. На этой же строке выживают пять мутантов Mootant: `/[~/]/.test(name)` → `false`, флаги `g`, `'~0'`/`'~1'` → `''`. Экранирование имён в указателе не проверено. Тест с именем `/` убивает и этого мутанта, тест с `a/b` — только мутантов Mootant.",
+   "test": "схема с anyOf и свойством '/', сериализация через ссылку на это свойство"
+  },
+  "fast-json-stringify:stryker:12": {
+   "verdict": "lost",
+   "why": "`STR_ESCAPE` с отрицанием класса: строка 42…4999 символов, состоящая только из символов, требующих экранирования, уходит в быстрый путь без экранирования (невалидный JSON). Единственный мутант Mootant этой регулярки (`[…]` → `[^]`) эквивалентен и указывает только на скорость. Отрицание класса у Mootant есть только в `strict` (`regex-pattern`, `negations`).",
+   "test": "expect(stringify('\"'.repeat(42))).toBe(JSON.stringify('\"'.repeat(42)))"
+  },
+  "fast-json-stringify:stryker:19": {
+   "verdict": "equivalent",
+   "why": "`len < 42` → `true`: длинные строки идут через ручной цикл экранирования, который даёт тот же результат. Порог быстрого пути в `asString`: обе ветки дают тот же JSON, меняется только скорость. Эквивалентны и три выживших Mootant на этой границе (`<= 42`, `!= 42`, `< 41`) — шум у обоих."
+  },
+  "fast-json-stringify:stryker:20": {
+   "verdict": "equivalent",
+   "why": "`len < 42` → `false`: короткие строки идут через проверку `STR_ESCAPE` или `JSON.stringify`. Порог быстрого пути в `asString`: обе ветки дают тот же JSON, меняется только скорость."
+  },
+  "fast-json-stringify:stryker:22": {
+   "verdict": "equivalent",
+   "why": "`len < 42` → `len >= 42`: ветки меняются местами, обе корректны. Порог быстрого пути в `asString`: обе ветки дают тот же JSON, меняется только скорость."
+  },
+  "fast-json-stringify:stryker:48": {
+   "verdict": "equivalent",
+   "why": "Условие выхода из цикла → `true`: на любом символе, кроме `\"` и `\\`, функция отдаёт `JSON.stringify(str)` — эталонный результат. Меняется только скорость."
+  },
+  "fast-json-stringify:stryker:55": {
+   "verdict": "equivalent",
+   "why": "`point >= 0xD800 || point <= 0xDFFF` истинно для любого числа: всегда `JSON.stringify` — тот же результат."
+  },
+  "fast-json-stringify:stryker:56": {
+   "verdict": "equivalent",
+   "why": "`point >= 0xD800` → `true`: выход в `JSON.stringify` для всех символов до `0xDFFF` — тот же результат."
+  },
+  "fast-json-stringify:stryker:59": {
+   "verdict": "equivalent",
+   "why": "`point <= 0xDFFF` → `true`: выход в `JSON.stringify` для всех символов от `0xD800` — тот же результат."
+  },
+  "fast-json-stringify:stryker:78": {
+   "verdict": "equivalent",
+   "why": "Условие быстрого пути для 42…4999 символов → `false`: всегда `JSON.stringify`. Порог быстрого пути в `asString`: обе ветки дают тот же JSON, меняется только скорость."
+  },
+  "fast-json-stringify:stryker:80": {
+   "verdict": "equivalent",
+   "why": "`len < 5000` → `true`: строки длиннее 5000 тоже проверяются `STR_ESCAPE`. Порог быстрого пути в `asString`: обе ветки дают тот же JSON, меняется только скорость."
+  },
+  "fast-json-stringify:stryker:82": {
+   "verdict": "equivalent",
+   "why": "`len < 5000` → `len >= 5000`: ветки меняются местами, обе корректны. Порог быстрого пути в `asString`: обе ветки дают тот же JSON, меняется только скорость."
+  },
+  "fast-json-stringify:stryker:105": {
+   "verdict": "equivalent",
+   "why": "Без `{ return '' + i }` целое идёт через `Math.trunc` (или другое округление), проверку на `Infinity`/`NaN` и тот же `'' + integer`; для целых `trunc(i) === i`, `-0` и там и там печатается как `0`. Эквивалентен и выживший Mootant `Number.isInteger(i)` → `false`."
+  },
+  "fast-json-stringify:stryker:100": {
+   "verdict": "equivalent",
+   "why": "`case 'trunc':` стоит прямо перед `default:` с тем же телом: `case ''` проваливается туда же. Mootant: `noise/case-label`."
+  },
+  "fast-json-stringify:stryker:217": {
+   "verdict": "equivalent",
+   "why": "`new Array(len)` → `new Array()`: массив заполняется подряд с индекса 0 и обрезается через `length`, предварительное выделение влияет только на скорость."
+  },
+  "fast-json-stringify:stryker:229": {
+   "verdict": "lost",
+   "why": "`typeof value !== 'string'` → `===` в цикле `asPlainStringArray`: нестроковые элементы до первой строки копируются как есть, и `[1, 'a']` даёт `[1,\"a\"]` вместо `[\"1\",\"a\"]`. Mootant здесь делает только `true` (эквивалентен: медленный путь даёт тот же результат) и `false` (убит). В цикле отрицание не поглощается константами: оно отличается только при нестроке в начале массива.",
+   "test": "схема { type: 'array', items: { type: 'string' } }: expect(stringify([1, 'a'])).toBe('[\"1\",\"a\"]')"
+  },
+  "fast-json-stringify:stryker:230": {
+   "verdict": "equivalent",
+   "why": "`typeof value !== ''` всегда истинно: медленный путь с первого элемента даёт тот же результат. Эквивалентен и выживший владелец Mootant (`… !== 'string'` → `true`, O4) — шум у обоих."
+  },
+  "fast-json-stringify:stryker:250": {
+   "verdict": "equivalent",
+   "why": "`typeof item === ''` всегда ложно: строки идут через `asString(item.toString())` — тот же результат. Эквивалентен и выживший владелец Mootant (→ `false`)."
+  },
+  "fast-json-stringify:stryker:294": {
+   "verdict": "same-gap",
+   "why": "`module.exports.dependencies = { … }` → `{}`: объект нужен, чтобы сборщики видели зависимости standalone-кода. Его проверял `test/webpack.test.js`, который из копии стенда удалён (README стенда). Mootant показывает то же двумя выжившими `object-property`."
+  },
+  "fast-json-stringify:stryker:295": {
+   "verdict": "equivalent",
+   "why": "`rfdc({ proto: true })` → `rfdc({})`: опция `proto` только ускоряет копирование; у схем (простых объектов) результат копии тот же. Эквивалентен и выживший владелец Mootant (`true` → `false`, `solitary`) — шум у обоих."
+  },
+  "fast-json-stringify:stryker:325": {
+   "verdict": "same-gap",
+   "why": "`ajvOptions || {}` → `true`: в standalone-коде восстановленный валидатор теряет пользовательские опции ajv. На этой строке выживают три мутанта Mootant (удаление присваивания и оба отбрасывания операнда) — тот же пробел: standalone-режим с опциями ajv не проверен."
+  },
+  "fast-json-stringify:stryker:326": {
+   "verdict": "same-gap",
+   "why": "`ajvOptions || {}` → `false` ≡ `{}` после `{ ...false }` — то же поведение, что у выжившего Mootant с отброшенным левым операндом."
+  },
+  "fast-json-stringify:stryker:327": {
+   "verdict": "same-gap",
+   "why": "`ajvOptions && {}` даёт `{}` при заданных опциях — то же поведение, что у выжившего Mootant с отброшенным левым операндом."
+  },
+  "fast-json-stringify:stryker:337": {
+   "verdict": "same-gap",
+   "why": "`schema.$id[0] === '#'` → `true` ≡ отбрасывание правого операнда; этот мутант Mootant (`schema.$id !== undefined`) выжил (O3)."
+  },
+  "fast-json-stringify:stryker:344": {
+   "verdict": "same-gap",
+   "why": "`refs[key] === undefined || schemas[key] === undefined`: схема повторно добавляется, когда известна только одна из двух таблиц ajv. Оба отбрасывания операнда у Mootant выжили — тот же пробел."
+  },
+  "fast-json-stringify:stryker:345": {
+   "verdict": "same-gap",
+   "why": "`refs[key] === undefined` → `true` ≡ отбрасывание левого операнда; этот мутант Mootant выжил (O3)."
+  },
+  "fast-json-stringify:stryker:347": {
+   "verdict": "same-gap",
+   "why": "`schemas[key] === undefined` → `true` ≡ отбрасывание правого операнда; этот мутант Mootant выжил (O3)."
+  },
+  "fast-json-stringify:stryker:376": {
+   "verdict": "same-gap",
+   "why": "`includes('object')` → `includes('')` всегда `false` для массива типов, то есть `!…` → `true`; это отбрасывание третьего операнда, и этот мутант Mootant (`w5mxm613rcwg`) выжил. Mootant пропустил по эвристике O8 («пустой ключ поиска делает проверку константой»), и здесь она верна."
+  },
+  "fast-json-stringify:mootant:f12ttfag9nrq": {
+   "verdict": "useful",
+   "why": "Без флага `g` в `name.replace(/~/g, '~0')` экранируется только первая `~` в имени свойства, и JSON pointer для `a~b~c` неверный. У Stryker на этом месте выживших нет. Тот же случай для `/` (`/\\//g`, `ash0m3fgpa66`) тоже выжил.",
+   "test": "схема с anyOf и свойством 'a~b~c'"
+  },
+  "fast-json-stringify:mootant:g5dka905rmvk": {
+   "verdict": "equivalent",
+   "why": "`let last = -1` → `0`: при первой кавычке `last === -1 && (last = 0)` и так ставит 0, а без кавычек `'\"' + result + str.slice(0) + '\"'` даёт ту же строку, что и ветка `last === -1`."
+  },
+  "fast-json-stringify:mootant:90v066swva0m": {
+   "verdict": "useful",
+   "why": "Удалено `schema.fjs_type = 'string'` для `type: 'string'`: схема получает тип `['string', 'object']` без проверки `toJSON`, и в `anyOf` строковая ветка начинает принимать обычные объекты. Такое же удаление для массива типов (стр. 101) тесты убивают. У Stryker на этой строке выжил только `'string'` → `''` (#365), и он, вероятно, эквивалентен: код ключевого слова `fjs_type` (`validator.js:38-46`) значение не читает.",
+   "test": "anyOf: [{ type: 'string' }, { type: 'object', properties: { a: { type: 'number' } } }]: expect(stringify({ a: 1 })).toBe('{\"a\":1}')"
+  },
+  "fast-json-stringify:mootant:tavgkhsr0zxw": {
+   "verdict": "equivalent",
+   "why": "`inlineValidators ? {code…} : {}` → `true`: ajv всегда хранит исходный код валидаторов (`source: true`, `esm: false` и так по умолчанию). Поведение то же, растёт только память."
   }
  }
 }

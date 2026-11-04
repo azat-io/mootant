@@ -1,2 +1,4 @@
 project,file,line,stryker,strykerStatus,strykerStatuses,static,mootant,mootantStatus,mootantStatuses,match,original,replacement,killedBy,message
 perfectionist,rules/sort-switch-case.ts,263,173 ArrayDeclaration,Killed,Killed/Killed/Killed,false,9p36sv89s7gv array-element,Survived,Survived/Survived/Survived,approx,[],[undefined],,
+fast-json-stringify,lib/validator.js,129,400 BlockStatement,Survived,Survived/Survived/Survived,false,xr15hd2h956q statement-removal,Killed,Killed/Killed/Killed,exact,"{ validator.ajv.addSchema(ajvSchema, id) }",;,test ajv schema,"no schema with key or ref ""__fjs_root_1#/if"""
+fast-json-stringify,lib/validator.js,130,401 CallExpression,Survived,Survived/Survived/Survived,false,xr15hd2h956q statement-removal,Killed,Killed/Killed/Killed,exact,"validator.ajv.addSchema(ajvSchema, id)",;,test ajv schema,"no schema with key or ref ""__fjs_root_1#/if"""

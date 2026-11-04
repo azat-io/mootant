@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-04T10:35:59.465Z",
+ "generated": "2026-11-04T11:09:14.261Z",
  "oxcParser": {
   "version": "0.156.0",
   "from": "/home/user/projects/bench/cheerio/node_modules/oxc-parser"
@@ -332,6 +332,7 @@
      "statement-removal": 1
     },
     "onlyStrykerSeesRegion": 6,
+    "onlyStrykerUsefulOverlap": 9,
     "matchedStrykerStatuses": {
      "Survived": 28,
      "Killed": 1,
@@ -890,6 +891,7 @@
      "regex-flag": 1
     },
     "onlyStrykerSeesRegion": 6,
+    "onlyStrykerUsefulOverlap": 8,
     "matchedStrykerStatuses": {
      "Survived": 18,
      "NoCoverage": 2
@@ -1434,6 +1436,7 @@
      "statement-removal": 1
     },
     "onlyStrykerSeesRegion": 18,
+    "onlyStrykerUsefulOverlap": 24,
     "matchedStrykerStatuses": {
      "Survived": 47,
      "NoCoverage": 2
@@ -1712,23 +1715,601 @@
      ]
     }
    }
+  },
+  {
+   "project": "fast-json-stringify",
+   "runs": {
+    "mootant": 3,
+    "stryker": 3
+   },
+   "offsetMismatch": 0,
+   "listVsRun": {
+    "listMutants": 308,
+    "runMutants": 308,
+    "missingInList": 0,
+    "differentEdit": 0
+   },
+   "notes": [],
+   "counts": {
+    "mootant": {
+     "total": 308,
+     "statuses": [
+      {
+       "run": 1,
+       "Killed": 240,
+       "Survived": 68
+      },
+      {
+       "run": 2,
+       "Killed": 240,
+       "Survived": 68
+      },
+      {
+       "run": 3,
+       "Killed": 240,
+       "Survived": 68
+      }
+     ],
+     "byMutator": {
+      "string-literal": 56,
+      "statement-removal": 43,
+      "condition": 10,
+      "regex-pattern": 2,
+      "regex-flag": 2,
+      "arithmetic-operator": 19,
+      "comparison-operator": 90,
+      "number-literal": 14,
+      "unary-operator": 6,
+      "logical-operator": 30,
+      "method-call": 5,
+      "return-value": 12,
+      "array-element": 2,
+      "object-property": 8,
+      "boolean-literal": 7,
+      "optional-chaining": 2
+     },
+     "usefulByMutator": {
+      "condition": 4,
+      "regex-pattern": 2,
+      "regex-flag": 2,
+      "string-literal": 8,
+      "comparison-operator": 25,
+      "number-literal": 4,
+      "arithmetic-operator": 4,
+      "statement-removal": 3,
+      "object-property": 5,
+      "boolean-literal": 3,
+      "logical-operator": 8
+     }
+    },
+    "stryker": {
+     "total": 394,
+     "statuses": [
+      {
+       "run": 1,
+       "Killed": 336,
+       "Survived": 57,
+       "Timeout": 1
+      },
+      {
+       "run": 2,
+       "Killed": 338,
+       "Survived": 55,
+       "Timeout": 1
+      },
+      {
+       "run": 3,
+       "Killed": 337,
+       "Survived": 56,
+       "Timeout": 1
+      }
+     ],
+     "byMutator": {
+      "BlockStatement": 67,
+      "StringLiteral": 78,
+      "ArithmeticOperator": 7,
+      "Regex": 2,
+      "ObjectLiteral": 8,
+      "ConditionalExpression": 116,
+      "EqualityOperator": 52,
+      "UnaryOperator": 6,
+      "LogicalOperator": 20,
+      "UpdateOperator": 3,
+      "MethodExpression": 5,
+      "AssignmentOperator": 5,
+      "BooleanLiteral": 9,
+      "CallExpression": 8,
+      "ArrayDeclaration": 5,
+      "ArrowFunction": 1,
+      "OptionalChaining": 2
+     },
+     "usefulByMutator": {
+      "StringLiteral": 12,
+      "Regex": 2,
+      "ConditionalExpression": 18,
+      "EqualityOperator": 9,
+      "LogicalOperator": 3,
+      "BlockStatement": 2,
+      "ArithmeticOperator": 4,
+      "ArrayDeclaration": 1,
+      "ObjectLiteral": 2,
+      "BooleanLiteral": 3,
+      "CallExpression": 1
+     },
+     "static": 0
+    },
+    "skipped": {
+     "total": 243,
+     "byCategory": {
+      "owned": 104,
+      "subsumed": 99,
+      "equivalent": 8,
+      "timeout": 6,
+      "noise": 25,
+      "duplicate": 1
+     },
+     "byRule": {
+      "O11": 11,
+      "solitary*": 49,
+      "lower-bound*": 4,
+      "comparison-region": 12,
+      "O1": 62,
+      "O4": 20,
+      "loop-running": 3,
+      "loop-advance": 3,
+      "unused-result": 3,
+      "R2": 16,
+      "O3": 20,
+      "non-numeric-plus*": 12,
+      "shifted-literal": 3,
+      "case-label": 4,
+      "fall-through-break": 1,
+      "R4": 2,
+      "error-message*": 5,
+      "O19": 6,
+      "duplicate": 1,
+      "nullish-swap*": 3,
+      "tagged-template": 1,
+      "O8*": 2
+     }
+    }
+   },
+   "determinism": {
+    "mootantDiffering": [],
+    "strykerDiffering": [
+     {
+      "key": "lib/validator.js|7:31-7:46|ObjectLiteral|{}",
+      "statuses": [
+       "Survived",
+       "Killed",
+       "Survived"
+      ]
+     },
+     {
+      "key": "lib/validator.js|7:40-7:44|BooleanLiteral|false",
+      "statuses": [
+       "Survived",
+       "Killed",
+       "Survived"
+      ]
+     },
+     {
+      "key": "lib/validator.js|31:23-31:28|BooleanLiteral|true",
+      "statuses": [
+       "Survived",
+       "Survived",
+       "Killed"
+      ]
+     }
+    ]
+   },
+   "parse": {
+    "errors": 0,
+    "strykerIdentity": [],
+    "mootantIdentity": []
+   },
+   "matching": {
+    "strykerMatchedToMootant": {
+     "exact": 147,
+     "approx": 18
+    },
+    "strykerMatchedToSkippedOnly": {
+     "exact": 77,
+     "approx": 4
+    },
+    "strykerUnmatched": 148,
+    "approxRules": {
+     "empty-body-undefined": 11,
+     "filler-string": 5,
+     "unary-plus": 6
+    },
+    "mootantMatched": 161,
+    "mootantMatchedApproxOnly": 18,
+    "pairsByMutators": {
+     "StringLiteral -> string-literal": 53,
+     "ConditionalExpression -> comparison-operator": 46,
+     "UnaryOperator -> unary-operator": 6,
+     "EqualityOperator -> comparison-operator": 10,
+     "MethodExpression -> method-call": 5,
+     "ConditionalExpression -> condition": 6,
+     "BlockStatement -> statement-removal": 8,
+     "BlockStatement -> return-value": 7,
+     "ArithmeticOperator -> arithmetic-operator": 4,
+     "ArrayDeclaration -> array-element": 1,
+     "BooleanLiteral -> boolean-literal": 7,
+     "OptionalChaining -> optional-chaining": 2,
+     "CallExpression -> statement-removal": 7,
+     "ConditionalExpression -> logical-operator": 3
+    },
+    "strykerUnmatchedByMutator": {
+     "BlockStatement": 41,
+     "ArithmeticOperator": 3,
+     "Regex": 2,
+     "EqualityOperator": 42,
+     "LogicalOperator": 20,
+     "ConditionalExpression": 27,
+     "ArrayDeclaration": 3,
+     "ArrowFunction": 1,
+     "StringLiteral": 3,
+     "ObjectLiteral": 5,
+     "BooleanLiteral": 1
+    },
+    "strykerSkippedByRule": {
+     "subsumed/solitary": 14,
+     "subsumed/comparison-region": 9,
+     "owned/O1": 13,
+     "timeout/loop-advance": 3,
+     "owned/O3": 12,
+     "noise/non-numeric-plus": 5,
+     "subsumed/O4": 11,
+     "noise/case-label": 4,
+     "subsumed/R4": 1,
+     "noise/error-message": 5,
+     "owned/O19": 2,
+     "owned/O8": 2
+    },
+    "strykerMultiMatch": 0
+   },
+   "strykerUseful": {
+    "total": 57,
+    "byClass": {
+     "a": 29,
+     "c": 16,
+     "b": 12
+    },
+    "a": {
+     "mootantUseful": 27,
+     "mootantKilled": 2,
+     "approx": 0,
+     "mootantStatuses": {
+      "Survived": 27,
+      "Killed": 2
+     }
+    },
+    "b": {
+     "byCategory": {
+      "subsumed": 5,
+      "owned": 6,
+      "noise": 1
+     },
+     "byRule": {
+      "comparison-region": 2,
+      "O1": 2,
+      "case-label": 1,
+      "O4": 2,
+      "solitary*": 1,
+      "O3": 3,
+      "O8*": 1
+     },
+     "ownerStatus": {
+      "useful": 8,
+      "not-found": 1,
+      "killed": 1,
+      "none": 2
+     },
+     "gapVisible": 10,
+     "approx": 0
+    },
+    "c": {
+     "byMutator": {
+      "Regex": 2,
+      "EqualityOperator": 3,
+      "LogicalOperator": 3,
+      "ConditionalExpression": 5,
+      "BlockStatement": 1,
+      "ArrayDeclaration": 1,
+      "ObjectLiteral": 1
+     },
+     "gapVisible": 14,
+     "gapVisibleByMutator": {
+      "Regex": 2,
+      "EqualityOperator": 3,
+      "LogicalOperator": 3,
+      "ConditionalExpression": 5,
+      "ObjectLiteral": 1
+     }
+    }
+   },
+   "mootantUseful": {
+    "total": 68,
+    "matched": 27,
+    "only": 41,
+    "onlyByMutator": {
+     "condition": 3,
+     "regex-pattern": 2,
+     "regex-flag": 2,
+     "comparison-operator": 14,
+     "number-literal": 4,
+     "statement-removal": 3,
+     "object-property": 5,
+     "logical-operator": 8
+    },
+    "onlyStrykerSeesRegion": 19,
+    "onlyStrykerUsefulOverlap": 27,
+    "matchedStrykerStatuses": {
+     "Survived": 27
+    }
+   },
+   "skipAudit": {
+    "subsumed/solitary*": {
+     "twins": 14,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 13,
+      "Survived": 1
+     }
+    },
+    "subsumed/comparison-region": {
+     "twins": 9,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 7,
+      "Survived": 2
+     }
+    },
+    "owned/O1": {
+     "twins": 62,
+     "alsoEmitted": 49,
+     "strykerStatuses": {
+      "Killed": 11,
+      "Survived": 2
+     }
+    },
+    "subsumed/R2": {
+     "twins": 5,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 3,
+      "Survived": 2
+     }
+    },
+    "timeout/loop-advance": {
+     "twins": 3,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Timeout": 1,
+      "Killed": 2
+     }
+    },
+    "owned/O3": {
+     "twins": 12,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 9,
+      "Survived": 3
+     }
+    },
+    "noise/non-numeric-plus*": {
+     "twins": 5,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 5
+     }
+    },
+    "subsumed/O4": {
+     "twins": 11,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 9,
+      "Survived": 2
+     }
+    },
+    "noise/case-label": {
+     "twins": 4,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 3,
+      "Survived": 1
+     }
+    },
+    "subsumed/R4": {
+     "twins": 1,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 1
+     }
+    },
+    "noise/error-message*": {
+     "twins": 5,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 5
+     }
+    },
+    "owned/O19": {
+     "twins": 2,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 2
+     }
+    },
+    "owned/O8*": {
+     "twins": 2,
+     "alsoEmitted": 0,
+     "strykerStatuses": {
+      "Killed": 1,
+      "Survived": 1
+     }
+    }
+   },
+   "disagreements": {
+    "total": 2,
+    "strykerUsefulMootantNot": 2,
+    "mootantUsefulStrykerNot": 0
+   },
+   "timing": {
+    "mootant": {
+     "mean": 402.33978973951326,
+     "stddev": 9.081497662815533,
+     "median": 403.73009825718,
+     "min": 392.64330883018,
+     "max": 410.64596213118,
+     "times": [
+      392.64330883018,
+      403.73009825718,
+      410.64596213118
+     ],
+     "user": 783.7450712,
+     "system": 113.91622777333332,
+     "perMutant": 1.3062980186347832,
+     "perUseful": 5.916761613816371,
+     "phases": [
+      {
+       "batch": null,
+       "isolated": 384358,
+       "startup": 276,
+       "dryRun": 6826,
+       "total": 391460
+      },
+      {
+       "batch": null,
+       "isolated": 396933,
+       "startup": 213,
+       "dryRun": 5860,
+       "total": 403005
+      },
+      {
+       "batch": null,
+       "isolated": 403488,
+       "startup": 175,
+       "dryRun": 6123,
+       "total": 409786
+      }
+     ],
+     "unitCost": {
+      "byStatus": {},
+      "rounds": []
+     },
+     "runs": [
+      {
+       "dry": 1,
+       "isolated": 7
+      },
+      {
+       "dry": 1,
+       "isolated": 7
+      },
+      {
+       "dry": 1,
+       "isolated": 7
+      }
+     ],
+     "stderr": [
+      [
+       "+ dry run  574 tests in 6.6s",
+       "+ testing 308 mutants  308/308 test runs in 2m 37s",
+       "+ testing 126 survivors with more test files  126/126 test runs in 14.6s",
+       "+ testing 95 survivors with more test files  180/180 test runs in 30.1s",
+       "+ testing 66 survivors with more test files  240/240 test runs in 1m 32s",
+       "+ testing 50 survivors with more test files  387/387 test runs in 38.8s",
+       "+ testing 41 survivors with more test files  438/438 test runs in 29.4s",
+       "+ testing 21 survivors with more test files  409/409 test runs in 22.4s"
+      ],
+      [
+       "+ dry run  574 tests in 5.6s",
+       "+ testing 308 mutants  308/308 test runs in 2m 33s",
+       "+ testing 126 survivors with more test files  126/126 test runs in 14.8s",
+       "+ testing 95 survivors with more test files  180/180 test runs in 30.0s",
+       "+ testing 66 survivors with more test files  240/240 test runs in 1m 43s",
+       "+ testing 50 survivors with more test files  387/387 test runs in 41.6s",
+       "+ testing 41 survivors with more test files  438/438 test runs in 30.9s",
+       "+ testing 21 survivors with more test files  409/409 test runs in 23.8s"
+      ],
+      [
+       "+ dry run  574 tests in 5.9s",
+       "+ testing 308 mutants  308/308 test runs in 2m 42s",
+       "+ testing 126 survivors with more test files  126/126 test runs in 14.5s",
+       "+ testing 95 survivors with more test files  180/180 test runs in 30.0s",
+       "+ testing 66 survivors with more test files  240/240 test runs in 1m 40s",
+       "+ testing 50 survivors with more test files  387/387 test runs in 40.4s",
+       "+ testing 41 survivors with more test files  438/438 test runs in 32.4s",
+       "+ testing 21 survivors with more test files  409/409 test runs in 24.0s"
+      ]
+     ]
+    },
+    "stryker": {
+     "mean": 248.2329778167,
+     "stddev": 4.770005198622688,
+     "median": 246.5442827147,
+     "min": 244.5370410997,
+     "max": 253.6176096357,
+     "times": [
+      253.6176096357,
+      244.5370410997,
+      246.5442827147
+     ],
+     "user": 653.77753288,
+     "system": 101.34936397999998,
+     "perMutant": 0.6300329386210659,
+     "perUseful": 4.3549645231,
+     "phases": [
+      {
+       "setup": 1,
+       "initialRun": 14,
+       "mutation": 236,
+       "initialTests": 62,
+       "initialNetMs": 8399.118176000002,
+       "initialOverheadMs": 5979.881823999998,
+       "staticWarning": null
+      },
+      {
+       "setup": 1,
+       "initialRun": 15,
+       "mutation": 228,
+       "initialTests": 62,
+       "initialNetMs": 8444.722631000002,
+       "initialOverheadMs": 6144.277368999998,
+       "staticWarning": null
+      },
+      {
+       "setup": 1,
+       "initialRun": 14,
+       "mutation": 230,
+       "initialTests": 62,
+       "initialNetMs": 7988.660158000001,
+       "initialOverheadMs": 5919.339841999999,
+       "staticWarning": null
+      }
+     ]
+    }
+   }
   }
  ],
  "review": {
-  "reviewed": 95,
+  "reviewed": 161,
   "sampled": 45,
   "missingFromReview": [],
   "stryker": {
    "all": {
-    "same-gap": 36,
-    "equivalent": 18,
+    "same-gap": 46,
+    "equivalent": 34,
     "noise": 4,
-    "lost": 1
+    "lost": 3
    },
    "sampled": {
     "same-gap": 16,
-    "equivalent": 9,
-    "noise": 4,
+    "equivalent": 10,
+    "noise": 3,
     "lost": 1
    },
    "byProject": {
@@ -1741,27 +2322,30 @@
     "cheerio|same-gap": 22,
     "cheerio|noise": 1,
     "cheerio|equivalent": 11,
-    "cheerio|lost": 1
+    "cheerio|lost": 1,
+    "fast-json-stringify|same-gap": 10,
+    "fast-json-stringify|lost": 2,
+    "fast-json-stringify|equivalent": 16
    },
    "bySet": {
-    "stryker-b|same-gap": 20,
-    "stryker-c|same-gap": 16,
-    "stryker-b|equivalent": 13,
+    "stryker-b|same-gap": 24,
+    "stryker-c|same-gap": 22,
+    "stryker-b|equivalent": 21,
     "stryker-c|noise": 1,
-    "stryker-c|equivalent": 5,
+    "stryker-c|equivalent": 13,
     "stryker-b|noise": 3,
-    "stryker-c|lost": 1
+    "stryker-c|lost": 3
    }
   },
   "mootantOnly": {
    "all": {
-    "equivalent": 18,
-    "useful": 16,
+    "equivalent": 34,
+    "useful": 38,
     "noise": 2
    },
    "sampled": {
-    "equivalent": 6,
-    "useful": 9
+    "equivalent": 8,
+    "useful": 7
    },
    "byProject": {
     "perfectionist|equivalent": 12,
@@ -1770,27 +2354,31 @@
     "path-to-regexp|useful": 7,
     "path-to-regexp|equivalent": 4,
     "path-to-regexp|noise": 1,
-    "cheerio|useful": 3,
-    "cheerio|equivalent": 2
+    "cheerio|useful": 23,
+    "cheerio|equivalent": 16,
+    "fast-json-stringify|useful": 2,
+    "fast-json-stringify|equivalent": 2
    },
    "byMutator": {
     "object-property|equivalent": 2,
-    "logical-operator|equivalent": 5,
-    "comparison-operator|equivalent": 5,
+    "logical-operator|equivalent": 12,
+    "comparison-operator|equivalent": 8,
     "assignment-operator|useful": 3,
-    "number-literal|equivalent": 4,
+    "number-literal|equivalent": 6,
     "number-literal|useful": 1,
     "condition|useful": 1,
     "number-literal|noise": 1,
-    "statement-removal|equivalent": 1,
+    "statement-removal|equivalent": 2,
     "object-property|useful": 1,
-    "regex-pattern|useful": 2,
-    "logical-operator|useful": 2,
-    "comparison-operator|useful": 4,
+    "regex-pattern|useful": 3,
+    "logical-operator|useful": 18,
+    "comparison-operator|useful": 6,
     "string-literal|useful": 1,
     "comparison-operator|noise": 1,
-    "regex-flag|useful": 1,
-    "assignment-operator|equivalent": 1
+    "regex-flag|useful": 3,
+    "assignment-operator|equivalent": 3,
+    "statement-removal|useful": 1,
+    "condition|equivalent": 1
    }
   }
  }
