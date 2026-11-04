@@ -18,9 +18,11 @@ new=$(node -p "require('$TMP/package/package.json').version")
 find "$TARGET" -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} +
 cp -a "$TMP/package/." "$TARGET/"
 # npm pack stores every file with the mtime 1985-10-26, and mootant keys its
-# cache on the mtime of its own build (core/cache/prepare-run-cache.ts:164):
-# give the files the time of this install, as npm install does, so that two
-# builds of one version never share cached verdicts.
-find "$TARGET" -path "$TARGET/node_modules" -prune -o -type f -exec touch {} +
+# cache on the mtime of its own build (core/cache/prepare-run-cache.ts:164), so
+# every tarball of one version would share cached verdicts. Give the files an
+# mtime derived from the tarball's hash instead: two builds never share the
+# cache, and installing the same tarball again keeps it valid.
+seconds=$((1000000000 + 0x$(sha256sum "$TGZ" | cut -c1-7)))
+find "$TARGET" -path "$TARGET/node_modules" -prune -o -type f -exec touch -d "@$seconds" {} +
 rm -rf "$TMP" "$PROJECT/node_modules/.cache/mootant"
 echo "$PROJECT: mootant <- $TGZ"
