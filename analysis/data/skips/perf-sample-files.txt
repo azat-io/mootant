@@ -2,8 +2,4 @@ rules/sort-heritage-clauses.ts
 rules/sort-heritage-clauses/compute-matched-context-options.ts
 rules/sort-heritage-clauses/compute-node-name.ts
 rules/sort-heritage-clauses/sort-heritage-clause.ts
-rules/sort-switch-case.ts
-rules/sort-switch-case/build-case-block-comparator-by-options-computer.ts
-rules/sort-switch-case/is-condition-expression.ts
 rules/sort-export-attributes.ts
-rules/sort-sets.ts
