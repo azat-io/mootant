@@ -53,3 +53,54 @@ test at test/math.test.js:12:1
       at Test.run (node:internal/test_runner/test:1022:27)
       at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
       at Test.postRun (node:internal/test_runner/test:1173:19)
+✔ isAdult (14.716099ms)
+✔ add (0.826568ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 82.531336
+✔ isAdult (1.564128ms)
+✔ add (0.614096ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 92.439112
+✔ isAdult (29.251273ms)
+✖ add (1.198012ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 68.422509
+
+✖ failing tests:
+
+test at test/math.test.js:12:1
+✖ add (1.198012ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 4
+  
+      at TestContext.<anonymous> (file:///home/user/projects/cache/nt-node-modules-patch/test/math.test.js:13:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 4,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
++ testing 4 mutants  4/4 test runs in 1.5s
