@@ -1,0 +1,18 @@
+diff --git a/vitest.config.mts b/vitest.config.mts
+index 80d0569..997ad44 100644
+--- a/vitest.config.mts
++++ b/vitest.config.mts
+@@ -1,8 +1,13 @@
+ /// <reference types="vitest" />
+ import { defineConfig } from "vite";
++import { configDefaults } from "vitest/config";
+ 
+ export default defineConfig({
+   test: {
++    // bench: src/cases.spec.ts is a data module without tests ("No test
++    // suite found"); src/redos.spec.ts runs the native recheck binary per
++    // case, fails here (9 cases "vulnerable") and takes 34 of 35 s.
++    exclude: [...configDefaults.exclude, "src/cases.spec.ts", "src/redos.spec.ts"],
+     coverage: {
+       include: ["src/**/*"],
+       exclude: ["**/*.bench.ts"],

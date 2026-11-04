@@ -139,7 +139,7 @@ index 3ada55c..4afafde 100644
  
  /**
 diff --git a/core/generate/generate-file-mutants.ts b/core/generate/generate-file-mutants.ts
-index 98ae493..cc821c1 100644
+index 98ae493..71b705a 100644
 --- a/core/generate/generate-file-mutants.ts
 +++ b/core/generate/generate-file-mutants.ts
 @@ -43,6 +43,9 @@ import { parseFile } from '../parser/parse-file'
@@ -156,7 +156,7 @@ index 98ae493..cc821c1 100644
    let mutants = kept.map(candidate =>
      createMutant(candidate, ids.get(candidate)!, file),
    )
-+  if (process.env['MOOTANT_UNSKIP']) {
++  if (isUnskipped('solitary') || isUnskipped('duplicate') || collection.unskipped.length > 0) {
 +    mutants = addUnskippedMutants({
 +      unskipped: collection.unskipped,
 +      solitary: solitary?.dropped ?? new Map(),
@@ -322,10 +322,11 @@ index 98ae493..cc821c1 100644
 +}
 diff --git a/core/generate/unskip.ts b/core/generate/unskip.ts
 new file mode 100644
-index 0000000..b043c8e
+index 0000000..347ce1c
 --- /dev/null
 +++ b/core/generate/unskip.ts
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,66 @@
++import { isMainThread } from 'node:worker_threads'
 +import { appendFileSync } from 'node:fs'
 +
 +import type { MutantCandidate } from '../../types/mutant/mutant-candidate'
@@ -363,7 +364,11 @@ index 0000000..b043c8e
 + */
 +export function isUnskipped(rule: string): boolean {
 +  let value = process.env['MOOTANT_UNSKIP']
-+  if (!value) {
++  if (
++    !value ||
++    !isMainThread ||
++    process.env['MOOTANT_UNSKIP_PID'] !== String(process.pid)
++  ) {
 +    return false
 +  }
 +  let entry = skipRules[rule as keyof typeof skipRules] as

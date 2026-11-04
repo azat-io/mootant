@@ -1,0 +1,273 @@
+* mootant run src                                               vitest 5.1.0
+
+dry run         12 tests in 0.8s
+mutants         79 in 5 files, 67 cached
+time            1.2s (start 0.4s, dry run 0.8s, isolated 0.0s)
+
+killed          28
+survived        39
+timeout         0
+no coverage     12
+score           35.44% (covered 41.79%)
+
+survived 39
+
+src/price.ts
+  10:7   comparison-operator  69kd
+    - if (total >= 100) {
+    + if (total > 100) {
+    test: test/price.test.ts
+
+  10:7   comparison-operator  x223
+    - if (total >= 100) {
+    + if (total >= 99) {
+    test: test/price.test.ts
+
+  19:14  arithmetic-operator  pf5t
+    - total += item.price * item.quantity
+    + total += item.price / item.quantity
+    test: test/price.test.ts
+
+  25:7   comparison-operator  8yjn
+    - if (percent <= 0) {
+    + if (percent < 0) {
+    test: test/price.test.ts
+
+  25:7   comparison-operator  qra1
+    - if (percent <= 0) {
+    + if (percent == 0) {
+    test: test/price.test.ts
+
+  25:7   comparison-operator  m37n
+    - if (percent <= 0) {
+    + if (percent <= 1) {
+    test: test/price.test.ts
+
+src/retry.ts
+  3:14  number-literal       wddk
+    - attempts = 3,
+    + attempts = 4,
+    test: test/retry.test.ts
+
+  6:22  number-literal       079b
+    - for (let attempt = 1; attempt <= attempts; attempt++) {
+    + for (let attempt = 2; attempt <= attempts; attempt++) {
+    test: test/retry.test.ts
+
+  6:25  comparison-operator  ggxa
+    - for (let attempt = 1; attempt <= attempts; attempt++) {
+    + for (let attempt = 1; attempt < attempts; attempt++) {
+    test: test/retry.test.ts
+
+  8:14  missing-await        wjh2
+    - return await task()
+    + return task()
+    test: test/retry.test.ts
+
+src/slug.ts
+  5:10   method-call          zy0x
+    - return title
+    -   .trim()
+    + return title
+    test: test/slug.test.ts
+
+  8:26   regex-flag           eemk
+    - .replace(/[^a-z0-9]+/g, '-')
+    + .replace(/[^a-z0-9]+/, '-')
+    test: test/slug.test.ts
+
+  9:15   regex-pattern        0r1g
+    - .replace(/^-+|-+$/g, '')
+    + .replace(/-+$/g, '')
+    test: test/slug.test.ts
+
+  9:18   regex-pattern        3bjx
+    - .replace(/^-+|-+$/g, '')
+    + .replace(/^-+/g, '')
+    test: test/slug.test.ts
+
+  9:23   regex-flag           qhb8
+    - .replace(/^-+|-+$/g, '')
+    + .replace(/^-+|-+$/, '')
+    test: test/slug.test.ts
+
+  9:26   string-literal       2grx
+    - .replace(/^-+|-+$/g, '')
+    + .replace(/^-+|-+$/g, 'mootant')
+    test: test/slug.test.ts
+
+  13:10  logical-operator     t9v9
+    - return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    + return slug.length <= 64
+    test: test/slug.test.ts
+
+  13:11  regex-pattern        aths
+    - return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    + return /[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    test: test/slug.test.ts
+
+  13:12  regex-pattern        h3dy
+    - return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    + return /^[^]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    test: test/slug.test.ts
+
+  13:25  regex-pattern        mra1
+    - return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    + return /^[a-z0-9]+(?:-[^]+)*$/.test(slug) && slug.length <= 64
+    test: test/slug.test.ts
+
+  13:35  regex-pattern        cpjd
+    - return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    + return /^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(slug) && slug.length <= 64
+    test: test/slug.test.ts
+
+  13:36  regex-pattern        bw7y
+    - return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    + return /^[a-z0-9]+(?:-[a-z0-9]+)*/.test(slug) && slug.length <= 64
+    test: test/slug.test.ts
+
+  13:53  comparison-operator  adp6
+    - return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    + return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length < 64
+    test: test/slug.test.ts
+
+  13:53  comparison-operator  pj0x
+    - return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    + return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 65
+    test: test/slug.test.ts
+
+src/user.ts
+  9:7    comparison-operator  b54d
+    - if (user.name.trim() === '') {
+    + if (false) {
+    test: test/user.test.ts
+
+  9:7    method-call          24vz
+    - if (user.name.trim() === '') {
+    + if (user.name === '') {
+    test: test/user.test.ts
+
+  10:17  string-literal       zspa
+    - errors.push('name is required')
+    + errors.push('')
+    test: test/user.test.ts
+
+  12:7   logical-operator     yr3r
+    - if (user.email !== undefined && !user.email.includes('@')) {
+    + if (!user.email.includes('@')) {
+    test: test/user.test.ts
+
+  12:7   logical-operator     4a2n
+    - if (user.email !== undefined && !user.email.includes('@')) {
+    + if (false) {
+    test: test/user.test.ts
+
+  13:17  string-literal       xrj1
+    - errors.push('email is invalid')
+    + errors.push('')
+    test: test/user.test.ts
+
+  15:7   logical-operator     3nwe
+    - if (user.age !== undefined && (user.age < 0 || user.age > 150)) {
+    + if ((user.age < 0 || user.age > 150)) {
+    test: test/user.test.ts
+
+  15:34  comparison-operator  7arf
+    - if (user.age !== undefined && (user.age < 0 || user.age > 150)) {
+    + if (user.age !== undefined && (user.age <= 0 || user.age > 150)) {
+    test: test/user.test.ts
+
+  15:34  comparison-operator  kadg
+    - if (user.age !== undefined && (user.age < 0 || user.age > 150)) {
+    + if (user.age !== undefined && (user.age < -1 || user.age > 150)) {
+    test: test/user.test.ts
+
+  15:50  comparison-operator  xsb6
+    - if (user.age !== undefined && (user.age < 0 || user.age > 150)) {
+    + if (user.age !== undefined && (user.age < 0 || user.age >= 150)) {
+    test: test/user.test.ts
+
+  15:50  comparison-operator  4pyg
+    - if (user.age !== undefined && (user.age < 0 || user.age > 150)) {
+    + if (user.age !== undefined && (user.age < 0 || user.age > 151)) {
+    test: test/user.test.ts
+
+  16:17  string-literal       arae
+    - errors.push('age is out of range')
+    + errors.push('')
+    test: test/user.test.ts
+
+  23:10  logical-operator     phjc
+    - return user.name || user.email || 'Anonymous'
+    + return user.name || user.email
+    test: test/user.test.ts
+
+  23:10  logical-operator     0wct
+    - return user.name || user.email || 'Anonymous'
+    + return user.email || 'Anonymous'
+    test: test/user.test.ts
+
+  23:10  logical-operator     pcxz
+    - return user.name || user.email || 'Anonymous'
+    + return user.name || 'Anonymous'
+    test: test/user.test.ts
+
+no coverage 12
+
+src/format.ts
+  1:55  string-literal       0hqs
+    - export function formatPrice(value: number, currency = 'USD'): string {
+    + export function formatPrice(value: number, currency = ''): string {
+
+  2:10  string-literal       yef5
+    - return `${value.toFixed(2)} ${currency}`
+    + return `${value.toFixed(2)}${currency}`
+
+  2:27  number-literal       kgza
+    - return `${value.toFixed(2)} ${currency}`
+    + return `${value.toFixed(3)} ${currency}`
+
+  6:10  comparison-operator  6d3m
+    - return count === 1 ? `${count} ${word}` : `${count} ${word}s`
+    + return count <= 1 ? `${count} ${word}` : `${count} ${word}s`
+
+  6:10  comparison-operator  wn30
+    - return count === 1 ? `${count} ${word}` : `${count} ${word}s`
+    + return count >= 1 ? `${count} ${word}` : `${count} ${word}s`
+
+  6:10  comparison-operator  g4g0
+    - return count === 1 ? `${count} ${word}` : `${count} ${word}s`
+    + return false ? `${count} ${word}` : `${count} ${word}s`
+
+  6:24  string-literal       v3v7
+    - return count === 1 ? `${count} ${word}` : `${count} ${word}s`
+    + return count === 1 ? '' : `${count} ${word}s`
+
+  6:45  string-literal       w76j
+    - return count === 1 ? `${count} ${word}` : `${count} ${word}s`
+    + return count === 1 ? `${count} ${word}` : ''
+
+src/price.ts
+  26:12  return-value  nekb
+    - return total
+    + return 0
+    test: test/price.test.ts
+
+src/retry.ts
+  10:7  statement-removal  vjfx
+    - lastError = error
+    + ;
+    test: test/retry.test.ts
+
+  13:3  statement-removal  t0d7
+    - throw lastError
+    + ;
+    test: test/retry.test.ts
+
+src/user.ts
+  23:37  string-literal  jkbj
+    - return user.name || user.email || 'Anonymous'
+    + return user.name || user.email || ''
+    test: test/user.test.ts
+
+re-check one: mootant run src --mutant 69kd

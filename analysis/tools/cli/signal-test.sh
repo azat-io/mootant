@@ -2,7 +2,7 @@
 # Starts `mootant run src` in a fixture, sends a signal after a delay and
 # reports what is left: processes started from the fixture (by command line),
 # work directories in the fixture's own TMPDIR, cache temp files, exit status.
-# usage: signal-test.sh <fixture dir> <delay s> <signal|none> <pid|group> <plain|tty> [mootant args...]
+# usage: signal-test.sh <fixture dir> <delay s> <signal|none> <pid|group> <plain|tty|tty-shell> [mootant args...]
 #   pid   - signal only mootant's main process (as `kill <pid>`, `timeout`,
 #           an IDE stop button or `docker stop` of PID 1 do)
 #   group - signal the whole process group (as Ctrl+C in a terminal does)
@@ -15,6 +15,10 @@ unset CI
 BIN="node $DIR/node_modules/mootant/bin/mootant.js run src $*"
 if [ "$MODE" = tty ]; then
   setsid script -qfec "$BIN" /dev/null >out.txt 2>&1 </dev/null &
+elif [ "$MODE" = tty-shell ]; then
+  # a shell leads the pty session, as in a real terminal, so mootant exiting
+  # does not hang up the terminal's foreground group
+  setsid script -qfec "bash -c '$BIN; true'" /dev/null >out.txt 2>&1 </dev/null &
 else
   setsid $BIN >out.txt 2>err.txt </dev/null &
 fi
