@@ -1,0 +1,8 @@
+=== reinstall_stamp (04:31:36)
+[reinstall-stamp/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+  before: 2026-11-04 04:08:26.011635053 +0000 /home/user/projects/cache/reinstall-stamp/node_modules/mootant/dist/core/cache/prepare-run-cache.js
