@@ -240,6 +240,10 @@ stderr» в `docs/content/guide/cli.mdx:125`) нарушается.
 | Kill-примеры 20 страниц мутаторов (`docs/content/mutators/*.md`) | 21/21 заявленных мутантов «`a` → `b`» генерируются (recommended), `data/cli/mutator-kill-examples.json` | верно |
 | Таблицы «Changes» мутаторов | 90/126 строк совпадают в изоляции; остальные 36 зависят от контекста (типы операндов, позиция `return`, несколько мутантов в ячейке), оговорённого в тексте рядом; противоречий при ручном разборе нет (`data/cli/mutator-docs-check.json`) | верно |
 | JSDoc `core/cache/get-cache-path.ts:10-11` «run-v2.json» | файл — `run-v3.json` (`CACHE_VERSION = 3`) | устаревший комментарий |
+| readme: «Vitest 5 (Node.js 22.12+, no browser mode) or node:test (Node.js 20.19+ or 22.12+)» (`readme.md:70-71`) | совпадает с проверкой node:test и с ошибкой браузерного режима | верно |
+| readme: «Mootant never writes to your source files» (`readme.md:81`) | исходники не меняются; пишутся только `node_modules/.cache/mootant/run-v3.json` и `.mootant/report.html` | верно |
+| readme: «With Vitest, it also tests Vue and Svelte components» (`readme.md:54-55`) | вердикты Vue/Svelte совпали с физическим применением | верно |
+| readme/getting-started: команды с `npx mootant …` | команда перепроверки в отчёте — `mootant run … --mutant …` без `npx` (`cli/report/format-command.ts:77`) | неудобство, код или доку |
 
 ## Отрицательные результаты (проверено, работает)
 
@@ -279,6 +283,9 @@ stderr» в `docs/content/guide/cli.mdx:125`) нарушается.
 - `.cjs`-конфиг с `require('mootant')`, `.mts` в CJS-пакете, ESM-конфиг с
   `createRequire` — грузятся.
 - Кэш при прерывании не портится (атомарная запись), `--no-cache` не пишет кэш.
+- Проект в каталоге с пробелами и не-ASCII (`space dir ü/vt proj`), оба
+  раннера, плюс `NODE_OPTIONS=--require "<путь с пробелом>"` для node:test —
+  вердикты как в обычном каталоге.
 - `npm i -D vitest@5.0.5` в npm 10/11 падает с «Cannot read properties of null
   (reading 'edgesOut')» и без mootant — это баг npm/arborist, не mootant
   (фикстуры ставились с `--legacy-peer-deps` и явным `vite`).
