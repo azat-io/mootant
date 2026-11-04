@@ -1,0 +1,72 @@
+{
+ "label": "oracle-text",
+ "mutants": 127,
+ "actionable": 3,
+ "statuses": {
+  "Killed": 121,
+  "Survived": 3,
+  "Timeout": 3
+ },
+ "rows": [
+  {
+   "name": "json --json (slim, actionable)",
+   "chars": 3081,
+   "o200k": 842,
+   "cl100k": 820
+  },
+  {
+   "name": "json --json --all (slim)",
+   "chars": 25285,
+   "o200k": 7264,
+   "cl100k": 7290
+  },
+  {
+   "name": "json --json --verbose --all",
+   "chars": 194763,
+   "o200k": 53012,
+   "cl100k": 52438
+  },
+  {
+   "name": "json --json --verbose (actionable)",
+   "chars": 29382,
+   "o200k": 7585,
+   "cl100k": 7407
+  },
+  {
+   "name": "toon of --json (slim, actionable)",
+   "chars": 3226,
+   "o200k": 964,
+   "cl100k": 948
+  },
+  {
+   "name": "toon of --json --all (slim)",
+   "chars": 26548,
+   "o200k": 8645,
+   "cl100k": 8435
+  },
+  {
+   "name": "toon of --verbose --all",
+   "chars": 201725,
+   "o200k": 58193,
+   "cl100k": 57520
+  },
+  {
+   "name": "compact v1 (actionable)",
+   "chars": 1789,
+   "o200k": 500,
+   "cl100k": 488
+  },
+  {
+   "name": "compact v2 (actionable, exact texts from verbose)",
+   "chars": 1683,
+   "o200k": 474,
+   "cl100k": 464
+  },
+  {
+   "name": "compact v2 --all",
+   "chars": 12497,
+   "o200k": 3849,
+   "cl100k": 3786
+  }
+ ]
+}

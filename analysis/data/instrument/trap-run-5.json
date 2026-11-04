@@ -1,0 +1,19 @@
+{
+ "summary": {
+  "files": 1,
+  "mutants": 27,
+  "aDiffs": 0,
+  "bDiffs": 0,
+  "bLooseOnly": 0,
+  "rawUnparsable": 0
+ },
+ "results": [
+  {
+   "file": "src/traps/t18-decorators.ts",
+   "mutants": 27,
+   "original": "{\"r\":[10,0,4],\"log\":[\"field1:limit\",\"method:compute\"]}",
+   "a": [],
+   "b": []
+  }
+ ]
+}

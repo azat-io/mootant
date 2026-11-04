@@ -1,22 +1,2 @@
-+ dry run  2 tests in 0.9s
-node:internal/modules/package_json_reader:189
-  const result = modulesBinding.readPackageJSON(nearestParentPackageJSON);
-                                ^
-
-Error: Invalid package config /home/user/projects/cache/write-back-package-json/package.json.
-    at Object.getNearestParentPackageJSON (node:internal/modules/package_json_reader:189:33)
-    at trySelf (node:internal/modules/cjs/loader:613:33)
-    at Function._resolveFilename (node:internal/modules/cjs/loader:1406:24)
-    at defaultResolveImpl (node:internal/modules/cjs/loader:1040:19)
-    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1045:22)
-    at Function._load (node:internal/modules/cjs/loader:1216:25)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
-    at Module.require (node:internal/modules/cjs/loader:1527:12)
-    at node:internal/modules/cjs/loader:2071:12
-    at loadPreloadModules (node:internal/process/pre_execution:756:5) {
-  code: 'ERR_INVALID_PACKAGE_CONFIG'
-}
-
-Node.js v22.23.4
-+ testing 4 mutants  3/4 test runs in 1.8s
-+ testing 1 survivor with more test files  1/1 test runs in 0.5s
++ dry run  2 tests in 0.5s
++ testing 4 mutants  4/4 test runs in 1.7s
