@@ -1,0 +1,8 @@
+{
+  "name": "bug-701",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  }
+}

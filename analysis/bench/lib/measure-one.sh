@@ -24,8 +24,16 @@ while [ -e "$OUT/run-$k.time" ]; do k=$((k + 1)); done
 
 TRACE=${BENCH_TRACE:-1}
 MEM=${BENCH_MEM:-1}
-TMP=$OUT/tmp-$k
+# hyperfine gives every run a random-length variable; tests that list
+# process.env (spread it, start a child process) make Mootant hash every
+# variable into its cache keys (adapters/shared/index-environment-hashes.ts),
+# so the variable would turn every warm run cold (BUG-701).
+unset HYPERFINE_RANDOMIZED_ENVIRONMENT_OFFSET
+# The same TMPDIR for every run of a project, for the same reason; emptied
+# before each run, so the only mootant-* directory in it is this run's.
+TMP=$(dirname "$(dirname "$OUT")")/tmp/$(basename "$PROJ")
 if [ "$TOOL" = mootant ]; then
+  rm -rf "$TMP"
   mkdir -p "$TMP"
   export TMPDIR=$TMP
 fi
@@ -64,7 +72,6 @@ case $TOOL in
   mootant)
     mv "$OUT/run-$k.out" "$OUT/run-$k.json"
     leaked=$(find "$TMP" -mindepth 1 -maxdepth 1 -name 'mootant-*' | wc -l)
-    rm -rf "$TMP"
     ;;
   stryker)
     if [ -f "$PROJ/reports/bench/mutation.json" ]; then

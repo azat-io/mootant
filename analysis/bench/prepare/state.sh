@@ -18,6 +18,10 @@ bench_project "${1:?project}"
 STATE=${2:?state}
 SNAP=$BENCH_RESULTS/snapshots/$NAME
 cd "$PROJECT_DIR"
+# The environment of the measured runs (lib/measure-one.sh), so a cache primed
+# here stays valid for them.
+unset HYPERFINE_RANDOMIZED_ENVIRONMENT_OFFSET
+export TMPDIR=$BENCH_RESULTS/tmp/$NAME
 
 reset_tree() {
   git checkout -q -f bench/base
@@ -35,6 +39,7 @@ reset_tree() {
 prime_mootant_cache() {
   echo "priming the Mootant cache of $NAME (untimed run)" >&2
   reset_tree
+  rm -rf "$TMPDIR" && mkdir -p "$TMPDIR"
   node "$MOOTANT_BIN" run "${MUTATE[@]}" \
     --concurrency "$BENCH_CONCURRENCY" --json >/dev/null 2>"$SNAP.prime.err" || true
   save_mootant_cache
