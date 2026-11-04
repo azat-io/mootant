@@ -387,7 +387,7 @@ Timeout-мутантом при каждом тёплом прогоне сно�
      переменных окружения главного процесса — тех, что читали тест-файлы, и
      `TZ`/`NODE_ENV`/`LANG`/`LC_*`/`NODE_OPTIONS` — **снятые до старта адаптера**
      (`core/run-mutants.ts:182`): Vite при создании Vitest выставляет в
-     главном процессе `NODE_ENV=development` (BUG-754), и первая версия
+     главном процессе `NODE_ENV=development` (BUG-753), и первая версия
      прототипа из-за этого никогда не переиспользовала снимок;
    - `tree` (`core/cache/hash-project-tree.ts`): хэш **всех файлов дерева
      проекта с содержимым**, кроме `node_modules`, `.git`, `.mootant`, символические
@@ -429,7 +429,7 @@ Timeout-мутантом при каждом тёплом прогоне сно�
    зависит от загрузки машины (лимит — `max(floor, factor × hits dry run)`,
    `core/run/get-try-limits.ts:26`), так что такая улика повторима так же, как
    убийство assert-ом. Тайм-ауты по времени (`time-limit`, `hang`) и краши
-   по-прежнему не кэшируются. Без переменной записи `Timeout` не читаются
+   по-прежнему не кэшируются (BUG-752). Без переменной записи `Timeout` не читаются
    (`core/cache/create-run-cache.ts:280`), так что обычный прогон ведёт себя как
    база.
 4. Тесты: `test/core/run-mutants.test.ts` («replays the saved dry run of an
@@ -523,6 +523,21 @@ s1-unchanged (**повтор, раннер не стартовал**), s2-edit-t
 (новый файл → дерево), s5-node-options (`NODE_OPTIONS=--no-warnings` → «an
 environment variable changed»). **Во всех 6 вердикты A и B совпадают**
 (`--strict`).
+
+Тест, перечисляющий окружение (`*`, финальная сборка `c275905`;
+`/home/user/projects/perf-proto/results/p3/star/`): в `vitest-units` добавлен
+`test/env-all.test.js` с `Object.keys(process.env)`; холодный прогон — «Saved
+the dry run for later runs», повтор без изменений — без раннера (`runs = {}`),
+с новой посторонней переменной `X_UNRELATED=1` — «an environment variable
+changed» и обычный путь; вердикты всех трёх прогонов равны (`--strict`). На
+стенде это работает потому, что `analysis/bench/lib/measure-one.sh:31-38`
+снимает переменную hyperfine и держит один `TMPDIR` на проект; без этого
+каждый прогон проекта с `*` видел бы «изменившееся» окружение (так же, как
+кэш вердиктов, BUG-701).
+
+Сценарии выше прогнаны на сборке `96ec389` (результаты сохранены в
+`.../results/p3/{vitest-units,node-units}-96ec389/`) и повторены на финальной
+сборке `c275905` (`.../results/p3/{vitest-units,node-units}/`): ПОВТОР_ФИНАЛ
 
 Команды:
 
@@ -738,4 +753,4 @@ grep -h 'Эквивалентны\|НЕ эквивалентны' /home/user/pro
 `analysis/tools/perf-proto/{setup-fixture,use-mootant,run-mootant,check-dry-snapshot,p3-negative-control,bench-proto}.sh`;
 фикстуры — `analysis/experiments/perf-fixtures/`; отчёты проверок —
 `/home/user/projects/perf-proto/results/{p1,p2,p3}/`. Баги, найденные по ходу, —
-`analysis/bugs/perf-proto.md` (BUG-750…BUG-754).
+`analysis/bugs/perf-proto.md` (BUG-750…BUG-753).
