@@ -62,7 +62,7 @@
 Поэтому в сводке есть колонка «вне total» = wall − total. Поиск файлов,
 парсинг, генерация, эвристики и инструментирование внутри `startup` отдельных
 полей не имеют; их делит CPU-профиль главного процесса (`analysis/bench/profile.sh
-<project> list main`: инклюзивное время `expandPaths`, `prepareFilePrograms`
+<project> list run`: инклюзивное время `expandPaths`, `prepareFilePrograms`
 (парсинг oxc), `collectFileCandidates` (мутаторы и эвристики),
 `deduplicateCandidates`, `getMutantRegions`, `createSwitchedFiles`,
 `startVitestSession`; self-время по группам `mootant/core/hints`,
@@ -147,7 +147,7 @@ Mootant (1,07 против 1,28 с на мутанта; 19,4 против 13,7 �
 | 9 | **Выборка (sampling)** для огромных проектов с доверительным интервалом score | — | линейно по доле выборки | вердикты те же, score — оценка | S–M | — |
 | 10 | **Калибровка таймаутов** | `timeout = 3 × длительность + 250 мс` на тест, `hitLimit = max(100000, 100 × hits)` (`core/config/resolve-run-settings.ts:25-31`, `core/run/get-try-limits.ts:25-26`); таймаут юнита в догфудинге — 290 с | зависит от доли Timeout; в смоуке path-to-regexp 3 Timeout у Mootant против 19 у Stryker | ниже таймаут → больше ложных Timeout на шумной машине | S (замер), S (настройка) | Σ `mutants[].duration` у Timeout / total |
 | 11 | **Ускорить dry run**: он медленнее обычного прогона (запись `covers` каждой попытки в out-файл синхронно, `adapters/vitest/worker/write-out-record.ts:17`; хук на каждую попытку; отслеживание чтений fs через `AsyncLocalStorage`, `adapters/shared/track-file-reads.ts`) | догфудинг: dry run 8 393 тестов 4 мин 37 с против 252 с у всего `test:unit` (10 491 тест с покрытием v8) | ×1,5–2 на dry run, который на больших проектах доминирует | низкий | M | `dryRun` против точки `test` того же проекта; профиль воркеров в dry run |
-| 12 | **Текстовый `mootant list`**: ~5 с из 7,5 на форматирование 16 тыс. строк (`00-baseline.md`) | `cli/report/format-text-report.ts` и хелперы `cli/terminal/*` | ×2–3 на `list` | нет | S | `m-list-text` против `m-list-json`, профиль `profile.sh <p> list` |
+| 12 | **Текстовый `mootant list`**: быстрый путь ширины строки для ASCII (BUG-702) | профиль `mootant list core`: 43 % времени — `cli/terminal/get-display-width.ts` (`Intl.Segmenter` на каждую строку), см. `analysis/bugs/perf.md` | `list` текстом ≈ `list --json` (×1,7–2,8) | нет (ширина ASCII = длина) | S | `m-list-text` против `m-list-json`, профиль `profile.sh <p> list` |
 
 ## 4.5. Результаты
 
