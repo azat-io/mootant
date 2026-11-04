@@ -703,6 +703,24 @@ EOF2
   run_mootant "$d" r2 src
 }
 
+# P1b: a define with the build time, as apps show it in an about box:
+# Vite's define values are in the environment key, so nothing is reused.
+volatile_define() {
+  local d
+  d=$(new_project volatile-define)
+  cat >"$d/vitest.config.ts" <<'EOF2'
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
+  test: { include: ['test/**/*.test.ts'] },
+})
+EOF2
+  commit_all "$d" define
+  run_mootant "$d" r1 src
+  run_mootant "$d" r2 src
+}
+
 # P2: a test that starts a child process with the inherited environment reads
 # "*": any variable that differs between two shells (CI run ids, npm_* of
 # npm run, SSH_AUTH_SOCK, VSCODE_*) drops its verdicts.

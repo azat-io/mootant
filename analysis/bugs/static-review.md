@@ -18,6 +18,7 @@
 | BUG-902 | Вне `--fast` один нестабильный провал теста в dry run приписывается инструментированию: файл выбрасывается с `instrumentation-break`, все его мутанты `Error`, exit 1, кэш не сохраняется | medium | подтверждён | `core/run/run-dry-phase.ts:161-170,195-203,275-296,385-421` | фикстура `flakydry`; `test/repros/BUG-902.test.ts` |
 | BUG-903 | Тест, загружающий модуль вычисляемым `import()`, не попадает в dry run (`vitest related`); если модуль импортирует статически другой, слабый тест, мутант молча получает `Survived` | medium | подтверждён (ограничение задокументировано, следствие — нет) | `adapters/vitest/run-dry.ts:225-247`, `core/run/rank-mutant-files.ts:61-92` | фикстура `dynimport` |
 | BUG-904 | Локальная привязка с именем `globalThis` (параметр, `let`, `var`) скрывает все сайты в своей области: проверка `globalThis.__mootant?.hit()` читает её, мутанты никогда не включаются → ложный `NoCoverage` (или `TypeError` и `instrumentation-break`, если значение `undefined`) | low | подтверждён | `core/instrument/get-site-check.ts:164-166` | фикстура `shadow`; `test/repros/BUG-904.test.ts` |
+| BUG-905 | Текст замены (плагин-мутатор) не проверяется на разбираемость ни при генерации, ни при переключении; файл с синтаксической ошибкой ломает загрузку тест-файла до вычисления сайтов, а `findBrokenFiles` при пустом покрытии объявляет сломанными **все** переключённые файлы → все мутанты прогона `Error` с ложным «Tests fail with the switched X» | medium | подтверждён | `core/generate/group-replacement.ts:233-236`, `core/instrument/create-switched-files.ts:74-94`, `core/run/run-dry-phase.ts:505-517` | фикстура `badplugin`; `test/repros/BUG-905.test.ts` |
 
 (Таблица дополняется ниже по мере работы.)
 
@@ -241,5 +242,42 @@ computed `import()` may not be selected»
 полифилах и UMD-обёртках). **Направление:** при наличии привязки `globalThis` в
 файле использовать незатеняемый доступ (например, модульная константа с
 уникальным именем в начале файла) или сообщать `instrument-error`.
+
+### BUG-905 — одна неразбираемая замена выбрасывает весь прогон
+
+Гарантия «replacement — выражение (или оператор) своего синтаксического
+класса» для мутаторов плагинов не проверяется:
+
+- `groupReplacement` читает текст замены (`readText`), и если он не
+  разбирается ни в одном контексте, просто оборачивает его в скобки
+  (`core/generate/group-replacement.ts:233-236`: `readings.length === 0 →
+  return true`), а не отвергает; `addReplacement`
+  (`core/generate/collect-candidates.ts:266-330`) проверяет узел
+  (`validateReplacement`), но не текст. `mootant list` показывает такой мутант
+  как обычный (`a + b -> a +`).
+- `instrumentFile`/`createSwitchedFiles` не разбирают результат
+  (`core/instrument/create-switched-files.ts:74-94`; проверка компиляции есть
+  только для Svelte/Vue).
+- В dry run тест-файл падает при загрузке до вычисления любого сайта
+  (`covers: []`), и `findBrokenFiles` при пустом множестве делает вывод «сломаны
+  все» (`core/run/run-dry-phase.ts:516`: `broken.size === 0 ? new Set(related)`).
+
+**Воспроизведение.** `/home/user/projects/static/vt/badplugin`: плагин `acme`
+с мутатором, который для `a + b` в `src/math.js` пишет `a +`; второй файл
+`src/other.js` со своими тестами. `mootant run --no-cache` → `error 4`: все
+мутанты обоих файлов, у `src/other.js` — «Tests fail with the switched
+src/other.js and pass without it», хотя он ничего не ломал. Юнит-тест
+`test/repros/BUG-905.test.ts`: (1) `createSwitchedFiles` принимает
+неразбираемый текст без диагностики; (2) `runDryPhase` с отказом загрузки без
+покрытия в одном тест-файле выбрасывает и невиновный файл.
+
+**Вероятность.** Встроенные мутаторы, судя по коду, строят тексты корректно
+(это проверяют агенты с fuzz); риск — в публичном плагинном API (модель ESLint
+предполагает сторонние мутаторы) и в будущих ошибках встроенных. Цена — весь
+прогон в `Error` с неверной диагностикой. **Направление:** отвергать
+неразбираемый текст как ошибку мутатора в `groupReplacement`/`addReplacement`;
+разбирать переключённый текст в `createSwitchedFiles` (oxc дешёв) и давать
+`instrument-error` одному файлу; в `findBrokenFiles` при пустом покрытии
+сужать подозреваемых до `DryFile.dependencies` упавших тест-файлов.
 
 ## Рабочие заметки (черновик, будут сокращены)
