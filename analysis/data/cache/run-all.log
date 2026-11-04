@@ -921,3 +921,10 @@ Auto-merging src/lines.ts
   EXPECT: line 3 (resolved, not yet added)
   [unmerged] --since main exit=0
     "src/lines.ts": lines 3
+  [resolved] --since main exit=0
+    "src/lines.ts": lines 3
+=== symlinks (05:13:41)
+  EXPECT: target.ts line 5
+  [target] --since HEAD exit=0
+    "src/target.ts": lines 5
+  link retargeted to lines.ts, lines.ts line 4 changed. EXPECT: lines.ts line 4 (and maybe the whole of lines.ts through the link)
