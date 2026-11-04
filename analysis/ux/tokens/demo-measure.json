@@ -1,0 +1,80 @@
+{
+ "label": "demo",
+ "mutants": 99,
+ "actionable": 32,
+ "statuses": {
+  "Killed": 65,
+  "Survived": 21,
+  "Ignored": 1,
+  "Timeout": 1,
+  "NoCoverage": 11
+ },
+ "rows": [
+  {
+   "name": "json --json (slim, actionable)",
+   "chars": 13229,
+   "o200k": 4173,
+   "cl100k": 4081
+  },
+  {
+   "name": "json --json --all (slim)",
+   "chars": 23193,
+   "o200k": 7345,
+   "cl100k": 7287
+  },
+  {
+   "name": "json --json --verbose --all",
+   "chars": 85751,
+   "o200k": 25685,
+   "cl100k": 25504
+  },
+  {
+   "name": "json --json --verbose (actionable)",
+   "chars": 31505,
+   "o200k": 9440,
+   "cl100k": 9323
+  },
+  {
+   "name": "toon of --json (slim, actionable)",
+   "chars": 14368,
+   "o200k": 4993,
+   "cl100k": 4947
+  },
+  {
+   "name": "toon of --json --all (slim)",
+   "chars": 24960,
+   "o200k": 8852,
+   "cl100k": 8711
+  },
+  {
+   "name": "toon of --verbose --all",
+   "chars": 92857,
+   "o200k": 30156,
+   "cl100k": 29999
+  },
+  {
+   "name": "compact v1 (actionable)",
+   "chars": 7389,
+   "o200k": 2386,
+   "cl100k": 2365
+  },
+  {
+   "name": "compact v2 (actionable, exact texts from verbose)",
+   "chars": 5763,
+   "o200k": 1877,
+   "cl100k": 1857
+  },
+  {
+   "name": "compact v2 --all",
+   "chars": 10295,
+   "o200k": 3483,
+   "cl100k": 3435
+  },
+  {
+   "name": "text report (non-TTY)",
+   "chars": 5372,
+   "o200k": 1764,
+   "cl100k": 1743
+  }
+ ]
+}
