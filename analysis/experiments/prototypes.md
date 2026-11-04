@@ -751,9 +751,26 @@ done
 grep -h 'Эквивалентны\|НЕ эквивалентны' /home/user/projects/bench/results-proto/*/compare-*.md
 ```
 
-Минимальный вариант, если окна мало: `BENCH_RUNS=1 BENCH_PROTO_MODES=on` для
-пунктов 1–2 (сравнение времени — с базовыми точками `m-cold`/`m-warm`
-основного стенда того же окна).
+Сколько это стоит: `m-cold` — полный прогон мутантов (смоук на занятой машине:
+path-to-regexp 342 мутанта — 437 с при `--concurrency 2`; perfectionist —
+десятки минут), и в режиме «off/on» × `BENCH_RUNS=3` таких прогонов шесть на
+точку. Если окна мало — минимальный вариант: «off» не гонять (поведение сборки
+прототипа без переменной равно базе, проверено на фикстурах; время «off» брать
+из точек основного стенда того же окна с tarball'ом базы), холодную точку — один
+раз, дешёвые тёплые — трижды. Снимок кэша для `m-warm`/`m-edit` берётся из
+`$BENCH_RESULTS/snapshots/` (его пишет очистка `m-cold`) и переживает повторную
+установку tarball'а (`npm pack` фиксирует `mtime` файлов, а с ним и штамп сборки
+в ключе кэша):
+
+```sh
+cd /home/user/mootant
+T=analysis/tools/perf-proto/bench-proto.sh
+BENCH_RUNS=1 BENCH_PROTO_MODES=on $T dry-snapshot cheerio m-cold
+BENCH_RUNS=3 BENCH_PROTO_MODES=on $T dry-snapshot cheerio m-warm m-edit
+BENCH_RUNS=1 BENCH_PROTO_MODES=on $T parallel-units path-to-regexp m-cold
+# сравнение: results-proto/<прототип>/on/<проект>/<точка> против
+# $BENCH_PROJECTS/results/<проект>/<точка> (основной стенд, база)
+```
 
 Что считать результатом по каждому прототипу:
 

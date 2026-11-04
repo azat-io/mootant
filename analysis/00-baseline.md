@@ -82,10 +82,17 @@ arborist в `#loadPeerSet` при разборе peer-зависимости
 3. **`test:astro`: 14 ошибок типов SVG-компонентов** (`Property 'class' does
    not exist on type 'IntrinsicAttributes'`, `Type 'string' is not assignable to
    type 'SvgComponent'`) в Breadcrumbs, Compatibility, Header, HeaderTools,
-   ReportPreview, Search, Why. В CI (Node 24) этот же коммит проходит. Это
-   гипотеза: ошибки зависят от окружения (Node 22 и Node 24 или порядок
-   генерации типов `astro sync`). Проверка: запустить `pnpm test:astro` под
-   Node 24. Серьёзность: low (только сайт документации).
+   ReportPreview, Search, Why. В CI этот же коммит проходит. **Причина
+   найдена** (подтверждено верификатором BUG-653 и проверено мной): ошибки
+   появляются только **после `pnpm build`**. `tsconfig.json:2-4` включает
+   `**/*.ts` и не исключает `dist/`. После сборки в программу попадает
+   `dist/types/html/inline-script.d.ts` с `/// <reference types="vite/client" />`,
+   и объявления `*.svg` из Vite конфликтуют с SVG-компонентами Astro. Без
+   `dist/` `astro check` проверяет 1 619 файлов вместо 2 441 и выдаёт 0
+   ошибок. В CI джоба Astro не собирает пакет, поэтому зелёная. Локально
+   `pnpm test` после любого `pnpm build` (и повторный `release:check`)
+   краснеет на `test:astro`. Исправление: `"exclude": ["dist", …]` в
+   `tsconfig.json`. Серьёзность: low.
 4. Coverage-пороги (100%) в этом прогоне не проверились: при упавших тестах
    Vitest не строит отчёт (`coverage.reportOnFailure` по умолчанию `false`).
    Повторный прогон с `--coverage.reportOnFailure` показал branches 99,98% <

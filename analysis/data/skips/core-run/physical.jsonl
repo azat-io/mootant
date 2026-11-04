@@ -1,1 +1,2 @@
 {"id": "ex98sm55ebd7", "rule": "loop-running", "file": "core/hints/find-this-class.ts", "status": "timeout", "tests": [], "seconds": 120.2, "tail": ""}
+{"id": "2fpf4qmtckzt", "rule": "tail-return", "file": "core/hints/find-this-class.ts", "status": "timeout", "tests": [], "seconds": 120.2, "tail": ""}
