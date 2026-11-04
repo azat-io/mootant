@@ -1,0 +1,30 @@
+=== b81dvyjxtny8 nullish-swap (noise) core/hints/union-inferred-types.ts:22 logical-operator
+    'type.knownKinds ?? []' -> 'type.knownKinds || []'
+    inside={'Killed': 3}
+        19   for (let type of types) {
+        20     if (type.kinds === null) {
+        21       isKnown = false
+    >>  22       kinds.push(...(type.knownKinds ?? []))
+        23     } else {
+        24       kinds.push(...type.kinds)
+        25     }
+=== p4y0fzh8x1bf nullish-normalization (noise) core/mutators/shared/get-literal-value.ts:33 logical-operator
+    'inner.quasis[0]!.value.cooked ?? null' -> 'inner.quasis[0]!.value.cooked'
+    inside={'Killed': 2}
+        30     }
+        31     case 'TemplateLiteral':
+        32       return inner.expressions.length === 0 ?
+    >>  33           (inner.quasis[0]!.value.cooked ?? null)
+        34         : null
+        35     case 'Literal':
+        36       return isLiteralValue(inner.value) ? inner.value : null
+=== kd2bd2fdctkf tail-return-false (noise) core/mutators/shared/get-literal-value.ts:56 statement-removal
+    'return false' -> ';'
+    inside={'Killed': 1}
+        53     case 'bigint':
+        54       return true
+        55     default:
+    >>  56       return false
+        57   }
+        58 }
+        59 

@@ -1,0 +1,24 @@
+O3                     owned      n= 115 files= 15 hidden=  0 strict=  0   0.0% W[0.0%,3.2%] B[0.0%,0.0%]  owner-survives=21 revealed=94
+solitary               subsumed   n=  90 files= 19 hidden=  0 strict=  0   0.0% W[0.0%,4.1%] B[0.0%,0.0%]  owner-survives=6 revealed=84
+O4                     subsumed   n=  61 files= 18 hidden=  0 strict=  0   0.0% W[0.0%,5.9%] B[0.0%,0.0%]  owner-survives=1 revealed=60
+case-label             noise      n=  37 files=  7 hidden=  0 strict=  0   0.0% W[0.0%,9.4%] B[0.0%,0.0%]  revealed=37
+O1                     owned      n=  29 files= 14 hidden=  0 strict=  0   0.0% W[0.0%,11.7%] B[0.0%,0.0%]  owner-survives=1 revealed=28
+R6                     subsumed   n=  15 files=  9 hidden=  0 strict=  0   0.0% W[0.0%,20.4%] B[0.0%,0.0%]  revealed=15
+O19                    owned      n=  14 files=  9 hidden=  0 strict=  0   0.0% W[0.0%,21.5%] B[0.0%,0.0%]  owner-survives=1 revealed=13
+R2                     subsumed   n=  14 files= 11 hidden=  0 strict=  0   0.0% W[0.0%,21.5%] B[0.0%,0.0%]  revealed=14
+loop-advance           timeout    n=  11 files=  5 hidden=  0 strict=  0   0.0% W[0.0%,25.9%] B[0.0%,0.0%]  terminates-killed=2 timeout-confirmed=9
+comparison-region      subsumed   n=   8 files=  6 hidden=  0 strict=  0   0.0% W[0.0%,32.4%] B[0.0%,0.0%]  revealed=8
+R4                     subsumed   n=   8 files=  7 hidden=  0 strict=  0   0.0% W[0.0%,32.4%] B[0.0%,0.0%]  revealed=8
+loop-running           timeout    n=   7 files=  5 hidden=  0 strict=  0   0.0% W[0.0%,35.4%] B[0.0%,0.0%]  neighbor-survives=1 terminates-killed=5 timeout-confirmed=1
+tail-return            equivalent n=   5 files=  5 hidden=  0 strict=  0   0.0% W[0.0%,43.4%] B[0.0%,0.0%]  not-equivalent=5
+lower-bound            equivalent n=   5 files=  5 hidden=  0 strict=  0   0.0% W[0.0%,43.4%] B[0.0%,0.0%]  consistent=5
+nullish-swap           noise      n=   4 files=  4 hidden=  1 strict=  1  25.0% W[4.6%,69.9%] B[0.0%,75.0%]  HIDDEN=1 neighbor-survives=1 revealed=2
+non-numeric-plus       noise      n=   4 files=  2 hidden=  0 strict=  0   0.0% W[0.0%,49.0%] B[0.0%,0.0%]  revealed=4
+shifted-literal        owned      n=   3 files=  3 hidden=  0 strict=  0   0.0% W[0.0%,56.2%] B[0.0%,0.0%]  revealed=3
+fall-through-break     equivalent n=   2 files=  2 hidden=  0 strict=  0   0.0% W[0.0%,65.8%] B[0.0%,0.0%]  consistent=2
+tail-return-false      noise      n=   2 files=  2 hidden=  1 strict=  1  50.0% W[9.5%,90.5%] B[0.0%,100.0%]  HIDDEN=1 revealed=1
+O8                     owned      n=   2 files=  1 hidden=  0 strict=  0   0.0% W[0.0%,65.8%] B[0.0%,0.0%]  revealed=2
+nullish-normalization  noise      n=   1 files=  1 hidden=  1 strict=  1 100.0% W[20.7%,100.0%] B[100.0%,100.0%]  HIDDEN=1
+R5                     subsumed   n=   1 files=  1 hidden=  0 strict=  0   0.0% W[0.0%,79.3%] B[0.0%,0.0%]  revealed=1
+awaited-by-caller      equivalent n=   1 files=  1 hidden=  0 strict=  0   0.0% W[0.0%,79.3%] B[0.0%,0.0%]  consistent=1
+error-message          noise      n=   1 files=  1 hidden=  0 strict=  0   0.0% W[0.0%,79.3%] B[0.0%,0.0%]  revealed=1

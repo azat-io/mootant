@@ -1,0 +1,24 @@
+O3                       n= 115  owner-survives=21  revealed=94
+solitary                 n=  90  owner-survives=6  revealed=84
+O4                       n=  61  owner-survives=1  revealed=60
+case-label               n=  37  revealed=37
+O1                       n=  29  owner-survives=1  revealed=28
+R6                       n=  15  revealed=15
+O19                      n=  14  owner-survives=1  revealed=13
+R2                       n=  14  revealed=14
+loop-advance             n=  11  terminates-killed=2  timeout-confirmed=9
+comparison-region        n=   8  revealed=8
+R4                       n=   8  revealed=8
+loop-running             n=   7  neighbor-survives=1  terminates-killed=5  timeout-confirmed=1
+tail-return              n=   5  not-equivalent=5
+lower-bound              n=   5  consistent=5
+nullish-swap             n=   4  HIDDEN=1  neighbor-survives=1  revealed=2
+non-numeric-plus         n=   4  revealed=4
+shifted-literal          n=   3  revealed=3
+fall-through-break       n=   2  consistent=2
+tail-return-false        n=   2  HIDDEN=1  revealed=1
+O8                       n=   2  revealed=2
+nullish-normalization    n=   1  HIDDEN=1
+R5                       n=   1  revealed=1
+awaited-by-caller        n=   1  consistent=1
+error-message            n=   1  revealed=1

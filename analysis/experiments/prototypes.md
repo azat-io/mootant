@@ -44,8 +44,22 @@
 - Стиль: TypeScript, ESM, «одна функция — один файл», JSDoc, `let`; изменённые
   файлы проходят `pnpm exec eslint` и `tsc --noEmit` (ошибки `tsc` только в
   `docs/` из-за несгенерированных типов Astro — так же и на базе без
-  `astro sync`); затронутые модули проходят свои тесты (`vitest run` по
-  затронутым файлам). Полный `pnpm test` с порогом 100 % покрытия не гонялся.
+  `astro sync`). Полный `pnpm test` с порогом 100 % покрытия не гонялся;
+  прогнаны наборы вокруг затронутых модулей (`--maxWorkers=2`, под нагрузкой):
+  - P1: `vitest run test/adapters test/core/run test/core/cache test/core/run-mutants.test.ts` —
+    696 из 698; упали `score-node-test` «skips test files it cannot read»
+    (известное падение под root, `analysis/00-baseline.md`) и
+    `test/adapters/vitest/index.test.ts` «agrees with mutants applied by hand in
+    Vue components and templates» — по тайм-ауту 120 с при нагрузке; отдельно
+    этот тест проходит и на P1, и на базе;
+  - P2: `vitest run test/adapters/vitest test/core/run test/core/cache test/core/run-mutants.test.ts` —
+    484 из 486; упали два теста «verdict equivalence» из
+    `test/adapters/vitest/index.test.ts` ровно по своим тайм-аутам (60 и 120 с)
+    при параллельном прогоне P1; ПОВТОР_P2;
+  - P3: `vitest run test/core/cache test/core/run test/core/run-mutants.test.ts` —
+    все проходят (с новыми тестами); ПОВТОР_P3.
+  Нестабильные тесты раннера, встреченные по ходу (`runner.test.ts`), падают и
+  на базе — BUG-750, BUG-751.
 
 Подготовка фикстур (уже сделана, повторять не нужно):
 
@@ -216,6 +230,12 @@ node analysis/bench/summarize.mjs /home/user/projects/bench/results-proto/parall
   `maxWorkers`, но тяжёлые файлы чаще оказываются в памяти одновременно).
 - Флаки, которые раньше не проявлялись (гонки на общем `tmp`), будут выглядеть
   как ложные убийства без диагностики.
+- Загрузка слотов растёт: в базе слот, ждущий очереди файла, почти не тратит
+  CPU, а в P1 все `W` слотов работают. Это та же загрузка, что у базы на `W`
+  разных файлах (и у dry run), так что бюджеты тайм-аутов рассчитаны на неё, но
+  подтверждения тайм-аутов isolated идут без снижения параллельности (у batch
+  она уполовинивается, `core/run/plan-batch.ts:68-70`), поэтому при замере
+  смотреть и на число Timeout в `compare-*.md`.
 
 ### Трудоёмкость до продакшна: M
 
@@ -514,7 +534,13 @@ the project was added, removed or changed». Значит, проверка вс
 тест и причина); раннер не стартовал ровно в 4 сценариях «ничего не
 изменилось» и стартовал во всех остальных, каждый раз с правильной причиной.
 Грубое время повтора на мини-фикстуре: 0,44–0,68 с против 2,0–4,0 с обычного
-тёплого прогона (не замер).
+тёплого прогона (не замер). Две промежуточные версии прототипа (не в
+истории ветки) в сценариях «ничего не изменилось» снимок не переиспользовали:
+первая снимала окружение после старта Vitest (BUG-753, «an environment variable
+changed»), вторая не кэшировала тайм-аут `hit-limit` единственного
+Timeout-мутанта фикстуры (BUG-752, «a mutant has no valid cached verdict»;
+`/home/user/projects/perf-proto/results/p3-v1-vitest-units-summary.txt`) —
+вердикты при этом тоже совпадали, P3 просто уходил на обычный путь.
 
 Фикстура `node-units` (node:test): 6 сценариев
 (`/home/user/projects/perf-proto/results/p3/node-units/summary.txt`): s0-cold,
@@ -557,8 +583,9 @@ $T/p3-negative-control.sh $P/dry-snapshot/vitest-units $P/results/p3/negative
   вердикты равны обычному тёплому прогону.
 - Отрицательный контроль как тест: без проверки дерева повтор даёт устаревший
   вердикт (страховка от «оптимизации» проверки дерева в будущем).
-- `write-dry-snapshot`: каждая причина «не сохранять» (нет зависимостей, `*`,
-  нет `cacheInputs`, файл изменился во время прогона, ошибки прогона).
+- `write-dry-snapshot`: каждая причина «не сохранять» (нет зависимостей, нет
+  `cacheInputs`, файл изменился во время прогона, ошибки прогона) и снимок
+  тест-файла с `*` (устаревает от любой новой переменной).
 - `read-dry-snapshot`: битый файл, другая версия, чужая структура → null.
 - Отчёт: `runs`, `timing`, диагностика сессии и dry-фазы в повторе совпадают с
   тёплым прогоном (кроме `runs.dry` и времени).

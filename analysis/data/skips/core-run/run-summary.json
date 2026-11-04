@@ -1,0 +1,185 @@
+{
+ "duration": {
+  "batch": null,
+  "isolated": 673214,
+  "startup": 2955,
+  "dryRun": 15836,
+  "total": 692006
+ },
+ "passed": true,
+ "staticCost": [
+  {
+   "file": "core/instrument/instrument-file.ts",
+   "duration": 141699,
+   "mutants": 0,
+   "units": 47
+  },
+  {
+   "file": "core/mutators/shared/get-typeof-name.ts",
+   "duration": 139780,
+   "mutants": 45,
+   "units": 121
+  },
+  {
+   "file": "core/mutators/shared/get-callback-result.ts",
+   "duration": 111026,
+   "mutants": 0,
+   "units": 67
+  },
+  {
+   "file": "core/mutators/shared/get-callback-owner.ts",
+   "duration": 102695,
+   "mutants": 0,
+   "units": 66
+  },
+  {
+   "file": "core/mutators/shared/is-boolean-result-source.ts",
+   "duration": 63439,
+   "mutants": 0,
+   "units": 57
+  },
+  {
+   "file": "core/syntax/get-checked-name.ts",
+   "duration": 59095,
+   "mutants": 0,
+   "units": 36
+  },
+  {
+   "file": "core/mutators/shared/get-literal-value.ts",
+   "duration": 48755,
+   "mutants": 0,
+   "units": 58
+  },
+  {
+   "file": "core/hints/infer-this-type.ts",
+   "duration": 46775,
+   "mutants": 0,
+   "units": 59
+  },
+  {
+   "file": "core/syntax/read-literal-type.ts",
+   "duration": 40476,
+   "mutants": 0,
+   "units": 71
+  },
+  {
+   "file": "core/syntax/is-non-thenable.ts",
+   "duration": 31891,
+   "mutants": 12,
+   "units": 44
+  },
+  {
+   "file": "core/syntax/is-vue-macro-call.ts",
+   "duration": 30476,
+   "mutants": 14,
+   "units": 27
+  },
+  {
+   "file": "core/text/edit-text.ts",
+   "duration": 26702,
+   "mutants": 0,
+   "units": 43
+  },
+  {
+   "file": "core/syntax/is-format-free.ts",
+   "duration": 24885,
+   "mutants": 0,
+   "units": 38
+  },
+  {
+   "file": "core/hints/find-this-class.ts",
+   "duration": 23673,
+   "mutants": 0,
+   "units": 26
+  },
+  {
+   "file": "core/syntax/get-closed-initializer.ts",
+   "duration": 21291,
+   "mutants": 0,
+   "units": 26
+  },
+  {
+   "file": "core/syntax/is-global-name.ts",
+   "duration": 18058,
+   "mutants": 0,
+   "units": 20
+  },
+  {
+   "file": "core/hints/union-inferred-types.ts",
+   "duration": 16808,
+   "mutants": 0,
+   "units": 21
+  },
+  {
+   "file": "core/parser/load-svelte-compiler.ts",
+   "duration": 16055,
+   "mutants": 0,
+   "units": 16
+  },
+  {
+   "file": "core/git/parse-binary-paths.ts",
+   "duration": 15783,
+   "mutants": 0,
+   "units": 37
+  },
+  {
+   "file": "core/mutators/shared/is-truth-flipping-literal.ts",
+   "duration": 14760,
+   "mutants": 0,
+   "units": 22
+  },
+  {
+   "file": "core/mutators/shared/is-boolean-mode.ts",
+   "duration": 12669,
+   "mutants": 0,
+   "units": 12
+  },
+  {
+   "file": "core/text/find-last-start.ts",
+   "duration": 12475,
+   "mutants": 0,
+   "units": 21
+  },
+  {
+   "file": "core/mutators/shared/get-nullish-swap-skip.ts",
+   "duration": 11748,
+   "mutants": 0,
+   "units": 15
+  },
+  {
+   "file": "core/regex/has-named-group.ts",
+   "duration": 9003,
+   "mutants": 0,
+   "units": 11
+  },
+  {
+   "file": "core/tree/get-slot.ts",
+   "duration": 4662,
+   "mutants": 0,
+   "units": 7
+  }
+ ],
+ "totalCached": null,
+ "totalUnrepeatableTests": null,
+ "totalBatch": null,
+ "totalNoCoverage": 0,
+ "totalMutants": 835,
+ "totalErrorMutants": 0,
+ "totalTests": 399,
+ "totalSurvived": 98,
+ "totalIgnored": 0,
+ "totalTimeout": 15,
+ "threshold": null,
+ "coveredScore": 88.26,
+ "totalKilled": 722,
+ "score": 88.26,
+ "runs": {
+  "dry": 1,
+  "isolated": 4
+ },
+ "totalIsolated": 835,
+ "totalWarnings": 1,
+ "totalErrors": 0,
+ "totalStatic": 71,
+ "totalFiles": 25
+}
