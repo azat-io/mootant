@@ -4,7 +4,7 @@
 > Пакет `mootant-0.1.0-170ec52.tgz`, Vitest 5.0.5, Vite 8.3.5. Node 22.23.4
 > (основной), 20.19.0, 22.12.0, 24.22.2, 26.13.0; для проверок вне `engines` —
 > 18.20.8, 20.18.0, 22.11.0. Linux x64, 4 vCPU (общая машина, load average
-> 2–27 во время замеров), процесс от root, `TERM=linux`, `CI` не задан.
+> 2–36 во время замеров), процесс от root, `TERM=linux`, `CI` не задан.
 >
 > Фикстуры — `/home/user/projects/cli/*`, их создают скрипты
 > `analysis/tools/cli/make-fixture.sh` и `make-hang-fixtures.sh` (node_modules
@@ -32,7 +32,7 @@
 | BUG-512 | Windows: после остановки воркера его PID проверяется без проверки родителя (`process.platform !== 'win32'`), а `waitForWorkers` через 70 с убивает «живые» PID из `worker/` — на Windows PID переиспользуются быстро, можно убить чужой процесс | low | гипотеза | `adapters/vitest/stop-hung-worker.ts:20`, `wait-for-workers.ts:73,113` | на Windows: держать PID умершего воркера занятым другим процессом до конца ожидания |
 | BUG-513 | Скрипты `package.json` разбираются по правилам POSIX-shell: `node --test test\unit\a.test.js` → файл `testunita.test.js`; обработка `\` и `.cmd` в `resolve-command.ts` недостижима; `set X=1&& node --test` теряет переменную; команда перепроверки кавычит одинарными кавычками (не работает в cmd.exe) | low | подтверждён (логика, функции из dist); эффект на Windows — гипотеза | `adapters/node-test/parse-command.ts:54-58`, `resolve-command.ts:82-85`, `cli/report/format-command.ts:117-121` | `node analysis/tools/cli/win-script-parse.mjs <фикстура>` |
 | BUG-514 | Цвета: `FORCE_COLOR=0` включает ANSI (Node и chalk трактуют как «выключить»), `CI=true` и Windows включают ANSI в перенаправленном в файл stdout | low | подтверждён | `cli/terminal/colors.ts:116-127` | `data/cli/cli-battery-run.txt` (`run-force-color-0`, `run-color-ci-pipe`); вызов `isColorSupported` из dist |
-| BUG-515 | Node < 20.19 (вне `engines`): CLI не проверяет версию — на 18.20.8 `run` падает со стеком `toSorted is not a function`, а любой `--no-*` — «Unknown option» (нет `allowNegative` в `util.parseArgs`) | low | подтверждён | `cli/index.ts:13`, `cli/create-run-progress.ts` | `npx -y node@18.20.8 node_modules/mootant/bin/mootant.js run src --no-cache` |
+| BUG-515 | Node < 20.19 (вне `engines`): CLI не проверяет версию — на 18.20.8 `run` падает со стеком `toSorted is not a function`, а любой `--no-*` — «Unknown option» (нет `allowNegative` в `util.parseArgs`) | low | подтверждён | `cli/index.ts:13`, `cli/create-run-progress.ts:393` | `npx -y node@18.20.8 node_modules/mootant/bin/mootant.js run src --no-cache` |
 | BUG-516 | Мелочи сообщений CLI: `list src --no-cache` → «--cache applies to the run command only», `run --no-skipped` — ошибка; `--threshold 0x10`/`1e1` принимаются как 16/10; в сообщениях node:test процесс называется «worker» | low | подтверждён | `cli/parse-arguments.ts:312-317,318-330,389-395`; `core/run/apply-isolated-result.ts:127` | `data/cli/cli-battery-args.txt`, `cli-battery-run.txt` |
 
 Bug-prompts (medium и выше, подтверждённые): `analysis/bug-prompts/BUG-500.md`,
@@ -137,7 +137,7 @@ Node). Пакет без поля `type` грузится, но каждый з�
 
 | Сценарий | Vitest | node:test |
 | --- | --- | --- |
-| Ctrl+C (SIGINT всей группе), TTY | 130; процессов нет; workdir + `<random>/ssr` остались | 130; процессов нет; workdir остался |
+| Ctrl+C (SIGINT всей группе), TTY | 130; процессов нет; workdir + `<nanoid>/ssr` остались | 130; процессов нет; workdir остался |
 | SIGINT только pid, без TTY | 130; **воркер-сирота** (ppid 1, R, 100% CPU) | 130; группа убита; workdir остался |
 | SIGTERM только pid, без TTY | 143; **воркер-сирота** | 143; ок; workdir остался |
 | SIGTERM pid, pty с shell (`tty-shell`) | 143; **воркер-сирота** | 143; ок; workdir остался |
@@ -151,8 +151,9 @@ Node). Пакет без поля `type` грузится, но каждый з�
 тестовых процессов (`adapters/node-test/track-process-group.ts:7,18-22,40-46`:
 SIGINT/SIGTERM, убить группы и переподнять сигнал). Для Vitest убийство
 воркеров при сигнале не предусмотрено; без TTY срабатывает обработчик логгера
-Vitest (`setTimeout(() => process.exit(), 1)`), воркер в синхронном цикле не
-видит закрытия IPC. Тестовые процессы node:test стартуют `detached`
+Vitest (`setTimeout(() => process.exit(), 1)`,
+`vitest/dist/chunks/index.1TqnEahn.js:8575-8584`), воркер в синхронном цикле
+не видит закрытия IPC. Тестовые процессы node:test стартуют `detached`
 (`run-test-process.ts:122`) — собственная сессия, SIGHUP терминала до них не
 доходит, а SIGHUP/SIGQUIT mootant не обрабатывает. Рабочий каталог создаётся в
 TMPDIR (`core/run/create-work-directory.ts:27`) и удаляется только в `finally`
@@ -331,6 +332,9 @@ stderr» в `docs/content/guide/cli.mdx:125`) нарушается.
   политикой окружения; вывод по исходникам BusyBox.
 - yarn PnP, bun как runtime, pnpm-симлинки — матрицу менеджеров пакетов ведёт
   агент раздела 7 (`/home/user/projects/release/vt-*`), здесь не дублировалось.
-- Время прогонов на перегруженной машине (load average до 27) не
-  использовалось как метрика; выводы о сигналах и зависаниях качественные и
-  устойчивы к нагрузке (повторены 2–3 раза в разных режимах).
+- Время прогонов на перегруженной машине (load average до 36) не
+  использовалось как метрика; выводы о сигналах и зависаниях качественные.
+  Все сценарии прогнаны харнессом на установленном tgz; ключевые (SIGTERM pid
+  для Vitest; SIGHUP, SIGQUIT и контрольный SIGTERM для node:test; SIGINT и
+  SIGTERM группе для утечки каталога; отсутствие `ps`) повторены
+  воспроизведениями на сборке из исходников в `experiment/bug-repros`.

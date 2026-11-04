@@ -48,6 +48,7 @@ let [root, out, ...paths] = positional
 let bin = flags.get('bin') ?? path.join(MOOTANT_ROOT, 'bin/mootant.js')
 let preset = flags.get('preset') ?? 'strict'
 let rawCheck = flags.get('raw') !== 'no'
+let MAX_SWITCHED = Number(flags.get('max-switched') ?? 8_000_000)
 
 let { instrumentFile } = await importDist('core/instrument/instrument-file.js')
 let { transformWithOxc } = await loadVite()
@@ -267,6 +268,13 @@ for (let [display, mutants] of byFile) {
     continue
   }
   stats.switchedBytes += switched.length
+  // Switched texts of many megabytes (BUG-104) are not parsed: oxc's AST of a
+  // 90 MB text takes gigabytes and got this process OOM-killed.
+  if (switched.length > MAX_SWITCHED) {
+    findings.push({ kind: 'huge-switched', file: display, sourceBytes: source.length, switchedBytes: switched.length, mutants: mutants.length })
+    stats.hugeSwitched = (stats.hugeSwitched ?? 0) + 1
+    continue
+  }
   // Line shift: extra lines the switched text has.
   let shift = switched.split('\n').length - source.split('\n').length
   if (shift > 0) {

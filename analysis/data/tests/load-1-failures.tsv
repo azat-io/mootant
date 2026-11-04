@@ -1,0 +1,23 @@
+file	test	duration_ms	message
+test/cli/index.test.ts	run keeps every script block of each fixture file parseable with each mutant applied	10032	Error: Test timed out in 5000ms.
+test/core/run-mutants.test.ts	runMutants checks switched components with the compiler of their framework	5280	Error: Test timed out in 5000ms.
+test/adapters/vitest/index.test.ts	vitest adapter runs every mutant of a project isolated by default	30214	Error: Test timed out in 30000ms.
+test/adapters/vitest/index.test.ts	vitest adapter runs the mutants of a project on the batch and isolated paths in fast mode	30005	Error: Test timed out in 30000ms.
+test/adapters/vitest/index.test.ts	verdict equivalence agrees with mutants applied by hand in the default and fast modes	60001	Error: Test timed out in 60000ms.
+test/adapters/vitest/index.test.ts	verdict equivalence counts errors of worker-scoped fixture cleanup against the mutant	60030	Error: Test timed out in 60000ms.
+test/adapters/vitest/index.test.ts	verdict equivalence agrees with mutants applied by hand in Vue components and templates	120009	Error: Test timed out in 120000ms.
+test/adapters/vitest/index.test.ts	verdict equivalence agrees with mutants applied by hand in Svelte components, templates and modules	60048	Error: Test timed out in 60000ms.
+test/adapters/vitest/index.test.ts	verdict equivalence skips only the message mutants of logging calls and runs the rest as by hand	60252	Error: Test timed out in 60000ms.
+test/adapters/vitest/index.test.ts	vitest adapter with the cache reuses every verdict of an unchanged project	60941	Error: Test timed out in 60000ms.
+test/adapters/vitest/index.test.ts	vitest adapter with the cache runs the mutants of a changed source file again	60621	Error: Test timed out in 60000ms.
+test/adapters/vitest/index.test.ts	vitest adapter with the cache runs every mutant again when the test runner configuration changes	60094	Error: Test timed out in 60000ms.
+test/adapters/vitest/runner.test.ts	mootantRunner records coverage, stray errors and flips in a dry run with beats	216	AssertionError: expected [ [ 1100, null, null ], …(2) ] to deeply equal [ [ 1100, null, null ], …(2) ]
+test/adapters/node-test/index.test.ts	node:test verdict equivalence agrees with mutants applied by hand	72790	AssertionError: expected false to be true // Object.is equality
+test/adapters/node-test/score-node-test.test.ts	scoreNodeTest skips test files it cannot read	24	Error: expected 1 to be +0 // Object.is equality
+test/cli/report/format-header.test.ts	formatHeader handles a body of more lines than a function takes arguments	44844	Error: Test timed out in 5000ms.
+test/cli/terminal/get-max-display-width.test.ts	getMaxDisplayWidth takes more texts than a function takes arguments	13907	Error: Test timed out in 5000ms.
+test/core/generate/generate-file-mutants.test.ts	generateFileMutants keeps no weak mutant and covers every fault of if (!((((!(y1 > x1) || a) || x2 === y2) && …)	7402	Error: Test timed out in 5000ms.
+test/core/generate/generate-file-mutants.test.ts	runProgram observes function f() { return new Promise(() => {}) }	1228	Error: expected [ 'hung' ] to strictly equal [ Array(1) ]
+test/core/cache/prune-cache-entries.test.ts	pruneCacheEntries keeps the 200 000 most recently used entries	6548	Error: Test timed out in 5000ms.
+test/core/instrument/instrument-file.test.ts	instrumentFile switches function f(text) { under recommended like each mutant applied alone	2293	Error: expected [ …(5) ] to strictly equal [ 'hung', …(4) ]
+test/cli/html/client/start-report.test.ts	startReport adds a page of tests after a test the search opened far down	6767	Error: Test timed out in 5000ms.
