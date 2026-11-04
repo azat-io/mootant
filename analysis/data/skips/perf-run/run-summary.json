@@ -1,0 +1,65 @@
+{
+ "duration": {
+  "batch": null,
+  "isolated": 847268,
+  "startup": 1313,
+  "dryRun": 6709,
+  "total": 855290
+ },
+ "passed": true,
+ "staticCost": [
+  {
+   "file": "rules/sort-export-attributes.ts",
+   "duration": 420528,
+   "mutants": 55,
+   "units": 70
+  },
+  {
+   "file": "rules/sort-heritage-clauses/sort-heritage-clause.ts",
+   "duration": 404421,
+   "mutants": 32,
+   "units": 111
+  },
+  {
+   "file": "rules/sort-heritage-clauses.ts",
+   "duration": 292574,
+   "mutants": 40,
+   "units": 46
+  },
+  {
+   "file": "rules/sort-heritage-clauses/compute-matched-context-options.ts",
+   "duration": 52375,
+   "mutants": 0,
+   "units": 7
+  },
+  {
+   "file": "rules/sort-heritage-clauses/compute-node-name.ts",
+   "duration": 39225,
+   "mutants": 0,
+   "units": 8
+  }
+ ],
+ "totalCached": null,
+ "totalUnrepeatableTests": null,
+ "totalBatch": null,
+ "totalNoCoverage": 4,
+ "totalMutants": 246,
+ "totalErrorMutants": 0,
+ "totalTests": 169,
+ "totalSurvived": 74,
+ "totalIgnored": 0,
+ "totalTimeout": 1,
+ "threshold": null,
+ "coveredScore": 69.42,
+ "totalKilled": 167,
+ "score": 68.29,
+ "runs": {
+  "dry": 1,
+  "isolated": 1
+ },
+ "totalIsolated": 242,
+ "totalWarnings": 0,
+ "totalErrors": 0,
+ "totalStatic": 127,
+ "totalFiles": 5
+}

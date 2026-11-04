@@ -1,0 +1,6 @@
+solitary                 n=  81  HIDDEN=13  owner-survives=24  revealed=44
+error-message            n=   3  HIDDEN=3
+O19                      n=   3  owner-survives=2  revealed=1
+loop-running             n=   2  terminates-killed=2
+O4                       n=   1  revealed=1
+loop-advance             n=   1  timeout-confirmed=1

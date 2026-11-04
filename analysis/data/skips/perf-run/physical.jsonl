@@ -1,0 +1,1 @@
+{"id": "wawq8gmd0fy5", "rule": "solitary", "file": "rules/sort-export-attributes.ts", "status": "survived", "tests": ["test/rules/sort-export-attributes.test.ts"], "seconds": 5.3, "tail": ""}

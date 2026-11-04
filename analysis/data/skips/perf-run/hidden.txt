@@ -1,0 +1,173 @@
+=== wawq8gmd0fy5 solitary (subsumed) rules/sort-export-attributes.ts:31 object-property
+    "{ type: 'unsorted' }" -> '{}'
+    by {'id': 'em34v05j58xw', 'mutator': 'string-literal', 'start': 1142, 'end': 1152} owners=[('string-literal', "''", 'Killed')]
+    inside={'Killed': 1}
+        28   | typeof ORDER_ERROR_ID
+        29 
+        30 let defaultOptions: Required<Options[0]> = {
+    >>  31   fallbackSort: { type: 'unsorted' },
+        32   newlinesInside: 'newlinesBetween',
+        33   specialCharacters: 'keep',
+        34   partitionByComment: false,
+=== erwx3jj103wt solitary (subsumed) rules/sort-export-attributes.ts:30 object-property
+    "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k" -> "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k"
+    by {'id': '908np3z5s83r', 'mutator': 'string-literal', 'start': 1410, 'end': 1417} owners=[('string-literal', "''", 'Killed')]
+    inside={'Survived': 3, 'Killed': 11}
+        27   | typeof GROUP_ORDER_ERROR_ID
+        28   | typeof ORDER_ERROR_ID
+        29 
+    >>  30 let defaultOptions: Required<Options[0]> = {
+        31   fallbackSort: { type: 'unsorted' },
+        32   newlinesInside: 'newlinesBetween',
+        33   specialCharacters: 'keep',
+=== yxxhhp0a5bbg solitary (subsumed) rules/sort-export-attributes.ts:30 object-property
+    "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k" -> "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k"
+    by {'id': 'q70anq3wqq8p', 'mutator': 'boolean-literal', 'start': 1244, 'end': 1249} owners=[('boolean-literal', 'true', 'Killed')]
+    inside={'Survived': 3, 'Killed': 11}
+        27   | typeof GROUP_ORDER_ERROR_ID
+        28   | typeof ORDER_ERROR_ID
+        29 
+    >>  30 let defaultOptions: Required<Options[0]> = {
+        31   fallbackSort: { type: 'unsorted' },
+        32   newlinesInside: 'newlinesBetween',
+        33   specialCharacters: 'keep',
+=== tqnt6hhsyqaj solitary (subsumed) rules/sort-export-attributes.ts:30 object-property
+    "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k" -> "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k"
+    by {'id': '1ht2sc9dgq7p', 'mutator': 'boolean-literal', 'start': 1273, 'end': 1278} owners=[('boolean-literal', 'true', 'Killed')]
+    inside={'Survived': 3, 'Killed': 11}
+        27   | typeof GROUP_ORDER_ERROR_ID
+        28   | typeof ORDER_ERROR_ID
+        29 
+    >>  30 let defaultOptions: Required<Options[0]> = {
+        31   fallbackSort: { type: 'unsorted' },
+        32   newlinesInside: 'newlinesBetween',
+        33   specialCharacters: 'keep',
+=== zz8c49pdbswc solitary (subsumed) rules/sort-export-attributes.ts:30 object-property
+    "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k" -> "{\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'keep',\n  partitionByComment: false,\n  p"
+    by {'id': 'em34v05j58xw', 'mutator': 'string-literal', 'start': 1142, 'end': 1152} owners=[('string-literal', "''", 'Killed')]
+    inside={'Survived': 3, 'Killed': 11}
+        27   | typeof GROUP_ORDER_ERROR_ID
+        28   | typeof ORDER_ERROR_ID
+        29 
+    >>  30 let defaultOptions: Required<Options[0]> = {
+        31   fallbackSort: { type: 'unsorted' },
+        32   newlinesInside: 'newlinesBetween',
+        33   specialCharacters: 'keep',
+=== 0r7v27wcab8m solitary (subsumed) rules/sort-heritage-clauses.ts:36 object-property
+    '{\n      items: {\n        properties: {\n          ...buildCommonJsonSchemas(),\n          ...buildComm' -> '{\n      items: {\n        properties: {\n          ...buildCommonJsonSchemas(),\n          ...buildComm'
+    by {'id': '94ccytydbfkv', 'mutator': 'string-literal', 'start': 1634, 'end': 1641} owners=[('string-literal', "''", 'Killed')]
+    inside={'Killed': 8, 'Survived': 1}
+        33 
+        34 export default createEslintRule<Options, MessageId>({
+        35   meta: {
+    >>  36     schema: {
+        37       items: {
+        38         properties: {
+        39           ...buildCommonJsonSchemas(),
+=== m3b8y2p1vbcr solitary (subsumed) rules/sort-heritage-clauses.ts:37 object-property
+    '{\n        properties: {\n          ...buildCommonJsonSchemas(),\n          ...buildCommonGroupsJsonSch' -> '{\n        properties: {\n          ...buildCommonJsonSchemas(),\n          ...buildCommonGroupsJsonSch'
+    by {'id': 'kpea8xygx3q2', 'mutator': 'string-literal', 'start': 1578, 'end': 1586} owners=[('string-literal', "''", 'Killed')]
+    inside={'Killed': 7}
+        34 export default createEslintRule<Options, MessageId>({
+        35   meta: {
+        36     schema: {
+    >>  37       items: {
+        38         properties: {
+        39           ...buildCommonJsonSchemas(),
+        40           ...buildCommonGroupsJsonSchemas(),
+=== 8hmgfvm4xss2 error-message (noise) rules/sort-heritage-clauses/compute-node-name.ts:27 arithmetic-operator
+    "'Unexpected heritage clause expression. Please report this issue ' +\n      'here: https://github.com" -> "'Unexpected heritage clause expression. Please report this issue '"
+    inside={}
+        24   }
+        25   /* v8 ignore next -- @preserve Should never throw. */
+        26   throw new Error(
+    >>  27     'Unexpected heritage clause expression. Please report this issue ' +
+        28       'here: https://github.com/azat-io/eslint-plugin-perfectionist/issues',
+        29   )
+        30 }
+=== qdas8mv63qqd error-message (noise) rules/sort-heritage-clauses/compute-node-name.ts:27 string-literal
+    "'Unexpected heritage clause expression. Please report this issue '" -> "''"
+    inside={}
+        24   }
+        25   /* v8 ignore next -- @preserve Should never throw. */
+        26   throw new Error(
+    >>  27     'Unexpected heritage clause expression. Please report this issue ' +
+        28       'here: https://github.com/azat-io/eslint-plugin-perfectionist/issues',
+        29   )
+        30 }
+=== zqqax749xpwd error-message (noise) rules/sort-heritage-clauses/compute-node-name.ts:28 string-literal
+    "'here: https://github.com/azat-io/eslint-plugin-perfectionist/issues'" -> "''"
+    inside={}
+        25   /* v8 ignore next -- @preserve Should never throw. */
+        26   throw new Error(
+        27     'Unexpected heritage clause expression. Please report this issue ' +
+    >>  28       'here: https://github.com/azat-io/eslint-plugin-perfectionist/issues',
+        29   )
+        30 }
+        31 
+=== g5am4apkrvdk solitary (subsumed) rules/sort-heritage-clauses/sort-heritage-clause.ts:36 object-property
+    "{ type: 'unsorted' }" -> '{}'
+    by {'id': 'thg88qh0xpjy', 'mutator': 'string-literal', 'start': 1855, 'end': 1865} owners=[('string-literal', "''", 'Killed')]
+    inside={'Killed': 1}
+        33 import { complete } from '../../utils/complete'
+        34 
+        35 export let defaultOptions: Required<Options[number]> = {
+    >>  36   fallbackSort: { type: 'unsorted' },
+        37   newlinesInside: 'newlinesBetween',
+        38   specialCharacters: 'keep',
+        39   newlinesBetween: 'ignore',
+=== 3w58znkqk60f solitary (subsumed) rules/sort-heritage-clauses/sort-heritage-clause.ts:35 object-property
+    "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k" -> "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k"
+    by {'id': '790n4qpm1v2f', 'mutator': 'string-literal', 'start': 2123, 'end': 2130} owners=[('string-literal', "''", 'Killed')]
+    inside={'Survived': 3, 'Killed': 11}
+        32 import { isSortable } from '../../utils/is-sortable'
+        33 import { complete } from '../../utils/complete'
+        34 
+    >>  35 export let defaultOptions: Required<Options[number]> = {
+        36   fallbackSort: { type: 'unsorted' },
+        37   newlinesInside: 'newlinesBetween',
+        38   specialCharacters: 'keep',
+=== gebe0bh5adtf solitary (subsumed) rules/sort-heritage-clauses/sort-heritage-clause.ts:35 object-property
+    "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k" -> "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k"
+    by {'id': 'masjj0b4j0bj', 'mutator': 'boolean-literal', 'start': 1986, 'end': 1991} owners=[('boolean-literal', 'true', 'Killed')]
+    inside={'Survived': 3, 'Killed': 11}
+        32 import { isSortable } from '../../utils/is-sortable'
+        33 import { complete } from '../../utils/complete'
+        34 
+    >>  35 export let defaultOptions: Required<Options[number]> = {
+        36   fallbackSort: { type: 'unsorted' },
+        37   newlinesInside: 'newlinesBetween',
+        38   specialCharacters: 'keep',
+=== 96k3gsrpa4nq solitary (subsumed) rules/sort-heritage-clauses/sort-heritage-clause.ts:35 object-property
+    "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k" -> "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k"
+    by {'id': '010b59ncch59', 'mutator': 'boolean-literal', 'start': 2015, 'end': 2020} owners=[('boolean-literal', 'true', 'Killed')]
+    inside={'Survived': 3, 'Killed': 11}
+        32 import { isSortable } from '../../utils/is-sortable'
+        33 import { complete } from '../../utils/complete'
+        34 
+    >>  35 export let defaultOptions: Required<Options[number]> = {
+        36   fallbackSort: { type: 'unsorted' },
+        37   newlinesInside: 'newlinesBetween',
+        38   specialCharacters: 'keep',
+=== dvkvwbtjeek3 solitary (subsumed) rules/sort-heritage-clauses/sort-heritage-clause.ts:35 object-property
+    "{\n  fallbackSort: { type: 'unsorted' },\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'k" -> "{\n  newlinesInside: 'newlinesBetween',\n  specialCharacters: 'keep',\n  newlinesBetween: 'ignore',\n  p"
+    by {'id': 'thg88qh0xpjy', 'mutator': 'string-literal', 'start': 1855, 'end': 1865} owners=[('string-literal', "''", 'Killed')]
+    inside={'Survived': 3, 'Killed': 11}
+        32 import { isSortable } from '../../utils/is-sortable'
+        33 import { complete } from '../../utils/complete'
+        34 
+    >>  35 export let defaultOptions: Required<Options[number]> = {
+        36   fallbackSort: { type: 'unsorted' },
+        37   newlinesInside: 'newlinesBetween',
+        38   specialCharacters: 'keep',
+=== xe1hj4b0j2db solitary (subsumed) rules/sort-heritage-clauses/sort-heritage-clause.ts:98 statement-removal
+    'validateGroupsConfig({\n    modifiers: [],\n    selectors: [],\n    options,\n  })' -> ';'
+    by {'id': 'd3j3wr8c0cc3', 'mutator': 'object-property', 'start': 3478, 'end': 3534} owners=[('object-property', '{\n    modifiers: [],\n    selectors: [],\n', 'Killed')]
+    inside={'Killed': 1, 'Survived': 2}
+        95     settings,
+        96   })
+        97   validateCustomSortConfig(options)
+    >>  98   validateGroupsConfig({
+        99     modifiers: [],
+       100     selectors: [],
+       101     options,
