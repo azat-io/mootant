@@ -24,3 +24,14 @@ mootant exit=143
 tools/hang-signal.sh: line 17: syntax error near unexpected token `;'
 tools/hang-signal.sh: line 17: `; echo "1 s after:"; list'
 ##### vitest SIGHUP
+tools/hang-signal.sh: line 13:  4820 Hangup                  TMPDIR="$out/tmp" TRACE_DIR="$out/trace" setsid node node_modules/mootant/bin/mootant.js run --config mootant.trace.config.js --mutant ef33xd3qqj1e > "$out/stdout.txt" 2> "$out/stderr.txt" < /dev/null
+mootant exit=129
+1 s after:
+ 2089     1 Rl        23 30.2 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/pro
+ 5108     1 Rl         5 29.9 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/pro
+11 s after:
+ 2089     1 Rl        34 31.0 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/pro
+ 5108     1 Rl        16 32.5 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/pro
+cleanup: killed 2089
+cleanup: killed 5108
+work dirs left: 1

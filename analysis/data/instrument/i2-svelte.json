@@ -1,0 +1,24 @@
+{
+ "project": "/home/user/projects/instrument/svelte",
+ "paths": [
+  "src"
+ ],
+ "mode": "i2",
+ "preset": "strict",
+ "files": 2,
+ "pending": 53,
+ "startedAt": "2026-11-04T04:56:38.183Z",
+ "i2": {
+  "tests": 4,
+  "baseFailed": [],
+  "ms": {
+   "base": 5635,
+   "plain": 4969,
+   "nulled": 4103
+  },
+  "plainDiff": [],
+  "nullDiff": [],
+  "errors": []
+ },
+ "finishedAt": "2026-11-04T04:56:52.907Z"
+}

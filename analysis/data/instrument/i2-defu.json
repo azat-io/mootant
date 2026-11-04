@@ -1,0 +1,24 @@
+{
+ "project": "/home/user/projects/instrument/defu",
+ "paths": [
+  "src"
+ ],
+ "mode": "i2",
+ "preset": "strict",
+ "files": 2,
+ "pending": 64,
+ "startedAt": "2026-11-04T04:32:02.635Z",
+ "i2": {
+  "tests": 23,
+  "baseFailed": [],
+  "ms": {
+   "base": 2054,
+   "plain": 1307,
+   "nulled": 1879
+  },
+  "plainDiff": [],
+  "nullDiff": [],
+  "errors": []
+ },
+ "finishedAt": "2026-11-04T04:32:07.887Z"
+}

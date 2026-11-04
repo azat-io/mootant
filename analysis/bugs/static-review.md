@@ -7,7 +7,10 @@
 > (`instrumentation.md`, `verdicts.md`, `skips.md`, `cache-since.md`,
 > `cli-env.md`) до раздела «Сравнение» не читались.
 >
-> Статус документа: в работе.
+> Фикстуры — маленькие проекты на Vitest 5.0.5 и `node:test` с пакетом
+> `mootant-0.1.0-170ec52.tgz`; «нестабильность» в них смоделирована счётчиком
+> запусков файла (`.runs`), чтобы сбой случался ровно в одном юните. Оракул —
+> физическое применение мутации и обычный `vitest run` / `node --test`.
 
 ## Найденные дефекты (сводка)
 
@@ -16,11 +19,10 @@
 | BUG-900 | Isolated-юнит, в котором из-за постороннего сбоя (таймаут теста, не достигшего мутанта, или упавший suite-хук) не выполнились тесты, достигающие мутанта, считается «файлом без улик» → ложный `Survived`/`NoCoverage` без диагностики | high | подтверждён | `core/run/read-isolated-unit.ts:46-106`, `adapters/vitest/runner.ts:886-888,630-637` | фикстуры `abandon`, `hook`; `test/repros/BUG-900.test.ts` |
 | BUG-901 | Падение воркера (`crash`) или ошибка загрузки тест-файла (`load-error`) в isolated-юните — всегда `Killed`, без проверки достижения мутанта и без повтора; `load-error`-убийство ещё и кэшируется → ложный `Killed`, переживающий следующие прогоны | medium | подтверждён | `core/run/read-isolated-unit.ts:42-44,75-83`, `core/cache/create-run-cache.ts:313-318` | фикстуры `crash`, `loaderr`, `loadcache`; `test/repros/BUG-901.test.ts` |
 | BUG-902 | Вне `--fast` один нестабильный провал теста в dry run приписывается инструментированию: файл выбрасывается с `instrumentation-break`, все его мутанты `Error`, exit 1, кэш не сохраняется | medium | подтверждён | `core/run/run-dry-phase.ts:161-170,195-203,275-296,385-421` | фикстура `flakydry`; `test/repros/BUG-902.test.ts` |
-| BUG-903 | Тест, загружающий модуль вычисляемым `import()`, не попадает в dry run (`vitest related`); если модуль импортирует статически другой, слабый тест, мутант молча получает `Survived` | medium | подтверждён (ограничение задокументировано, следствие — нет) | `adapters/vitest/run-dry.ts:225-247`, `core/run/rank-mutant-files.ts:61-92` | фикстура `dynimport` |
-| BUG-904 | Локальная привязка с именем `globalThis` (параметр, `let`, `var`) скрывает все сайты в своей области: проверка `globalThis.__mootant?.hit()` читает её, мутанты никогда не включаются → ложный `NoCoverage` (или `TypeError` и `instrumentation-break`, если значение `undefined`) | low | подтверждён | `core/instrument/get-site-check.ts:164-166` | фикстура `shadow`; `test/repros/BUG-904.test.ts` |
+| BUG-903 | Тест, загружающий модуль вычисляемым `import()`, не попадает в dry run (`vitest related`); если модуль импортирует статически другой, слабый тест, мутант молча получает `Survived` | medium | подтверждён (ограничение задокументировано, следствие — нет) | `adapters/vitest/run-dry.ts:225-247`, `core/run/rank-mutant-files.ts:28-59` | фикстура `dynimport` |
+| BUG-904 | Локальная привязка с именем `globalThis` (параметр, `let`, `var`) скрывает все сайты в своей области: проверка `globalThis.__mootant?.hit()` читает её, мутанты никогда не включаются → ложный `NoCoverage` (или `TypeError` и `instrumentation-break`, если значение `undefined`) | low | подтверждён | `core/instrument/get-site-check.ts:11-13` | фикстура `shadow`; `test/repros/BUG-904.test.ts` |
 | BUG-905 | Текст замены (плагин-мутатор) не проверяется на разбираемость ни при генерации, ни при переключении; файл с синтаксической ошибкой ломает загрузку тест-файла до вычисления сайтов, а `findBrokenFiles` при пустом покрытии объявляет сломанными **все** переключённые файлы → все мутанты прогона `Error` с ложным «Tests fail with the switched X» | medium | подтверждён | `core/generate/group-replacement.ts:233-236`, `core/instrument/create-switched-files.ts:74-94`, `core/run/run-dry-phase.ts:505-517` | фикстура `badplugin`; `test/repros/BUG-905.test.ts` |
 
-(Таблица дополняется ниже по мере работы.)
 
 ## Разбор находок
 
@@ -29,13 +31,13 @@
 **Контракт.** `RunStatus` (`types/run/run-status.d.ts:7-8`): «`Survived`: every
 test of the test files that cover it passed in a fresh module graph, and one of
 them reached it». Порядок файлов и правило решения — `decideEvidence`
-(`core/run/decide-evidence.ts:154-172`): файл с уликой `'none'` считается
+(`core/run/decide-evidence.ts:17-35`): файл с уликой `'none'` считается
 «done without one», и мутант становится `Survived`, как только все файлы
 «done» и хотя бы один юнит достиг мутанта.
 
 **Дефект.** `readIsolatedUnit` (`core/run/read-isolated-unit.ts:46-106`)
 возвращает `null` (→ `'none'` в `getUnitEvidence`,
-`core/run/get-unit-evidence.ts:126-128`) в трёх ситуациях, когда юнит **не
+`core/run/get-unit-evidence.ts:19-21`) в трёх ситуациях, когда юнит **не
 выполнил** тесты файла по причинам, не связанным с мутантом:
 
 1. Тест, не достигший мутанта, превысил таймаут (собственный `testTimeout`
@@ -104,13 +106,13 @@ mootant запускает столько юнитов параллельно, �
 не отличим в отчёте от настоящего, агентский skill потратит время на
 «недостающий» тест, порог `--threshold` может не пройти. Кэш ложный вердикт не
 закрепляет: для прерванного юнита запись не создаётся
-(`apply-isolated-result.ts:105-110` пишет только не-`null`), и следующий прогон
+(`apply-isolated-result.ts:77-82` пишет только не-`null`), и следующий прогон
 выполнит этот файл снова.
 
 **Направление исправления.** Улика `'none'` допустима, только если все тесты
 файла из dry run (`analysis.fileTests`) выполнились или юнит остановлен
 bail-ом после убийства. Иначе юнит неполон: повторить один раз как
-`missing` (`apply-isolated-result.ts:121-141`), при повторе — `Error` с
+`missing` (`apply-isolated-result.ts:93-113`), при повторе — `Error` с
 диагностикой. Альтернатива на стороне адаптера — не бросать isolated-юнит после
 таймаута теста, не достигшего мутанта.
 
@@ -195,7 +197,7 @@ Dry run запускает только тест-файлы, которые Vite
 Vitest 5.0.5 это `AffectedModulesResolver` — обход графа модулей по `deps` и
 `dynamicDeps` трансформаций, т. е. только статических импортов и `import()` с
 литералом. Isolated-путь затем запускает мутанта лишь в файлах, которые
-достигли его в dry run (`core/run/rank-mutant-files.ts:66-70`). Тест-файл,
+достигли его в dry run (`core/run/rank-mutant-files.ts:33-37`). Тест-файл,
 загружающий модуль вычисляемым спецификатором (``import(`../src/${name}`)``,
 `import(path.join(dir, file))` — типично для тестов плагинов/фикстур по
 списку), не попадает ни в dry run, ни в isolated-юниты. Если тот же модуль
@@ -215,16 +217,16 @@ computed `import()` may not be selected»
 (физическая мутация) — `dynamic.test.js` падает.
 
 **Направление.** `readTestImports` уже разбирает `import()` тест-файлов и
-отбрасывает нелитеральные (`core/run/read-test-imports.ts:141-146`): тест-файлы
+отбрасывает нелитеральные (`core/run/read-test-imports.ts:57-62`): тест-файлы
 с вычисляемым `import()` можно добавлять в dry run явно (поле `files`
 запроса) или предупреждать о них; опция «dry run по всем тест-файлам».
 
 ### BUG-904 — затенённый `globalThis` прячет сайты мутантов
 
 Проверка сайта — `globalThis.__mootant?.hit("id")`
-(`core/instrument/get-site-check.ts:164-166`); `validateReplacement` и
+(`core/instrument/get-site-check.ts:11-13`); `validateReplacement` и
 `isValuePosition` не смотрят, связано ли имя `globalThis` в области сайта
-(`core/generate/validate-replacement.ts:132-167`). Внутри функции с параметром
+(`core/generate/validate-replacement.ts:49-84`). Внутри функции с параметром
 или локальной переменной `globalThis` проверка читает локальное значение: при
 объекте без `__mootant` сайт никогда не включается и не попадает в покрытие →
 все мутанты области `NoCoverage`; при `undefined`/`null` исходный код падает с
@@ -285,23 +287,23 @@ src/other.js and pass without it», хотя он ничего не ломал. 
 ### Что считается «покрыто»
 
 - Мутант действует **только** через проверку своего сайта: хост — условное
-  выражение или `if` с вызовом `hit(id)` (`core/instrument/render-mutant-range.ts:142-152`),
-  `hit` возвращает `true` лишь для активного id (`core/runtime/install-mutant-runtime.ts:113-126`).
+  выражение или `if` с вызовом `hit(id)` (`core/instrument/render-mutant-range.ts:85-95`),
+  `hit` возвращает `true` лишь для активного id (`core/runtime/install-mutant-runtime.ts:40-53`).
   Пока сайт не вычислен, код с активным мутантом исполняется так же, как без
   него, поэтому запуск мутанта только в тест-файлах, вычислявших его сайт в dry
-  run (`core/run/rank-mutant-files.ts:66-70`), корректен для
+  run (`core/run/rank-mutant-files.ts:33-37`), корректен для
   детерминированных тестов. Нарушают это нетестовые пути загрузки (BUG-903) и
   затенённый `globalThis` (BUG-904).
 - Покрытие попытки — сайты, вычисленные, пока попытка активна
-  (`adapters/vitest/runner.ts:1149-1162`); для одновременных (concurrent) попыток
+  (`adapters/vitest/runner.ts:1135-1147`); для одновременных (concurrent) попыток
   сайт засчитывается всем — переоценка, безопасная для isolated-пути.
 - **Static.** Сайты, вычисленные вне попыток (загрузка тест-файла и его
   импортов, setup-файлы, `beforeAll`/`afterAll`, промежутки между тестами), идут
-  в `DryFile.covers` (`runner.ts:521-525,1149-1162`) → `loadCovers`
+  в `DryFile.covers` (`runner.ts:524-525,1135-1147`) → `loadCovers`
   (`core/run/read-dry-run.ts:41-54`) → путь `isolated`, причина `static`
-  (`core/run/classify-mutants.ts:244-246`), файлы — загружавшие мутанта
-  (`rank-mutant-files.ts:66`), мутант активен с начала загрузки
-  (`runner.ts:546-551`). Batch-путь static-мутантов не берёт — верно, он
+  (`core/run/classify-mutants.ts:101-103`), файлы — загружавшие мутанта
+  (`rank-mutant-files.ts:33`), мутант активен с начала загрузки
+  (`runner.ts:548-553`). Batch-путь static-мутантов не берёт — верно, он
   включает мутанта только внутри попытки.
 - **Setup-файлы** исключены из мутации (`core/run/select-run-files.ts:55-59`,
   список — `AdapterSession.listTestFiles`), их импорты мутируются и считаются
@@ -313,7 +315,7 @@ src/other.js and pass without it», хотя он ничего не ломал. 
   нельзя «почистить», исключив их.
 - Код, исполняемый в нестандартном test environment до создания раннера,
   `__mootant` не видит (рантайм ставит раннер,
-  `adapters/vitest/runner.ts:253-254`): такие сайты не покрываются и не
+  `adapters/vitest/runner.ts:256`): такие сайты не покрываются и не
   попадают в `outside` → `NoCoverage` (гипотеза по чтению, не проверялась).
 
 ### Fast mode: когда batch-kill принимается
@@ -339,24 +341,24 @@ Kill принимается, если попытка мутанта упала *
 
 Синтезированная попытка зависшего batch-юнита помечается `reached: true`
 (`adapters/vitest/run-batch.ts:61-75`), но записи теста пишутся только в конце
-теста (`runner.ts:1051-1068`), поэтому у неё никогда нет контрольной «до» →
+теста (`runner.ts:1112-1131`), поэтому у неё никогда нет контрольной «до» →
 `doubtful` → isolated. Жёстко заданный `reached` безвреден.
 
 ### Таймауты и hit limit
 
 - Hit limit считает **все** вычисления сайтов, после превышения каждый `hit`
-  бросает до сброса (`install-mutant-runtime.ts:113-117`) — проглоченная ошибка
+  бросает до сброса (`install-mutant-runtime.ts:40-44`) — проглоченная ошибка
   не спасает бесконечный цикл; проверка лимита юнита идёт раньше убийств
   (`core/run/read-isolated-unit.ts:31-38`). Достичь лимита без достижения
   мутанта детерминированный код не может (лимит ≥ 100× dry run).
 - Бюджет isolated-юнита — сумма бюджетов тестов и загрузки
-  (`core/run/plan-isolated.ts:44-73`), а дедлайн каждого теста — дедлайн всего
-  юнита (`adapters/vitest/runner.ts:840-842`): отдельный тест может быть
+  (`core/run/plan-isolated.ts:16-45`), а дедлайн каждого теста — дедлайн всего
+  юнита (`adapters/vitest/runner.ts:853`): отдельный тест может быть
   намного медленнее «своих» `3×d + 250` мс. Dry run меряет с включённым
   покрытием (медленнее) — запас в пользу мутанта.
 - «Честный медленный мутант» становится `Timeout`, только если замедление
   превышает бюджет и в подтверждающем прогоне с удвоенным бюджетом
-  (`core/run/get-unit-evidence.ts:129-135`, `plan-isolated.ts:51`). Это
+  (`core/run/get-unit-evidence.ts:22-28`, `plan-isolated.ts:23`). Это
   заявленная семантика (`docs/content/guide/configuration.mdx:429-434`).
 - Зависание без достижения мутанта засчитывается так же, как с ним: `hang` не
   проверяет `reached` (`read-isolated-unit.ts:39-41`), но требует двух зависаний
@@ -371,12 +373,12 @@ Kill принимается, если попытка мутанта упала *
 
 - Решение по кэшированным уликам — то же правило `decideEvidence`, что и для
   свежих (`core/cache/apply-cached-units.ts:18-50`,
-  `core/cache/apply-cached-batch.ts:79-105`): файлы до первого кэшированного
+  `core/cache/apply-cached-batch.ts:29-55`): файлы до первого кэшированного
   убийства без записи всё равно запускаются, файлы после — отбрасываются;
   эквивалентно свежему прогону при неизменных входах.
 - Batch-kill из кэша — только после кэшированных проходов всех тестов, которые
   batch попробовал бы раньше, или если это был первый тест мутанта
-  (`apply-cached-batch.ts:116-189`) — консервативно (проходы тестов других
+  (`apply-cached-batch.ts:66-139`) — консервативно (проходы тестов других
   файлов не влияют на результат, но требуются).
 - Не хранятся timeout, error и crash (`core/cache/create-run-cache.ts:313-318`);
   **хранятся** убийства `load-error`, `stray-error` и обычные убийства из одной
@@ -391,8 +393,8 @@ Kill принимается, если попытка мутанта упала *
 2. Вердикт не зависит от разбиения на раунды, числа воркеров и порядка
    завершения юнитов: первый по рангу файл с уликой решает, ожидающие файлы
    (без улик, `confirming`, `retrying`) задерживают более поздние
-   (`core/run/decide-evidence.ts:154-172`); ранг не зависит от длительностей
-   (`core/run/rank-mutant-files.ts:52-55`). Кэш использует то же правило.
+   (`core/run/decide-evidence.ts:17-35`); ранг не зависит от длительностей
+   (`core/run/rank-mutant-files.ts:19-22`). Кэш использует то же правило.
 3. Достижение в isolated-юните кумулятивно и согласовано между ядром
    (`read-isolated-unit.ts:45-47`), раннером Vitest (bail, `runner.ts:889-891`)
    и `node:test` (`adapters/node-test/preload/create-try-tracker.ts:150-152,167-178`):
@@ -409,20 +411,20 @@ Kill принимается, если попытка мутанта упала *
    (`core/syntax/is-value-position.ts:50-203`); директивы, спецификаторы
    модулей и типы не входят в дерево (`core/tree/index-tree.ts:88-136`);
    объявления не бывают block-хостами (`core/generate/get-replacement-kind.ts:6-25`),
-   тело метки не заменяется (`core/generate/validate-replacement.ts:151-157`);
+   тело метки не заменяется (`core/generate/validate-replacement.ts:68-74`);
    ASI у начала оператора закрыт `;` (`core/instrument/find-statement-starts.ts:62-111`);
    все хосты в скобках — приоритет операторов не важен. Исключение — BUG-904.
    Вывод имени функции (`const f = () => {}`) сломался бы, если бы мутатор
    заменял анонимную функцию целиком в инициализаторе; встроенные так не
    делают (`return-value` меняет только возвращаемые значения).
 7. Дедупликация сравнивает полный мутированный текст
-   (`core/generate/deduplicate-candidates.ts:33-50`) — склеивает только
+   (`core/generate/deduplicate-candidates.ts:32-49`) — склеивает только
    текстуально равные программы.
 8. Ошибочный узел замены (не выражение/оператор, не та позиция) — ошибка
    мутатора и пропуск, а не мутант (`core/generate/collect-candidates.ts:286-304`).
 9. Score: `(Killed + Timeout) / (… + Survived [+ NoCoverage])`, `Ignored` и
    `Error` исключены, но любой `Error` делает прогон неуспешным
-   (`core/run/compute-score.ts:171-178`, `cli/report/build-run-report.ts:151-156`).
+   (`core/run/compute-score.ts:12-19`, `cli/report/build-run-report.ts:151-156`).
 10. В `--fast` нестабильные тесты ловятся двумя попытками dry run, и их мутанты
     уходят на isolated (`core/run/read-dry-run.ts:75-81`,
     `core/run/run-dry-phase.ts:190-251`).
@@ -445,8 +447,8 @@ Kill принимается, если попытка мутанта упала *
   воркеры (задокументировано: оригинальный код) не дают покрытия.
 - **Текст замены валиден** (BUG-905) и **`globalThis` не затенён** (BUG-904).
 - **Позиции в переключённом коде не важны тестам.** Карта исходников не
-  строится (`core/instrument/instrument-file.ts:151`, плагин отдаёт
-  `map: null`, `adapters/vitest/create-mootant-plugin.ts:36`), многострочные
+  строится (`core/instrument/instrument-file.ts:44`, плагин отдаёт
+  `map: null`, `adapters/vitest/create-mootant-plugin.ts:49`), многострочные
   замены сдвигают строки последующего кода; тесты, сверяющие `error.stack`,
   `fn.toString()` или номера строк вызывающего кода, упадут уже в dry run и
   выкинут файл как `instrumentation-break` (гипотеза, не проверялась).
@@ -461,7 +463,7 @@ Kill принимается, если попытка мутанта упала *
 ## Мелкие наблюдения (без ID)
 
 - Порог сравнивается с округлённым до 0,01 score
-  (`core/run/compute-score.ts:187-189`, `cli/report/build-run-report.ts:154-155`):
+  (`core/run/compute-score.ts:28-30`, `cli/report/build-run-report.ts:154-155`):
   15999/20000 = 79,995% даёт `80` и проходит `--threshold 80` (проверено
   вычислением).
 - После BUG-902 второй нестабильный провал в повторном dry run обрывает весь

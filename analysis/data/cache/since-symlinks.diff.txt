@@ -1,0 +1,16 @@
+diff --git a/src/lines.ts b/src/lines.ts
+index 226863f..40496a9 100644
+--- a/src/lines.ts
++++ b/src/lines.ts
+@@ -4 +4 @@ export const c = (x: number) => x > 3
+-export const d = (x: number) => x > 4
++export const d = (x: number) => x >= 4
+diff --git a/src/link.ts b/src/link.ts
+index 1c6734d..914817e 120000
+--- a/src/link.ts
++++ b/src/link.ts
+@@ -1 +1 @@
+-target.ts
+\ No newline at end of file
++lines.ts
+\ No newline at end of file

@@ -1,0 +1,7 @@
+$ npx mootant run src --mutant zzzz --json
+exit=1 stdout_bytes=0
+Error: Unknown mutant id "zzzz".
+
+$ npx mootant run src --since HEAD --threshold 80 --json   # нет изменений
+{"summary":{"threshold":80,"totalErrorMutants":0,"duration":{"total":320},"totalNoCoverage":0,"totalSurvived":0,"totalWarnings":0,"totalIgnored":0,"totalTimeout":0,"totalMutants":0,"totalKilled":0,"totalErrors":0,"totalTests":0,"totalFiles":0,"passed":true},"schemaVersion":3,"diagnostics":[],"command":"run","listed":"actionable","runner":"vitest","preset":"recommended","mode":"isolated","since":{"ref":"HEAD","base":"5e444e8b1705f698543e4d73646cec200a99d6cb"},"mutants":[]}
+exit=0

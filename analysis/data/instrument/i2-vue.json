@@ -1,0 +1,24 @@
+{
+ "project": "/home/user/projects/instrument/vue",
+ "paths": [
+  "src"
+ ],
+ "mode": "i2",
+ "preset": "strict",
+ "files": 1,
+ "pending": 85,
+ "startedAt": "2026-11-04T04:55:03.794Z",
+ "i2": {
+  "tests": 5,
+  "baseFailed": [],
+  "ms": {
+   "base": 3921,
+   "plain": 5851,
+   "nulled": 4347
+  },
+  "plainDiff": [],
+  "nullDiff": [],
+  "errors": []
+ },
+ "finishedAt": "2026-11-04T04:55:17.937Z"
+}

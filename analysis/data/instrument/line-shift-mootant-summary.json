@@ -1,0 +1,37 @@
+{
+ "root": "/home/user/wt/instrument",
+ "paths": [
+  "core",
+  "adapters",
+  "cli"
+ ],
+ "preset": "recommended",
+ "files": 650,
+ "filesWithShift": 333,
+ "shareFilesWithShift": 0.512,
+ "shareLinesMoved": 0.431,
+ "medianShiftOfShifted": 10,
+ "maxShift": {
+  "file": "core/run-mutants.ts",
+  "mutants": 385,
+  "originalLines": 713,
+  "switchedLines": 2395,
+  "shift": 1682,
+  "movedLines": 536,
+  "multiLineMutants": 121
+ },
+ "extraLinesByMutator": {
+  "object-property": 18191,
+  "logical-operator": 857,
+  "array-element": 740,
+  "arithmetic-operator": 35,
+  "missing-await": 486,
+  "method-call": 381,
+  "optional-chaining": 29,
+  "bitwise-operator": 6,
+  "comparison-operator": 16,
+  "condition": 214,
+  "assignment-operator": 9,
+  "string-literal": 16
+ }
+}

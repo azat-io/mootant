@@ -71,3 +71,52 @@
 | ошибка suite-хука / teardown | `hookError` | exit ≠ 0 без упавших тестов | `Killed(hook-error)` только при reached (`:84-92`) |
 
 (результаты экспериментов — ниже)
+
+## Пары мутантов и режимы (Vitest)
+
+Для каждой пары: `--mutant A`, `--mutant B`, `--mutant A --mutant B`,
+`--mutant B --mutant A`, то же с `--fast`, с `--concurrency 1` и
+`--fast --concurrency 1`, плюс полный прогон `src` (по умолчанию и `--fast`) и
+эталон (физическая мутация + обычный `vitest run` всего набора). Все прогоны —
+`--no-cache`, `--concurrency` по умолчанию = `maxWorkers` Vitest = 3.
+
+| Пара | Что общее | Мутант | полный | `--fast` полный | A | B | AB | BA | AB `--fast` | AB c1 | AB `--fast` c1 | эталон |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| counter | модульное `count`, один тест-файл | A `09w15scc` `count = 0` → `;` (в `reset`) | Survived | **Killed [batch]** | Survived | — | Survived | Survived | **Killed [batch]** | Survived | **Killed [batch]** | survived |
+| | | B `x9ahzmww` `count += step` → `count -= step` | Killed | Killed [batch] | — | Killed | Killed | Killed | Killed [batch] | Killed | Killed [batch] | killed |
+| memo | модульный `Map`-кэш, один тест | A `prd6tx8n` `memo.has(n)` → `false` | **Timeout (hit-limit)** | **Timeout (hit-limit) [batch]** | **Timeout** | — | **Timeout** | **Timeout** | **Timeout [batch]** | **Timeout** | **Timeout [batch]** | survived |
+| | | B `twzenj03` `n < 2` → `n <= 2` | Killed | Killed [batch-survivor] | — | Killed | Killed | Killed | Killed [batch-survivor] | Killed | Killed [batch-survivor] | killed |
+| seen | модульный `Set`, один тест-файл | A `7kq6qzrd` `seen.clear()` → `;` | Survived | **Killed [batch]** | Survived | — | Survived | Survived | **Killed [batch]** | Survived | **Killed [batch]** | survived |
+| | | B `2nde6pq8` `seen.has(id)` → `true` | Killed | Killed [batch] | — | Killed | Killed | Killed | Killed [batch] | Killed | Killed [batch] | killed |
+| mocks | два файла: `api.js` (A) мокается фабрикой с `vi.importActual` через хелпер, `service.js` (B) | A `jnhjhh9w` `` `user${id}` `` → `''` | Killed | Killed [batch] | **NoCoverage** | — | Killed | Killed | Killed [batch] | Killed | Killed [batch] | killed |
+| | | B `2hmxc740` `isAdmin(user)` → `false` | Killed | Killed [batch] | — | Killed | Killed | Killed | Killed [batch] | Killed | Killed [batch] | killed |
+
+Дополнительно для пары mocks: `mootant run src/api.js` даёт A — `NoCoverage`,
+а `18v42cm0` (`{ id, name }` → `{ name }`) — тоже `NoCoverage` (в полном прогоне
+оба `Killed`). Это BUG-201.
+
+### Выводы по Vitest
+
+1. **Isolated-путь от соседних мутантов не зависит.** Ни одна пара не
+   поменяла вердикт от порядка (`AB` = `BA`), от совместного запуска и от
+   `--concurrency 1` против 3: у каждой единицы свой процесс (см. выше), а
+   решение о вердикте берётся из первого по рангу файла с уликой
+   (`core/run/decide-evidence.ts:17-35`) и от группировки по раундам не
+   зависит. Модульный кэш, моки (`vi.mock`, `vi.doMock`, `{ spy: true }`),
+   `globalThis`, `process.env`, прототипы (`vt/state/src/registry.js`) и fake
+   timers (`vt/modes/test/timers.test.js`) в isolated-режиме дали вердикты,
+   совпавшие с эталоном.
+2. **Но от *файлов* прогона isolated-путь зависит** (пара mocks): выбор
+   тест-файлов dry run — статический анализ Vitest по множеству переключаемых
+   файлов, а это множество зависит от выбранных мутантов (BUG-201).
+3. **Batch (`--fast`) делит состояние между попытками.** Ложные убийства
+   (counter A, seen A) происходят не из-за второго мутанта, а из-за
+   контрольной попытки перед мутантом: она оставляет `count = 1` / `seen = {x}`,
+   мутант перестаёт их сбрасывать, тест падает, контроль после снова проходит
+   (он сбрасывает) — убийство принято (`core/run/apply-batch-result.ts:305-320`).
+   Обратный эффект — кэш, заполненный контрольной попыткой, прячет мутанта
+   (memo B: в batch выжил, потому что `fib(25)` взят из мемо) — безопасен:
+   выжившие batch всегда перепроверяются isolated
+   (`core/run/run-batch-phases.ts:91-97`), вердикт B верный.
+4. `--fast` с `--concurrency 1` не убирает ложные убийства: это не гонка, а
+   общий модульный граф в одном процессе.

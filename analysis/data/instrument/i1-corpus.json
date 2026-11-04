@@ -1,0 +1,166 @@
+[
+ {
+  "corpus": "mootant core+adapters+cli",
+  "files": 650,
+  "mutants": 35262,
+  "switchedParseErrors": 0,
+  "transformErrors": 0,
+  "compileErrors": 0,
+  "siteMismatch": 0,
+  "rawParseErrors": 0,
+  "audit": {
+   "named-evaluation-replacement": 1
+  },
+  "blockTypes": {
+   "ExpressionStatement": 1762,
+   "ReturnStatement": 88,
+   "BreakStatement": 95,
+   "ThrowStatement": 22,
+   "ContinueStatement": 17,
+   "ForStatement": 11
+  },
+  "listMs": 4201,
+  "totalMs": 25429,
+  "findings": [
+   {
+    "kind": "named-evaluation-replacement",
+    "file": "core/run/create-run-state.ts",
+    "id": "rvhwm77h5rtk",
+    "mutator": "logical-operator",
+    "original": "input.report ?? (() => {})",
+    "replacement": "(() => {})",
+    "line": 97
+   }
+  ]
+ },
+ {
+  "corpus": "eslint-plugin-perfectionist",
+  "files": 248,
+  "mutants": 10146,
+  "switchedParseErrors": 0,
+  "transformErrors": 0,
+  "compileErrors": 0,
+  "siteMismatch": 0,
+  "rawParseErrors": 0,
+  "audit": {},
+  "blockTypes": {
+   "ExpressionStatement": 439,
+   "ThrowStatement": 69,
+   "ReturnStatement": 91,
+   "BreakStatement": 44,
+   "ContinueStatement": 15
+  },
+  "listMs": 2773,
+  "totalMs": 13872,
+  "findings": []
+ },
+ {
+  "corpus": "unjs/ufo",
+  "files": 6,
+  "mutants": 1095,
+  "switchedParseErrors": 0,
+  "transformErrors": 0,
+  "compileErrors": 0,
+  "siteMismatch": 0,
+  "rawParseErrors": 0,
+  "audit": {},
+  "blockTypes": {
+   "ThrowStatement": 3,
+   "ExpressionStatement": 43,
+   "ForStatement": 1,
+   "ContinueStatement": 2
+  },
+  "listMs": 1793,
+  "totalMs": 5120,
+  "findings": []
+ },
+ {
+  "corpus": "unjs/defu",
+  "files": 2,
+  "mutants": 64,
+  "switchedParseErrors": 0,
+  "transformErrors": 0,
+  "compileErrors": 0,
+  "siteMismatch": 0,
+  "rawParseErrors": 0,
+  "audit": {},
+  "blockTypes": {
+   "ReturnStatement": 4,
+   "ExpressionStatement": 5
+  },
+  "listMs": 355,
+  "totalMs": 380,
+  "findings": []
+ },
+ {
+  "corpus": "expressjs/express",
+  "files": 7,
+  "mutants": 1225,
+  "switchedParseErrors": 0,
+  "transformErrors": 0,
+  "compileErrors": 0,
+  "siteMismatch": 0,
+  "rawParseErrors": 0,
+  "audit": {
+   "named-evaluation-replacement": 1
+  },
+  "blockTypes": {
+   "ExpressionStatement": 282,
+   "ReturnStatement": 20,
+   "BreakStatement": 7,
+   "ContinueStatement": 1,
+   "ThrowStatement": 2
+  },
+  "listMs": 1614,
+  "totalMs": 6186,
+  "findings": [
+   {
+    "kind": "named-evaluation-replacement",
+    "file": "lib/response.js",
+    "id": "h1tvfx41tj2a",
+    "mutator": "logical-operator",
+    "original": "done || function (err, str) {\n    if (err) return req.next(err);\n    self.send(str);\n  }",
+    "replacement": "function (err, str) {\n    if (err) return req.next(err);\n    self.send(str);\n  }",
+    "line": 914
+   }
+  ]
+ },
+ {
+  "corpus": "ljharb/qs",
+  "files": 5,
+  "mutants": 1735,
+  "switchedParseErrors": 0,
+  "transformErrors": 0,
+  "compileErrors": 0,
+  "siteMismatch": 0,
+  "rawParseErrors": 0,
+  "audit": {},
+  "blockTypes": {
+   "ExpressionStatement": 115,
+   "ThrowStatement": 2,
+   "ContinueStatement": 4
+  },
+  "listMs": 1536,
+  "totalMs": 6716,
+  "findings": []
+ },
+ {
+  "corpus": "pmndrs/zustand",
+  "files": 12,
+  "mutants": 553,
+  "switchedParseErrors": 0,
+  "transformErrors": 0,
+  "compileErrors": 0,
+  "siteMismatch": 0,
+  "rawParseErrors": 0,
+  "audit": {},
+  "blockTypes": {
+   "ReturnStatement": 17,
+   "ExpressionStatement": 75,
+   "ThrowStatement": 1
+  },
+  "listMs": 564,
+  "totalMs": 1188,
+  "findings": []
+ }
+]

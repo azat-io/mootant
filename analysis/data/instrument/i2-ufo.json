@@ -1,0 +1,24 @@
+{
+ "project": "/home/user/projects/instrument/ufo",
+ "paths": [
+  "src"
+ ],
+ "mode": "i2",
+ "preset": "strict",
+ "files": 6,
+ "pending": 1095,
+ "startedAt": "2026-11-04T04:31:45.419Z",
+ "i2": {
+  "tests": 487,
+  "baseFailed": [],
+  "ms": {
+   "base": 3569,
+   "plain": 3564,
+   "nulled": 2674
+  },
+  "plainDiff": [],
+  "nullDiff": [],
+  "errors": []
+ },
+ "finishedAt": "2026-11-04T04:31:55.286Z"
+}
