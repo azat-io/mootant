@@ -14,8 +14,8 @@
 
 | Способ | Что проверяет | Объём | Отчёт |
 | --- | --- | --- | --- |
-| Фикстуры по семантическим ловушкам и differential/property-based-проверка инструментирования | Меняет ли switched-код семантику без активного мутанта (I2) и совпадает ли активный мутант с физически применённым (I3) | 123 867 мутантов в 1 466 файлах 9 проектов на разбор и аудит позиций; I2 на 4 проектах; I3 — 422 мутанта по-тестово; сквозной прогон ufo — 157 из 157 | [`bugs/instrumentation.md`](bugs/instrumentation.md) |
-| Оракул: физически применённая мутация и обычный прогон всего тест-сьюта | Ложные `Killed`/`Survived`/`NoCoverage`, изоляция, детерминизм | 634 эталонных прогона; согласие 91,5% (Vitest), 91,6% (`--fast`), 96,7% (node:test) на нарочно трудных фикстурах; 127 из 127 на реальном коде `core/text` | [`bugs/verdicts.md`](bugs/verdicts.md), [`data/isolation.md`](data/isolation.md) |
+| Фикстуры по семантическим ловушкам и differential/property-based-проверка инструментирования | Меняет ли switched-код семантику без активного мутанта (I2) и совпадает ли активный мутант с физически применённым (I3) | Разбор, «один сайт на мутанта» и структурный аудит позиций — 123 867 мутантов в 1 466 файлах 9 проектов; поведение (I2) — на 4 проектах; поведение активного мутанта против физически применённого (I3) — 422 мутанта по-тестово и 1 105 мутантов 21 модуля-ловушки; сквозной прогон ufo — 157 из 157 | [`bugs/instrumentation.md`](bugs/instrumentation.md) |
+| Оракул: физически применённая мутация и обычный прогон всего тест-сьюта | Ложные `Killed`/`Survived`/`NoCoverage`, изоляция, детерминизм | 634 эталонных прогона; согласие 91,5% (Vitest), 91,6% (`--fast`), 96,7% (node:test) на нарочно трудных фикстурах; 127 из 127 на `core/text` самого Mootant (внешние проекты оракулом запустить не удалось: система разрешений запретила исполнять тесты склонированных репозиториев) | [`bugs/verdicts.md`](bugs/verdicts.md), [`data/isolation.md`](data/isolation.md) |
 | Независимый статический ревью пути вердикта (без чтения чужих выводов до конца работы) | Те же инварианты рассуждением по коду, затем сверка с экспериментальными находками | 6 находок: 4 совпали с экспериментальными, 3 нашёл только он, 3 пропустил | [`bugs/static-review.md`](bugs/static-review.md) |
 | «Unskip»-патч: пропущенные кандидаты возвращаются как мутанты, их вердикты сравниваются с вердиктами «владельцев» | Ложные пропуски эвристик | core: 835 мутантов, в `owned`/`subsumed` 0 ложных из 360; perfectionist: `solitary` — 3 полезных из 81 | [`bugs/skips.md`](bugs/skips.md) |
 | Сценарные матрицы | Кэш, `--incremental`, `--since`; сигналы и процессы; окружения (Node 20.19–26, npm/pnpm/yarn/bun); CLI и документация | 21 + 17 находок, плюс длинные списки «работает правильно» | [`bugs/cache-since.md`](bugs/cache-since.md), [`bugs/cli-env.md`](bugs/cli-env.md) |
@@ -25,12 +25,19 @@
 и выше прошёл Workflow из двух независимых агентов. Первый воспроизводил баг
 с нуля только по самодостаточному промпту и проверял цитаты кода. Второй,
 скептик, пытался его опровергнуть. Итоговая серьёзность — решение
-координатора с обоснованием (`data/verification/decisions.md`). Из 47
-перепроверенных находок не воспроизвелась ни одна. Полностью или частично
-опровергнуты 3 (BUG-204, BUG-309, BUG-603, плюс узкая часть BUG-302): они
-оказались задокументированным поведением. У 22 серьёзность понижена, чаще
-всего с medium до low. Поэтому колонка «Итог» местами ниже колонки
-«Заявлено».
+координатора с обоснованием (`data/verification/decisions.md`). Так
+перепроверено 43 находки, и ни одна не оказалась невоспроизводимой. 41
+воспроизведена полностью. BUG-651 воспроизведён частично: реестр skills из
+сессии недоступен, но отсутствие `SKILL.md` доказано. У BUG-856
+воспроизводящий агент был остановлен ради окна замеров, а скептик подтвердил
+все факты ручным применением мутаций. Как дефект опровергнут 1 (BUG-309 —
+задокументированное поведение, остаётся запрос на улучшение), частично — 3
+(BUG-204, BUG-603 и часть BUG-302 про R4). У 21 серьёзность понижена, чаще
+всего с medium до low, поэтому колонка «Итог» местами ниже колонки
+«Заявлено». Повышений нет: BUG-653 остался critical. Промптов в
+`bug-prompts/` 50. Это все подтверждённые баги medium+ и несколько
+понизившихся при перепроверке; промпты понизившихся оставлены, у дублей они
+помечены.
 
 **Шкала.** critical — вердикты массово неверны или инструмент неработоспособен
 для всех; high — неверный вердикт или полный отказ в распространённом
@@ -46,11 +53,13 @@
 
 ## Сводка
 
-- **Доверие к вердикту в целом оправдано.** Инструментирование выдержало
-  differential-проверку на сотнях тысяч мутантов (0 расхождений семантики, кроме
-  BUG-106 и BUG-102/103). Изоляция isolated-пути подтверждена (своя ячейка
-  процесса на юнит в обоих адаптерах). Вердикты детерминированы, кроме
-  зависящих от времени. На реальном коде оракул согласен в 127 случаях из 127.
+- **Доверие к вердикту в целом оправдано.** Структурный аудит 123 867
+  мутантов не нашёл ни одного неразбираемого switched-текста, кроме BUG-106.
+  Поведенческая сверка с физически применёнными мутантами (422 мутанта
+  по-тестово, 1 105 мутантов модулей-ловушек, 157 из 157 на ufo, 127 из 127 на
+  `core/text`) расхождений не дала, кроме BUG-102/103. Изоляция isolated-пути
+  подтверждена: у каждого юнита свой процесс в обоих адаптерах. Вердикты
+  детерминированы, кроме зависящих от времени.
 - **Опасные классы ошибок**:
   - ложный `Survived` из-за постороннего сбоя в юните (BUG-900);
   - ложный `NoCoverage` для CommonJS через `require()` (BUG-507);
@@ -76,7 +85,7 @@
 ## Счётчики
 
 - Строк в таблицах областей: 113, из них уникальных багов 105, дублей 8.
-- Итоговая серьёзность уникальных: high — 6, medium — 26, low — 73.
+- Итоговая серьёзность уникальных: high — 5, medium — 26, low — 73, critical — 1.
 - Заявленная агентами: critical — 1, high — 7, medium — 41, low — 56.
 - Перепроверено независимыми агентами: 42; гипотез: 11; самодостаточных промптов: 47.
 
@@ -87,11 +96,11 @@
 
 | ID | Итог | Заявлено | Статус | Перепроверка | Область | Описание | Где в коде | Как воспроизвести |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [BUG-653](bug-prompts/BUG-653.md) | **critical** | critical | подтверждён | воспр.: да; опроверг.: нет | UX и агенты | Документированная установка `npm install -D mootant` ставит заглушку `mootant@0.0.0` (OIDC trusted publishing, «DO NOT USE THIS PACKAGE», без `bin`); `npx mootant run src` → `npm error could not determine executable to run`. Установка из GitHub тоже не работает: нет `dist/` и `prepare` | `readme.md:77-78`, `docs/content/guide/getting-started.mdx:65-69`; `package.json` (`files: ["./bin", "./dist"]`, нет `prepare`) | `npm view mootant` → `latest: 0.0.0`; в пустом проекте `npm install -D mootant && npx mootant run src` → exit 1 |
 | [BUG-305](bug-prompts/BUG-305.md) | **high** | high | подтверждён | воспр.: да; опроверг.: нет | эвристики пропуска | `--since` отбирает мутантов по строкам после правил пропуска: пропуск, чей владелец на неизменённой строке, не возвращается — изменённая строка без мутантов | `core/files/select-changed-mutants.ts:17-80`, `core/list-mutants.ts:70-90`, `core/run-mutants.ts:192` | `test/repros/BUG-305.test.ts`; `analysis/data/skips/fx-since`: `mutants 0`, `score none` |
 | [BUG-507](bug-prompts/BUG-507.md) | **high** | high | подтверждён | воспр.: да; опроверг.: нет | CLI, процессы, окружения | Под Vitest модуль, загруженный через `require()` (CJS-исходник требует другой, `createRequire` в тесте), не переключается: его мутанты — NoCoverage, хотя тесты их убивают | переключение только в Vite-хуке `adapters/vitest/create-mootant-plugin.ts:32`; у node:test есть `adapters/node-test/preload/patch-module-compile.ts:14` | `test/repros/BUG-507.test.ts`; `data/cli/physical-vt-cjs-chain.json` (4 расхождения из 8), `physical-vt-require.json` (6 из 7) |
 | [BUG-508](bug-prompts/BUG-508.md) | **high** | high | подтверждён | воспр.: да; опроверг.: нет | CLI, процессы, окружения | Проект Vitest (`test.projects`) со своим `root` (`projects: ['packages/*']` и т. п.) не настраивается: dry run падает «Tests fail without mutants … The test runner did not report this file», хотя `vitest --run` зелёный | плагин передаётся только в корневой Vite-сервер: `adapters/vitest/start-vitest-session.ts:110`, хук `create-mootant-plugin.ts:53`; Vitest берёт `configureVitest` из `project.vite.config` (`vitest/dist/chunks/cli-api.De07GUeT.js:12410-12411`) | `test/repros/BUG-508.test.ts` |
 | BUG-511 | **high** | high | гипотеза | — | CLI, процессы, окружения | Windows: `stopProcessGroup` не убивает тестовый процесс: `process.kill(-pid)` даёт `ESRCH` (libuv `uv_kill` → `OpenProcess` → `ERROR_INVALID_PARAMETER` → `UV_ESRCH`), а код считает это «группа уже завершилась»; зависший мутант node:test вешает прогон | `adapters/node-test/stop-process-group.ts:11-16`; тест предполагает `EINVAL`: `test/adapters/node-test/stop-process-group.test.ts:36-48` | на Windows: `node -e "try{process.kill(-process.pid,'SIGKILL')}catch(e){console.log(e.code)}"`, затем `nt-hang` |
-| [BUG-653](bug-prompts/BUG-653.md) | **high** | critical | подтверждён | воспр.: да; опроверг.: нет | UX и агенты | Документированная установка `npm install -D mootant` ставит заглушку `mootant@0.0.0` (OIDC trusted publishing, «DO NOT USE THIS PACKAGE», без `bin`); `npx mootant run src` → `npm error could not determine executable to run`. Установка из GitHub тоже не работает: нет `dist/` и `prepare` | `readme.md:77-78`, `docs/content/guide/getting-started.mdx:65-69`; `package.json` (`files: ["./bin", "./dist"]`, нет `prepare`) | `npm view mootant` → `latest: 0.0.0`; в пустом проекте `npm install -D mootant && npx mootant run src` → exit 1 |
 | [BUG-900](bug-prompts/BUG-900.md) | **high** | high | подтверждён | воспр.: да; опроверг.: нет | статический ревью | Isolated-юнит, в котором из-за постороннего сбоя (таймаут теста, не достигшего мутанта, или упавший suite-хук) не выполнились тесты, достигающие мутанта, считается «файлом без улик» → ложный `Survived`/`NoCoverage` без диагностики | `core/run/read-isolated-unit.ts:46-106`, `adapters/vitest/runner.ts:886-888,630-637` | фикстуры `abandon`, `hook`; `test/repros/BUG-900.test.ts` |
 | [BUG-100](bug-prompts/BUG-100.md) | **medium** | medium | подтверждён | воспр.: да; опроверг.: нет | инструментирование | Если упавшие в dry run тесты (или незагрузившиеся тест-файлы) не достигли ни одного сайта, `instrumentation-break` получают все switched-файлы прогона: ложная диагностика у невиновных файлов, все мутанты `Error`, exit 1. Триггеры: нестабильный тест/хук до вызова кода, ошибка трансформации, исключение в самой проверке сайта (BUG-101) | `core/run/run-dry-phase.ts:505-517` (строка 516), `:275-296`, `:385-421` | `test/repros/BUG-100.test.ts`; `test/repros/BUG-100/run.sh` (фикстуры collateral, flaky) |
 | [BUG-104](bug-prompts/BUG-104.md) | **medium** | medium | подтверждён | воспр.: да; опроверг.: нет | инструментирование | Размер switched-текста (и отчёта `list --json`) квадратичен по числу элементов литерала: replacement'ы `object-property`/`array-element` — весь литерал без одного элемента. Svelte `entities.js` (41 КБ, `--preset strict`): switched 92 МБ, `list --json --verbose` 419 МБ, 3,9 ГБ RSS | `core/instrument/render-mutant-range.ts:85-95`, `core/instrument/create-switched-files.ts:74-104`, `core/mutators/object-property.ts`, `core/mutators/array-element.ts` | `test/repros/BUG-104.test.ts`; `analysis/tools/instrument/switch-size.mjs` |

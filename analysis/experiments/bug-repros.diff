@@ -1,0 +1,4183 @@
+diff --git a/test/fixtures/repros/BUG-200/package.json b/test/fixtures/repros/BUG-200/package.json
+new file mode 100644
+index 0000000..aad6763
+--- /dev/null
++++ b/test/fixtures/repros/BUG-200/package.json
+@@ -0,0 +1,5 @@
++{
++  "name": "bug-200",
++  "private": true,
++  "type": "module"
++}
+diff --git a/test/fixtures/repros/BUG-200/src/memo.js b/test/fixtures/repros/BUG-200/src/memo.js
+new file mode 100644
+index 0000000..81b0725
+--- /dev/null
++++ b/test/fixtures/repros/BUG-200/src/memo.js
+@@ -0,0 +1,13 @@
++let memo = new Map()
++
++export function fib(n) {
++  if (n < 2) {
++    return n
++  }
++  if (memo.has(n)) {
++    return memo.get(n)
++  }
++  let value = fib(n - 1) + fib(n - 2)
++  memo.set(n, value)
++  return value
++}
+diff --git a/test/fixtures/repros/BUG-200/test/memo.check.js b/test/fixtures/repros/BUG-200/test/memo.check.js
+new file mode 100644
+index 0000000..4a58252
+--- /dev/null
++++ b/test/fixtures/repros/BUG-200/test/memo.check.js
+@@ -0,0 +1,7 @@
++import { expect, test } from 'vitest'
++
++import { fib } from '../src/memo.js'
++
++test('fib', () => {
++  expect(fib(25)).toBe(75025)
++})
+diff --git a/test/fixtures/repros/BUG-200/vitest.config.js b/test/fixtures/repros/BUG-200/vitest.config.js
+new file mode 100644
+index 0000000..4f67b8d
+--- /dev/null
++++ b/test/fixtures/repros/BUG-200/vitest.config.js
+@@ -0,0 +1,5 @@
++export default {
++  test: {
++    include: ['test/**/*.check.js'],
++  },
++}
+diff --git a/test/fixtures/repros/BUG-201/package.json b/test/fixtures/repros/BUG-201/package.json
+new file mode 100644
+index 0000000..ed95e06
+--- /dev/null
++++ b/test/fixtures/repros/BUG-201/package.json
+@@ -0,0 +1,5 @@
++{
++  "name": "bug-201",
++  "private": true,
++  "type": "module"
++}
+diff --git a/test/fixtures/repros/BUG-201/src/api.js b/test/fixtures/repros/BUG-201/src/api.js
+new file mode 100644
+index 0000000..3dd0533
+--- /dev/null
++++ b/test/fixtures/repros/BUG-201/src/api.js
+@@ -0,0 +1,3 @@
++export async function fetchUser(id) {
++  return { id, name: `user${id}` }
++}
+diff --git a/test/fixtures/repros/BUG-201/src/service.js b/test/fixtures/repros/BUG-201/src/service.js
+new file mode 100644
+index 0000000..7f18507
+--- /dev/null
++++ b/test/fixtures/repros/BUG-201/src/service.js
+@@ -0,0 +1,6 @@
++import { fetchUser } from './api.js'
++
++export async function greet(id) {
++  let user = await fetchUser(id)
++  return `Hello, ${user.name}!`
++}
+diff --git a/test/fixtures/repros/BUG-201/test/actual.js b/test/fixtures/repros/BUG-201/test/actual.js
+new file mode 100644
+index 0000000..8ae9f64
+--- /dev/null
++++ b/test/fixtures/repros/BUG-201/test/actual.js
+@@ -0,0 +1,5 @@
++import { vi } from 'vitest'
++
++export function loadActual(specifier) {
++  return vi.importActual(specifier)
++}
+diff --git a/test/fixtures/repros/BUG-201/test/greet.check.js b/test/fixtures/repros/BUG-201/test/greet.check.js
+new file mode 100644
+index 0000000..bc9617a
+--- /dev/null
++++ b/test/fixtures/repros/BUG-201/test/greet.check.js
+@@ -0,0 +1,12 @@
++import { expect, test, vi } from 'vitest'
++
++import { loadActual } from './actual.js'
++import { greet } from '../src/service.js'
++
++vi.mock('../src/api.js', async () => ({
++  ...(await loadActual('../src/api.js')),
++}))
++
++test('greets the real user', async () => {
++  expect(await greet(2)).toBe('Hello, user2!')
++})
+diff --git a/test/fixtures/repros/BUG-201/vitest.config.js b/test/fixtures/repros/BUG-201/vitest.config.js
+new file mode 100644
+index 0000000..4f67b8d
+--- /dev/null
++++ b/test/fixtures/repros/BUG-201/vitest.config.js
+@@ -0,0 +1,5 @@
++export default {
++  test: {
++    include: ['test/**/*.check.js'],
++  },
++}
+diff --git a/test/fixtures/repros/BUG-202/package.json b/test/fixtures/repros/BUG-202/package.json
+new file mode 100644
+index 0000000..4fe7233
+--- /dev/null
++++ b/test/fixtures/repros/BUG-202/package.json
+@@ -0,0 +1,5 @@
++{
++  "name": "bug-202",
++  "private": true,
++  "type": "module"
++}
+diff --git a/test/fixtures/repros/BUG-202/src/report.js b/test/fixtures/repros/BUG-202/src/report.js
+new file mode 100644
+index 0000000..0b337dc
+--- /dev/null
++++ b/test/fixtures/repros/BUG-202/src/report.js
+@@ -0,0 +1,9 @@
++export function report(lines, verbose) {
++  let checksum = 0
++  if (verbose) {
++    for (let line = 0; line < lines; line++) {
++      checksum += line % 7
++    }
++  }
++  return lines + checksum * 0
++}
+diff --git a/test/fixtures/repros/BUG-202/test/report.check.js b/test/fixtures/repros/BUG-202/test/report.check.js
+new file mode 100644
+index 0000000..8ee5124
+--- /dev/null
++++ b/test/fixtures/repros/BUG-202/test/report.check.js
+@@ -0,0 +1,19 @@
++import { expect, test } from 'vitest'
++
++import { report } from '../src/report.js'
++
++test('quiet report', () => {
++  expect(report(25000, false)).toBe(25000)
++})
++
++test('empty report', () => {
++  expect(report(0, false)).toBe(0)
++})
++
++test('one line', () => {
++  expect(report(1, false)).toBe(1)
++})
++
++test('two lines', () => {
++  expect(report(2, false)).toBe(2)
++})
+diff --git a/test/fixtures/repros/BUG-202/vitest.config.js b/test/fixtures/repros/BUG-202/vitest.config.js
+new file mode 100644
+index 0000000..4f67b8d
+--- /dev/null
++++ b/test/fixtures/repros/BUG-202/vitest.config.js
+@@ -0,0 +1,5 @@
++export default {
++  test: {
++    include: ['test/**/*.check.js'],
++  },
++}
+diff --git a/test/fixtures/repros/BUG-203/package.json b/test/fixtures/repros/BUG-203/package.json
+new file mode 100644
+index 0000000..f6f9acf
+--- /dev/null
++++ b/test/fixtures/repros/BUG-203/package.json
+@@ -0,0 +1,5 @@
++{
++  "name": "bug-203",
++  "private": true,
++  "type": "module"
++}
+diff --git a/test/fixtures/repros/BUG-203/src/events.js b/test/fixtures/repros/BUG-203/src/events.js
+new file mode 100644
+index 0000000..b6b5533
+--- /dev/null
++++ b/test/fixtures/repros/BUG-203/src/events.js
+@@ -0,0 +1,8 @@
++export function emitLater(listener) {
++  setTimeout(() => {
++    if (listener) {
++      listener()
++    }
++  }, 0)
++  return true
++}
+diff --git a/test/fixtures/repros/BUG-203/test/events.check.js b/test/fixtures/repros/BUG-203/test/events.check.js
+new file mode 100644
+index 0000000..4a46a67
+--- /dev/null
++++ b/test/fixtures/repros/BUG-203/test/events.check.js
+@@ -0,0 +1,10 @@
++import { expect, test } from 'vitest'
++
++import { emitLater } from '../src/events.js'
++
++test('emits without a listener', async () => {
++  expect(emitLater(undefined)).toBe(true)
++  await new Promise(resolve => {
++    setTimeout(resolve, 10)
++  })
++})
+diff --git a/test/fixtures/repros/BUG-203/vitest.config.js b/test/fixtures/repros/BUG-203/vitest.config.js
+new file mode 100644
+index 0000000..6870b42
+--- /dev/null
++++ b/test/fixtures/repros/BUG-203/vitest.config.js
+@@ -0,0 +1,6 @@
++export default {
++  test: {
++    include: ['test/**/*.check.js'],
++    dangerouslyIgnoreUnhandledErrors: true,
++  },
++}
+diff --git a/test/fixtures/repros/BUG-204/package.json b/test/fixtures/repros/BUG-204/package.json
+new file mode 100644
+index 0000000..85c63bb
+--- /dev/null
++++ b/test/fixtures/repros/BUG-204/package.json
+@@ -0,0 +1,5 @@
++{
++  "name": "bug-204",
++  "private": true,
++  "type": "module"
++}
+diff --git a/test/fixtures/repros/BUG-204/src/retry.js b/test/fixtures/repros/BUG-204/src/retry.js
+new file mode 100644
+index 0000000..c9508a4
+--- /dev/null
++++ b/test/fixtures/repros/BUG-204/src/retry.js
+@@ -0,0 +1,11 @@
++export async function retry(task, pause = 10) {
++  try {
++    return await task()
++  } catch {
++    let delay = Math.min(pause, 12000)
++    await new Promise(resolve => {
++      setTimeout(resolve, delay)
++    })
++    return task()
++  }
++}
+diff --git a/test/fixtures/repros/BUG-204/test/retry.check.js b/test/fixtures/repros/BUG-204/test/retry.check.js
+new file mode 100644
+index 0000000..ed79b7f
+--- /dev/null
++++ b/test/fixtures/repros/BUG-204/test/retry.check.js
+@@ -0,0 +1,15 @@
++import { expect, test } from 'vitest'
++
++import { retry } from '../src/retry.js'
++
++test('retries once', async () => {
++  let calls = 0
++  let value = await retry(async () => {
++    calls++
++    if (calls === 1) {
++      throw new Error('flaky')
++    }
++    return 'ok'
++  })
++  expect(value).toBe('ok')
++})
+diff --git a/test/fixtures/repros/BUG-204/vitest.config.js b/test/fixtures/repros/BUG-204/vitest.config.js
+new file mode 100644
+index 0000000..c0276eb
+--- /dev/null
++++ b/test/fixtures/repros/BUG-204/vitest.config.js
+@@ -0,0 +1,6 @@
++export default {
++  test: {
++    include: ['test/**/*.check.js'],
++    testTimeout: 30_000,
++  },
++}
+diff --git a/test/fixtures/repros/BUG-206/package.json b/test/fixtures/repros/BUG-206/package.json
+new file mode 100644
+index 0000000..bfb48ac
+--- /dev/null
++++ b/test/fixtures/repros/BUG-206/package.json
+@@ -0,0 +1,5 @@
++{
++  "name": "bug-206",
++  "private": true,
++  "type": "module"
++}
+diff --git a/test/fixtures/repros/BUG-206/src/cached.js b/test/fixtures/repros/BUG-206/src/cached.js
+new file mode 100644
+index 0000000..e7b3e2f
+--- /dev/null
++++ b/test/fixtures/repros/BUG-206/src/cached.js
+@@ -0,0 +1,15 @@
++import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
++import path from 'node:path'
++
++import { compute } from './compute.js'
++
++export function cachedCompute(value, directory) {
++  let file = path.join(directory, `${value}.json`)
++  if (existsSync(file)) {
++    return JSON.parse(readFileSync(file, 'utf8'))
++  }
++  let result = compute(value)
++  mkdirSync(directory, { recursive: true })
++  writeFileSync(file, JSON.stringify(result))
++  return result
++}
+diff --git a/test/fixtures/repros/BUG-206/src/compute.js b/test/fixtures/repros/BUG-206/src/compute.js
+new file mode 100644
+index 0000000..08548b9
+--- /dev/null
++++ b/test/fixtures/repros/BUG-206/src/compute.js
+@@ -0,0 +1,3 @@
++export function compute(value) {
++  return value * 2
++}
+diff --git a/test/fixtures/repros/BUG-206/test/cached.check.js b/test/fixtures/repros/BUG-206/test/cached.check.js
+new file mode 100644
+index 0000000..0e52488
+--- /dev/null
++++ b/test/fixtures/repros/BUG-206/test/cached.check.js
+@@ -0,0 +1,10 @@
++import { fileURLToPath } from 'node:url'
++import { expect, test } from 'vitest'
++
++import { cachedCompute } from '../src/cached.js'
++
++let cache = fileURLToPath(new URL('../.cache', import.meta.url))
++
++test('doubles through the on-disk cache', () => {
++  expect(cachedCompute(21, cache)).toBe(42)
++})
+diff --git a/test/fixtures/repros/BUG-206/vitest.config.js b/test/fixtures/repros/BUG-206/vitest.config.js
+new file mode 100644
+index 0000000..4f67b8d
+--- /dev/null
++++ b/test/fixtures/repros/BUG-206/vitest.config.js
+@@ -0,0 +1,5 @@
++export default {
++  test: {
++    include: ['test/**/*.check.js'],
++  },
++}
+diff --git a/test/repros/BUG-100.test.ts b/test/repros/BUG-100.test.ts
+new file mode 100644
+index 0000000..56ea5b5
+--- /dev/null
++++ b/test/repros/BUG-100.test.ts
+@@ -0,0 +1,112 @@
++import { describe, expect, it } from 'vitest'
++
++import type { DryRunResult } from '../../types/adapter/dry-run-result'
++import type { SwitchedFile } from '../../types/adapter/switched-file'
++import type { FakeWorld } from '../helpers/create-fake-adapter'
++
++import { createFakeAdapter } from '../helpers/create-fake-adapter'
++import { runDryPhase } from '../../core/run/run-dry-phase'
++
++/**
++ * Runs the dry phase of two switched files, `/src/a.ts` with mutant `a1` and
++ * `/src/b.ts` with mutant `b1`, in a world whose `/t/b.test.ts` fails to load
++ * before it reaches any site while `failsWithB` says so.
++ *
++ * @param failsWithB - Tells, from the request of a dry run, whether the test
++ *   file of `b` fails to load in it.
++ * @returns Switched files left and the diagnostics of the dry phase.
++ */
++async function runPhase(
++  failsWithB: (request: {
++    instrumented: boolean
++    related: string[]
++  }) => boolean,
++): Promise<{ diagnostics: string[]; switched: string[] }> {
++  let world: FakeWorld = {
++    onDry: (result: DryRunResult, request) => {
++      if (!failsWithB(request)) {
++        return result
++      }
++      return {
++        ...result,
++        files: result.files.map(file =>
++          file.file === '/t/b.test.ts' ?
++            {
++              ...file,
++              errors: ['ReferenceError: Cannot access before initialization'],
++              loadFailed: true,
++              covers: [],
++            }
++          : file,
++        ),
++        tests: result.tests.filter(test => test.file !== '/t/b.test.ts'),
++      }
++    },
++    tests: [
++      { file: '/t/a.test.ts', covers: ['a1'], id: 'ta' },
++      { file: '/t/b.test.ts', covers: ['b1'], id: 'tb' },
++    ],
++  }
++  let fake = createFakeAdapter(world)
++  let switched: SwitchedFile[] = [
++    { switched: 'hit("a1")', file: '/src/a.ts', original: '' },
++    { switched: 'hit("b1")', file: '/src/b.ts', original: '' },
++  ]
++  let session = await fake.adapter.start({
++    workDirectory: '/work',
++    concurrency: null,
++    files: switched,
++    root: '/',
++  })
++  let phase = await runDryPhase(session, {
++    displays: new Map([
++      ['/src/a.ts', 'src/a.ts'],
++      ['/src/b.ts', 'src/b.ts'],
++    ]),
++    mutantFiles: new Map([
++      ['a1', '/src/a.ts'],
++      ['b1', '/src/b.ts'],
++    ]),
++    report: () => {},
++    repeat: false,
++    root: '/',
++    switched,
++  })
++  return {
++    diagnostics: phase.diagnostics.map(
++      diagnostic => `${diagnostic.code} ${diagnostic.file}`,
++    ),
++    switched: switched.map(entry => entry.file),
++  }
++}
++
++describe('BUG-100: a dry-run failure that reached no mutant site drops every switched file', () => {
++  it('keeps a switched file whose tests pass when another file breaks a test file before any site', async () => {
++    // `/src/b.ts` breaks the loading of its test file whenever it is switched,
++    // as a module whose switched text throws before its first site does (a
++    // binding named `globalThis`, a compile-time macro that rejects the
++    // switched argument). `/src/a.ts` and its test have nothing to do with it.
++    let result = await runPhase(
++      request => request.instrumented && request.related.includes('/src/b.ts'),
++    )
++
++    expect(result.diagnostics).not.toContain('instrumentation-break src/a.ts')
++    expect(result.switched).toContain('/src/a.ts')
++  })
++
++  it('drops no file when a test file failed to load once, before any site, and loads when run again', async () => {
++    // A transient load failure (a port in use, a resource not ready) in the
++    // first instrumented dry run only: no switched file is to blame.
++    let runs = 0
++    let result = await runPhase(request => {
++      if (!request.instrumented) {
++        return false
++      }
++      runs += 1
++      return runs === 1
++    })
++
++    expect(result.diagnostics).toStrictEqual([])
++    expect(result.switched).toStrictEqual(['/src/a.ts', '/src/b.ts'])
++  })
++})
+diff --git a/test/repros/BUG-100/collateral/src/env.js b/test/repros/BUG-100/collateral/src/env.js
+new file mode 100644
+index 0000000..b0520c2
+--- /dev/null
++++ b/test/repros/BUG-100/collateral/src/env.js
+@@ -0,0 +1,5 @@
++// A module-level binding named globalThis, as in polyfill-style code.
++const globalThis = typeof window !== 'undefined' ? window : { platform: 'node' }
++export function platform() {
++  return globalThis.platform ?? 'browser'
++}
+diff --git a/test/repros/BUG-100/collateral/src/price.js b/test/repros/BUG-100/collateral/src/price.js
+new file mode 100644
+index 0000000..9ddaa00
+--- /dev/null
++++ b/test/repros/BUG-100/collateral/src/price.js
+@@ -0,0 +1,5 @@
++export function total(items, discount) {
++  let sum = 0
++  for (let item of items) sum += item.price * item.count
++  return discount > 0 ? sum - sum * discount : sum
++}
+diff --git a/test/repros/BUG-100/collateral/test/env.check.js b/test/repros/BUG-100/collateral/test/env.check.js
+new file mode 100644
+index 0000000..f4000d7
+--- /dev/null
++++ b/test/repros/BUG-100/collateral/test/env.check.js
+@@ -0,0 +1,5 @@
++import { expect, it } from 'vitest'
++import { platform } from '../src/env.js'
++it('detects node', () => {
++  expect(platform()).toBe('node')
++})
+diff --git a/test/repros/BUG-100/collateral/test/price.check.js b/test/repros/BUG-100/collateral/test/price.check.js
+new file mode 100644
+index 0000000..9a5d2cf
+--- /dev/null
++++ b/test/repros/BUG-100/collateral/test/price.check.js
+@@ -0,0 +1,8 @@
++import { expect, it } from 'vitest'
++import { total } from '../src/price.js'
++it('sums', () => {
++  expect(total([{ price: 2, count: 3 }, { price: 1, count: 1 }], 0)).toBe(7)
++})
++it('discounts', () => {
++  expect(total([{ price: 10, count: 1 }], 0.5)).toBe(5)
++})
+diff --git a/test/repros/BUG-100/flaky/src/format.js b/test/repros/BUG-100/flaky/src/format.js
+new file mode 100644
+index 0000000..401dc5b
+--- /dev/null
++++ b/test/repros/BUG-100/flaky/src/format.js
+@@ -0,0 +1,3 @@
++export function label(name, count) {
++  return count > 1 ? `${name} x${count}` : name
++}
+diff --git a/test/repros/BUG-100/flaky/src/price.js b/test/repros/BUG-100/flaky/src/price.js
+new file mode 100644
+index 0000000..9ddaa00
+--- /dev/null
++++ b/test/repros/BUG-100/flaky/src/price.js
+@@ -0,0 +1,5 @@
++export function total(items, discount) {
++  let sum = 0
++  for (let item of items) sum += item.price * item.count
++  return discount > 0 ? sum - sum * discount : sum
++}
+diff --git a/test/repros/BUG-100/flaky/test/format.check.js b/test/repros/BUG-100/flaky/test/format.check.js
+new file mode 100644
+index 0000000..2575298
+--- /dev/null
++++ b/test/repros/BUG-100/flaky/test/format.check.js
+@@ -0,0 +1,16 @@
++// Fails to load on the first run of a fresh checkout only, as a test does
++// when a port, a temporary directory or a network resource is not ready.
++import { existsSync, writeFileSync } from 'node:fs'
++import { expect, it } from 'vitest'
++import { label } from '../src/format.js'
++
++let marker = new URL('../.warmed-up', import.meta.url)
++if (!existsSync(marker)) {
++  writeFileSync(marker, '')
++  throw new Error('resource not ready')
++}
++
++it('labels', () => {
++  expect(label('apple', 2)).toBe('apple x2')
++  expect(label('pear', 1)).toBe('pear')
++})
+diff --git a/test/repros/BUG-100/flaky/test/price.check.js b/test/repros/BUG-100/flaky/test/price.check.js
+new file mode 100644
+index 0000000..9a5d2cf
+--- /dev/null
++++ b/test/repros/BUG-100/flaky/test/price.check.js
+@@ -0,0 +1,8 @@
++import { expect, it } from 'vitest'
++import { total } from '../src/price.js'
++it('sums', () => {
++  expect(total([{ price: 2, count: 3 }, { price: 1, count: 1 }], 0)).toBe(7)
++})
++it('discounts', () => {
++  expect(total([{ price: 10, count: 1 }], 0.5)).toBe(5)
++})
+diff --git a/test/repros/BUG-100/run.sh b/test/repros/BUG-100/run.sh
+new file mode 100755
+index 0000000..d200a4c
+--- /dev/null
++++ b/test/repros/BUG-100/run.sh
+@@ -0,0 +1,38 @@
++#!/usr/bin/env bash
++# BUG-100: a dry-run failure that reached no mutant site drops every switched
++# file with a false `instrumentation-break`.
++#   collateral/ - src/env.js declares `const globalThis` (BUG-101): its switched
++#                 text throws at load; src/price.js is innocent but is dropped too.
++#   flaky/      - test/format.test.js fails to load on the first run only; no
++#                 file is broken, yet every file is dropped.
++# Fixture tests are stored as *.check.js so that the mootant suite does not
++# collect them; run.sh renames them to *.test.js in a temporary copy.
++# Usage: MOOTANT_TGZ=/path/to/mootant.tgz ./run.sh
++set -euo pipefail
++here="$(cd "$(dirname "$0")" && pwd)"
++tgz="${MOOTANT_TGZ:-/home/user/artifacts/mootant-0.1.0-170ec52.tgz}"
++work="$(mktemp -d)"
++status=0
++for name in collateral flaky; do
++  dir="$work/$name"
++  mkdir -p "$dir"
++  cp -r "$here/$name/." "$dir/"
++  for f in "$dir"/test/*.check.js; do mv "$f" "${f%.check.js}.test.js"; done
++  cat > "$dir/package.json" <<JSON
++{ "name": "$name", "private": true, "type": "module",
++  "devDependencies": { "mootant": "file:$tgz", "vitest": "5.0.5", "vite": "8.3.5" } }
++JSON
++  (cd "$dir" && npm i --legacy-peer-deps --silent >/dev/null 2>&1)
++  (cd "$dir" && npx vitest --run >/dev/null 2>&1) || true
++  (cd "$dir" && npx vitest --run >/dev/null 2>&1 && echo "$name: plain vitest passes")
++  rm -f "$dir/.warmed-up"
++  (cd "$dir" && npx mootant run src --json --all > report.json 2>/dev/null) || true
++  node -e "
++    let r = require('$dir/report.json')
++    let dropped = r.diagnostics.filter(d => d.code === 'instrumentation-break').map(d => d.file)
++    console.log('$name:', JSON.stringify({ errorMutants: r.summary.totalErrorMutants, mutants: r.summary.totalMutants, dropped }))
++    if (dropped.includes('src/price.js')) { console.log('$name: REPRODUCED - innocent src/price.js dropped'); process.exitCode = 1 }
++  " || status=1
++done
++rm -rf "$work"
++exit $status
+diff --git a/test/repros/BUG-101.test.ts b/test/repros/BUG-101.test.ts
+new file mode 100644
+index 0000000..85a9596
+--- /dev/null
++++ b/test/repros/BUG-101.test.ts
+@@ -0,0 +1,52 @@
++import { describe, expect, it } from 'vitest'
++
++import { instrumentFile } from '../../core/instrument/instrument-file'
++import { runSwitchedProgram } from '../helpers/run-switched-program'
++import { generateMutants } from '../helpers/generate-mutants'
++import { applyMutant } from '../helpers/apply-mutant'
++import { runProgram } from '../helpers/run-program'
++
++describe('BUG-101: a binding named globalThis captures the site check of the mutant switch', () => {
++  it('switches each mutant of a function with a globalThis parameter like the mutant applied alone', async () => {
++    let source = [
++      'function f(globalThis, factor) {',
++      '  return globalThis.base * factor + 1',
++      '}',
++    ].join('\n')
++    let file = 'example.js'
++    let inputs = [[{ base: 2 }, 3]]
++    let mutants = generateMutants(source, { preset: 'strict', file })
++    let switched = instrumentFile({ mutants, source, file })
++    let expected = await Promise.all(
++      mutants.map(mutant =>
++        runProgram(applyMutant(source, mutant), file, inputs),
++      ),
++    )
++    let actual = await Promise.all(
++      mutants.map(mutant =>
++        runSwitchedProgram({ active: mutant.id, switched, file }, inputs),
++      ),
++    )
++
++    expect(mutants.length).toBeGreaterThan(0)
++    expect(actual).toStrictEqual(expected)
++  })
++
++  it('runs the original code of a file whose own globalThis binding has mutant sites in its initializer', async () => {
++    let source = [
++      "const globalThis = typeof process === 'object' ? { name: 'node' } : null",
++      'function f() {',
++      '  return globalThis.name',
++      '}',
++    ].join('\n')
++    let file = 'example.js'
++    let inputs = [[]]
++    let mutants = generateMutants(source, { preset: 'strict', file })
++    let switched = instrumentFile({ mutants, source, file })
++
++    expect(mutants.length).toBeGreaterThan(0)
++    await expect(
++      runSwitchedProgram({ active: null, switched, file }, inputs),
++    ).resolves.toStrictEqual(await runProgram(source, file, inputs))
++  })
++})
+diff --git a/test/repros/BUG-102.test.ts b/test/repros/BUG-102.test.ts
+new file mode 100644
+index 0000000..1b99358
+--- /dev/null
++++ b/test/repros/BUG-102.test.ts
+@@ -0,0 +1,116 @@
++import { describe, expect, it } from 'vitest'
++
++import { createMootantPlugin } from '../../adapters/vitest/create-mootant-plugin'
++import { createVitestSessionState } from '../helpers/create-vitest-session-state'
++import { instrumentFile } from '../../core/instrument/instrument-file'
++import { generateMutants } from '../helpers/generate-mutants'
++
++/**
++ * Digits of base64 VLQ.
++ */
++const BASE64 =
++  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
++
++/**
++ * Position in a text, both 0-based.
++ */
++interface Position {
++  column: number
++  line: number
++}
++
++/**
++ * Maps a generated position back through a source map, as Vite does to report a
++ * stack trace; a missing map means the transform kept every position.
++ *
++ * @param map - Source map with `mappings`, or null.
++ * @param generated - Generated position.
++ * @returns Original position of the segment that holds it.
++ */
++function trace(
++  map: { mappings: string } | null,
++  generated: Position,
++): Position {
++  if (map === null) {
++    return generated
++  }
++  let state: [number, number, number, number] = [0, 0, 0, 0]
++  let found: Position | null = null
++  for (let [line, text] of map.mappings.split(';').entries()) {
++    state[0] = 0
++    for (let segment of text.split(',')) {
++      if (segment === '') {
++        continue
++      }
++      let values: number[] = []
++      let value = 0
++      let shift = 0
++      for (let char of segment) {
++        let digit = BASE64.indexOf(char)
++        value += (digit & 31) << shift
++        if (digit & 32) {
++          shift += 5
++        } else {
++          values.push(value & 1 ? -(value >> 1) : value >> 1)
++          value = 0
++          shift = 0
++        }
++      }
++      for (let [index, delta] of values.slice(0, 4).entries()) {
++        state[index as 0 | 1 | 2 | 3] += delta
++      }
++      if (
++        values.length >= 4 &&
++        line === generated.line &&
++        state[0] <= generated.column
++      ) {
++        found = { column: state[3], line: state[2] }
++      }
++    }
++  }
++  return found ?? { column: -1, line: -1 }
++}
++
++/**
++ * Finds where the `new Error('here')` of the program first occurs in a text.
++ *
++ * @param text - Text to search.
++ * @returns 0-based line and column of its first character.
++ */
++function locate(text: string): Position {
++  let offset = text.indexOf("new Error('here')")
++  let before = text.slice(0, offset).split('\n')
++  return { column: before.at(-1)!.length, line: before.length - 1 }
++}
++
++describe('BUG-102: the switched text moves code without a source map', () => {
++  it('maps the code after a multi-line mutant back to its original line and column', () => {
++    let source = [
++      'export function levels() {',
++      '  return [',
++      '    debug(),',
++      '    info(),',
++      '  ]',
++      '}',
++      'export function where() {',
++      "  return new Error('here').stack",
++      '}',
++    ].join('\n')
++    let mutants = generateMutants(source, { preset: 'strict', file: 'a.js' })
++    let switched = instrumentFile({ file: 'a.js', mutants, source })
++    let context = {
++      files: [{ file: '/project/src/a.js', original: source, switched }],
++    } as never
++    let plugin = createMootantPlugin(context, createVitestSessionState())
++    let { handler } = plugin.transform as {
++      handler(
++        code: string,
++        id: string,
++      ): { map: { mappings: string } | null; code: string }
++    }
++    let result = handler(source, '/project/src/a.js')
++
++    expect(mutants.some(mutant => mutant.replacement.includes('\n'))).toBe(true)
++    expect(trace(result.map, locate(result.code))).toStrictEqual(locate(source))
++  })
++})
+diff --git a/test/repros/BUG-102/fixture/src/stack.js b/test/repros/BUG-102/fixture/src/stack.js
+new file mode 100644
+index 0000000..6963d2b
+--- /dev/null
++++ b/test/repros/BUG-102/fixture/src/stack.js
+@@ -0,0 +1,17 @@
++const debug = () => ({ n: 10 })
++const info = () => ({ n: 20 })
++export function levels() {
++  return [
++    debug(),
++    info(),
++  ]
++}
++
++export function where() {
++  let line = new Error('here').stack.split('\n')[1]
++  return Number(line.match(/:(\d+):\d+\)?$/)[1])
++}
++
++export function level(index) {
++  return levels()[index]?.n ?? 0
++}
+diff --git a/test/repros/BUG-102/fixture/test/stack.check.js b/test/repros/BUG-102/fixture/test/stack.check.js
+new file mode 100644
+index 0000000..285d14d
+--- /dev/null
++++ b/test/repros/BUG-102/fixture/test/stack.check.js
+@@ -0,0 +1,11 @@
++import { expect, it } from 'vitest'
++import { level, where } from '../src/stack.js'
++
++it('reports its own line', () => {
++  expect(where()).toBe(11)
++})
++
++it('reads levels', () => {
++  expect(level(1)).toBe(20)
++  expect(level(9)).toBe(0)
++})
+diff --git a/test/repros/BUG-102/run.sh b/test/repros/BUG-102/run.sh
+new file mode 100755
+index 0000000..0a68d12
+--- /dev/null
++++ b/test/repros/BUG-102/run.sh
+@@ -0,0 +1,28 @@
++#!/usr/bin/env bash
++# BUG-102: switched code moves lines and columns without a source map; a test
++# that reads a line number of the code under test passes with plain Vitest and
++# fails in mootant's instrumented dry run, so every mutant of the file is lost
++# (`instrumentation-break`).
++# Fixture tests are stored as *.check.js so that the mootant suite does not
++# collect them; run.sh renames them to *.test.js in a temporary copy.
++# Usage: MOOTANT_TGZ=/path/to/mootant.tgz ./run.sh
++set -euo pipefail
++here="$(cd "$(dirname "$0")" && pwd)"
++tgz="${MOOTANT_TGZ:-/home/user/artifacts/mootant-0.1.0-170ec52.tgz}"
++dir="$(mktemp -d)"
++cp -r "$here/fixture/." "$dir/"
++for f in "$dir"/test/*.check.js; do mv "$f" "${f%.check.js}.test.js"; done
++cat > "$dir/package.json" <<JSON
++{ "name": "stack-lines", "private": true, "type": "module",
++  "devDependencies": { "mootant": "file:$tgz", "vitest": "5.0.5", "vite": "8.3.5" } }
++JSON
++cd "$dir"
++npm i --legacy-peer-deps --silent >/dev/null 2>&1
++npx vitest --run >/dev/null 2>&1 && echo "plain vitest passes"
++npx mootant run src --json --all > report.json 2>/dev/null || true
++node -e "
++  let r = require('$dir/report.json')
++  let codes = r.diagnostics.map(d => d.code + ' ' + d.file)
++  console.log(JSON.stringify({ summary: r.summary, diagnostics: codes }))
++  if (codes.includes('instrumentation-break src/stack.js')) { console.log('REPRODUCED'); process.exitCode = 1 }
++"
+diff --git a/test/repros/BUG-103.test.ts b/test/repros/BUG-103.test.ts
+new file mode 100644
+index 0000000..b653914
+--- /dev/null
++++ b/test/repros/BUG-103.test.ts
+@@ -0,0 +1,38 @@
++import { describe, expect, it } from 'vitest'
++
++import { instrumentFile } from '../../core/instrument/instrument-file'
++import { runSwitchedProgram } from '../helpers/run-switched-program'
++import { generateMutants } from '../helpers/generate-mutants'
++import { applyMutant } from '../helpers/apply-mutant'
++import { runProgram } from '../helpers/run-program'
++
++describe('BUG-103: the mutant switch hides the name a binding gives an anonymous function', () => {
++  it('switches a mutant that leaves an anonymous function in an initializer like the mutant applied alone', async () => {
++    let source = [
++      'function f(flag, options) {',
++      '  let handler = flag || function () { return 1 }',
++      '  let fallback = options.fallback ?? (() => 2)',
++      '  return [handler.name, fallback.name]',
++      '}',
++    ].join('\n')
++    let file = 'example.js'
++    let inputs = [[false, {}]]
++    let mutants = generateMutants(source, { preset: 'strict', file }).filter(
++      mutant => mutant.mutator === 'logical-operator',
++    )
++    let switched = instrumentFile({ mutants, source, file })
++    let expected = await Promise.all(
++      mutants.map(mutant =>
++        runProgram(applyMutant(source, mutant), file, inputs),
++      ),
++    )
++    let actual = await Promise.all(
++      mutants.map(mutant =>
++        runSwitchedProgram({ active: mutant.id, switched, file }, inputs),
++      ),
++    )
++
++    expect(mutants.length).toBeGreaterThan(0)
++    expect(actual).toStrictEqual(expected)
++  })
++})
+diff --git a/test/repros/BUG-104.test.ts b/test/repros/BUG-104.test.ts
+new file mode 100644
+index 0000000..7518b2e
+--- /dev/null
++++ b/test/repros/BUG-104.test.ts
+@@ -0,0 +1,27 @@
++import { describe, expect, it } from 'vitest'
++
++import { instrumentFile } from '../../core/instrument/instrument-file'
++import { generateMutants } from '../helpers/generate-mutants'
++
++describe('BUG-104: the switched text grows with the square of a literal', () => {
++  it('keeps the switched text of a lookup table within a linear bound', () => {
++    // A table like `packages/svelte/src/compiler/phases/1-parse/utils/entities.js`
++    // in the Svelte compiler (2231 entries, 41 KB): under `strict` every
++    // object-property mutant copies the whole literal minus one entry, so the
++    // switched text of that file is 92 MB and `mootant list --json --verbose`
++    // prints 419 MB for it.
++    let entries = Array.from(
++      { length: 400 },
++      (_, index) => `  'entity${index};': ${index + 100},`,
++    )
++    let source = ['export default {', ...entries, '}'].join('\n')
++    let file = 'entities.js'
++    let mutants = generateMutants(source, { preset: 'strict', file })
++    let switched = instrumentFile({ mutants, source, file })
++
++    expect(
++      mutants.filter(mutant => mutant.mutator === 'object-property').length,
++    ).toBeGreaterThan(0)
++    expect(switched.length).toBeLessThan(50 * source.length)
++  })
++})
+diff --git a/test/repros/BUG-106.test.ts b/test/repros/BUG-106.test.ts
+new file mode 100644
+index 0000000..49cde47
+--- /dev/null
++++ b/test/repros/BUG-106.test.ts
+@@ -0,0 +1,44 @@
++import { describe, expect, it } from 'vitest'
++
++import { getSyntaxFingerprint } from '../helpers/get-syntax-fingerprint'
++import { instrumentFile } from '../../core/instrument/instrument-file'
++import { generateMutants } from '../helpers/generate-mutants'
++
++describe('BUG-106: a regular expression that starts with <!-- breaks the switched module', () => {
++  it.each([
++    [
++      'strip.ts',
++      [
++        'export function strip(html: string): string {',
++        "  return html.replace(/<!--[\\s\\S]*?-->/g, '')",
++        '}',
++      ],
++    ],
++    [
++      'escape.ts',
++      [
++        '// as in packages/shared/src/escapeHtml.ts of vuejs/core',
++        'const commentStripRE = /^(?:-?>)+|<!--|-->|--!>|<!-$/g',
++        'export function escapeHtmlComment(src: string): string {',
++        "  return src.replace(commentStripRE, '')",
++        '}',
++      ],
++    ],
++  ])(
++    'hosts the mutants of %s in a module that parses as Vite 8 parses it',
++    (file, lines) => {
++      // oxc, which Vite 8 and rolldown parse modules with, reads `(/<!--`
++      // as an HTML comment in a module of ambiguous source type; the mutant
++      // switch writes every replacement and original in parentheses.
++      let source = lines.join('\n')
++      let mutants = generateMutants(source, { preset: 'recommended', file })
++      let switched = instrumentFile({ mutants, source, file })
++
++      expect(getSyntaxFingerprint(file, source)).not.toBeNull()
++      expect(mutants.some(mutant => mutant.mutator === 'regex-pattern')).toBe(
++        true,
++      )
++      expect(getSyntaxFingerprint(file, switched)).not.toBeNull()
++    },
++  )
++})
+diff --git a/test/repros/BUG-106/fixture/src/strip.js b/test/repros/BUG-106/fixture/src/strip.js
+new file mode 100644
+index 0000000..50770b4
+--- /dev/null
++++ b/test/repros/BUG-106/fixture/src/strip.js
+@@ -0,0 +1,3 @@
++export function stripTags(html) {
++  return html.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, '')
++}
+diff --git a/test/repros/BUG-106/fixture/src/strip.ts b/test/repros/BUG-106/fixture/src/strip.ts
+new file mode 100644
+index 0000000..c982490
+--- /dev/null
++++ b/test/repros/BUG-106/fixture/src/strip.ts
+@@ -0,0 +1,5 @@
++const COMMENT = /<!--[\s\S]*?-->/g
++
++export function stripComments(html: string): string {
++  return html.replace(COMMENT, '').trim()
++}
+diff --git a/test/repros/BUG-106/fixture/test/strip.check.ts b/test/repros/BUG-106/fixture/test/strip.check.ts
+new file mode 100644
+index 0000000..851dd6f
+--- /dev/null
++++ b/test/repros/BUG-106/fixture/test/strip.check.ts
+@@ -0,0 +1,12 @@
++import { expect, it } from 'vitest'
++import { stripComments } from '../src/strip.ts'
++import { stripTags } from '../src/strip.js'
++
++it('strips comments', () => {
++  expect(stripComments(' a<!-- x -->b ')).toBe('ab')
++  expect(stripComments('<!--a--><!--b-->c')).toBe('c')
++})
++
++it('strips tags', () => {
++  expect(stripTags('<p>a<!-- b --></p>')).toBe('a')
++})
+diff --git a/test/repros/BUG-106/run.sh b/test/repros/BUG-106/run.sh
+new file mode 100755
+index 0000000..dc1e586
+--- /dev/null
++++ b/test/repros/BUG-106/run.sh
+@@ -0,0 +1,28 @@
++#!/usr/bin/env bash
++# BUG-106: a regular expression literal that starts with `<!--` (HTML comment
++# stripping) becomes `(/<!--…/g)` in the switched text; oxc/rolldown in Vite 8
++# rejects it ("HTML comments are not allowed in modules"), the test file fails
++# to load in the instrumented dry run and every mutant of the file is `Error`.
++# Fixture tests are stored as *.check.ts so that the mootant suite does not
++# collect them; run.sh renames them to *.test.ts in a temporary copy.
++# Usage: MOOTANT_TGZ=/path/to/mootant.tgz ./run.sh
++set -euo pipefail
++here="$(cd "$(dirname "$0")" && pwd)"
++tgz="${MOOTANT_TGZ:-/home/user/artifacts/mootant-0.1.0-170ec52.tgz}"
++dir="$(mktemp -d)"
++cp -r "$here/fixture/." "$dir/"
++for f in "$dir"/test/*.check.ts; do mv "$f" "${f%.check.ts}.test.ts"; done
++cat > "$dir/package.json" <<JSON
++{ "name": "htmlre", "private": true, "type": "module",
++  "devDependencies": { "mootant": "file:$tgz", "vitest": "5.0.5", "vite": "8.3.5" } }
++JSON
++cd "$dir"
++npm i --legacy-peer-deps --silent >/dev/null 2>&1
++npx vitest --run >/dev/null 2>&1 && echo "plain vitest passes"
++npx mootant run src --json --all > report.json 2>/dev/null || true
++node -e "
++  let r = require('$dir/report.json')
++  let codes = r.diagnostics.map(d => d.code + ' ' + d.file)
++  console.log(JSON.stringify({ summary: r.summary, diagnostics: codes }))
++  if (codes.some(code => code.startsWith('instrumentation-break'))) { console.log('REPRODUCED'); process.exitCode = 1 }
++"
+diff --git a/test/repros/BUG-200.test.ts b/test/repros/BUG-200.test.ts
+new file mode 100644
+index 0000000..a9f0e4f
+--- /dev/null
++++ b/test/repros/BUG-200.test.ts
+@@ -0,0 +1,54 @@
++import { describe, expect, it } from 'vitest'
++import { readFileSync } from 'node:fs'
++import path from 'node:path'
++
++import { runReferenceMutants } from '../helpers/run-reference-mutants'
++import { createBuiltIns } from '../helpers/create-built-ins'
++import { vitestAdapter } from '../../adapters/vitest/index'
++import { runMutants } from '../../core/run-mutants'
++
++/**
++ * Fixture project: a memoized `fib` and one test of `fib(25)`. Without the
++ * memo, `fib(25)` makes about 250 000 calls, a few milliseconds of work, but
++ * about 1.2 million mutant site evaluations, over the default hit limit of
++ * `max(100000, 100 × hits of the dry run)`.
++ */
++let root = path.join(import.meta.dirname, '../fixtures/repros/BUG-200')
++
++describe('BUG-200: a mutant that only makes code hotter ends as a hit-limit Timeout', () => {
++  it('lets the tests decide the mutants that turn the memo off', { timeout: 180_000 }, async () => {
++    let result = await runMutants({
++      builtIns: createBuiltIns('vitest', vitestAdapter()),
++      concurrency: 2,
++      paths: ['src'],
++      cache: false,
++      cwd: root,
++    })
++    let source = readFileSync(path.join(root, 'src/memo.js'), 'utf8')
++    let memoOff = result.results.filter(({ mutant }) => {
++      let original = source.slice(mutant.start, mutant.end)
++      return (
++        (original === 'memo.has(n)' && mutant.replacement === 'false') ||
++        original === 'memo.set(n, value)'
++      )
++    })
++    expect(memoOff).toHaveLength(2)
++
++    let reference = await runReferenceMutants(
++      root,
++      memoOff.map(({ mutant }) => mutant),
++      { sources: ['src/memo.js'], separate: true },
++    )
++    // A plain Vitest run of each applied mutant passes: the tests do not
++    // detect either mutant.
++    expect(reference.original).toBe(true)
++    expect([...reference.killed.values()]).toStrictEqual([false, false])
++
++    // Actual: both end as `Timeout` with cause `hit-limit`, counted as
++    // detected in the score.
++    expect(memoOff.map(({ status, cause }) => [status, cause])).toStrictEqual([
++      ['Survived', null],
++      ['Survived', null],
++    ])
++  })
++})
+diff --git a/test/repros/BUG-201.test.ts b/test/repros/BUG-201.test.ts
+new file mode 100644
+index 0000000..44f5ca8
+--- /dev/null
++++ b/test/repros/BUG-201.test.ts
+@@ -0,0 +1,70 @@
++import { describe, expect, it } from 'vitest'
++import { readFileSync } from 'node:fs'
++import path from 'node:path'
++
++import type { RunResult } from '../../types/run/run-result'
++
++import { runReferenceMutants } from '../helpers/run-reference-mutants'
++import { createBuiltIns } from '../helpers/create-built-ins'
++import { vitestAdapter } from '../../adapters/vitest/index'
++import { runMutants } from '../../core/run-mutants'
++
++/**
++ * Fixture project: `test/greet.check.js` imports `src/service.js` and mocks
++ * `src/api.js` with a factory that loads the real module through a helper, so
++ * Vitest's static analysis takes `src/api.js` for replaced in that test file;
++ * at run time the test does run the real `fetchUser` and kills the mutant of
++ * its template literal.
++ */
++let root = path.join(import.meta.dirname, '../fixtures/repros/BUG-201')
++
++/**
++ * Runs the fixture with the given paths and mutants.
++ *
++ * @param paths - Files and directories to mutate, relative to the fixture.
++ * @param mutantIds - Ids of `--mutant`, or undefined for every mutant.
++ * @returns Result of the run.
++ */
++function run(paths: string[], mutantIds?: string[]): Promise<RunResult> {
++  return runMutants({
++    builtIns: createBuiltIns('vitest', vitestAdapter()),
++    concurrency: 2,
++    cache: false,
++    cwd: root,
++    mutantIds,
++    paths,
++  })
++}
++
++describe('BUG-201: the verdict of a mutant depends on the other files of the run', () => {
++  it('gives the template literal of fetchUser the same verdict alone as in the whole run', { timeout: 300_000 }, async () => {
++    let full = await run(['src'])
++    let source = readFileSync(path.join(root, 'src/api.js'), 'utf8')
++    let target = full.results.find(
++      ({ mutant }) =>
++        mutant.file === 'src/api.js' &&
++        mutant.mutator === 'string-literal' &&
++        source.slice(mutant.start, mutant.end).startsWith('`user'),
++    )!
++    expect(target.status).toBe('Killed')
++
++    let reference = await runReferenceMutants(root, [target.mutant], {
++      sources: ['src/api.js'],
++      separate: true,
++    })
++    expect(reference.original).toBe(true)
++    expect(reference.killed.get(target.mutant.id)).toBe(true)
++
++    let alone = await run(['src'], [target.mutant.id])
++    let file = await run(['src/api.js'])
++    // Actual: `NoCoverage` in both, since only `src/api.js` is related then
++    // and the static analysis skips `test/greet.check.js`.
++    expect(alone.results.map(result => result.status)).toStrictEqual([
++      'Killed',
++    ])
++    expect(
++      file.results.find(({ mutant }) => mutant.id === target.mutant.id)
++        ?.status,
++    ).toBe('Killed')
++  })
++})
+diff --git a/test/repros/BUG-202.test.ts b/test/repros/BUG-202.test.ts
+new file mode 100644
+index 0000000..fcb01f0
+--- /dev/null
++++ b/test/repros/BUG-202.test.ts
+@@ -0,0 +1,64 @@
++import { describe, expect, it } from 'vitest'
++import { readFileSync } from 'node:fs'
++import path from 'node:path'
++
++import type { RunResult } from '../../types/run/run-result'
++
++import { runReferenceMutants } from '../helpers/run-reference-mutants'
++import { createBuiltIns } from '../helpers/create-built-ins'
++import { vitestAdapter } from '../../adapters/vitest/index'
++import { runMutants } from '../../core/run-mutants'
++
++/**
++ * Fixture project: with `verbose` forced to `true`, `report(25000, false)` runs
++ * a finite loop of 25 000 iterations, about 125 000 mutant site evaluations:
++ * over the 100 000 floor of one try's hit limit in a batch run, under the sum
++ * of the four tests' limits of an isolated unit.
++ */
++let root = path.join(import.meta.dirname, '../fixtures/repros/BUG-202')
++
++/**
++ * Finds the mutant that forces `verbose` to `true`.
++ *
++ * @param result - Result of a run.
++ * @returns Status and cause of the mutant.
++ */
++function findForced(result: RunResult): [string, string | null] {
++  let source = readFileSync(path.join(root, 'src/report.js'), 'utf8')
++  let found = result.results.find(
++    ({ mutant }) =>
++      source.slice(mutant.start, mutant.end) === 'verbose' &&
++      mutant.replacement === 'true',
++  )!
++  return [found.status, found.cause]
++}
++
++describe('BUG-202: --fast takes a hot but finite loop for an endless one', () => {
++  it('gives the mutant the verdict of the default mode', { timeout: 300_000 }, async () => {
++    let options = {
++      builtIns: createBuiltIns('vitest', vitestAdapter()),
++      concurrency: 2,
++      paths: ['src'],
++      cache: false,
++      cwd: root,
++    }
++    let isolated = await runMutants(options)
++    let fast = await runMutants({ ...options, fast: true })
++    expect(findForced(isolated)).toStrictEqual(['Survived', null])
++
++    let source = readFileSync(path.join(root, 'src/report.js'), 'utf8')
++    let forced = isolated.results.find(
++      ({ mutant }) =>
++        source.slice(mutant.start, mutant.end) === 'verbose' &&
++        mutant.replacement === 'true',
++    )!.mutant
++    let reference = await runReferenceMutants(root, [forced], {
++      sources: ['src/report.js'],
++      separate: true,
++    })
++    expect(reference.killed.get(forced.id)).toBe(false)
++
++    // Actual: `Timeout` with cause `hit-limit`, final on the batch path.
++    expect(findForced(fast)).toStrictEqual(['Survived', null])
++  })
++})
+diff --git a/test/repros/BUG-203.test.ts b/test/repros/BUG-203.test.ts
+new file mode 100644
+index 0000000..68a78fd
+--- /dev/null
++++ b/test/repros/BUG-203.test.ts
+@@ -0,0 +1,66 @@
++import { writeFile, readFile, mkdtemp, cp, rm } from 'node:fs/promises'
++import { describe, expect, it } from 'vitest'
++import { execFile } from 'node:child_process'
++import { createRequire } from 'node:module'
++import { tmpdir } from 'node:os'
++import path from 'node:path'
++
++import type { Mutant } from '../../types/mutant/mutant'
++
++import { createBuiltIns } from '../helpers/create-built-ins'
++import { vitestAdapter } from '../../adapters/vitest/index'
++import { applyMutant } from '../helpers/apply-mutant'
++import { runMutants } from '../../core/run-mutants'
++
++/**
++ * Fixture project with `dangerouslyIgnoreUnhandledErrors: true`: forcing the
++ * `if (listener)` test to `true` makes the timer call `undefined`, an uncaught
++ * error that Vitest reports and, by that setting, does not fail the run for.
++ */
++let root = path.join(import.meta.dirname, '../fixtures/repros/BUG-203')
++
++/**
++ * Runs plain `vitest run` on a copy of the fixture with the mutant applied.
++ *
++ * @param mutant - Mutant to apply.
++ * @returns Exit code of Vitest.
++ */
++async function runPlain(mutant: Mutant): Promise<number> {
++  let directory = await mkdtemp(path.join(tmpdir(), 'bug-203-'))
++  try {
++    await cp(root, directory, { recursive: true })
++    let file = path.join(directory, mutant.file)
++    await writeFile(file, applyMutant(await readFile(file, 'utf8'), mutant))
++    let vitest = createRequire(import.meta.url).resolve('vitest/package.json')
++    let bin = path.join(path.dirname(vitest), 'vitest.mjs')
++    return await new Promise(resolve => {
++      execFile(process.execPath, [bin, 'run', '--root', directory], error => {
++        resolve(error === null ? 0 : Number(error.code ?? 1))
++      })
++    })
++  } finally {
++    await rm(directory, { recursive: true, force: true })
++  }
++}
++
++describe('BUG-203: an unhandled error that the Vitest configuration ignores kills the mutant', () => {
++  it('lets dangerouslyIgnoreUnhandledErrors keep the mutant alive', { timeout: 300_000 }, async () => {
++    let result = await runMutants({
++      builtIns: createBuiltIns('vitest', vitestAdapter()),
++      concurrency: 2,
++      paths: ['src'],
++      cache: false,
++      cwd: root,
++    })
++    let source = await readFile(path.join(root, 'src/events.js'), 'utf8')
++    let forced = result.results.find(
++      ({ mutant }) =>
++        source.slice(mutant.start, mutant.end) === 'listener' &&
++        mutant.replacement === 'true',
++    )!
++    await expect(runPlain(forced.mutant)).resolves.toBe(0)
++
++    // Actual: `Killed` with cause `stray-error`.
++    expect([forced.status, forced.cause]).toStrictEqual(['Survived', null])
++  })
++})
+diff --git a/test/repros/BUG-204.test.ts b/test/repros/BUG-204.test.ts
+new file mode 100644
+index 0000000..5146e3e
+--- /dev/null
++++ b/test/repros/BUG-204.test.ts
+@@ -0,0 +1,45 @@
++import { describe, expect, it } from 'vitest'
++import { readFileSync } from 'node:fs'
++import path from 'node:path'
++
++import { runReferenceMutants } from '../helpers/run-reference-mutants'
++import { createBuiltIns } from '../helpers/create-built-ins'
++import { vitestAdapter } from '../../adapters/vitest/index'
++import { runMutants } from '../../core/run-mutants'
++
++/**
++ * Fixture project: `retry` waits `Math.min(pause, 12000)` = 10 ms before the
++ * second attempt. The mutant `Math.min` → `Math.max` makes it wait 12 s: the
++ * test still passes well within the project's own 30 s test timeout, but far
++ * past mootant's budget of `3 × duration + 250 ms`, doubled for the
++ * confirmation, however slow the dry run was.
++ */
++let root = path.join(import.meta.dirname, '../fixtures/repros/BUG-204')
++
++describe('BUG-204: a mutant that only slows a passing test down ends as a Timeout', () => {
++  it('lets a test that passes within its own timeout decide the mutant', { timeout: 300_000 }, async () => {
++    let result = await runMutants({
++      builtIns: createBuiltIns('vitest', vitestAdapter()),
++      concurrency: 2,
++      paths: ['src'],
++      cache: false,
++      cwd: root,
++    })
++    let source = readFileSync(path.join(root, 'src/retry.js'), 'utf8')
++    let slower = result.results.find(
++      ({ mutant }) =>
++        source.slice(mutant.start, mutant.end) ===
++          'Math.min(pause, 12000)' && mutant.replacement.startsWith('Math.max'),
++    )!
++    let reference = await runReferenceMutants(root, [slower.mutant], {
++      sources: ['src/retry.js'],
++      separate: true,
++    })
++    // A plain Vitest run of the applied mutant passes after about 12 s.
++    expect(reference.killed.get(slower.mutant.id)).toBe(false)
++
++    // Actual: `Timeout` with cause `time-limit`, after the confirmation with
++    // doubled bounds.
++    expect([slower.status, slower.cause]).toStrictEqual(['Survived', null])
++  })
++})
+diff --git a/test/repros/BUG-206.test.ts b/test/repros/BUG-206.test.ts
+new file mode 100644
+index 0000000..a69e0a6
+--- /dev/null
++++ b/test/repros/BUG-206.test.ts
+@@ -0,0 +1,37 @@
++import { afterEach, describe, expect, it } from 'vitest'
++import { rm } from 'node:fs/promises'
++import path from 'node:path'
++
++import { createBuiltIns } from '../helpers/create-built-ins'
++import { vitestAdapter } from '../../adapters/vitest/index'
++import { runMutants } from '../../core/run-mutants'
++
++/**
++ * Fixture project whose test caches the result of `compute` in `.cache/` of
++ * the project: the dry run computes and writes the cache, every isolated unit
++ * then reads it and never reaches the mutants of `compute`.
++ */
++let root = path.join(import.meta.dirname, '../fixtures/repros/BUG-206')
++
++describe('BUG-206: a mutant the dry run covered ends as NoCoverage when no unit reaches it', () => {
++  afterEach(async () => {
++    await rm(path.join(root, '.cache'), { recursive: true, force: true })
++  })
++
++  it('does not report a covered mutant as uncovered', { timeout: 300_000 }, async () => {
++    await rm(path.join(root, '.cache'), { recursive: true, force: true })
++    let result = await runMutants({
++      builtIns: createBuiltIns('vitest', vitestAdapter()),
++      concurrency: 2,
++      paths: ['src'],
++      cache: false,
++      cwd: root,
++    })
++    let contradictory = result.results.filter(
++      ({ coveredBy, status }) => status === 'NoCoverage' && coveredBy.length > 0,
++    )
++    // Actual: the mutants of `compute` (and the returned `result`) end as
++    // `NoCoverage` while their covering test is listed, with no diagnostic.
++    expect(contradictory.map(({ mutant }) => mutant.file)).toStrictEqual([])
++  })
++})
+diff --git a/test/repros/BUG-300.test.ts b/test/repros/BUG-300.test.ts
+new file mode 100644
+index 0000000..31636fe
+--- /dev/null
++++ b/test/repros/BUG-300.test.ts
+@@ -0,0 +1,34 @@
++import { describe, expect, it } from 'vitest'
++
++import { listMutantTexts } from '../helpers/list-mutant-texts'
++import { listSkipped } from '../helpers/list-skipped'
++
++/**
++ * Lookup set probed by a test with an empty word: `isKeyword('')` kills every
++ * `'…'` → `''` mutant of the set, without telling whether `'else'` or `'for'`
++ * are in it.
++ */
++let keywords = [
++  "const KEYWORDS = new Set(['if', 'else', 'for'])",
++  'export function isKeyword(word) {',
++  '  return KEYWORDS.has(word)',
++  '}',
++]
++
++describe('BUG-300: an emptied string element hides the removal of the element', () => {
++  it('keeps the removal of each element of a lookup set', () => {
++    expect(
++      listMutantTexts('array-element', keywords, { file: 'example.js' }),
++    ).toStrictEqual([
++      "['if', 'else', 'for'] -> ['else', 'for']",
++      "['if', 'else', 'for'] -> ['if', 'for']",
++      "['if', 'else', 'for'] -> ['if', 'else']",
++    ])
++  })
++
++  it('does not drop the removals as solitary', () => {
++    expect(
++      listSkipped('array-element', keywords.join('\n'), { file: 'example.js' }),
++    ).toStrictEqual([])
++  })
++})
+diff --git a/test/repros/BUG-301.test.ts b/test/repros/BUG-301.test.ts
+new file mode 100644
+index 0000000..9c4dadb
+--- /dev/null
++++ b/test/repros/BUG-301.test.ts
+@@ -0,0 +1,36 @@
++import { describe, expect, it } from 'vitest'
++
++import { listMutantTexts } from '../helpers/list-mutant-texts'
++import { listSkipped } from '../helpers/list-skipped'
++
++/**
++ * A local that the function passes to a callback before it returns it: the
++ * mutants of its initializer and update are killed through the callback, so
++ * they say nothing about whether a test reads the returned value.
++ */
++let processAll = [
++  'export function processAll(items, onItem) {',
++  '  let count = 0',
++  '  for (let item of items) {',
++  '    count++',
++  '    onItem(item, count)',
++  '  }',
++  '  return count',
++  '}',
++]
++
++describe('BUG-301: a finer mutant of a returned local hides the returned default', () => {
++  it('keeps the default of a returned local that is also read elsewhere', () => {
++    expect(
++      listMutantTexts('return-value', processAll, { file: 'example.js' }),
++    ).toStrictEqual(['count -> 0'])
++  })
++
++  it('does not drop the default as solitary', () => {
++    expect(
++      listSkipped('return-value', processAll.join('\n'), {
++        file: 'example.js',
++      }),
++    ).toStrictEqual([])
++  })
++})
+diff --git a/test/repros/BUG-302.test.ts b/test/repros/BUG-302.test.ts
+new file mode 100644
+index 0000000..3dc43c1
+--- /dev/null
++++ b/test/repros/BUG-302.test.ts
+@@ -0,0 +1,33 @@
++import { describe, expect, it } from 'vitest'
++
++import { listMutantTexts } from '../helpers/list-mutant-texts'
++import { listSkipped } from '../helpers/list-skipped'
++
++/**
++ * The test of the `if` deletes the key: removing the then-branch keeps the
++ * deletion, while condition's `false` drops it, so the two are not the same
++ * mutant.
++ */
++let remove = [
++  'export function remove(map, key, onRemove) {',
++  '  if (map.delete(key)) {',
++  '    onRemove(key)',
++  '  }',
++  '}',
++]
++
++describe('BUG-302: O19 takes the removal of a then-branch for a constant test with an effect', () => {
++  it('keeps the removal of the then-branch of a test with an effect', () => {
++    expect(
++      listMutantTexts('statement-removal', remove, { file: 'example.js' }),
++    ).toStrictEqual(['onRemove(key) -> ;'])
++  })
++
++  it('does not skip the removal as owned', () => {
++    expect(
++      listSkipped('statement-removal', remove.join('\n'), {
++        file: 'example.js',
++      }),
++    ).toStrictEqual([])
++  })
++})
+diff --git a/test/repros/BUG-303.test.ts b/test/repros/BUG-303.test.ts
+new file mode 100644
+index 0000000..a8d547b
+--- /dev/null
++++ b/test/repros/BUG-303.test.ts
+@@ -0,0 +1,63 @@
++import { describe, expect, it } from 'vitest'
++
++import { listMutantTexts } from '../helpers/list-mutant-texts'
++import { listSkipped } from '../helpers/list-skipped'
++
++describe('BUG-303: a call on an element of the loop bound is taken for the loop advance', () => {
++  it('keeps the removal of a call on an element of the array a for loop counts', () => {
++    expect(
++      listMutantTexts(
++        'statement-removal',
++        [
++          'export function renderAll(items) {',
++          '  for (let i = 0; i < items.length; i++) {',
++          '    items[i].render()',
++          '  }',
++          '}',
++        ],
++        { file: 'example.js' },
++      ),
++    ).toStrictEqual(['items[i].render() -> ;'])
++  })
++
++  it('does not take a push that only reads the bound for the loop advance', () => {
++    let push = 'bytes.push(Number.parseInt(text.slice(index, index + 2), 16))'
++    let skipped = listSkipped(
++      'statement-removal',
++      [
++        'export function decode(text) {',
++        '  let bytes = []',
++        '  let index = 0',
++        '  while (index < text.length) {',
++        `    ${push}`,
++        '    index += 2',
++        '  }',
++        '  return bytes',
++        '}',
++      ].join('\n'),
++      { file: 'example.js' },
++    )
++
++    /*
++     * The push holds finer mutants, so `recommended` may still drop it as
++     * solitary; it must not be skipped as a timeout.
++     */
++    expect(skipped).not.toContain(`${push} -> ; (timeout loop-advance)`)
++  })
++
++  it('still skips the removal of a call that shifts the queue the loop tests', () => {
++    expect(
++      listMutantTexts(
++        'statement-removal',
++        [
++          'export function drain(queue, handle) {',
++          '  while (queue.length > 0) {',
++          '    handle(queue.shift())',
++          '  }',
++          '}',
++        ],
++        { file: 'example.js' },
++      ),
++    ).toStrictEqual([])
++  })
++})
+diff --git a/test/repros/BUG-304.test.ts b/test/repros/BUG-304.test.ts
+new file mode 100644
+index 0000000..5ce583e
+--- /dev/null
++++ b/test/repros/BUG-304.test.ts
+@@ -0,0 +1,34 @@
++import { describe, expect, it } from 'vitest'
++
++import { listMutantTexts } from '../helpers/list-mutant-texts'
++import { listSkipped } from '../helpers/list-skipped'
++
++/**
++ * A local that a branch reads before the function returns it: the
++ * comparison-operator mutants of its initializer are killed through the
++ * `report` call, so they say nothing about whether a test reads the returned
++ * value.
++ */
++let validate = [
++  'export function validate(input, report) {',
++  '  let ok = input.length > 2 && input.length < 10',
++  '  if (!ok) {',
++  "    report('invalid')",
++  '  }',
++  '  return ok',
++  '}',
++]
++
++describe('BUG-304: R6 takes a mutant of a local read elsewhere for a subsumer of the returned constants', () => {
++  it('keeps the constants of a returned local that a branch also reads', () => {
++    expect(
++      listMutantTexts('return-value', validate, { file: 'example.js' }),
++    ).toStrictEqual(['ok -> true', 'ok -> false'])
++  })
++
++  it('does not skip the constants as subsumed', () => {
++    expect(
++      listSkipped('return-value', validate.join('\n'), { file: 'example.js' }),
++    ).toStrictEqual([])
++  })
++})
+diff --git a/test/repros/BUG-305.test.ts b/test/repros/BUG-305.test.ts
+new file mode 100644
+index 0000000..d043d54
+--- /dev/null
++++ b/test/repros/BUG-305.test.ts
+@@ -0,0 +1,65 @@
++import { afterEach, describe, expect, it } from 'vitest'
++
++import type { GitRepository } from '../helpers/create-git-repository'
++
++import { createGitRepository } from '../helpers/create-git-repository'
++import { listMutants } from '../../core/list-mutants'
++
++/**
++ * Repository of the running test.
++ */
++let repository: GitRepository | null = null
++
++/**
++ * Function whose then-branch changes in the second commit: the removal of the
++ * changed statement is skipped as O19 in favor of condition's `false` on the
++ * unchanged `if` line, which `--since` then leaves out.
++ *
++ * @param call - Statement of the then-branch.
++ * @returns Source of the file.
++ */
++function createSource(call: string): string {
++  return [
++    'export function open(user, door) {',
++    '  if (user.isAdmin) {',
++    `    ${call}`,
++    '  }',
++    '}',
++    '',
++  ].join('\n')
++}
++
++describe('BUG-305: --since drops a mutant whose owner lies on an unchanged line', () => {
++  afterEach(async () => {
++    await repository?.remove()
++    repository = null
++  })
++
++  it('keeps a mutant of the changed line when the mutant it is left to is not selected', async () => {
++    repository = await createGitRepository()
++    let { write, root, git } = repository
++    await write('src/access.js', createSource('door.unlock(user)'))
++    git('add', '.')
++    git('commit', '--quiet', '-m', 'base')
++    await write('src/access.js', createSource('door.open(user)'))
++
++    let result = await listMutants({
++      paths: ['src'],
++      since: 'HEAD',
++      skipped: true,
++      cwd: root,
++    })
++    let mutants = result.files.flatMap(file =>
++      file.mutants.map(
++        mutant => `${mutant.mutator}: ${mutant.replacement}`,
++      ),
++    )
++
++    /*
++     * Without `--since` the line holds the O19 removal and line 2 holds its
++     * owner, condition's `false`. With `--since` only line 3 is selected, so
++     * the owner is gone and the changed call has no mutant at all.
++     */
++    expect(mutants).toContain('statement-removal: ;')
++  })
++})
+diff --git a/test/repros/BUG-306.test.ts b/test/repros/BUG-306.test.ts
+new file mode 100644
+index 0000000..bce7804
+--- /dev/null
++++ b/test/repros/BUG-306.test.ts
+@@ -0,0 +1,29 @@
++import { describe, expect, it } from 'vitest'
++
++import { listMutantTexts } from '../helpers/list-mutant-texts'
++
++describe('BUG-306: an error code passed to an error constructor is taken for message text', () => {
++  it('keeps the change of a code that callers compare', () => {
++    expect(
++      listMutantTexts(
++        'string-literal',
++        [
++          'class AppError extends Error {',
++          '  constructor(code, message) {',
++          '    super(message)',
++          '    this.code = code',
++          '  }',
++          '}',
++          'export function findUser(users, id) {',
++          '  let user = users.get(id)',
++          '  if (!user) {',
++          "    throw new AppError('NOT_FOUND', `No user ${id}`)",
++          '  }',
++          '  return user',
++          '}',
++        ],
++        { file: 'example.js' },
++      ),
++    ).toContain("'NOT_FOUND' -> ''")
++  })
++})
+diff --git a/test/repros/BUG-307.test.ts b/test/repros/BUG-307.test.ts
+new file mode 100644
+index 0000000..a2125d4
+--- /dev/null
++++ b/test/repros/BUG-307.test.ts
+@@ -0,0 +1,22 @@
++import { describe, expect, it } from 'vitest'
++
++import { listMutantTexts } from '../helpers/list-mutant-texts'
++
++describe('BUG-307: a numeric || 0 that guards against NaN is taken for an equivalent default', () => {
++  it.each([
++    ['done / total || 0', 'done / total'],
++    ['Number(text) || 0', 'Number(text)'],
++  ])('keeps the drop of the default of %s', (code, dropped) => {
++    expect(
++      listMutantTexts(
++        'logical-operator',
++        [
++          'export function guard(done, total, text) {',
++          `  return ${code}`,
++          '}',
++        ],
++        { file: 'example.js' },
++      ),
++    ).toContain(`${code} -> ${dropped}`)
++  })
++})
+diff --git a/test/repros/BUG-308.test.ts b/test/repros/BUG-308.test.ts
+new file mode 100644
+index 0000000..08ac5fc
+--- /dev/null
++++ b/test/repros/BUG-308.test.ts
+@@ -0,0 +1,15 @@
++import { describe, expect, it } from 'vitest'
++
++import { listMutantTexts } from '../helpers/list-mutant-texts'
++
++describe('BUG-308: x + 0 is taken for an identity while x may be a string', () => {
++  it('keeps the swap of + 0 when the left operand is not known to be a number', () => {
++    expect(
++      listMutantTexts(
++        'arithmetic-operator',
++        ['export function shift(value) {', '  return value + 0', '}'],
++        { file: 'example.js' },
++      ),
++    ).toStrictEqual(['value + 0 -> value - 0'])
++  })
++})
+diff --git a/test/repros/BUG-309.test.ts b/test/repros/BUG-309.test.ts
+new file mode 100644
+index 0000000..e77bbe0
+--- /dev/null
++++ b/test/repros/BUG-309.test.ts
+@@ -0,0 +1,39 @@
++import { describe, expect, it } from 'vitest'
++
++import { listMutantTexts } from '../helpers/list-mutant-texts'
++
++/**
++ * Attributes whose values change what the element does, not how it looks.
++ */
++let login = [
++  'export function Login() {',
++  '  return (',
++  '    <form>',
++  '      <input type="password" aria-label="Password" />',
++  '      <a href="/reset">Reset</a>',
++  '    </form>',
++  '  )',
++  '}',
++]
++
++describe('BUG-309: every JSX attribute value is skipped as noise', () => {
++  it('keeps the strings of attributes that change behavior', () => {
++    expect(
++      listMutantTexts('string-literal', login, { file: 'example.jsx' }),
++    ).toStrictEqual([
++      '"password" -> ""',
++      '"Password" -> ""',
++      '"/reset" -> ""',
++    ])
++  })
++
++  it('still skips a class name', () => {
++    expect(
++      listMutantTexts(
++        'string-literal',
++        ['export let badge = <span className="badge">New</span>'],
++        { file: 'example.jsx' },
++      ),
++    ).toStrictEqual([])
++  })
++})
+diff --git a/test/repros/BUG-310.test.ts b/test/repros/BUG-310.test.ts
+new file mode 100644
+index 0000000..ab8d081
+--- /dev/null
++++ b/test/repros/BUG-310.test.ts
+@@ -0,0 +1,37 @@
++import { describe, expect, it } from 'vitest'
++
++import { listMutantTexts } from '../helpers/list-mutant-texts'
++
++/**
++ * Endless loop with two exits: forcing either exit test to `false` leaves the
++ * other one, so the loop still ends.
++ */
++let findRoot = [
++  'export function findRoot(node) {',
++  '  let current = node',
++  '  for (;;) {',
++  '    if (current.isRoot) {',
++  '      break',
++  '    }',
++  '    if (current.parent === null) {',
++  '      break',
++  '    }',
++  '    current = current.parent',
++  '  }',
++  '  return current',
++  '}',
++]
++
++describe('BUG-310: one exit test of an endless loop with other exits is taken for a timeout', () => {
++  it('keeps condition false for an exit test that other exits back up', () => {
++    expect(
++      listMutantTexts('condition', findRoot, { file: 'example.js' }),
++    ).toContain('current.isRoot -> false')
++  })
++
++  it('keeps comparison-operator false for an exit test that other exits back up', () => {
++    expect(
++      listMutantTexts('comparison-operator', findRoot, { file: 'example.js' }),
++    ).toContain('current.parent === null -> false')
++  })
++})
+diff --git a/test/repros/BUG-311.test.ts b/test/repros/BUG-311.test.ts
+new file mode 100644
+index 0000000..db846fb
+--- /dev/null
++++ b/test/repros/BUG-311.test.ts
+@@ -0,0 +1,34 @@
++import { describe, expect, it } from 'vitest'
++
++import { generateCandidates } from '../helpers/generate-candidates'
++
++/**
++ * Component with an inline click handler whose only behavior is the call.
++ */
++let source = [
++  '<script setup>',
++  "const emit = defineEmits(['save'])",
++  'function save() {',
++  "  emit('save')",
++  '}',
++  '</script>',
++  '',
++  '<template>',
++  '  <button @click="save()">Save</button>',
++  '</template>',
++  '',
++].join('\n')
++
++describe('BUG-311: a statement of a template handler is dropped without a trace', () => {
++  it('lists the removal of a handler call as a mutant or as a skipped change', () => {
++    let { mutants, skipped } = generateCandidates(source, {
++      file: 'example.vue',
++    })
++    let removals = [...mutants, ...skipped].filter(
++      item =>
++        item.mutator === 'statement-removal' &&
++        source.slice(item.start, item.end) === 'save()',
++    )
++    expect(removals).not.toHaveLength(0)
++  })
++})
+diff --git a/test/repros/BUG-312.test.ts b/test/repros/BUG-312.test.ts
+new file mode 100644
+index 0000000..f25df1f
+--- /dev/null
++++ b/test/repros/BUG-312.test.ts
+@@ -0,0 +1,26 @@
++import { describe, expect, it } from 'vitest'
++
++import { listSkipped } from '../helpers/list-skipped'
++
++describe('BUG-312: removing a tail return null is taken for an equivalent change', () => {
++  it('does not call the removal of a tail return null equivalent', () => {
++    let source = [
++      'export function find(list, name) {',
++      '  for (let item of list) {',
++      '    if (item.name === name) {',
++      '      return item',
++      '    }',
++      '  }',
++      '  return null',
++      '}',
++    ].join('\n')
++
++    /*
++     * `expect(find([], 'a')).toBeNull()` kills the removal, so it alters what
++     * the code does; at most it is noise, like `tail-return-false`.
++     */
++    expect(
++      listSkipped('statement-removal', source, { file: 'example.js' }),
++    ).not.toContain('return null -> ; (equivalent tail-return)')
++  })
++})
+diff --git a/test/repros/BUG-400-cache-project.ts b/test/repros/BUG-400-cache-project.ts
+new file mode 100644
+index 0000000..e443330
+--- /dev/null
++++ b/test/repros/BUG-400-cache-project.ts
+@@ -0,0 +1,147 @@
++import {
++  writeFile,
++  realpath,
++  mkdtemp,
++  symlink,
++  mkdir,
++  rm,
++} from 'node:fs/promises'
++import { setTimeout } from 'node:timers/promises'
++import { tmpdir } from 'node:os'
++import path from 'node:path'
++
++import type { RunResult } from '../../types/run/run-result'
++
++import { createBuiltIns } from '../helpers/create-built-ins'
++import { vitestAdapter } from '../../adapters/vitest/index'
++import { runMutants } from '../../core/run-mutants'
++
++/**
++ * Projects created by the running test file, removed by `removeCacheProjects`.
++ */
++let projects: string[] = []
++
++/**
++ * Template of the cache reproductions (BUG-402 and later): `isAdult` has the
++ * survivors `age > 18` and `age >= 17` while no test asks about 18 or 17, and
++ * `age == 18` is killed by `isAdult(30)`.
++ */
++export const MATH_SOURCE = [
++  'export function isAdult(age: number): boolean {',
++  '  return age >= 18',
++  '}',
++  '',
++].join('\n')
++
++/**
++ * Configuration of Vitest of the reproductions.
++ */
++export const VITEST_CONFIG = [
++  "import { defineConfig } from 'vitest/config'",
++  '',
++  "export default defineConfig({ test: { include: ['test/**/*.test.ts'] } })",
++  '',
++].join('\n')
++
++/**
++ * Creates a project in a temporary directory with a `node_modules` of its own,
++ * where a link to the repository's Vitest stands for the installed one, so
++ * the cache file of every reproduction is private.
++ *
++ * @param files - Texts by path relative to the root.
++ * @returns Real path of the project.
++ */
++export async function createCacheProject(
++  files: Record<string, string>,
++): Promise<string> {
++  let root = await realpath(
++    await mkdtemp(path.join(tmpdir(), 'mootant-repro-')),
++  )
++  projects.push(root)
++  await mkdir(path.join(root, 'node_modules'), { recursive: true })
++  await symlink(
++    await realpath(
++      path.resolve(import.meta.dirname, '../../node_modules/vitest'),
++    ),
++    path.join(root, 'node_modules/vitest'),
++  )
++  await writeProjectFiles(root, { 'package.json': '{ "type": "module" }', ...files })
++  return root
++}
++
++/**
++ * Writes files of a project, creating their directories.
++ *
++ * @param root - Root of the project.
++ * @param files - Texts by path relative to the root.
++ */
++export async function writeProjectFiles(
++  root: string,
++  files: Record<string, string>,
++): Promise<void> {
++  for (let [file, text] of Object.entries(files)) {
++    let absolute = path.join(root, file)
++    await mkdir(path.dirname(absolute), { recursive: true })
++    await writeFile(absolute, text)
++  }
++  // Files modified in the millisecond a run starts count as changed during it.
++  await setTimeout(5)
++}
++
++/**
++ * Runs the mutants of a project with Vitest.
++ *
++ * @param root - Root of the project.
++ * @param options - Paths and whether to use the cache.
++ * @param options.cache - Whether to use the cache; on when omitted.
++ * @param options.paths - Paths to mutate; `src` when omitted.
++ * @returns Result of the run.
++ */
++export function runProject(
++  root: string,
++  options: { paths?: string[]; cache?: boolean } = {},
++): Promise<RunResult> {
++  return runMutants({
++    builtIns: createBuiltIns('vitest', vitestAdapter()),
++    paths: ['src'],
++    concurrency: 1,
++    cwd: root,
++    ...options,
++  })
++}
++
++/**
++ * Lists the verdict of every mutant of a run by its replacement.
++ *
++ * @param result - Result of a run.
++ * @returns Status by `<file>: <replacement>`.
++ */
++export function listVerdicts(result: RunResult): Record<string, string> {
++  return Object.fromEntries(
++    result.results.map(entry => [
++      `${entry.mutant.file}: ${entry.mutant.replacement}`,
++      entry.status,
++    ]),
++  )
++}
++
++/**
++ * Removes the projects of the running test file.
++ *
++ * @returns Promise of the removal.
++ */
++export async function removeCacheProjects(): Promise<void> {
++  await Promise.all(
++    projects.splice(0).map(root => rm(root, { recursive: true, force: true })),
++  )
++}
++
++/**
++ * Counts the mutants of a run whose verdict came from the cache.
++ *
++ * @param result - Result of a run.
++ * @returns Number of cached verdicts.
++ */
++export function countCached(result: RunResult): number {
++  return result.results.filter(entry => entry.cached).length
++}
+diff --git a/test/repros/BUG-401.test.ts b/test/repros/BUG-401.test.ts
+new file mode 100644
+index 0000000..06f6a2a
+--- /dev/null
++++ b/test/repros/BUG-401.test.ts
+@@ -0,0 +1,77 @@
++import { afterEach, describe, expect, it } from 'vitest'
++import { symlink, rm } from 'node:fs/promises'
++import path from 'node:path'
++
++import type { GitRepository } from '../helpers/create-git-repository'
++
++import { createGitRepository } from '../helpers/create-git-repository'
++import { readChangedLines } from '../../core/git/read-changed-lines'
++
++/**
++ * Repository of the running test.
++ */
++let repository: GitRepository | null = null
++
++/**
++ * Lines of a numbered file: `line 1` to `line <count>`.
++ *
++ * @param count - Number of lines.
++ * @param changes - Replaced lines by number.
++ * @returns Text with a final line break.
++ */
++function createLines(
++  count: number,
++  changes: Record<number, string> = {},
++): string {
++  return Array.from(
++    { length: count },
++    (_value, index) => `${changes[index + 1] ?? `line ${index + 1}`}\n`,
++  ).join('')
++}
++
++describe('BUG-401: --since with a changed link to a changed source file', () => {
++  afterEach(async () => {
++    await repository?.remove()
++    repository = null
++  })
++
++  it('keeps the changed lines of the target when a tracked link to it changes too', async () => {
++    repository = await createGitRepository()
++    let { write, root, git } = repository
++    await write('src/lines.ts', createLines(6))
++    await write('src/target.ts', createLines(6))
++    await symlink('target.ts', path.join(root, 'src/link.ts'))
++    git('add', '.')
++    git('commit', '--quiet', '-m', 'base')
++    await write('src/lines.ts', createLines(6, { 4: 'changed' }))
++    await rm(path.join(root, 'src/link.ts'))
++    await symlink('lines.ts', path.join(root, 'src/link.ts'))
++
++    let { files } = await readChangedLines(root, 'HEAD')
++    let lines = files.get(path.join(root, 'src/lines.ts'))
++
++    /*
++     * `git diff` lists `src/lines.ts` with line 4 and then `src/link.ts`, whose
++     * text (the link target) changed on line 1; both resolve to the real path
++     * of `src/lines.ts`, and the second entry replaces the first, so line 4 is
++     * lost and line 1, which did not change, is selected.
++     */
++    expect(lines === 'all' || lines?.has(4)).toBe(true)
++  })
++
++  it('keeps the changed lines of the target when a link to it is added', async () => {
++    repository = await createGitRepository()
++    let { write, root, git } = repository
++    await write('src/lines.ts', createLines(6))
++    git('add', '.')
++    git('commit', '--quiet', '-m', 'base')
++    await write('src/lines.ts', createLines(6, { 4: 'changed' }))
++    await symlink('lines.ts', path.join(root, 'src/shared.ts'))
++    git('add', 'src/shared.ts')
++
++    let { files } = await readChangedLines(root, 'HEAD')
++    let lines = files.get(path.join(root, 'src/lines.ts'))
++
++    expect(lines === 'all' || lines?.has(4)).toBe(true)
++  })
++})
+diff --git a/test/repros/BUG-402.test.ts b/test/repros/BUG-402.test.ts
+new file mode 100644
+index 0000000..a711f45
+--- /dev/null
++++ b/test/repros/BUG-402.test.ts
+@@ -0,0 +1,153 @@
++import type { TestProject } from 'vitest/node'
++
++import { afterEach, describe, expect, it } from 'vitest'
++
++import {
++  removeCacheProjects,
++  createCacheProject,
++  writeProjectFiles,
++  listVerdicts,
++  MATH_SOURCE,
++  runProject,
++} from './BUG-400-cache-project'
++import { collectDependencies } from '../../adapters/vitest/collect-dependencies'
++
++/**
++ * Module of a simulated module graph.
++ */
++interface FakeNode {
++  importedModules: Set<FakeNode>
++  transformResult: unknown
++  file: string | null
++  id: string | null
++  url: string
++}
++
++/**
++ * Builds a module of a simulated module graph.
++ *
++ * @param id - Resolved id.
++ * @returns Transformed module without imports; a module whose id is not an
++ *   absolute path has no file, as a virtual module.
++ */
++function createNode(id: string): FakeNode {
++  return {
++    file: id.startsWith('/') ? id : null,
++    importedModules: new Set(),
++    transformResult: {},
++    url: `url:${id}`,
++    id,
++  }
++}
++
++/**
++ * Configuration with a plugin that loads `virtual:limits` from `limits.json`
++ * and watches that file, as plugins of messages, routes or icons do.
++ */
++let virtualConfig = [
++  "import { readFileSync } from 'node:fs'",
++  "import path from 'node:path'",
++  '',
++  "import { defineConfig } from 'vitest/config'",
++  '',
++  'export default defineConfig({',
++  '  plugins: [',
++  '    {',
++  "      name: 'limits',",
++  '      resolveId(id) {',
++  "        return id === 'virtual:limits' ? '\\0virtual:limits' : null",
++  '      },',
++  '      load(id) {',
++  "        if (id !== '\\0virtual:limits') {",
++  '          return null',
++  '        }',
++  "        let file = path.resolve(import.meta.dirname, 'limits.json')",
++  '        this.addWatchFile(file)',
++  "        return `export default ${readFileSync(file, 'utf8')}`",
++  '      },',
++  '    },',
++  '  ],',
++  "  test: { include: ['test/**/*.test.ts'] },",
++  '})',
++  '',
++].join('\n')
++
++/**
++ * Test of `isAdult` at the boundary the virtual module gives.
++ */
++let virtualTest = [
++  "import { expect, it } from 'vitest'",
++  "// @ts-expect-error virtual module",
++  "import limits from 'virtual:limits'",
++  '',
++  "import { isAdult } from '../src/math'",
++  '',
++  "it('isAdult', () => {",
++  '  expect(isAdult(limits.age)).toBe(true)',
++  '  expect(isAdult(5)).toBe(false)',
++  '})',
++  '',
++].join('\n')
++
++describe('BUG-402: files a plugin watches for a virtual module', () => {
++  afterEach(async () => {
++    await removeCacheProjects()
++  })
++
++  it('counts the files a virtual module imports in the module graph', async () => {
++    let test = createNode('/p/test/a.test.ts')
++    let virtual = createNode('\0virtual:limits')
++    /*
++     * A plugin that loads `virtual:limits` from `limits.json` and calls
++     * `this.addWatchFile()` makes Vite's import analysis add the file to the
++     * imports of the virtual module (vite/dist/node/chunks/node.js, the
++     * `pluginImports` of `vite:import-analysis`).
++     */
++    let watched = createNode('/p/limits.json')
++    virtual.importedModules.add(watched)
++    test.importedModules.add(virtual)
++    let known = new Map([
++      [virtual.id!, virtual],
++      [test.id!, test],
++    ])
++    let project = {
++      vite: {
++        environments: {
++          ssr: {
++            moduleGraph: { getModuleById: (id: string) => known.get(id) },
++            transformRequest: () => Promise.resolve({}),
++          },
++        },
++      },
++    } as unknown as TestProject
++
++    let dependencies = await collectDependencies({
++      reported: [test.id!, virtual.id!],
++      file: '/p/test/a.test.ts',
++      tsconfigs: new Map(),
++      project,
++    })
++
++    expect(dependencies).toContain('/p/limits.json')
++  })
++
++  it('runs the mutants again when the file behind a virtual module changes', async () => {
++    let root = await createCacheProject({
++      'vitest.config.ts': virtualConfig,
++      'test/math.test.ts': virtualTest,
++      'limits.json': '{ "age": 30 }',
++      'src/math.ts': MATH_SOURCE,
++    })
++    await runProject(root)
++    await writeProjectFiles(root, { 'limits.json': '{ "age": 18 }' })
++
++    let cached = await runProject(root)
++    let fresh = await runProject(root, { cache: false })
++
++    /*
++     * With 18, `age > 18` is killed and `age == 18` survives; the cached run
++     * still reports `age > 18` as survived and `age == 18` as killed.
++     */
++    expect(listVerdicts(cached)).toStrictEqual(listVerdicts(fresh))
++  }, 120_000)
++})
+diff --git a/test/repros/BUG-403.test.ts b/test/repros/BUG-403.test.ts
+new file mode 100644
+index 0000000..a76b361
+--- /dev/null
++++ b/test/repros/BUG-403.test.ts
+@@ -0,0 +1,73 @@
++import { realpath, mkdtemp, rm } from 'node:fs/promises'
++import { afterEach, describe, expect, it } from 'vitest'
++import { tmpdir } from 'node:os'
++import path from 'node:path'
++
++import {
++  removeCacheProjects,
++  createCacheProject,
++  writeProjectFiles,
++  VITEST_CONFIG,
++  listVerdicts,
++  MATH_SOURCE,
++  runProject,
++} from './BUG-400-cache-project'
++
++/**
++ * Directories of shared fixtures created by the running test.
++ */
++let shared: string[] = []
++
++describe('BUG-403: files a test reads outside the project root', () => {
++  afterEach(async () => {
++    await removeCacheProjects()
++    await Promise.all(
++      shared.splice(0).map(directory =>
++        rm(directory, { recursive: true, force: true }),
++      ),
++    )
++  })
++
++  it('runs the mutants again when a fixture outside the root changes', async () => {
++    /*
++     * As in a monorepo whose packages read shared fixtures of the repository:
++     * the fixture lives outside the root of the mootant project.
++     */
++    let fixtures = await realpath(
++      await mkdtemp(path.join(tmpdir(), 'mootant-shared-')),
++    )
++    shared.push(fixtures)
++    let fixture = path.join(fixtures, 'limits.json')
++    await writeProjectFiles(fixtures, { 'limits.json': '{ "age": 30 }' })
++    let root = await createCacheProject({
++      'test/math.test.ts': [
++        "import { readFileSync } from 'node:fs'",
++        '',
++        "import { expect, it } from 'vitest'",
++        '',
++        "import { isAdult } from '../src/math'",
++        '',
++        `let limits = JSON.parse(readFileSync(${JSON.stringify(fixture)}, 'utf8'))`,
++        '',
++        "it('isAdult', () => {",
++        '  expect(isAdult(limits.age)).toBe(true)',
++        '  expect(isAdult(5)).toBe(false)',
++        '})',
++        '',
++      ].join('\n'),
++      'vitest.config.ts': VITEST_CONFIG,
++      'src/math.ts': MATH_SOURCE,
++    })
++    await runProject(root)
++    await writeProjectFiles(fixtures, { 'limits.json': '{ "age": 18 }' })
++
++    let cached = await runProject(root)
++    let fresh = await runProject(root, { cache: false })
++
++    /*
++     * `adapters/shared/track-inputs.ts` records only reads inside the root, so
++     * the fixture is in no key and the cached run keeps the verdicts of 30.
++     */
++    expect(listVerdicts(cached)).toStrictEqual(listVerdicts(fresh))
++  }, 120_000)
++})
+diff --git a/test/repros/BUG-404.test.ts b/test/repros/BUG-404.test.ts
+new file mode 100644
+index 0000000..d059468
+--- /dev/null
++++ b/test/repros/BUG-404.test.ts
+@@ -0,0 +1,86 @@
++import { afterEach, describe, expect, it } from 'vitest'
++import { utimes } from 'node:fs/promises'
++import path from 'node:path'
++
++import {
++  removeCacheProjects,
++  createCacheProject,
++  VITEST_CONFIG,
++  MATH_SOURCE,
++  countCached,
++  runProject,
++} from './BUG-400-cache-project'
++
++/**
++ * Test that kills `age == 18` and leaves `age > 18` and `age >= 17`.
++ */
++let mathTest = [
++  "import { expect, it } from 'vitest'",
++  '',
++  "import { isAdult } from '../src/math'",
++  '',
++  "it('isAdult', () => {",
++  '  expect(isAdult(30)).toBe(true)',
++  '  expect(isAdult(5)).toBe(false)',
++  '})',
++  '',
++].join('\n')
++
++describe('BUG-404: a modification time at or after the start of the run', () => {
++  afterEach(async () => {
++    await removeCacheProjects()
++  })
++
++  it('reuses verdicts, or says why not, when the configuration has a future modification time', async () => {
++    let root = await createCacheProject({
++      'vitest.config.ts': VITEST_CONFIG,
++      'test/math.test.ts': mathTest,
++      'src/math.ts': MATH_SOURCE,
++    })
++    /*
++     * The clock of the file system is ahead, as on a shared folder of a VM, on
++     * /mnt/c under WSL2 or after unpacking an archive made on such a machine.
++     * Nothing changes between the runs.
++     */
++    let future = new Date(Date.now() + 2 * 60 * 60 * 1000)
++    await utimes(path.join(root, 'vitest.config.ts'), future, future)
++    await runProject(root)
++
++    let second = await runProject(root)
++    let explained = second.diagnostics.some(
++      diagnostic => diagnostic.code === 'cache-skipped',
++    )
++
++    /*
++     * `prepareRunCache` sees `mtime >= start`, returns null and the run has no
++     * cache: `cache` is false, nothing is cached or reused, and no diagnostic
++     * tells why.
++     */
++    expect({ cached: countCached(second) > 0 || explained }).toStrictEqual({
++      cached: true,
++    })
++  }, 120_000)
++
++  it('reuses verdicts when a test writes package.json back unchanged', async () => {
++    let root = await createCacheProject({
++      'test/math.test.ts': mathTest.replace(
++        "it('isAdult', () => {",
++        [
++          "import { readFileSync, writeFileSync } from 'node:fs'",
++          '',
++          "it('isAdult', () => {",
++          "  let file = new URL('../package.json', import.meta.url)",
++          '  writeFileSync(file, readFileSync(file))',
++        ].join('\n'),
++      ),
++      'vitest.config.ts': VITEST_CONFIG,
++      'src/math.ts': MATH_SOURCE,
++    })
++    await runProject(root)
++
++    let second = await runProject(root)
++
++    expect(second.cache).toBe(true)
++    expect(countCached(second)).toBeGreaterThan(0)
++  }, 120_000)
++})
+diff --git a/test/repros/BUG-407/run.sh b/test/repros/BUG-407/run.sh
+new file mode 100755
+index 0000000..969aa45
+--- /dev/null
++++ b/test/repros/BUG-407/run.sh
+@@ -0,0 +1,66 @@
++#!/usr/bin/env bash
++# BUG-407: reinstalling the same mootant package drops every cached verdict.
++# The build stamp of the environment key is the modification time of
++# dist/core/cache/prepare-run-cache.js (core/cache/prepare-run-cache.ts:164),
++# and npm gives installed files the time of the install.
++#
++# Usage: run.sh [path to mootant-*.tgz]   (default: the 170ec52 build)
++# Exit code: 1 while the bug is present (the second run reuses nothing),
++# 0 once a reinstall keeps the verdicts.
++set -eu
++tgz=${1:-/home/user/artifacts/mootant-0.1.0-170ec52.tgz}
++work=$(mktemp -d "${TMPDIR:-/tmp}/mootant-bug-407-XXXXXX")
++trap 'rm -rf "$work"' EXIT
++cd "$work"
++cat >package.json <<'JSON'
++{ "name": "bug-407", "private": true, "type": "module", "scripts": { "test": "vitest run" } }
++JSON
++mkdir -p src test
++printf 'export function isAdult(age: number): boolean {\n  return age >= 18\n}\n' >src/math.ts
++cat >test/math.test.ts <<'TS'
++import { expect, it } from 'vitest'
++
++import { isAdult } from '../src/math'
++
++it('isAdult', () => {
++  expect(isAdult(30)).toBe(true)
++  expect(isAdult(5)).toBe(false)
++})
++TS
++# --legacy-peer-deps: npm 10 cannot resolve the peer set of vitest 5.0.5.
++npm i -D --legacy-peer-deps --no-audit --no-fund "$tgz" vitest@5.0.5 vite@8.3.5 >/dev/null
++
++count_cached() {
++  node -e 'let r = JSON.parse(require("fs").readFileSync(0, "utf8")); console.log(r.summary.totalCached ?? 0)'
++}
++
++npx mootant run src --json --all --verbose 2>/dev/null >first.json
++cp node_modules/.cache/mootant/run-v3.json saved-cache.json
++second=$(npx mootant run src --json --all --verbose 2>/dev/null | count_cached)
++echo "unchanged project, same install:        $second cached"
++
++# CI: rm -rf node_modules && npm ci, then the cache directory is restored.
++stamp=node_modules/mootant/dist/core/cache/prepare-run-cache.js
++before=$(stat -c %y "$stamp")
++touch -r "$stamp" stamp-reference
++rm -rf node_modules/mootant
++sleep 1
++npm i -D --legacy-peer-deps --no-audit --no-fund --offline "$tgz" >/dev/null
++after=$(stat -c %y "$stamp")
++cp saved-cache.json node_modules/.cache/mootant/run-v3.json
++third=$(npx mootant run src --json --all --verbose 2>/dev/null | count_cached)
++echo "same version reinstalled: $third cached"
++echo "  (mtime $before -> $after)"
++
++# The exact old time, nanoseconds included: a copy that keeps whole seconds
++# only (as some archives and copies do) would still change the key.
++touch -r stamp-reference "$stamp"
++cp saved-cache.json node_modules/.cache/mootant/run-v3.json
++fourth=$(npx mootant run src --json --all --verbose 2>/dev/null | count_cached)
++echo "same files, old mtime restored:         $fourth cached"
++
++if [ "$third" = 0 ] && [ "$second" != 0 ]; then
++  echo "BUG-407 reproduced: a reinstall of the same package drops the cache"
++  exit 1
++fi
++echo "BUG-407 not reproduced"
+diff --git a/test/repros/BUG-410.test.ts b/test/repros/BUG-410.test.ts
+new file mode 100644
+index 0000000..c128adf
+--- /dev/null
++++ b/test/repros/BUG-410.test.ts
+@@ -0,0 +1,57 @@
++import { afterEach, describe, expect, it } from 'vitest'
++
++import {
++  removeCacheProjects,
++  createCacheProject,
++  writeProjectFiles,
++  VITEST_CONFIG,
++  listVerdicts,
++  MATH_SOURCE,
++  runProject,
++} from './BUG-400-cache-project'
++
++describe('BUG-410: code in node_modules that changes without the lockfile', () => {
++  afterEach(async () => {
++    await removeCacheProjects()
++  })
++
++  it('runs the mutants again when a dependency is patched in place', async () => {
++    let root = await createCacheProject({
++      'test/math.test.ts': [
++        "import { expect, it } from 'vitest'",
++        '// @ts-expect-error untyped local package',
++        "import limits from 'limits-pkg'",
++        '',
++        "import { isAdult } from '../src/math'",
++        '',
++        "it('isAdult', () => {",
++        '  expect(isAdult(limits.age)).toBe(true)',
++        '  expect(isAdult(5)).toBe(false)',
++        '})',
++        '',
++      ].join('\n'),
++      'node_modules/limits-pkg/package.json': JSON.stringify({
++        name: 'limits-pkg',
++        main: 'index.js',
++        type: 'module',
++      }),
++      'node_modules/limits-pkg/index.js': 'export default { age: 30 }\n',
++      'package-lock.json': '{ "lockfileVersion": 3, "packages": {} }\n',
++      'vitest.config.ts': VITEST_CONFIG,
++      'src/math.ts': MATH_SOURCE,
++    })
++    await runProject(root)
++    /*
++     * As patch-package, a manual fix or an install out of step with the
++     * lockfile does: the lockfile stays the same.
++     */
++    await writeProjectFiles(root, {
++      'node_modules/limits-pkg/index.js': 'export default { age: 18 }\n',
++    })
++
++    let cached = await runProject(root)
++    let fresh = await runProject(root, { cache: false })
++
++    expect(listVerdicts(cached)).toStrictEqual(listVerdicts(fresh))
++  }, 120_000)
++})
+diff --git a/test/repros/BUG-412.test.ts b/test/repros/BUG-412.test.ts
+new file mode 100644
+index 0000000..16b0df9
+--- /dev/null
++++ b/test/repros/BUG-412.test.ts
+@@ -0,0 +1,65 @@
++import { afterEach, describe, expect, it } from 'vitest'
++
++import {
++  removeCacheProjects,
++  createCacheProject,
++  MATH_SOURCE,
++  countCached,
++  runProject,
++} from './BUG-400-cache-project'
++
++describe('BUG-412: a value a global setup provides that differs on every run', () => {
++  afterEach(async () => {
++    await removeCacheProjects()
++  })
++
++  it('reuses verdicts of an unchanged project whose global setup serves on a random port', async () => {
++    let root = await createCacheProject({
++      'test/global-setup.ts': [
++        "import { createServer } from 'node:http'",
++        '',
++        "import type { TestProject } from 'vitest/node'",
++        '',
++        'export default async function setup(project: TestProject) {',
++        "  let server = createServer((_request, response) => response.end('ok'))",
++        '  await new Promise<void>(resolve => server.listen(0, resolve))',
++        '  let { port } = server.address() as { port: number }',
++        "  project.provide('apiUrl', `http://127.0.0.1:${port}`)",
++        '  return () => new Promise<void>(resolve => server.close(() => resolve()))',
++        '}',
++        '',
++      ].join('\n'),
++      'test/math.test.ts': [
++        "import { expect, it } from 'vitest'",
++        '',
++        "import { isAdult } from '../src/math'",
++        '',
++        "it('isAdult', () => {",
++        '  expect(isAdult(30)).toBe(true)',
++        '  expect(isAdult(5)).toBe(false)',
++        '})',
++        '',
++      ].join('\n'),
++      'vitest.config.ts': [
++        "import { defineConfig } from 'vitest/config'",
++        '',
++        'export default defineConfig({',
++        "  test: { include: ['test/**/*.test.ts'], globalSetup: ['test/global-setup.ts'] },",
++        '})',
++        '',
++      ].join('\n'),
++      'src/math.ts': MATH_SOURCE,
++    })
++    let first = await runProject(root)
++
++    let second = await runProject(root)
++
++    /*
++     * The provided context, port included, is part of the environment key
++     * (`describeProjectSettings` in `adapters/vitest/get-cache-inputs.ts`), so
++     * no verdict of the first run is ever reused.
++     */
++    expect(first.cache).toBe(true)
++    expect(countCached(second)).toBe(second.results.length)
++  }, 120_000)
++})
+diff --git a/test/repros/BUG-419.test.ts b/test/repros/BUG-419.test.ts
+new file mode 100644
+index 0000000..3a5ae00
+--- /dev/null
++++ b/test/repros/BUG-419.test.ts
+@@ -0,0 +1,95 @@
++import { afterEach, describe, expect, it } from 'vitest'
++
++import {
++  removeCacheProjects,
++  createCacheProject,
++  writeProjectFiles,
++  listVerdicts,
++  runProject,
++} from './BUG-400-cache-project'
++
++/**
++ * Referenced configuration of the package, with the option under test.
++ *
++ * @param define - Value of `useDefineForClassFields`.
++ * @returns Text of `packages/web/tsconfig.app.json`.
++ */
++function createAppConfig(define: boolean): string {
++  return JSON.stringify({
++    compilerOptions: { useDefineForClassFields: define, target: 'ES2022' },
++    include: ['src', 'test'],
++  })
++}
++
++describe('BUG-419: a tsconfig a package references', () => {
++  afterEach(async () => {
++    await removeCacheProjects()
++  })
++
++  it('runs the mutants again when a referenced tsconfig changes how classes compile', async () => {
++    let root = await createCacheProject({
++      'packages/web/src/math.ts': [
++        'export function double(value: number): number {',
++        '  return value * 2',
++        '}',
++        '',
++        'class Base {',
++        '  stored = 0',
++        '',
++        '  set value(value: number) {',
++        '    this.stored = double(value)',
++        '  }',
++        '',
++        '  get value(): number {',
++        '    return this.stored',
++        '  }',
++        '}',
++        '',
++        'export class Child extends Base {',
++        '  // @ts-expect-error a field over an accessor, as in older code bases',
++        '  value = 5',
++        '}',
++        '',
++      ].join('\n'),
++      'packages/web/test/math.test.ts': [
++        "import { expect, it } from 'vitest'",
++        '',
++        "import { Child, double } from '../src/math'",
++        '',
++        "it('child', () => {",
++        '  expect([5, 10]).toContain(new Child().value)',
++        '  expect(double(0)).toBe(0)',
++        '})',
++        '',
++      ].join('\n'),
++      'vitest.config.ts': [
++        "import { defineConfig } from 'vitest/config'",
++        '',
++        "export default defineConfig({ test: { include: ['packages/*/test/**/*.test.ts'] } })",
++        '',
++      ].join('\n'),
++      'packages/web/tsconfig.json': JSON.stringify({
++        references: [{ path: './tsconfig.app.json' }],
++        files: [],
++      }),
++      'packages/web/tsconfig.app.json': createAppConfig(true),
++    })
++    await runProject(root, { paths: ['packages/web/src'] })
++    /*
++     * With [[Set]] semantics the field calls the setter, so `double` runs and
++     * `value / 2` is killed; Vite reads the option from the referenced file,
++     * which `listTsconfigFiles` never lists.
++     */
++    await writeProjectFiles(root, {
++      'packages/web/tsconfig.app.json': createAppConfig(false),
++    })
++
++    let cached = await runProject(root, { paths: ['packages/web/src'] })
++    let fresh = await runProject(root, {
++      paths: ['packages/web/src'],
++      cache: false,
++    })
++
++    expect(listVerdicts(cached)).toStrictEqual(listVerdicts(fresh))
++  }, 120_000)
++})
+diff --git a/test/repros/BUG-500/mootant.config.ts b/test/repros/BUG-500/mootant.config.ts
+new file mode 100644
+index 0000000..5dce9c8
+--- /dev/null
++++ b/test/repros/BUG-500/mootant.config.ts
+@@ -0,0 +1,11 @@
++import { defineConfig } from 'mootant'
++
++export default defineConfig({
++  mutators: {
++    'string-literal': 'off',
++  },
++  run: {
++    paths: ['src'],
++    threshold: 80,
++  },
++})
+diff --git a/test/repros/BUG-500/package.json b/test/repros/BUG-500/package.json
+new file mode 100644
+index 0000000..e6cd973
+--- /dev/null
++++ b/test/repros/BUG-500/package.json
+@@ -0,0 +1,5 @@
++{
++  "name": "bug-500-fixture",
++  "private": true,
++  "type": "commonjs"
++}
+diff --git a/test/repros/BUG-500/run.sh b/test/repros/BUG-500/run.sh
+new file mode 100755
+index 0000000..2fb1a34
+--- /dev/null
++++ b/test/repros/BUG-500/run.sh
+@@ -0,0 +1,18 @@
++#!/bin/bash
++# BUG-500: the mootant.config.ts of the configuration guide fails to load in a
++# package with "type": "commonjs" (what `npm init -y` of npm 11 writes) on
++# Node.js 22.18 or later: mootant imports .ts natively whenever Node strips
++# types, and Node reads the file as CommonJS. Node 22.12 with jiti loads the
++# same file. Builds dist when it is missing. Exit 1 = reproduced.
++set -u
++HERE=$(cd "$(dirname "$0")" && pwd)
++REPO=$(cd "$HERE/../../.." && pwd)
++[ -f "$REPO/dist/cli/index.js" ] || (cd "$REPO" && pnpm run build >/dev/null)
++mkdir -p "$HERE/node_modules"
++ln -sfn "$REPO" "$HERE/node_modules/mootant"
++cd "$HERE"
++echo "node $(node --version), process.features.typescript=$(node -p 'process.features.typescript')"
++node "$REPO/bin/mootant.js" list src </dev/null
++CODE=$?
++rm -rf "$HERE/node_modules"
++[ "$CODE" -eq 0 ] || { echo "REPRODUCED: exit $CODE"; exit 1; }
+diff --git a/test/repros/BUG-500/src/add.js b/test/repros/BUG-500/src/add.js
+new file mode 100644
+index 0000000..0604766
+--- /dev/null
++++ b/test/repros/BUG-500/src/add.js
+@@ -0,0 +1,3 @@
++export function add(a, b) {
++  return a + b
++}
+diff --git a/test/repros/BUG-501/mootant.config.cts b/test/repros/BUG-501/mootant.config.cts
+new file mode 100644
+index 0000000..2c1cb58
+--- /dev/null
++++ b/test/repros/BUG-501/mootant.config.cts
+@@ -0,0 +1,5 @@
++const { defineConfig } = require('mootant')
++
++module.exports = defineConfig({
++  mutators: { 'string-literal': 'off' },
++})
+diff --git a/test/repros/BUG-501/package.json b/test/repros/BUG-501/package.json
+new file mode 100644
+index 0000000..8039aae
+--- /dev/null
++++ b/test/repros/BUG-501/package.json
+@@ -0,0 +1,5 @@
++{
++  "name": "bug-501-fixture",
++  "private": true,
++  "type": "commonjs"
++}
+diff --git a/test/repros/BUG-501/run.sh b/test/repros/BUG-501/run.sh
+new file mode 100755
+index 0000000..ba556fd
+--- /dev/null
++++ b/test/repros/BUG-501/run.sh
+@@ -0,0 +1,22 @@
++#!/bin/bash
++# BUG-501: a mootant.config.cts that requires mootant fails on Node.js 22.18+
++# (22.x) with "request for './instrument/resolve-switched-text.js' is from a
++# module not been linked": mootant loads .cts with import(), and Node 22's
++# require(esm) from a CommonJS TypeScript module loaded by import() breaks on
++# an ES module with imports of its own; Node 24 and 26 load it, and so does
++# require() of the same file on Node 22. Builds dist when it is missing.
++# Exit 1 = reproduced.
++set -u
++HERE=$(cd "$(dirname "$0")" && pwd)
++REPO=$(cd "$HERE/../../.." && pwd)
++[ -f "$REPO/dist/cli/index.js" ] || (cd "$REPO" && pnpm run build >/dev/null)
++mkdir -p "$HERE/node_modules"
++ln -sfn "$REPO" "$HERE/node_modules/mootant"
++cd "$HERE"
++echo "node $(node --version)"
++node "$REPO/bin/mootant.js" list src </dev/null
++CODE=$?
++echo "--- the same file through require():"
++node -e "console.log(Object.keys(require('./mootant.config.cts')))"
++rm -rf "$HERE/node_modules"
++[ "$CODE" -eq 0 ] || { echo "REPRODUCED: exit $CODE"; exit 1; }
+diff --git a/test/repros/BUG-501/src/add.js b/test/repros/BUG-501/src/add.js
+new file mode 100644
+index 0000000..0604766
+--- /dev/null
++++ b/test/repros/BUG-501/src/add.js
+@@ -0,0 +1,3 @@
++export function add(a, b) {
++  return a + b
++}
+diff --git a/test/repros/BUG-502.test.ts b/test/repros/BUG-502.test.ts
+new file mode 100644
+index 0000000..8bb2bde
+--- /dev/null
++++ b/test/repros/BUG-502.test.ts
+@@ -0,0 +1,56 @@
++import { afterEach, describe, expect, it } from 'vitest'
++import { mkdtemp, symlink, rm } from 'node:fs/promises'
++import { spawn } from 'node:child_process'
++import { once } from 'node:events'
++import { tmpdir } from 'node:os'
++import path from 'node:path'
++
++import { stopHungWorker } from '../../adapters/vitest/stop-hung-worker'
++
++/**
++ * `PATH` of the test process before the test changed it.
++ */
++let originalPath = process.env['PATH']
++
++/**
++ * Directory with only `node` in it, used as `PATH`.
++ */
++let directory: string | null = null
++
++describe('BUG-502: a hung Vitest worker is never stopped without ps', () => {
++  afterEach(async () => {
++    process.env['PATH'] = originalPath
++    if (directory !== null) {
++      await rm(directory, { recursive: true, force: true })
++      directory = null
++    }
++  })
++
++  it('stops a live child process when ps is not installed', async () => {
++    let child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
++      stdio: 'ignore',
++    })
++    await once(child, 'spawn')
++    let exited = once(child, 'exit')
++    directory = await mkdtemp(path.join(tmpdir(), 'mootant-no-ps-'))
++    await symlink(process.execPath, path.join(directory, 'node'))
++    process.env['PATH'] = directory
++
++    let stopped: boolean
++    try {
++      stopped = await stopHungWorker(child.pid!)
++    } finally {
++      process.env['PATH'] = originalPath
++      child.kill('SIGKILL')
++    }
++    await exited
++
++    /*
++     * The child is a live child of this process, as a hung Vitest worker is.
++     * `getParentPid` runs `ps -o ppid= -p <pid>`; without `ps`, as in
++     * Debian-slim images, or with BusyBox `ps`, which has no `-p`, it resolves
++     * null, so the worker is never stopped and the run waits for it forever.
++     */
++    expect(stopped).toBe(true)
++  })
++})
+diff --git a/test/repros/BUG-503/mootant.config.js b/test/repros/BUG-503/mootant.config.js
+new file mode 100644
+index 0000000..98f59df
+--- /dev/null
++++ b/test/repros/BUG-503/mootant.config.js
+@@ -0,0 +1,4 @@
++export default {
++  // the hung mutant keeps its worker busy for about 30 s
++  run: { timeout: { constant: 30000 } },
++}
+diff --git a/test/repros/BUG-503/package.json b/test/repros/BUG-503/package.json
+new file mode 100644
+index 0000000..880b310
+--- /dev/null
++++ b/test/repros/BUG-503/package.json
+@@ -0,0 +1,6 @@
++{
++  "name": "bug-503-fixture",
++  "private": true,
++  "type": "module",
++  "scripts": { "test": "vitest --run" }
++}
+diff --git a/test/repros/BUG-503/run.sh b/test/repros/BUG-503/run.sh
+new file mode 100755
+index 0000000..1b041a1
+--- /dev/null
++++ b/test/repros/BUG-503/run.sh
+@@ -0,0 +1,32 @@
++#!/bin/bash
++# BUG-503: SIGTERM (or SIGINT/SIGHUP) sent to mootant's own pid, as `kill`,
++# an IDE stop button or a CI runner may do, leaves the Vitest worker that runs
++# a hung mutant alive: reparented to init, at 100% CPU, for good.
++# Linux or macOS with ps. Builds dist when it is missing. Exit 1 = reproduced.
++set -u
++HERE=$(cd "$(dirname "$0")" && pwd)
++REPO=$(cd "$HERE/../../.." && pwd)
++[ -f "$REPO/dist/cli/index.js" ] || (cd "$REPO" && pnpm run build >/dev/null)
++cd "$HERE"
++export TMPDIR=$(mktemp -d)
++node "$REPO/bin/mootant.js" run src --no-cache </dev/null >/dev/null 2>&1 &
++MOOTANT=$!
++WORKER=""
++for _ in $(seq 1 120); do
++  # a worker that has run for 3 s or more runs the hung mutant
++  WORKER=$(ps -o pid=,etimes= --ppid "$MOOTANT" | awk '$2 >= 3 {print $1; exit}')
++  [ -n "$WORKER" ] && break
++  sleep 0.5
++done
++[ -z "$WORKER" ] && { echo "no hung worker found"; kill "$MOOTANT"; exit 2; }
++kill -TERM "$MOOTANT"
++wait "$MOOTANT"; echo "mootant exit code: $?"
++sleep 2
++if kill -0 "$WORKER" 2>/dev/null; then
++  echo "REPRODUCED: worker $WORKER outlived mootant: $(ps -o pid=,ppid=,stat=,pcpu= -p "$WORKER")"
++  kill -KILL "$WORKER"
++  rm -rf "$TMPDIR"
++  exit 1
++fi
++echo "ok: no worker left"
++rm -rf "$TMPDIR"
+diff --git a/test/repros/BUG-503/src/step.js b/test/repros/BUG-503/src/step.js
+new file mode 100644
+index 0000000..9a90d41
+--- /dev/null
++++ b/test/repros/BUG-503/src/step.js
+@@ -0,0 +1,3 @@
++export function getStep(size) {
++  return size - 9
++}
+diff --git a/test/repros/BUG-503/test/step.check.js b/test/repros/BUG-503/test/step.check.js
+new file mode 100644
+index 0000000..bd91146
+--- /dev/null
++++ b/test/repros/BUG-503/test/step.check.js
+@@ -0,0 +1,13 @@
++import { expect, it } from 'vitest'
++
++import { getStep } from '../src/step.js'
++
++it('counts to ten', () => {
++  let step = getStep(10)
++  let n = 0
++  // the mutant 9 -> 10 makes the step 0: an endless synchronous loop
++  for (let i = 0; i < 10; i += step) {
++    n++
++  }
++  expect(n).toBe(10)
++})
+diff --git a/test/repros/BUG-503/vitest.config.js b/test/repros/BUG-503/vitest.config.js
+new file mode 100644
+index 0000000..caec7c2
+--- /dev/null
++++ b/test/repros/BUG-503/vitest.config.js
+@@ -0,0 +1,3 @@
++export default {
++  test: { include: ['test/**/*.check.js'] },
++}
+diff --git a/test/repros/BUG-504/mootant.config.js b/test/repros/BUG-504/mootant.config.js
+new file mode 100644
+index 0000000..8946837
+--- /dev/null
++++ b/test/repros/BUG-504/mootant.config.js
+@@ -0,0 +1,4 @@
++export default {
++  // the hung mutant keeps its test process busy for about 30 s
++  run: { runner: 'node-test', timeout: { constant: 30000 } },
++}
+diff --git a/test/repros/BUG-504/package.json b/test/repros/BUG-504/package.json
+new file mode 100644
+index 0000000..57a9d7f
+--- /dev/null
++++ b/test/repros/BUG-504/package.json
+@@ -0,0 +1,6 @@
++{
++  "name": "bug-504-fixture",
++  "private": true,
++  "type": "module",
++  "scripts": { "test": "node --test test/step.check.js" }
++}
+diff --git a/test/repros/BUG-504/run.sh b/test/repros/BUG-504/run.sh
+new file mode 100755
+index 0000000..c37fb05
+--- /dev/null
++++ b/test/repros/BUG-504/run.sh
+@@ -0,0 +1,33 @@
++#!/bin/bash
++# BUG-504: node:test runs every test file detached, in a session of its own,
++# and mootant stops these processes only on SIGINT and SIGTERM. SIGHUP (the
++# terminal or the SSH session closes) or SIGQUIT (Ctrl+\) ends mootant and
++# leaves the test process of a hung mutant running for good.
++# Linux or macOS with ps. Builds dist when it is missing. Exit 1 = reproduced.
++set -u
++HERE=$(cd "$(dirname "$0")" && pwd)
++REPO=$(cd "$HERE/../../.." && pwd)
++SIGNAL=${1:-HUP}
++[ -f "$REPO/dist/cli/index.js" ] || (cd "$REPO" && pnpm run build >/dev/null)
++cd "$HERE"
++export TMPDIR=$(mktemp -d)
++node "$REPO/bin/mootant.js" run src --no-cache </dev/null >/dev/null 2>&1 &
++MOOTANT=$!
++CHILD=""
++for _ in $(seq 1 120); do
++  CHILD=$(ps -o pid=,etimes= --ppid "$MOOTANT" | awk '$2 >= 3 {print $1; exit}')
++  [ -n "$CHILD" ] && break
++  sleep 0.5
++done
++[ -z "$CHILD" ] && { echo "no hung test process found"; kill "$MOOTANT"; exit 2; }
++kill -s "$SIGNAL" "$MOOTANT"
++wait "$MOOTANT"; echo "mootant exit code: $?"
++sleep 2
++if kill -0 "$CHILD" 2>/dev/null; then
++  echo "REPRODUCED: test process $CHILD outlived mootant: $(ps -o pid=,ppid=,sid=,stat=,pcpu= -p "$CHILD")"
++  kill -KILL -- "-$CHILD" 2>/dev/null || kill -KILL "$CHILD"
++  rm -rf "$TMPDIR"
++  exit 1
++fi
++echo "ok: no test process left"
++rm -rf "$TMPDIR"
+diff --git a/test/repros/BUG-504/src/step.js b/test/repros/BUG-504/src/step.js
+new file mode 100644
+index 0000000..9a90d41
+--- /dev/null
++++ b/test/repros/BUG-504/src/step.js
+@@ -0,0 +1,3 @@
++export function getStep(size) {
++  return size - 9
++}
+diff --git a/test/repros/BUG-504/test/step.check.js b/test/repros/BUG-504/test/step.check.js
+new file mode 100644
+index 0000000..fad4d29
+--- /dev/null
++++ b/test/repros/BUG-504/test/step.check.js
+@@ -0,0 +1,14 @@
++import { it } from 'node:test'
++import assert from 'node:assert/strict'
++
++import { getStep } from '../src/step.js'
++
++it('counts to ten', () => {
++  let step = getStep(10)
++  let n = 0
++  // the mutant 9 -> 10 makes the step 0: an endless synchronous loop
++  for (let i = 0; i < 10; i += step) {
++    n++
++  }
++  assert.equal(n, 10)
++})
+diff --git a/test/repros/BUG-505/package.json b/test/repros/BUG-505/package.json
+new file mode 100644
+index 0000000..64087a3
+--- /dev/null
++++ b/test/repros/BUG-505/package.json
+@@ -0,0 +1,6 @@
++{
++  "name": "bug-505-fixture",
++  "private": true,
++  "type": "module",
++  "scripts": { "test": "vitest --run" }
++}
+diff --git a/test/repros/BUG-505/run.sh b/test/repros/BUG-505/run.sh
+new file mode 100755
+index 0000000..183adfb
+--- /dev/null
++++ b/test/repros/BUG-505/run.sh
+@@ -0,0 +1,26 @@
++#!/bin/bash
++# BUG-505: an interrupted run leaves its work directory (mootant-XXXXXX with
++# beat, claim, done, env, out, plan, worker) and Vitest's own temporary
++# directory in TMPDIR: createWorkDirectory's directory is removed only in a
++# finally block, which a signal never reaches. Ctrl+C is simulated by SIGINT to
++# the whole process group. Builds dist when it is missing. Exit 1 = reproduced.
++set -u
++HERE=$(cd "$(dirname "$0")" && pwd)
++REPO=$(cd "$HERE/../../.." && pwd)
++SIGNAL=${1:-INT}
++[ -f "$REPO/dist/cli/index.js" ] || (cd "$REPO" && pnpm run build >/dev/null)
++cd "$HERE"
++export TMPDIR=$(mktemp -d)
++setsid node "$REPO/bin/mootant.js" run src --no-cache </dev/null >/dev/null 2>&1 &
++MOOTANT=$!
++sleep 2
++kill -s "$SIGNAL" -- "-$MOOTANT"
++wait "$MOOTANT"; echo "mootant exit code: $?"
++sleep 1
++LEFT=$(ls -A "$TMPDIR")
++rm -rf "$TMPDIR"
++if [ -n "$LEFT" ]; then
++  echo "REPRODUCED: left in TMPDIR: $LEFT"
++  exit 1
++fi
++echo "ok: TMPDIR is empty"
+diff --git a/test/repros/BUG-505/src/add.js b/test/repros/BUG-505/src/add.js
+new file mode 100644
+index 0000000..0604766
+--- /dev/null
++++ b/test/repros/BUG-505/src/add.js
+@@ -0,0 +1,3 @@
++export function add(a, b) {
++  return a + b
++}
+diff --git a/test/repros/BUG-505/test/add.check.js b/test/repros/BUG-505/test/add.check.js
+new file mode 100644
+index 0000000..517489d
+--- /dev/null
++++ b/test/repros/BUG-505/test/add.check.js
+@@ -0,0 +1,8 @@
++import { expect, it } from 'vitest'
++
++import { add } from '../src/add.js'
++
++it('adds slowly', async () => {
++  await new Promise(resolve => setTimeout(resolve, 3000))
++  expect(add(2, 3)).toBe(5)
++})
+diff --git a/test/repros/BUG-505/vitest.config.js b/test/repros/BUG-505/vitest.config.js
+new file mode 100644
+index 0000000..caec7c2
+--- /dev/null
++++ b/test/repros/BUG-505/vitest.config.js
+@@ -0,0 +1,3 @@
++export default {
++  test: { include: ['test/**/*.check.js'] },
++}
+diff --git a/test/repros/BUG-506/global-setup.js b/test/repros/BUG-506/global-setup.js
+new file mode 100644
+index 0000000..3d31394
+--- /dev/null
++++ b/test/repros/BUG-506/global-setup.js
+@@ -0,0 +1,7 @@
++import http from 'node:http'
++
++// A global setup that leaves a server open, a common leak: `vitest --run`
++// warns "close timed out after 10000ms" and exits anyway.
++export default function setup() {
++  http.createServer((request, response) => response.end('ok')).listen(0)
++}
+diff --git a/test/repros/BUG-506/package.json b/test/repros/BUG-506/package.json
+new file mode 100644
+index 0000000..6b1493f
+--- /dev/null
++++ b/test/repros/BUG-506/package.json
+@@ -0,0 +1,6 @@
++{
++  "name": "bug-506-fixture",
++  "private": true,
++  "type": "module",
++  "scripts": { "test": "vitest --run" }
++}
+diff --git a/test/repros/BUG-506/run.sh b/test/repros/BUG-506/run.sh
+new file mode 100755
+index 0000000..2a8b85c
+--- /dev/null
++++ b/test/repros/BUG-506/run.sh
+@@ -0,0 +1,22 @@
++#!/bin/bash
++# BUG-506: when something in mootant's own process keeps the event loop alive,
++# such as a server a Vitest globalSetup leaves open, `mootant run` prints the
++# whole report and never exits; `vitest --run` exits after its teardown
++# timeout. Builds dist when it is missing. Exit 1 = reproduced.
++set -u
++HERE=$(cd "$(dirname "$0")" && pwd)
++REPO=$(cd "$HERE/../../.." && pwd)
++[ -f "$REPO/dist/cli/index.js" ] || (cd "$REPO" && pnpm run build >/dev/null)
++cd "$HERE"
++START=$(date +%s)
++timeout 40 "$REPO/node_modules/.bin/vitest" --run </dev/null >/dev/null 2>&1
++echo "vitest --run: exit $? after $(( $(date +%s) - START )) s"
++START=$(date +%s)
++timeout 40 node "$REPO/bin/mootant.js" run src --no-cache </dev/null >report.txt 2>/dev/null
++CODE=$?
++echo "mootant run: exit $CODE after $(( $(date +%s) - START )) s; report lines: $(wc -l <report.txt)"
++rm -rf report.txt "$HERE/node_modules"
++if [ "$CODE" -eq 124 ]; then
++  echo "REPRODUCED: mootant printed its report and did not exit within 40 s"
++  exit 1
++fi
+diff --git a/test/repros/BUG-506/src/add.js b/test/repros/BUG-506/src/add.js
+new file mode 100644
+index 0000000..0604766
+--- /dev/null
++++ b/test/repros/BUG-506/src/add.js
+@@ -0,0 +1,3 @@
++export function add(a, b) {
++  return a + b
++}
+diff --git a/test/repros/BUG-506/test/add.check.js b/test/repros/BUG-506/test/add.check.js
+new file mode 100644
+index 0000000..06561b2
+--- /dev/null
++++ b/test/repros/BUG-506/test/add.check.js
+@@ -0,0 +1,7 @@
++import { expect, it } from 'vitest'
++
++import { add } from '../src/add.js'
++
++it('adds', () => {
++  expect(add(2, 3)).toBe(5)
++})
+diff --git a/test/repros/BUG-506/vitest.config.js b/test/repros/BUG-506/vitest.config.js
+new file mode 100644
+index 0000000..64a77df
+--- /dev/null
++++ b/test/repros/BUG-506/vitest.config.js
+@@ -0,0 +1,6 @@
++export default {
++  test: {
++    include: ['test/**/*.check.js'],
++    globalSetup: ['./global-setup.js'],
++  },
++}
+diff --git a/test/repros/BUG-507.test.ts b/test/repros/BUG-507.test.ts
+new file mode 100644
+index 0000000..0e4eb12
+--- /dev/null
++++ b/test/repros/BUG-507.test.ts
+@@ -0,0 +1,35 @@
++import { describe, expect, it } from 'vitest'
++import path from 'node:path'
++
++import { createBuiltIns } from '../helpers/create-built-ins'
++import { vitestAdapter } from '../../adapters/vitest/index'
++import { runMutants } from '../../core/run-mutants'
++
++/**
++ * Project with CommonJS sources: the test imports `src/a.cjs`, which loads
++ * `src/b.cjs` with `require()`.
++ */
++let root = path.resolve(import.meta.dirname, 'BUG-507')
++
++describe('BUG-507: Vitest and modules loaded with require()', () => {
++  it('decides the mutants of a module that a source loads with require()', async () => {
++    let result = await runMutants({
++      builtIns: createBuiltIns('vitest', vitestAdapter()),
++      paths: ['src'],
++      concurrency: 1,
++      cache: false,
++      cwd: root,
++    })
++    let verdicts = result.results
++      .filter(verdict => verdict.mutant.file === 'src/b.cjs')
++      .map(verdict => `${verdict.mutant.replacement} ${verdict.status}`)
++
++    /*
++     * With `age >= 18` -> `age > 18` applied to `src/b.cjs` by hand, the test
++     * fails (`canVote(18)` is false). Vite serves only `src/a.cjs`; Node's own
++     * `require()` loads `src/b.cjs` from disk, unswitched, so every mutant of
++     * `src/b.cjs` ends as NoCoverage with a `never-served` warning.
++     */
++    expect(verdicts).toContain('age > 18 Killed')
++  }, 60_000)
++})
+diff --git a/test/repros/BUG-507/package.json b/test/repros/BUG-507/package.json
+new file mode 100644
+index 0000000..c77123e
+--- /dev/null
++++ b/test/repros/BUG-507/package.json
+@@ -0,0 +1,8 @@
++{
++  "name": "bug-507-fixture",
++  "private": true,
++  "type": "module",
++  "scripts": {
++    "test": "vitest --run"
++  }
++}
+diff --git a/test/repros/BUG-507/src/a.cjs b/test/repros/BUG-507/src/a.cjs
+new file mode 100644
+index 0000000..a28d33f
+--- /dev/null
++++ b/test/repros/BUG-507/src/a.cjs
+@@ -0,0 +1,7 @@
++const { isAdult } = require('./b.cjs')
++
++function canVote(age) {
++  return isAdult(age)
++}
++
++module.exports = { canVote }
+diff --git a/test/repros/BUG-507/src/b.cjs b/test/repros/BUG-507/src/b.cjs
+new file mode 100644
+index 0000000..8d861aa
+--- /dev/null
++++ b/test/repros/BUG-507/src/b.cjs
+@@ -0,0 +1,5 @@
++function isAdult(age) {
++  return age >= 18
++}
++
++module.exports = { isAdult }
+diff --git a/test/repros/BUG-507/test/a.check.js b/test/repros/BUG-507/test/a.check.js
+new file mode 100644
+index 0000000..0c5962e
+--- /dev/null
++++ b/test/repros/BUG-507/test/a.check.js
+@@ -0,0 +1,8 @@
++import { expect, it } from 'vitest'
++
++import { canVote } from '../src/a.cjs'
++
++it('lets 18-year-olds vote', () => {
++  expect(canVote(18)).toBe(true)
++  expect(canVote(17)).toBe(false)
++})
+diff --git a/test/repros/BUG-507/vitest.config.ts b/test/repros/BUG-507/vitest.config.ts
+new file mode 100644
+index 0000000..4f67b8d
+--- /dev/null
++++ b/test/repros/BUG-507/vitest.config.ts
+@@ -0,0 +1,5 @@
++export default {
++  test: {
++    include: ['test/**/*.check.js'],
++  },
++}
+diff --git a/test/repros/BUG-508.test.ts b/test/repros/BUG-508.test.ts
+new file mode 100644
+index 0000000..6e8158f
+--- /dev/null
++++ b/test/repros/BUG-508.test.ts
+@@ -0,0 +1,38 @@
++import { describe, expect, it } from 'vitest'
++import path from 'node:path'
++
++import { createBuiltIns } from '../helpers/create-built-ins'
++import { vitestAdapter } from '../../adapters/vitest/index'
++import { runMutants } from '../../core/run-mutants'
++
++/**
++ * Project whose only Vitest project has a root of its own, `pkg`, as
++ * `projects: ['packages/*']` gives every package of a monorepo.
++ */
++let root = path.resolve(import.meta.dirname, 'BUG-508')
++
++describe('BUG-508: Vitest projects with a root of their own', () => {
++  it('runs the mutants of a project whose root is not the root of the run', async () => {
++    /*
++     * `npx vitest --run` in the fixture passes. mootant's plugin reaches only
++     * the projects that share the root Vite server (`configureVitest` is not
++     * called for `pkg`), so `pkg` keeps Vitest's own runner and pool, writes
++     * no out files, and the dry run stops the run with "Tests fail without
++     * mutants; fix them first (1 test file): pkg/test/add.check.ts: fails to
++     * load: The test runner did not report this file."
++     */
++    let result = await runMutants({
++      builtIns: createBuiltIns('vitest', vitestAdapter()),
++      paths: ['pkg/src'],
++      concurrency: 1,
++      cache: false,
++      cwd: root,
++    })
++
++    expect(
++      result.results.map(
++        verdict => `${verdict.mutant.replacement} ${verdict.status}`,
++      ),
++    ).toContain('a - b Killed')
++  }, 60_000)
++})
+diff --git a/test/repros/BUG-508/package.json b/test/repros/BUG-508/package.json
+new file mode 100644
+index 0000000..d976272
+--- /dev/null
++++ b/test/repros/BUG-508/package.json
+@@ -0,0 +1,8 @@
++{
++  "name": "bug-508-fixture",
++  "private": true,
++  "type": "module",
++  "scripts": {
++    "test": "vitest --run"
++  }
++}
+diff --git a/test/repros/BUG-508/pkg/src/add.ts b/test/repros/BUG-508/pkg/src/add.ts
+new file mode 100644
+index 0000000..a39d4ef
+--- /dev/null
++++ b/test/repros/BUG-508/pkg/src/add.ts
+@@ -0,0 +1,3 @@
++export function add(a: number, b: number): number {
++  return a + b
++}
+diff --git a/test/repros/BUG-508/pkg/test/add.check.ts b/test/repros/BUG-508/pkg/test/add.check.ts
+new file mode 100644
+index 0000000..92ba5e0
+--- /dev/null
++++ b/test/repros/BUG-508/pkg/test/add.check.ts
+@@ -0,0 +1,7 @@
++import { expect, it } from 'vitest'
++
++import { add } from '../src/add'
++
++it('adds', () => {
++  expect(add(2, 3)).toBe(5)
++})
+diff --git a/test/repros/BUG-508/vitest.config.ts b/test/repros/BUG-508/vitest.config.ts
+new file mode 100644
+index 0000000..2bd921c
+--- /dev/null
++++ b/test/repros/BUG-508/vitest.config.ts
+@@ -0,0 +1,13 @@
++export default {
++  test: {
++    projects: [
++      {
++        test: {
++          include: ['test/**/*.check.ts'],
++          root: './pkg',
++          name: 'pkg',
++        },
++      },
++    ],
++  },
++}
+diff --git a/test/repros/BUG-509/package.json b/test/repros/BUG-509/package.json
+new file mode 100644
+index 0000000..44dede8
+--- /dev/null
++++ b/test/repros/BUG-509/package.json
+@@ -0,0 +1,6 @@
++{
++  "name": "bug-509-fixture",
++  "private": true,
++  "type": "module",
++  "scripts": { "test": "vitest --run" }
++}
+diff --git a/test/repros/BUG-509/run.sh b/test/repros/BUG-509/run.sh
+new file mode 100755
+index 0000000..ce2ec94
+--- /dev/null
++++ b/test/repros/BUG-509/run.sh
+@@ -0,0 +1,20 @@
++#!/bin/bash
++# BUG-509: with --json, stdout must hold only the report, but whatever code in
++# mootant's own process prints there (a Vitest config, a Vite plugin) comes
++# first, so JSON.parse of stdout fails. Builds dist when it is missing.
++# Exit 1 = reproduced.
++set -u
++HERE=$(cd "$(dirname "$0")" && pwd)
++REPO=$(cd "$HERE/../../.." && pwd)
++[ -f "$REPO/dist/cli/index.js" ] || (cd "$REPO" && pnpm run build >/dev/null)
++cd "$HERE"
++node "$REPO/bin/mootant.js" run src --json --no-cache </dev/null 2>/dev/null >report.json
++echo "mootant exit code: $?; first bytes of stdout: $(head -c 60 report.json)"
++if node -e 'JSON.parse(require("fs").readFileSync("report.json", "utf8"))' 2>/dev/null; then
++  rm -f report.json
++  echo "ok: stdout is JSON"
++  exit 0
++fi
++rm -f report.json
++echo "REPRODUCED: stdout of --json is not JSON"
++exit 1
+diff --git a/test/repros/BUG-509/src/add.js b/test/repros/BUG-509/src/add.js
+new file mode 100644
+index 0000000..0604766
+--- /dev/null
++++ b/test/repros/BUG-509/src/add.js
+@@ -0,0 +1,3 @@
++export function add(a, b) {
++  return a + b
++}
+diff --git a/test/repros/BUG-509/test/add.check.js b/test/repros/BUG-509/test/add.check.js
+new file mode 100644
+index 0000000..06561b2
+--- /dev/null
++++ b/test/repros/BUG-509/test/add.check.js
+@@ -0,0 +1,7 @@
++import { expect, it } from 'vitest'
++
++import { add } from '../src/add.js'
++
++it('adds', () => {
++  expect(add(2, 3)).toBe(5)
++})
+diff --git a/test/repros/BUG-509/vitest.config.js b/test/repros/BUG-509/vitest.config.js
+new file mode 100644
+index 0000000..7d3fe26
+--- /dev/null
++++ b/test/repros/BUG-509/vitest.config.js
+@@ -0,0 +1,7 @@
++// What dotenv@17 prints when `import 'dotenv/config'` loads a .env file; Vite
++// plugins such as vite-plugin-svelte print to stdout the same way.
++console.log('[dotenv@17.2.3] injecting env (1) from .env')
++
++export default {
++  test: { include: ['test/**/*.check.js'] },
++}
+diff --git a/test/repros/BUG-510.test.ts b/test/repros/BUG-510.test.ts
+new file mode 100644
+index 0000000..247be65
+--- /dev/null
++++ b/test/repros/BUG-510.test.ts
+@@ -0,0 +1,48 @@
++import { afterEach, describe, expect, it } from 'vitest'
++import { mkdtemp, writeFile, rm } from 'node:fs/promises'
++import { tmpdir } from 'node:os'
++import path from 'node:path'
++
++import { readNodeRuntime } from '../../adapters/node-test/read-node-runtime'
++
++/**
++ * `NODE_OPTIONS` of the test process before the test changed it.
++ */
++let originalOptions = process.env['NODE_OPTIONS']
++
++/**
++ * Directory of the preload that prints to stdout.
++ */
++let directory: string | null = null
++
++describe('BUG-510: node:test probe with a preload that prints', () => {
++  afterEach(async () => {
++    if (originalOptions === undefined) {
++      delete process.env['NODE_OPTIONS']
++    } else {
++      process.env['NODE_OPTIONS'] = originalOptions
++    }
++    if (directory !== null) {
++      await rm(directory, { recursive: true, force: true })
++      directory = null
++    }
++  })
++
++  it('reads the runtime when NODE_OPTIONS preloads a module that prints', async () => {
++    directory = await mkdtemp(path.join(tmpdir(), 'mootant-print-'))
++    let preload = path.join(directory, 'print.cjs')
++    // As `-r dotenv/config` of dotenv 17 prints "[dotenv@17…] injecting env"
++    await writeFile(preload, "console.log('[preload] hello')\n")
++    process.env['NODE_OPTIONS'] = `--require ${preload}`
++
++    /*
++     * `node -p PROBE` prints the preload's line before the JSON; `JSON.parse`
++     * of the whole stdout throws inside the `execFile` callback, so the
++     * promise never settles and the exception is uncaught: `mootant run`
++     * crashes with a stack trace instead of starting the session.
++     */
++    await expect(readNodeRuntime(process.execPath)).resolves.toMatchObject({
++      version: process.version,
++    })
++  })
++})
+diff --git a/test/repros/BUG-900.test.ts b/test/repros/BUG-900.test.ts
+new file mode 100644
+index 0000000..853e448
+--- /dev/null
++++ b/test/repros/BUG-900.test.ts
+@@ -0,0 +1,111 @@
++import { describe, expect, it } from 'vitest'
++
++import type { IsolatedResult } from '../../types/adapter/isolated-result'
++import type { IsolatedPlan } from '../../types/adapter/isolated-plan'
++import type { FakeWorld } from '../helpers/create-fake-adapter'
++
++import { runIsolatedRounds } from '../../core/run/run-isolated-rounds'
++import { getFinalStatus } from '../../core/run/get-final-status'
++import { createTestRun } from '../helpers/create-test-run'
++
++/**
++ * Tests of the project: `a1` never reaches mutant `m`, `a2` reaches and kills
++ * it, both in `/t/a.test.ts`, the file named after the module and ranked first;
++ * `b1` in `/t/b.test.ts` reaches it and checks nothing.
++ */
++let tests: FakeWorld['tests'] = [
++  { file: '/t/a.test.ts', id: 'a1' },
++  {
++    kills: { m: 'expected 2 to be 5' },
++    file: '/t/a.test.ts',
++    covers: ['m'],
++    id: 'a2',
++  },
++  { file: '/t/b.test.ts', covers: ['m'], id: 'b1' },
++]
++
++/**
++ * Changes the first isolated run only: its unit of `/t/a.test.ts` ends as the
++ * worker leaves it after a transient problem that has nothing to do with the
++ * mutant, before any test reached it.
++ *
++ * @param change - What the unit reports instead.
++ * @returns Hook of the simulated project.
++ */
++function spoilFirstRun(
++  change: (
++    facts: IsolatedResult['units'][number],
++  ) => IsolatedResult['units'][number],
++): NonNullable<FakeWorld['onIsolated']> {
++  return (result: IsolatedResult, plan: IsolatedPlan, call: number) => {
++    if (call !== 1) {
++      return result
++    }
++    return {
++      units: result.units.map(facts =>
++        plan.units[facts.unit]!.file === '/t/a.test.ts' ? change(facts) : facts,
++      ),
++    }
++  }
++}
++
++/**
++ * Runs the isolated path of mutant `m` outside fast mode.
++ *
++ * @param onIsolated - Change of the first isolated run.
++ * @returns Final status of `m`.
++ */
++async function runMutant(
++  onIsolated: NonNullable<FakeWorld['onIsolated']>,
++): Promise<ReturnType<typeof getFinalStatus>> {
++  let { session, state } = await createTestRun(
++    { onIsolated, tests },
++    { mutants: ['m'], isolate: true },
++  )
++  await runIsolatedRounds(session, state)
++  return getFinalStatus(state.mutants.get('m')!)
++}
++
++describe('BUG-900: an isolated unit that never ran the tests that reach the mutant counts as a file done without evidence', () => {
++  it('does not make the mutant Survived after a test that did not reach it timed out and the worker skipped the rest of the file', async () => {
++    /**
++     * Vitest's runner abandons the unit after any timed-out try
++     * (`adapters/vitest/runner.ts:886-888`, `onBeforeRunTask` skips the rest),
++     * so `a2`, which would kill `m`, never runs.
++     */
++    let status = await runMutant(
++      spoilFirstRun(facts => ({
++        ...facts,
++        tests: [
++          {
++            ...facts.tests[0]!,
++            message: 'Test timed out in 1000ms.',
++            timedOut: true,
++            reached: false,
++            failed: true,
++          },
++        ],
++        reached: false,
++      })),
++    )
++
++    // A plain run of the tests kills `m` (a2 fails); the unit that skipped a2
++    // proves nothing, so `m` must not survive on the strength of b1 alone.
++    expect(status).not.toBe('Survived')
++    expect(status).not.toBe('NoCoverage')
++  })
++
++  it('does not make the mutant Survived after a suite hook that did not reach it failed and no test ran', async () => {
++    let status = await runMutant(
++      spoilFirstRun(facts => ({
++        ...facts,
++        hookError: 'listen EADDRINUSE: address already in use :::4000',
++        reached: false,
++        tests: [],
++      })),
++    )
++
++    expect(status).not.toBe('Survived')
++    expect(status).not.toBe('NoCoverage')
++  })
++})
+diff --git a/test/repros/BUG-901.test.ts b/test/repros/BUG-901.test.ts
+new file mode 100644
+index 0000000..120862d
+--- /dev/null
++++ b/test/repros/BUG-901.test.ts
+@@ -0,0 +1,77 @@
++import { describe, expect, it } from 'vitest'
++
++import type { IsolatedResult } from '../../types/adapter/isolated-result'
++import type { MutantState } from '../../types/run/mutant-state'
++import type { FakeWorld } from '../helpers/create-fake-adapter'
++
++import { runIsolatedRounds } from '../../core/run/run-isolated-rounds'
++import { getFinalStatus } from '../../core/run/get-final-status'
++import { createTestRun } from '../helpers/create-test-run'
++
++/**
++ * Runs mutant `m` isolated outside fast mode in a test file whose first unit
++ * fails as `spoil` says, for a reason that has nothing to do with `m`: `c1`
++ * never reaches `m`; `c2` reaches it and checks nothing, so a plain run of the
++ * tests lets `m` survive.
++ *
++ * @param spoil - What the first unit reports instead of its facts.
++ * @returns State of `m` after the isolated rounds.
++ */
++async function runMutant(
++  spoil: (
++    facts: IsolatedResult['units'][number],
++  ) => IsolatedResult['units'][number],
++): Promise<MutantState> {
++  let world: FakeWorld = {
++    onIsolated: (result: IsolatedResult, _plan, call) =>
++      call === 1 ? { units: result.units.map(spoil) } : result,
++    tests: [
++      { file: '/t/c.test.ts', id: 'c1' },
++      { file: '/t/c.test.ts', covers: ['m'], id: 'c2' },
++    ],
++  }
++  let { session, state } = await createTestRun(world, {
++    mutants: ['m'],
++    isolate: true,
++  })
++  await runIsolatedRounds(session, state)
++  return state.mutants.get('m')!
++}
++
++describe('BUG-901: a unit that fails before the mutant is reached kills the mutant', () => {
++  it('does not kill a mutant whose only covering file lost its worker once, before any test reached the mutant', async () => {
++    /**
++     * The worker dies during `c1` (the OOM killer, a signal), as Vitest reports
++     * it: no end record, no tries, nothing reached
++     * (`adapters/vitest/build-isolated-facts.ts:32-44`).
++     */
++    let mutant = await runMutant(facts => ({
++      ...facts,
++      incomplete: 'crash',
++      reached: false,
++      tests: [],
++    }))
++
++    // A crash that nothing ties to the mutant decides nothing: the unit should
++    // run again, as a missing unit does, and then `m` survives.
++    expect(mutant.verdict?.cause).not.toBe('crash')
++    expect(getFinalStatus(mutant)).toBe('Survived')
++  })
++
++  it('does not kill a mutant that is not reached while loading when its test file failed to load once', async () => {
++    /**
++     * The test file connects to a service at the top level and fails once while
++     * the service restarts; `m` is not reached while loading, which the end
++     * record of the unit tells (`reached: false`).
++     */
++    let mutant = await runMutant(facts => ({
++      ...facts,
++      loadError: 'connect ECONNREFUSED 127.0.0.1:5432',
++      reached: false,
++      tests: [],
++    }))
++
++    expect(mutant.verdict?.cause).not.toBe('load-error')
++    expect(getFinalStatus(mutant)).toBe('Survived')
++  })
++})
+diff --git a/test/repros/BUG-902.test.ts b/test/repros/BUG-902.test.ts
+new file mode 100644
+index 0000000..a2331ce
+--- /dev/null
++++ b/test/repros/BUG-902.test.ts
+@@ -0,0 +1,69 @@
++import { describe, expect, it } from 'vitest'
++
++import type { DryRunResult } from '../../types/adapter/dry-run-result'
++import type { SwitchedFile } from '../../types/adapter/switched-file'
++import type { FakeWorld } from '../helpers/create-fake-adapter'
++
++import { createFakeAdapter } from '../helpers/create-fake-adapter'
++import { runDryPhase } from '../../core/run/run-dry-phase'
++
++describe('BUG-902: one flaky failure in the dry run is blamed on the instrumentation', () => {
++  it('does not drop a switched file whose test failed once and passes when run again with the same switched file', async () => {
++    let instrumented = 0
++    /**
++     * `t1` reaches mutant `a1` and fails in the first dry run only, as a flaky
++     * test does once in a while; every later run passes, with or without the
++     * switched files.
++     */
++    let world: FakeWorld = {
++      onDry: (result: DryRunResult, request) => {
++        if (!request.instrumented) {
++          return result
++        }
++        instrumented += 1
++        if (instrumented > 1) {
++          return result
++        }
++        return {
++          ...result,
++          tests: result.tests.map(test => ({
++            ...test,
++            tries: test.tries.map(facts => ({
++              ...facts,
++              message: 'expected 0 not to be 0',
++              failed: true,
++            })),
++          })),
++        }
++      },
++      tests: [{ file: '/t/a.test.ts', covers: ['a1'], id: 't1' }],
++    }
++    let fake = createFakeAdapter(world)
++    let switched: SwitchedFile[] = [
++      { switched: 'hit("a1")', file: '/src/a.ts', original: '' },
++    ]
++    let session = await fake.adapter.start({
++      workDirectory: '/work',
++      concurrency: null,
++      files: switched,
++      root: '/',
++    })
++    let phase = await runDryPhase(session, {
++      displays: new Map([['/src/a.ts', 'src/a.ts']]),
++      mutantFiles: new Map([['a1', '/src/a.ts']]),
++      report: () => {},
++      repeat: false,
++      root: '/',
++      switched,
++    })
++
++    // The switched file did not break the test: the test passes with it when
++    // it runs again. Blaming the instrumentation drops every mutant of the file
++    // with `Error`, fails the run and keeps the cache from being saved.
++    expect(phase.diagnostics.map(diagnostic => diagnostic.code)).not.toContain(
++      'instrumentation-break',
++    )
++    expect(phase.errors.size).toBe(0)
++    expect(switched.map(entry => entry.file)).toStrictEqual(['/src/a.ts'])
++  })
++})
+diff --git a/test/repros/BUG-904.test.ts b/test/repros/BUG-904.test.ts
+new file mode 100644
+index 0000000..92ef902
+--- /dev/null
++++ b/test/repros/BUG-904.test.ts
+@@ -0,0 +1,40 @@
++import { describe, expect, it } from 'vitest'
++
++import { instrumentFile } from '../../core/instrument/instrument-file'
++import { runSwitchedProgram } from '../helpers/run-switched-program'
++import { generateMutants } from '../helpers/generate-mutants'
++import { applyMutant } from '../helpers/apply-mutant'
++import { runProgram } from '../helpers/run-program'
++
++describe('BUG-904: a local binding named globalThis hides every mutant site in its scope', () => {
++  it('switches the mutants of a function with a globalThis parameter like each mutant applied alone', async () => {
++    let file = 'example.js'
++    let source = [
++      'function f(globalThis, values) {',
++      '  let total = 0',
++      '  for (let value of values) {',
++      '    total = total + value * globalThis.scale',
++      '  }',
++      '  return total',
++      '}',
++    ].join('\n')
++    let inputs = [[{ scale: 2 }, [1, 2]]]
++    let mutants = generateMutants(source, { preset: 'recommended', file })
++    let switched = instrumentFile({ mutants, source, file })
++    let expected = await Promise.all(
++      mutants.map(mutant =>
++        runProgram(applyMutant(source, mutant), file, inputs),
++      ),
++    )
++    let actual = await Promise.all(
++      mutants.map(mutant =>
++        runSwitchedProgram({ active: mutant.id, switched, file }, inputs),
++      ),
++    )
++
++    // The site check `globalThis.__mootant?.hit(...)` reads the parameter, so
++    // no mutant is ever switched on and every one of them runs the original.
++    expect(mutants.length).toBeGreaterThan(0)
++    expect(actual).toStrictEqual(expected)
++  })
++})
+diff --git a/test/repros/BUG-905.test.ts b/test/repros/BUG-905.test.ts
+new file mode 100644
+index 0000000..b276681
+--- /dev/null
++++ b/test/repros/BUG-905.test.ts
+@@ -0,0 +1,116 @@
++import { describe, expect, it } from 'vitest'
++
++import type { DryRunResult } from '../../types/adapter/dry-run-result'
++import type { SwitchedFile } from '../../types/adapter/switched-file'
++import type { FakeWorld } from '../helpers/create-fake-adapter'
++
++import { createSwitchedFiles } from '../../core/instrument/create-switched-files'
++import { createFakeAdapter } from '../helpers/create-fake-adapter'
++import { runDryPhase } from '../../core/run/run-dry-phase'
++import { createMutant } from '../helpers/create-mutant'
++
++describe('BUG-905: a replacement that does not parse breaks every switched file of the run', () => {
++  it('reports the file whose switched text does not parse instead of serving it', () => {
++    /**
++     * A plugin mutator wrote `a +` in place of `a + b`; nothing checks that the
++     * text parses, so the file is switched and served as is.
++     */
++    let math = 'export function add(a, b) {\n  return a + b\n}\n'
++    let other = "export function greet(name) {\n  return 'Hello, ' + name\n}\n"
++    let built = createSwitchedFiles([
++      {
++        mutants: [
++          createMutant({
++            file: 'src/math.js',
++            replacement: 'a +',
++            start: 37,
++            end: 42,
++          }),
++        ],
++        absolute: '/p/src/math.js',
++        file: 'src/math.js',
++        source: math,
++      },
++      {
++        mutants: [
++          createMutant({
++            replacement: "'Hello, '",
++            file: 'src/other.js',
++            start: 39,
++            id: 'm2',
++            end: 55,
++          }),
++        ],
++        absolute: '/p/src/other.js',
++        file: 'src/other.js',
++        source: other,
++      },
++    ])
++
++    expect(built.diagnostics.map(diagnostic => diagnostic.file)).toStrictEqual([
++      'src/math.js',
++    ])
++    expect(built.switched.map(entry => entry.file)).toStrictEqual([
++      '/p/src/other.js',
++    ])
++  })
++
++  it('does not blame a switched file that no failing test file reached or loaded', async () => {
++    /**
++     * `/t/a.test.ts` fails to load while the switched files are served, before
++     * any site ran, as when a switched `/src/a.ts` does not parse;
++     * `/t/b.test.ts` only uses `/src/b.ts` and passes.
++     */
++    let world: FakeWorld = {
++      onDry: (result: DryRunResult, request) =>
++        request.instrumented ?
++          {
++            ...result,
++            files: result.files.map(file =>
++              file.file === '/t/a.test.ts' ?
++                {
++                  ...file,
++                  errors: ['SyntaxError: Unexpected token'],
++                  loadFailed: true,
++                  covers: [],
++                }
++              : file,
++            ),
++            tests: result.tests.filter(test => test.file !== '/t/a.test.ts'),
++          }
++        : result,
++      tests: [
++        { file: '/t/a.test.ts', covers: ['a1'], id: 'ta' },
++        { file: '/t/b.test.ts', covers: ['b1'], id: 'tb' },
++      ],
++    }
++    let fake = createFakeAdapter(world)
++    let switched: SwitchedFile[] = [
++      { switched: 'hit("a1")', file: '/src/a.ts', original: '' },
++      { switched: 'hit("b1")', file: '/src/b.ts', original: '' },
++    ]
++    let session = await fake.adapter.start({
++      workDirectory: '/work',
++      concurrency: null,
++      files: switched,
++      root: '/',
++    })
++    let phase = await runDryPhase(session, {
++      displays: new Map([
++        ['/src/a.ts', 'src/a.ts'],
++        ['/src/b.ts', 'src/b.ts'],
++      ]),
++      mutantFiles: new Map([
++        ['a1', '/src/a.ts'],
++        ['b1', '/src/b.ts'],
++      ]),
++      report: () => {},
++      repeat: false,
++      root: '/',
++      switched,
++    })
++
++    // `src/b.ts` broke nothing: its only test passes with it switched.
++    expect([...phase.errors.keys()]).not.toContain('src/b.ts')
++  })
++})

@@ -1,0 +1,34 @@
+20db8ac test: reproduce BUG-312 tail return null skipped as equivalent
+9275c82 test: reproduce BUG-206 covered mutant reported as NoCoverage
+0dfa22d test: move BUG-200..204 fixtures to test/fixtures and harden BUG-204
+84dbff5 test: reproduce BUG-204 a slowed but passing test ends as a timeout
+72c2b63 test: reproduce BUG-106 regex starting with <!-- breaks the switched module
+7ad90ca test: reproduce BUG-311 template handler statements dropped without a trace
+38b91a7 test: target loop-advance in the BUG-303 push case
+6b1e3de test: reproduce BUG-510 node:test probe crashes on a preload that prints
+27abca7 test: reproduce BUG-500..509 config loading, signals, leaks and json output
+72af81b test: tidy BUG-905 reproduction
+738f115 test: reproduce BUG-104 switched text grows quadratically with a literal
+645ed02 test: reproduce BUG-905 an unparsable replacement drops every switched file
+f97c2ea test: reproduce BUG-310 exit tests of multi-exit endless loops skipped as timeouts
+b4efcf6 test: reproduce BUG-508 vitest projects with their own root fail the dry run
+bc8d828 test: reproduce BUG-507 vitest never switches modules loaded with require
+b557431 test: reproduce BUG-502 hung vitest worker never stopped without ps
+a5dbf34 test: reproduce BUG-407 reinstalling mootant drops the verdict cache
+ecb7aba test: reproduce BUG-402..404, BUG-410, BUG-412, BUG-419 stale or unused verdict cache
+caa1416 test: reproduce BUG-203 ignored unhandled error still kills the mutant
+8223261 test: reproduce BUG-202 fast mode takes a hot finite loop for a timeout
+d81d35d test: reproduce BUG-309 behavioral JSX attribute strings skipped as noise
+400ca94 test: extend BUG-901 with a load error before the mutant is reached
+a000be1 test: reproduce BUG-308 x + 0 swap skipped for an unknown operand
+64abdc2 test: reproduce BUG-201 verdict of a mutant depends on the other files of the run
+4cf1d87 test: reproduce BUG-100..103 dry-run collateral drop, globalThis, source maps, names
+aab5192 test: reproduce BUG-200 hit limit turns a memo-off mutant into a timeout
+3f0a106 test: reproduce BUG-307 numeric || 0 NaN guard skipped as equivalent
+ec724b0 test: reproduce BUG-904 a local globalThis binding hides mutant sites
+8345e33 test: reproduce BUG-306 error codes skipped as error messages
+2838249 test: reproduce BUG-305 --since drops mutants whose owner is on an unchanged line
+5033f22 test: reproduce BUG-900..902 isolated units and dry run misread transient failures
+aae7312 test: reproduce BUG-304 R6 skips constants of a returned local read elsewhere
+98b82e4 test: reproduce BUG-300..303 false skips of solitary, O19 and loop-advance
+cfb15f5 test: reproduce BUG-401 --since loses lines of a file behind a changed link

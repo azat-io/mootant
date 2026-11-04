@@ -1,0 +1,1614 @@
+{
+ "propose:adoption": {
+  "lens": "Принятие пользователями и агентами: установка и первый запуск, документация, agent skill и --json, CI, совместимость (раннеры, Node, менеджеры пакетов, монорепо), релиз 0.1/1.0, позиционирование против Stryker. Вопрос: что мешает начать пользоваться Mootant и рекомендовать его.",
+  "problems": [
+   {
+    "title": "Установить Mootant по документации нельзя: на npm лежит заглушка 0.0.0",
+    "kind": "problem",
+    "severity": "critical",
+    "effort": "S",
+    "problem": "`npm install -D mootant` из readme, getting-started и лендинга ставит OIDC-заглушку `mootant@0.0.0` без `bin` («DO NOT USE THIS PACKAGE»). После неё `npx mootant run src` падает с `could not determine executable to run`. Из GitHub пакет тоже не ставится: в `files` только bin и dist, `prepare` нет. Это блокирует 100 % новых пользователей и агентов. Кто уже поставил заглушку, получил в package.json `^0.0.0`, и этот диапазон не подтянет 0.1.0. В 02-bugs итоговая оценка high («шаг релиза, а не дефект кода»), но для принятия это блокер №1.",
+    "evidence": "06-ux-and-agents.md §6.1 шаг 1 (стр. 57–76); bugs/ux.md BUG-653; data/verification/decisions.md:23 (воспроизведён; ловушка `^0.0.0`; та же команда в docs/components/Hero.astro:54); readme.md:77; docs/content/guide/getting-started.mdx:68; package.json:45-48; 07-compat-and-release.md «Главное» п.1 (тегов и changelog нет).",
+    "benefit": "Без публикации недоступно всё остальное. Первая команда из документации начинает работать.",
+    "risks": "Опубликованная версия закрепит в ожиданиях пользователей формат конфига, `schemaVersion: 3`, схему id и коды выхода. Ломающие правки (коды выхода, корень проекта) дешевле всего сделать в 0.x и объявить в changelog. Первый `changelogen --release` соберёт всю историю (07 §7.4.4 п.9).",
+    "verify": "В пустом каталоге `npm init -y && npm i -D vitest@5 mootant && npx mootant --version` печатает `mootant/0.1.0`. `npm view mootant dist-tags.latest` = 0.1.0. После релиза `npm view mootant@0.1.0 dist.attestations` не пуст.",
+    "related_bugs": [
+     "BUG-653"
+    ]
+   },
+   {
+    "title": "Agent skill, заявленный главным отличием, отсутствует",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Skill обещают описание пакета («ships with an agent skill», package.json:4), лендинг («the agent skill in the box», docs/components/Hero.astro:30, Skill.astro:22-41), getting-started (:136-145) и пункт меню «Agent skill» (Header.astro:15). При этом `npx skills add azat-io/mootant` отвечает «No skills found» с exit 1, а `/agent-skill` даёт 404. В README skill не упомянут вовсе (readme.md:51-64). Первый же пользователь, пришедший ради агентов, упирается в невыполненное обещание. В 02-bugs как дефект кода это medium и low, но с точки зрения позиционирования это high.",
+    "evidence": "06 §6.3 (стр. 428–464), analysis/ux/skills-add-output.txt; BUG-651 и BUG-650 (decisions.md:24-25). Черновик analysis/ux/SKILL.draft.md (129 строк, около 1,7 тыс. токенов) проверен CLI skills 1.7.6: находится и ставится (06 стр. 480–485).",
+    "benefit": "Отличие от Stryker начинает работать. Агент получает правила цикла: `--json` → тест → `--mutant`, вызов через `npx`, что делать с эквивалентными мутантами, не трогать исходники.",
+    "risks": "Skill нужно держать в синхроне с флагами CLI и полями JSON. Поэтому references стоит генерировать из docs/content/mutators/*.md, а в CI проверять frontmatter, ссылки и `npx skills add . --list`.",
+    "verify": "`npx skills add azat-io/mootant --list` показывает `mootant`. Агент на docs/demo по фразе «fix the surviving mutants in src» убивает `q31p` и подтверждает это через `--mutant`.",
+    "related_bugs": [
+     "BUG-651",
+     "BUG-650"
+    ]
+   },
+   {
+    "title": "Поддержаны только Vitest 5 и node:test, а это отрезает ядро аудитории",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "L",
+    "problem": "Vitest 5 вышел 2026-09-03. На Vitest 4 и 3 первый запуск обрывается сообщением «mootant runs Vitest 5, but … has Vitest 4.1.12». Среди пользователей Stryker около 80 % работают через vitest-runner, а он поддерживает `vitest >=2`. Vitest 4 и 3 ещё получают патчи. Долю v5 среди скачиваний измерить не удалось; гипотеза — это меньшинство. Снять проверку версии мало: адаптер завязан на API пула и раннера v5. Jest — около 15 % рынка Stryker, его поддержка — XL.",
+    "evidence": "adapters/vitest/detect-vitest.ts:45; adapters/vitest/start-vitest-session.ts:58-64; data/compat-experiments.md M11 (Vitest 4.1.12 со снятой проверкой падает с `reading 'logger'` и таймаутом пула) и M13 (скачивания); 07 §7.1.5–7.1.6 (стр. 176–246); 03 §3.4, §6.3; 01-architecture-adapters.md:53-57.",
+    "benefit": "На запуске 0.x попробовать Mootant смогут в разы больше проектов. Ценность этой работы максимальна сейчас и падает по мере перехода экосистемы на v5.",
+    "risks": "Одному мейнтейнеру придётся вести два варианта интеграции с пулом. Без контрактного набора тестов на общей фикстуре (01-architecture-adapters.md §12 п.1) легко потерять изоляцию мутантов.",
+    "verify": "Блок «verdict equivalence» в test/adapters/vitest/index.test.ts зелёный на Vitest 4.1.x. На двух реальных проектах с v4 вердикты совпадают с ручным применением мутантов.",
+    "related_bugs": []
+   },
+   {
+    "title": "CI-гейт `--since` молча пропускает непроверенные изменения",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Мутанты по изменённым строкам отбираются уже после правил пропуска. Если мутант изменённой строки пропущен как поглощённый «владельцем», а владелец стоит на неизменённой строке, мутант не возвращается. В итоге `--since … --threshold 80` показывает «score none» и выходит с 0, хотя полный прогон того же кода даёт 0 % и exit 1. Без мутантов любой порог считается пройденным (cli.mdx:66-68), а раннер даже не стартует (core/run-mutants.ts:241). Строк, где правка одной этой строки даёт ноль мутантов: 357 в core и 268 в perfectionist. Это главный CI-сценарий из README (readme.md:63-64).",
+    "evidence": "02-bugs.md BUG-305 (итог high; воспроизведён 3/3; масштаб независимо пересчитан); decisions.md:49; bug-prompts/BUG-305.md; core/files/select-changed-mutants.ts:17-80, core/list-mutants.ts:70-90.",
+    "benefit": "Порог в PR перестаёт давать ложный зелёный результат, и главной CI-функции можно доверять.",
+    "risks": "На `--since` вернётся часть мутантов, которых полный прогон считает избыточными, поэтому шума в PR станет немного больше. Нужна диагностика на случай «на изменённых строках были кандидаты, а мутантов ноль».",
+    "verify": "test/repros/BUG-305.test.ts из ветки experiment/bug-repros проходит. На analysis/data/skips/fx-since команда `--since HEAD --threshold 80` находит мутанта и выходит с кодом 1.",
+    "related_bugs": [
+     "BUG-305"
+    ]
+   },
+   {
+    "title": "Монорепо с `test.projects` и собственным `root` не запускаются",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Самая распространённая схема монорепо (`projects: ['packages/*']`) из корня падает с «Tests fail without mutants … The test runner did not report this file», хотя `vitest --run` зелёный. Плагин Mootant попадает только в корневой Vite-сервер, и проекты со своим root остаются ненастроенными. Запуск из каждого пакета работает, но документация этот обход не называет.",
+    "evidence": "BUG-508 (итог high; воспроизведён 2/2 и на независимой фикстуре; decisions.md:28); bug-prompts/BUG-508.md (adapters/vitest/start-vitest-session.ts:91-117, create-mootant-plugin.ts:32-55); data/compat-experiments.md M10 (npm и pnpm workspaces при запуске из пакета работают).",
+    "benefit": "Начинают работать монорепо. Это частая форма как раз у библиотек, которые первыми берут мутационное тестирование.",
+    "risks": "Внедрение плагина в Vite-конфиг каждого проекта опирается на внутренности Vitest; оценка M — гипотеза. Для таких проектов нужно сохранить проверку `checkProjectConfig`.",
+    "verify": "test/repros/BUG-508.test.ts проходит. На фикстуре из двух проектов со своим root и одного без него вердикты совпадают с ручным применением мутантов. `pool: 'vmThreads'` в проекте с root по-прежнему даёт ошибку.",
+    "related_bugs": [
+     "BUG-508"
+    ]
+   },
+   {
+    "title": "Тихо неверный результат: CJS через `require()` под Vitest и yarn PnP с node:test",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Под Vitest модули, загруженные через `require()` или `createRequire`, не переключаются. На фикстуре все 5 мутантов `b.cjs` получают NoCoverage, хотя при ручном применении 4 из 5 убиваются. Диагностика — только общий `never-served`, а документация обещает поддержку `.cjs` без оговорок. В yarn 4 PnP с node:test все мутанты получают NoCoverage, score 0 %, exit 0, и есть лишь предупреждение. Новый пользователь делает вывод, что инструмент не видит его тестов.",
+    "evidence": "BUG-507 (итог high; decisions.md:27; bug-prompts/BUG-507.md); docs/content/guide/compatibility.mdx:34; BUG-820 (medium; data/compat-experiments.md M10: 12/12 no coverage, exit 0); adapters/node-test/start-node-test-session.ts:123-132; 07 §7.2.3 R4.",
+    "benefit": "Legacy-проекты на CJS и пользователи yarn PnP получают либо верный результат, либо понятную ошибку вместо ложных 0 %.",
+    "risks": "Переключение `require()` в раннере Vitest — новая точка переключения, и для неё нужна проверка изоляции. Ошибку для PnP стоит выдавать, только если ни один процесс не увидел переключаемых модулей.",
+    "verify": "test/repros/BUG-507.test.ts проходит. Фикстура M10 (yarn 4 PnP, node:test) завершается ошибкой с советом `nodeLinker: node-modules` и ненулевым кодом.",
+    "related_bugs": [
+     "BUG-507",
+     "BUG-820"
+    ]
+   },
+   {
+    "title": "CI не работает из коробки: кэш сбрасывается, shallow checkout ломает `--since`",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "(1) Штамп сборки в ключе кэша — mtime файла пакета, а `npm ci` ставит файлам новое время. После восстановления `actions/cache` переиспользуется 0 вердиктов из 67. (2) Тесты, которые перечисляют `process.env` (spread, дочерние процессы, RuleTester), зависят от хэша всех переменных. `GITHUB_RUN_ID` и подобные меняются на каждом прогоне, поэтому кэша у таких тестов в CI нет никогда. (3) На мутант хранится одна запись: матрица Node 22/24 сбрасывает всё. Прогон, прерванный по `timeout-minutes`, не сохраняет ничего. (4) Обычный `actions/checkout` (глубина 1) даёт `unknown git revision \"origin/main\"` без подсказки, а документация ограничивается одной фразой без YAML. При этом README и лендинг обещают кэш в CI и «Fast reruns».",
+    "evidence": "06 §6.2 (таблицы на стр. 288–294 и 322–330; analysis/ux/ci-since-check.txt, ci-cache-check.txt); core/cache/prepare-run-cache.ts:164; BUG-407 (поднят до medium из-за CI, decisions.md:39); bugs/perf.md BUG-701 (смоук perfectionist: 0 из 21 вердикта из кэша, после снятия переменной hyperfine — 19 из 21); adapters/shared/index-environment-hashes.ts:9-17; BUG-414, BUG-412, BUG-600; core/git/get-merge-base.ts:33-35 (BUG-406); getting-started.mdx:132-134; readme.md:63-64; docs/components/Why.astro:26-28.",
+    "benefit": "Полный прогон main и проверка PR берут вердикты из кэша. Первый CI-конфиг собирается по рецепту, без чтения кода.",
+    "risks": "Штамп должен по-прежнему отличать пересборку неопубликованной версии, поэтому вместо mtime нужен вшитый id сборки. Из `*`-хэша можно исключать только идентификаторы прогона CI, иначе появятся устаревшие вердикты.",
+    "verify": "Сценарий ci-cache-check.txt без `touch`: после второго `npm ci` в выводе «Reused cached verdicts for 67 of 79». analysis/bench/repro/bug-701/repro.sh с разными `GITHUB_RUN_ID` попадает в кэш. Клон глубиной 1 печатает совет про `fetch-depth`.",
+    "related_bugs": [
+     "BUG-407",
+     "BUG-701",
+     "BUG-414",
+     "BUG-412",
+     "BUG-600",
+     "BUG-406"
+    ]
+   },
+   {
+    "title": "Машинный интерфейс для агентов и CI ненадёжен",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "(1) Любой вывод внутри процесса Mootant (`console.log` в vitest.config, vite-plugin-svelte, баннер dotenv) попадает в stdout и ломает `JSON.parse`. (2) При ошибке с `--json` stdout пуст, а текст ошибки уходит в stderr. (3) Exit 1 означает сразу «порог не пройден», «тесты падают без мутантов» и «неверный аргумент». (4) Команда перепроверки в тексте, в поле `recheck` и в HTML печатается без `npx`, поэтому при копировании даёт `command not found`; агент в skill-session.ansi вызывает её так же. Различить исходы агент и CI могут только разбором stderr.",
+    "evidence": "BUG-509 (итог medium, decisions.md:31); cli/run-mutation.ts:73-75, 83-94; cli/index.ts:15-19; docs/content/guide/cli.mdx:125-126; BUG-652 (low; cli/report/format-command.ts:77; docs/components/skill-session.ansi:3,14); 06 §6.4, «чего не хватает» (стр. 644–654); 03 §6.11 (коды выхода cargo-mutants).",
+    "benefit": "Агенты и CI получают надёжный контракт без разбора текста. Это ещё и дешёвое отличие от Stryker, у которого есть только exit 1 по `break`.",
+    "risks": "Смена кодов выхода ломает совместимость: её стоит сделать в 0.x и записать в changelog. Перехват чужого stdout не должен прятать вывод тестов в текстовом режиме.",
+    "verify": "`mootant run src --mutant zzzz --json` печатает JSON с error.code = unknown-mutant и выходит с кодом, отличным от порогового. stdout фикстуры test/repros/BUG-509 парсится как JSON. Скопированная строка `re-check one:` запускается в bash.",
+    "related_bugs": [
+     "BUG-509",
+     "BUG-652"
+    ]
+   },
+   {
+    "title": "Прогон может зависнуть или оставить процессы: в контейнерах CI и у агентов",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Без совместимого `ps` (slim, distroless; про BusyBox — гипотеза) зависший воркер Vitest не убивается, и прогон висит до таймаута джобы. Открытый хэндл из `globalSetup` не даёт `mootant run` завершиться после отчёта, хотя `vitest --run` выходит. Если SIGTERM или SIGHUP получает только процесс CLI (`child.kill()` харнесса агента, IDE, отмена CI), остаются процессы-сироты, которые занимают 30–100 % CPU. Windows не проверяется нигде; по коду `stopProcessGroup` там, вероятно, не убивает процесс (гипотеза, BUG-511 high).",
+    "evidence": "BUG-502 (medium; M14: прогон висел дольше 100 с, независимо data/cli/e1a-vt-hang-no-ps.txt; adapters/vitest/stop-hung-worker.ts:19-24, 42-47); BUG-506 (medium); BUG-601 (medium; decisions.md:15 — оценка оставлена из-за агентов; decisions.md:57 — сироту верификатора пришлось завершать вручную); BUG-511 (гипотеза; adapters/node-test/stop-process-group.ts:9-19); .github/workflows/test.yml — все джобы на `ubuntu-latest`.",
+    "benefit": "CI-джобы и сессии агентов не висят часами и не жгут CPU. Появляется честный ответ, работает ли Mootant на Windows.",
+    "risks": "Если убивать воркеры по карте `spawns` пула, нужно учесть, что карта сбрасывается на каждый план (07 §7.2.3 R1). Принудительный выход после отчёта может оборвать teardown пользователя; ориентир — `teardownTimeout` Vitest.",
+    "verify": "Тест M14 без `ps` в PATH даёт вердикт Timeout. Фикстура BUG-506 завершается. После SIGTERM процессу CLI не остаётся живых воркеров, а TMPDIR пуст (скрипт M8). Smoke-джоб на windows-latest проходит.",
+    "related_bugs": [
+     "BUG-502",
+     "BUG-506",
+     "BUG-601",
+     "BUG-511",
+     "BUG-600"
+    ]
+   },
+   {
+    "title": "Позиционирование против Stryker не подкреплено проверяемыми фактами",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Раздел README «Why Mootant» абстрактен и не содержит ни одного проверяемого факта (readme.md:51-64). В документации Stryker не упомянут ни разу: нет ни сравнения, ни гайда миграции. Утверждение «быстрее Stryker» пока не доказано: в смоуке под нагрузкой Mootant тратил меньше времени на полезного мутанта, но больше на мутанта вообще, а финальных цифр нет. Тезис «меньше шума» уязвим в TypeScript: 25–29 % мутантов Mootant на строгом TS не компилируются, а Stryker отсекает такие мутанты своим checker-ом (в смоуке — ценой многократного замедления). Пример вывода в getting-started (26 мутантов, score 96,15 %) не совпадает с прогоном docs/demo (99 мутантов, 67,35 %).",
+    "evidence": "readme.md:51-64; поиск «stryker» по docs/ и readme ничего не находит; 03 §7.2 (стр. 1563–1594), §2.5 и §6.1 (стр. 1210–1263); 04-performance.md:183, 187, 199-211 (смоук, только качественно); 06 §6.6 D7, D10; docs/components/hero-output.ansi:1,21.",
+    "benefit": "У пользователя появляется что пересказать коллеге, и сравнение со Stryker меньше разочаровывает. Проверка типов только у выживших мутантов — дешёвое преимущество перед checker-ом Stryker.",
+    "risks": "Цифры против Stryker можно публиковать только после бенчмарка раздела 4 с описанной методикой. Фильтр по типам скрывает мутантов, валидных в рантайме, поэтому нужна настройка `typecheck: 'off'`. Доля некомпилирующихся среди выживших пока не измерена (гипотеза).",
+    "verify": "В README 3–4 факта, и каждый ведёт на воспроизводимый замер. Есть страница «Mootant and Stryker» с таблицей соответствия. Пример вывода совпадает с прогоном docs/demo.",
+    "related_bugs": []
+   },
+   {
+    "title": "Цикл агента и тёплые перезапуски каждый раз платят за старт раннера и dry run",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "L",
+    "problem": "Каждая перепроверка через `--mutant` и каждый тёплый прогон стартуют раннер и делают dry run покрывающих тест-файлов, даже если все вердикты берутся из кэша. На крошечном проекте это 4 с, а dry run `core/text` самого Mootant идёт 4 мин 37 с. В смоуке на внешних проектах dry run занимал подавляющую часть тёплого прогона. На большом проекте цикл агента «тест → перепроверка» растягивается на минуты, и обещание «Fast reruns» выполняется лишь частично.",
+    "evidence": "00-baseline.md:174, 202-210; 04-performance.md:184 (смоук, качественно); 06 §6.3 п.6 и R11 (стр. 879–891); experiments/prototypes.md:20 (P3 — полный кэш без запуска раннера: вердикты совпали в 22 из 22 сценариев, оценка L); docs/components/Why.astro:26-28.",
+    "benefit": "Перепроверка без изменений в тестовом файле занимает секунды. Это и задел для дешёвого MCP в будущем (06 §6.5).",
+    "risks": "Устаревшее покрытие ведёт к неверному выбору тестов и ложным Survived или NoCoverage. P3 покрывает только случай «ничего не изменилось»; частичный dry run — отдельная работа на L.",
+    "verify": "На точках m-warm и m-one стенда analysis/bench видна доля dryRun в total. analysis/tools/compare-verdicts.mjs --strict показывает те же статусы, что у базы.",
+    "related_bugs": []
+   },
+   {
+    "title": "К 1.0 не определены контракты стабильности",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "L",
+    "problem": "Добавление мутатора в `recommended` или ослабление эвристики меняет score и ломает CI с `--threshold`, но semver-политики для пресетов нет, а changelog различает только feat, fix и perf. В главный вход попали 22 типа SPI адаптеров и внутренние `classifyTry` и `resolveSwitchedText`. В `MutatorContext` — 40 syntax-хелперов, в публичных типах — AST `oxc-parser` версии 0.x. Типы JSON-отчёта при этом не экспортируются. Корень проекта — каталог конфига, найденного поиском вверх до $HOME (вне $HOME — до /). Релизный workflow выдаёт `id-token: write` всему джобу, где собираются devDependencies; тестов на теге нет; GitHub Release создаётся до `npm publish`.",
+    "evidence": "07 §7.4.1–7.4.4 и чек-лист §7.4.6 (стр. 516–726); 01-architecture.md ARCH-1, ARCH-10 (стр. 273, 282) и §8.1 (стр. 929); core/index.ts (типов отчёта нет); .github/workflows/release.yml:9-13, 44-53; BUG-826 (core/config/load-config.ts:86-108,133); changelog.config.ts:4-21.",
+    "benefit": "Команды ставят порог в CI без опасения, что minor-версия его сломает. Авторы плагинов и адаптеров знают, на что можно опираться.",
+    "risks": "Сужение API ломает недокументированных потребителей, но сейчас их нет, поэтому до 1.0 это дешевле всего. Правило «новый мутатор в recommended = major» замедлит развитие пресета; полигоном для новых мутаторов может служить `strict`.",
+    "verify": "В CI есть API-отчёт (api-extractor или diff `.d.ts`). В PR, которые трогают core/presets, core/hints или core/skips, проверяется снапшот числа мутантов `mootant list` на эталонных фикстурах. Публикация из отдельного джоба проверена через `--dry-run`.",
+    "related_bugs": [
+     "BUG-826"
+    ]
+   }
+  ],
+  "improvements": [
+   {
+    "title": "Опубликовать 0.1.0 и закрыть ловушки первого релиза",
+    "kind": "improvement",
+    "severity": "critical",
+    "effort": "S",
+    "problem": "Установка из документации не работает: на npm заглушка 0.0.0.",
+    "evidence": "BUG-653; decisions.md:23; 07 §7.4.4 (п. 2, 4–6, 8–9); 00-baseline.md:82-95 (после `pnpm build` `test:astro` краснеет, потому что tsconfig.json не исключает dist, и `release:check` проваливается).",
+    "benefit": "Релиз идёт через уже настроенный OIDC-workflow. До тега нужны правки на S: `exclude: [dist]` в tsconfig.json; убрать `--no-git-checks` и права `packages`/`models`; выполнить `npm pkg fix`; добавить `.mootant/` в .gitignore до `git add .`; создавать Release после publish. В заметках к 0.1.0 указать `npm i -D mootant@latest` для тех, кто застрял на `^0.0.0`. Отдельное предложение — `npm deprecate mootant@0.0.0`.",
+    "risks": "Релиз закрепит текущие контракты. Ожидаемые в 0.x ломающие правки (коды выхода, корень проекта) нужно объявить в changelog.",
+    "verify": "`npm init -y && npm i -D vitest@5 mootant && npx mootant --version` печатает `mootant/0.1.0`. `pnpm release:check` зелёный и после повторной сборки.",
+    "related_bugs": [
+     "BUG-653"
+    ]
+   },
+   {
+    "title": "Положить проверенный черновик skill и починить ссылку `/agent-skill`",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "S",
+    "problem": "Обещанный skill не устанавливается, а пункт меню ведёт на 404.",
+    "evidence": "analysis/ux/SKILL.draft.md проверен командами `npx skills add <repo> --list` и `-y` (06 стр. 480–485); docs/components/Header.astro:15; BUG-651, BUG-650.",
+    "benefit": "Минимальный шаг — один файл `skills/mootant/SKILL.md` (раскладка как в azat-io/ghostwriter) и ссылка на раздел getting-started вместо 404. Следующий шаг (M): `references/` из разделов «Kill a surviving mutant» (218–360 токенов на мутатор) и проверка skill в CI.",
+    "risks": "Skill может разойтись с CLI. Оговорки черновика про `npx` и гранулярность игнора нужно обновить после исправления BUG-652 и появления игнора по id.",
+    "verify": "`npx skills add azat-io/mootant --list` показывает `mootant`. Ссылка в шапке сайта не ведёт на 404 (проверка ссылок после `astro build`).",
+    "related_bugs": [
+     "BUG-651",
+     "BUG-650"
+    ]
+   },
+   {
+    "title": "Отшлифовать первый запуск: `npx` в подсказках, `.mootant/.gitignore`, проверка версии Node",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Скопированная подсказка `re-check one: mootant run src --mutant 69kd` даёт `command not found`. Отчёт `.mootant/report.html` с исходниками и первыми строками ошибок тестов легко попадает в коммит. На Node ниже 20.19 пользователь видит `toSorted is not a function` вместо сообщения о версии.",
+    "evidence": "BUG-652 (cli/report/format-command.ts:77, cli/html/client/render-mutant-panel.ts:197); 06 §6.1 шаг 4 (в тестовом проекте `git add -A` закоммитил отчёт на 4223 строки); cli/html/write-html-report.ts:14; BUG-825; BUG-515 (bin/mootant.js:3-5).",
+    "benefit": "Каждая подсказка работает при копировании и у человека, и у агента. Отчёт с кодом не утекает в git. Вместо стека — понятная ошибка версии Node.",
+    "risks": "Менеджер пакетов можно угадать неверно (по lockfile или `npm_config_user_agent`), поэтому в JSON стоит дополнительно отдавать массив `recheckArgs`. Созданный `.gitignore` не должен перезаписывать файл пользователя.",
+    "verify": "Строка `re-check one:` из TTY-отчёта запускается в bash. `git status` чист после `--html`. Запуск bin на Node 18 печатает требуемую версию.",
+    "related_bugs": [
+     "BUG-652",
+     "BUG-515",
+     "BUG-825"
+    ]
+   },
+   {
+    "title": "Починить кэш в CI: штамп сборки без mtime, идентификаторы прогона CI вне `*`-хэша",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Кэш не переживает `npm ci` (BUG-407). Тесты, перечисляющие env, теряют кэш из-за `GITHUB_RUN_ID` и подобных переменных (BUG-701).",
+    "evidence": "core/cache/prepare-run-cache.ts:164; analysis/ux/ci-cache-check.txt (0 из 67, с `touch` — 67 из 67); adapters/shared/index-environment-hashes.ts:9-17 (в VOLATILE 7 имён); bugs/perf.md BUG-701.",
+    "benefit": "Вшить id сборки через `define` в vite.config.ts вместо mtime (S). Добавить в VOLATILE переменные прогона CI (`GITHUB_RUN_*`, `RUNNER_*`, `CI_JOB_ID` и т. п.) и применять их только к `*`-хэшу (S–M). После этого полный прогон main и PR берут вердикты из кэша, как обещает README.",
+    "risks": "Если id одинаков у разных пересборок неопубликованной версии, она получит чужие вердикты; id лучше выводить из хэша собранного кода. Лишнее исключение переменных окружения приведёт к устаревшим вердиктам.",
+    "verify": "Сценарий ci-cache-check без `touch` печатает «Reused cached verdicts for 67 of 79». bug-701/repro.sh с разными `GITHUB_RUN_ID` попадает в кэш.",
+    "related_bugs": [
+     "BUG-407",
+     "BUG-701"
+    ]
+   },
+   {
+    "title": "Страницы «CI» и «Troubleshooting» с проверенным workflow; подсказка для shallow-клона",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Первый CI-конфиг ломается в каждой детали: глубина клона 1 → unknown revision, кэш, PR из форков, артефакты. Сообщения об ошибках никуда не ведут.",
+    "evidence": "analysis/ux/mootant-workflow.yml (actionlint без замечаний); ci-since-check.txt (`fetch-depth: 2` + `--since HEAD^1` работает); core/git/get-merge-base.ts:33-35 (BUG-406); 06 §6.6 D3, D8; 07 §7.5 п. 4–6; BUG-822.",
+    "benefit": "Готовый YAML: `fetch-depth: 0` или `2` с `HEAD^1`; ключ кэша с ОС, мажорной версией Node и lockfile; временный обход BUG-407; ограничение PR из форков; `timeout-minutes`. В compatibility.mdx — контейнеры без `ps`, PnP с node:test, обязательная локальная установка, yarn 1 с peer `vite`, монорепо (запуск из пакета до исправления BUG-508). В коде — совет про `git fetch` и `fetch-depth` в сообщении `unknown git revision`.",
+    "risks": "Workflow ещё не запускался на GitHub (06 §6.8): перед публикацией его нужно прогнать на тестовом репозитории. Обходы удалить из документации после исправлений.",
+    "verify": "Workflow зелёный на тестовом PR. Клон глубиной 1 печатает подсказку. Сообщения об ошибках ссылаются на Troubleshooting.",
+    "related_bugs": [
+     "BUG-406",
+     "BUG-822"
+    ]
+   },
+   {
+    "title": "README и страница «Mootant и Stryker» на проверяемых фактах",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Убедить пользователя нечем, пересказать коллеге нечего, пути миграции со Stryker нет.",
+    "evidence": "readme.md:51-64; 03 §3.8, §7.1–7.2 (стр. 1513–1594); 06 §6.6 D7, D10; docs/components/hero-output.ansi.",
+    "benefit": "В README — 3–4 факта: 5 пакетов и 11,8 МБ против 168 пакетов и 61,5 МБ; `--since` из коробки (у StrykerJS его нет, #2843); каждый пропуск объяснён в `list --skipped`; нативные Vitest 5 и node:test; строка про skill (после пункта о skill). На странице — соответствия: `// Stryker disable` → `mootant-ignore-*`, `thresholds.break` → `threshold`, `excludedMutations` → `'off'`, `incremental` → кэш, `--mutate` → `--since`/`--mutant`, имена мутаторов (03 §2.1), а также чего пока нет. hero-output.ansi пересобрать из docs/demo.",
+    "risks": "Не писать «быстрее» и «no equivalent mutants» до бенчмарка и аудита эвристик (03 §7.2).",
+    "verify": "Каждый факт README ссылается на воспроизводимый замер. Вывод в getting-started совпадает с `mootant run src` в docs/demo.",
+    "related_bugs": []
+   },
+   {
+    "title": "Вернуть в выборку `--since` мутантов, чей владелец вне изменённых строк",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Гейт PR проходит, хотя изменённая строка не проверена ни одним мутантом.",
+    "evidence": "BUG-305; bug-prompts/BUG-305.md, раздел «Ожидаемое поведение» (для ignore-комментариев так уже работает `context.runs`).",
+    "benefit": "Пропуск по владельцу действует, только если владелец запускается в этом же прогоне. Добавляется диагностика «на изменённых строках были кандидаты, а мутантов ноль». Главная CI-функция перестаёт давать ложный зелёный результат.",
+    "risks": "В PR станет немного больше мутантов. То же исправление нужно применить к `--mutant` и узким путям: там отбор тоже идёт после генерации.",
+    "verify": "test/repros/BUG-305.test.ts проходит. analysis/tools/skips/since_exposure.py показывает 0 строк без мутантов на core и perfectionist.",
+    "related_bugs": [
+     "BUG-305"
+    ]
+   },
+   {
+    "title": "Контракт `--json`: JSON при ошибке, различимые коды выхода, чистый stdout",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Агент и CI не могут отличить непройденный порог от сбоя, а чужой вывод ломает JSON.",
+    "evidence": "BUG-509; cli/run-mutation.ts:73-75, 83-94; docs/content/guide/cli.mdx:125-126; 06 R5; 03 §6.11.",
+    "benefit": "При `--json` ошибка тоже печатается в stdout как объект error (code, message, tests). Коды выхода: 0 — успех, 1 — ошибка, 2 — порог не пройден, 3 — тесты падают без мутантов (по образцу cargo-mutants). На время прогона с `--json` запись в stdout перенаправляется в stderr, а отчёт печатается напрямую. Всё это документируется как контракт.",
+    "risks": "Скрипты с проверкой `$? -eq 1` сломаются, поэтому изменение нужно объявить в changelog 0.x. Текстовый режим перехват stdout затрагивать не должен.",
+    "verify": "Тесты в test/cli на каждый код выхода. `--mutant zzzz --json` печатает JSON-ошибку. stdout фикстуры BUG-509 парсится.",
+    "related_bugs": [
+     "BUG-509"
+    ]
+   },
+   {
+    "title": "Монорепо: настраивать каждый проект Vitest с собственным `root`",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "M",
+    "problem": "`test.projects` с собственным root падает целиком.",
+    "evidence": "BUG-508; bug-prompts/BUG-508.md, раздел «Подозреваемые места в коде».",
+    "benefit": "Плагин Mootant попадает в Vite-конфиг каждого проекта (через хук `config` или `injectTestProjects`). Если какой-то проект остался ненастроенным, выводится понятная ошибка. До исправления в compatibility.mdx появляется строка «запускайте из пакета».",
+    "risks": "Решение зависит от внутренностей Vitest; оценка M — гипотеза.",
+    "verify": "test/repros/BUG-508.test.ts проходит. На фикстуре из двух проектов со своим root вердикты совпадают с ручным применением.",
+    "related_bugs": [
+     "BUG-508"
+    ]
+   },
+   {
+    "title": "CJS и PnP: переключать `require()` под Vitest, а PnP с node:test превратить в ошибку",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Ложные NoCoverage и 0 % без явной ошибки.",
+    "evidence": "BUG-507 (переключать как в adapters/node-test/preload/install-module-hooks.ts:76; тесты отбирает Vitest `related`, adapters/vitest/run-dry.ts:225-236, по decisions.md:27); BUG-820; 07 §7.2.3 R4.",
+    "benefit": "Сначала шаг на S: PnP с node:test, где не переключился ни один модуль, завершается ошибкой с советом `nodeLinker: node-modules`, а ограничение для CJS описано в compatibility.mdx. Затем шаг на M: переключение CJS в раннере Vitest и отбор тестов для таких модулей.",
+    "risks": "Новую точку переключения нужно проверить на изоляцию. Нельзя сломать проекты, где часть файлов всё-таки переключается.",
+    "verify": "test/repros/BUG-507.test.ts проходит. Фикстура M10 vt-pnp завершается с ненулевым кодом.",
+    "related_bugs": [
+     "BUG-507",
+     "BUG-820"
+    ]
+   },
+   {
+    "title": "Процессы: убивать зависших без `ps`, выходить после отчёта, единый обработчик сигналов",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Прогон зависает в slim-контейнерах, процесс не завершается после отчёта, после SIGTERM остаются сироты.",
+    "evidence": "BUG-502, BUG-506, BUG-601, BUG-600; 07 §7.2.3 R1, R5; 01-architecture-adapters.md §12 п.2.",
+    "benefit": "Зависших убивать через `ChildProcess` или карту `spawns` пула (create-forks-pool.ts:46,68), без `ps`. После отчёта завершать процесс по таймауту teardown, как делает `vitest --run`. Один обработчик SIGINT, SIGTERM и SIGHUP закрывает сессию с таймаутом, удаляет рабочий каталог и выходит с кодом 130 или 143. Для Windows — `process.kill(pid)` или `taskkill /T` (S) и smoke-джоб на windows-latest и macos-latest, либо явное заявление «не поддерживается».",
+    "risks": "Нельзя убить чужой процесс: карта сбрасывается на каждый план. Принудительный выход не должен обрывать запись кэша и отчёта.",
+    "verify": "M14 без `ps` даёт Timeout. Фикстура BUG-506 завершается. После SIGTERM процессу CLI нет сирот, TMPDIR пуст.",
+    "related_bugs": [
+     "BUG-502",
+     "BUG-506",
+     "BUG-601",
+     "BUG-600",
+     "BUG-511"
+    ]
+   },
+   {
+    "title": "`--format github` и запись JSON в файл рядом с текстовым отчётом",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Результаты остаются в логе CI. Чтобы получить и текст, и JSON, нужны два прогона.",
+    "evidence": "06 §6.2, «Аннотации, сводка, комментарий» (прототип analysis/ux/mootant-github.mjs на 130 строк: аннотации, step summary, SARIF, rdjson; результаты в analysis/ux/ci/); в cli/, core/ и adapters/ нет ни `GITHUB_`, ни `::warning`; 03 §3.7, §6.2 (в ядре Stryker аннотаций тоже нет).",
+    "benefit": "Выжившие видны во вкладке «Files changed» и в сводке шага, то есть там, где принимают решения (урок Google и Infection). `run.json` или `--json-file` избавляет от второго прогона. Это отличие от Stryker.",
+    "risks": "Шум в PR: нужен лимит (у GitHub ограничено число аннотаций на шаг) и только изменённые строки. `--json` ломать нельзя.",
+    "verify": "Снапшот-тесты вывода. Workflow на docs/demo с выжившим мутантом на изменённой строке показывает аннотацию.",
+    "related_bugs": []
+   },
+   {
+    "title": "Игнор одного мутанта по id",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Игнор эквивалентного мутанта выключает и убиваемых соседей на той же строке, и агент молча завышает score.",
+    "evidence": "06 §6.1 шаг 6 (стр. 211–217: `8yjn`, `qra1`, `m37n` — все стали Ignored), U-04, R9; docs/content/mutators.md:84-113; id не содержит позиций (core/identity/create-mutant-id.ts:51-73).",
+    "benefit": "`// mootant-ignore-next-line 8yjn: reason` выключает ровно один мутант. Skill может честно помечать эквивалентные мутанты. Это основа для файла подавлений (03 §6.4).",
+    "risks": "При правке выражения id меняется, поэтому нужна диагностика «игнор не нашёл мутанта». Это и плюс: устаревший игнор сам всплывёт.",
+    "verify": "Ignored только `8yjn`, а `qra1` и `m37n` остаются в прогоне. Есть тест диагностики устаревшего id.",
+    "related_bugs": []
+   },
+   {
+    "title": "Адаптер Vitest 4 после контрактных тестов адаптеров",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "L",
+    "problem": "На Vitest 4, вероятно, сейчас большинство пользователей Vitest (гипотеза), и для них первый запуск обрывается.",
+    "evidence": "07 §7.1.6 п.1 (оценка L); data/compat-experiments.md M11; 01-architecture-adapters.md §12 п.1 (контрактный набор тестов на общей фикстуре).",
+    "benefit": "В разы больше доступной аудитории на запуске. Контрактный набор тестов заодно станет критерием готовности для Rstest и Jest.",
+    "risks": "Второй вариант интеграции с пулом и раннером на одного мейнтейнера. Ценность падает по мере перехода на v5: делать быстро или не делать вовсе.",
+    "verify": "Блок «verdict equivalence» зелёный на Vitest 4.1.x. Два реальных проекта на v4 дают вердикты, совпадающие с ручным применением.",
+    "related_bugs": []
+   }
+  ],
+  "roadmap": {
+   "two_weeks": [
+    "Опубликовать 0.1.0 после S-правок релиза: exclude dist в tsconfig.json, без `--no-git-checks` и лишних прав, `npm pkg fix`, Release после publish, `.mootant/` в .gitignore; в заметках к релизу — про `^0.0.0` и `npm i -D mootant@latest`; `npm deprecate` для 0.0.0 (BUG-653)",
+    "Положить `skills/mootant/SKILL.md` из analysis/ux/SKILL.draft.md, ссылку `/agent-skill` направить на страницу или раздел getting-started (BUG-651, BUG-650)",
+    "Подсказки перепроверки с префиксом менеджера пакетов, `.mootant/.gitignore`, проверка версии Node в bin (BUG-652, BUG-515)",
+    "Штамп сборки без mtime (BUG-407); идентификаторы прогона CI исключить из `*`-хэша (BUG-701)",
+    "Страницы CI и Troubleshooting с проверенным workflow; совет про `fetch-depth` в ошибке `unknown git revision` (BUG-406); в compatibility.mdx — ОС, контейнеры, PnP, `npx`, yarn 1, монорепо",
+    "README: проверяемые факты и строка про skill; пересобрать hero-output.ansi из docs/demo (06 D10)",
+    "Убивать зависший воркер без `ps` (BUG-502, S–M)"
+   ],
+   "two_months": [
+    "Контракт `--json`: JSON при ошибке, коды выхода 0/1/2/3, чистый stdout (BUG-509) — пока пользователи не завязались на exit 1",
+    "`--since` возвращает мутантов, чей владелец вне выборки, плюс диагностика нуля мутантов (BUG-305)",
+    "Совместимость: монорепо `test.projects` (BUG-508), CJS через `require()` (BUG-507), PnP с node:test превращается в ошибку (BUG-820)",
+    "Процессы: выход после отчёта (BUG-506), единый обработчик сигналов и очистка (BUG-601, BUG-600), сохранение кэша по ходу прогона (BUG-418); для Windows — фолбэк и smoke-джоб windows/macos или явное «не поддерживается» (BUG-511)",
+    "`--format github` и `--json-file`; страница «Mootant и Stryker» с таблицей миграции",
+    "Контрактный набор тестов адаптеров на общей фикстуре, затем адаптер Vitest 4 (L)",
+    "Skill: references из документации мутаторов, проверка в CI, eval на docs/demo; игнор по id (R9); `--format agent` (на 55–62 % меньше токенов, чем `--json`, 06 §6.4)",
+    "Повторное использование dry run из кэша для тёплых прогонов и перепроверок (прототип P3, L) — по результатам замеров раздела 4; цифры против Stryker публиковать только по итогам бенчмарка"
+   ],
+   "before_1_0": [
+    "Semver-политика для пресетов и эвристик: новый мутатор в recommended — major, `strict` может меняться в minor; раздел changelog «влияет на score»; снапшоты числа мутантов в CI (07 §7.4.3)",
+    "Разделить API на стабильный (конфиг, defineConfig, Plugin/Preset, минимальный Mutator) и экспериментальный (`mootant/adapter`, syntax/hints); API-отчёт в CI; решить судьбу типов oxc в публичном API; экспортировать типы отчёта и JSON Schema",
+    "Объявить контракты: `schemaVersion`, схема id `mootant:mutant-id:v1`, коды выхода; ограничить поиск конфига границей проекта и печатать путь загруженного конфига (BUG-826); решить судьбу Node 20 (EOL)",
+    "Релиз: build и publish в разных джобах, минимум прав, environment, smoke-тест tarball на обоих адаптерах перед публикацией (07 §7.4.4)",
+    "Фильтр типов для выживших TS-мутантов (03 §6.1), чтобы тезис «меньше шума» выдерживал сравнение со Stryker с checker-ом",
+    "adapter-kit, затем Rstest (после его 1.0) и Jest по спросу (01-architecture-adapters.md §12: Rstest L→M, Jest XL→L); файл подавлений и базовая линия для legacy-кода (03 §6.4)",
+    "Сознательно не делать: команду `init` (06 §6.1), MCP до появления тёплого процесса и 1.0 (06 §6.5), формат TOON (на 14–20 % длиннее JSON, 06 §6.4)"
+   ]
+  },
+  "strengths": [
+   "Нулевая конфигурация и понятный первый отчёт: раннер находится сам, у каждого мутанта есть дифф, тестовый файл и команда перепроверки. Повторный прогон без изменений занимает 1,1 с («67 cached»), а после правки теста перезапускаются только затронутые мутанты, 21 из 67 (06 §6.1 шаг 3). Команда `init` не нужна (06 §6.1).",
+   "Цикл агента устроен правильно: стабильные id без строк и столбцов (core/identity/create-mutant-id.ts:51-73), `--mutant` принимает префикс от 4 символов, slim JSON содержит `recheck` и `testFiles`. Один проход агента поднял score с 35 % до 48 % и вскрыл реальную слабую проверку: `rejects.toThrow('down')` проходит при `throw undefined`. Это готовый пример для документации и skill (06 §6.1 шаг 6).",
+   "Объяснимый отсев: `list --skipped` показывает категорию, правило, причину и флаг heuristic для каждого пропуска, а Stryker выбрасывает отфильтрованных мутантов без следа (#4463) (03 §7.1 п.2; docs/content/mutators.md:26-67).",
+   "`--since` из коробки: merge base, незакоммиченные и неотслеживаемые файлы, верный выбор строк на merge-ref (06 §6.2). Если на изменённых строках нет мутантов, раннер не стартует (core/run-mutants.ts:241). У StrykerJS аналога нет (#2843).",
+   "Лёгкая установка: поверх Vitest Mootant добавляет 5 пакетов и 11,8 МБ, Stryker — 168 пакетов и 61,5 МБ. Прямых зависимостей три (03 §3.8, data/install-size.md, package.json:78-81).",
+   "Нативная поддержка Vitest 5 и node:test. На стенде из четырёх реальных проектов Mootant не потребовал своих правок копий, а Stryker — двух: падение предобработки tsconfig на TS 7 и tap-runner, счёвший зелёный файл упавшим (bench/README.md:299-300, 333-349). vitest-runner Stryker был сломан на Vitest 5 до версии 10.1.1 (#6210), нативного раннера node:test у Stryker нет (PR #6020). Оговорка: проекты для стенда отбирались на Vitest 5.",
+   "HTML-отчёт — один офлайн-файл без сетевых запросов: «Look at these first», «Where to add a test», клавиши j/Esc, выгрузка JSON (06 §6.1 шаг 4).",
+   "Безопасные умолчания: кэш учитывает прочитанные тестами файлы и переменные окружения, lockfile и версии, пишется атомарно, а испорченный файл игнорируется. Исходники Mootant не пишет, параллельные прогоны безопасны (07 §7.2.1, §7.2.4, M6). По умолчанию это строже incremental-режима Stryker (03 §3.2).",
+   "Доверие к вердикту как фундамент: адаптер поставляет факты, решения принимает ядро (01-architecture-adapters.md §11), а оракул согласен с Mootant в 127 случаях из 127 на реальном коде (02-bugs.md, «Сводка»). Это даёт одинаковую семантику score для будущих раннеров. Шаблоны Vue и Svelte мутируются, у Stryker такого нет (03 §7.1 п.9).",
+   "Гигиена поставки и конфига: SHA-пины, harden-runner, OIDC trusted publishing без NPM_TOKEN, `--ignore-scripts`, `minimumReleaseAge`; строгая валидация конфига с подсказками (07 §7.2.4)."
+  ]
+ },
+ "propose:trust": {
+  "lens": "Доверие к вердикту и корректность: ложные Killed/Survived/NoCoverage, кэш, --since в CI, инструментирование, эвристики пропуска, изоляция.\n\nИтог. Механизм вердикта надёжен. На детерминированном коде он совпадает с физическим применением мутаций: 127/127 на реальном коде в обоих режимах, 157/157 на ufo, 0 расхождений переключения на 123 867 мутантах; у каждого isolated-юнита свой процесс.\n\nДоверие подрывают места, где Mootant молча толкует нештатный сигнал или молча сужает проверку:\n- `--since` проходит порог с «score none» (BUG-305);\n- сбой окружения в юните становится ложным Survived (BUG-900), ложным Killed, который закрепляется в кэше (BUG-901), или ложной поломкой инструментирования (BUG-902, BUG-100);\n- ключ кэша не видит части входов (BUG-402, 403, 410, 419), а промахи кэша не объясняются (BUG-407: в CI 0 из 67);\n- Vitest-адаптер доверяет статическому графу Vite (BUG-507, 903, 201);\n- часть «доказательных» правил пропуска теряет полезных мутантов, а `run` не показывает число пропусков.\n\nДешевле всего доверие восстанавливает принцип «не знаю — так и скажи»:\n- неполный юнит → повтор → Error с диагностикой;\n- пропуск с владельцем действует, только если владелец запущен;\n- каждое тихое решение видно в отчёте.\n\nПочти у всех находок есть падающий тест в `experiment/bug-repros` и промпт, поэтому первые шаги — S–M.\n\nЗамечания к сводному отчёту:\n- `02-bugs.md:43` ссылается на отсутствующий `analysis/experiments/bug-repros.diff`; ветка `experiment/bug-repros` только локальная.\n- Счётчики перепроверки расходятся: в `02-bugs.md:29` — 47, в `:81` — 42, в `data/verification/decisions.md` — 43 строки. Файлов `bug-prompts/BUG-*.md` — 50 при заявленных 47.",
+  "problems": [
+   {
+    "title": "--since молча теряет мутантов изменённых строк, и CI-гейт проходит с «score none»",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Отбор --since идёт после правил пропуска. Если «владелец» пропуска (O19, R4, R5, R6, solitary) стоит на неизменённой строке, мутант изменённой строки не возвращается, и строка остаётся без мутантов. При нуле мутантов score = none, а passed = true при любом --threshold. Главный CI-сценарий из readme и getting-started молча пропускает непроверенную правку.",
+    "evidence": "02-bugs.md:90 (high по решению координатора; воспр.: да, опроверг.: нет). data/verification/decisions.md:49: у верификатора `--since HEAD --threshold 80` дал «score none» и exit 0, а полный прогон — 0 % и exit 1. Масштаб: 357 строк core и 268 строк perfectionist, где правка одной строки даёт 0 мутантов при наличии кандидатов (bugs/skips.md:19-23; bug-prompts/BUG-305.md:19-27). Код: core/run-mutants.ts:186-209 (сначала генерация с пропусками, затем selectChangedMutants); core/files/select-changed-mutants.ts:17-66 (фильтрует mutants и skipped, не зная о владельцах); cli/report/build-run-report.ts:150-155 (при score.total === null — passed). Документация обещает «subsumed changes come back when the other mutant does not run» (docs/content/mutators.md:62-63).",
+    "benefit": "Гейт на PR снова означает «изменённые строки проверены мутантами». Правки внутри if/return перестают проходить без проверки.",
+    "risks": "Без --since состав и id мутантов не должны меняться. С --since мутантов станет немного больше, и PR-прогон удлинится. Нельзя вернуть дубль, если владелец тоже попал в отбор.",
+    "verify": "test/repros/BUG-305.test.ts (experiment/bug-repros) проходит. На фикстуре analysis/data/skips/fx-since `run --since HEAD --threshold 80` даёт мутанта `door.open(user) -> ;` и exit 1. analysis/tools/skips/since_exposure.py на core и perfectionist находит 0 строк «ноль мутантов при кандидатах». Без --since вывод `list --json` побайтно прежний.",
+    "related_bugs": [
+     "BUG-305"
+    ]
+   },
+   {
+    "title": "Сбой соседнего теста превращается в ложный Survived/NoCoverage: неполный юнит считается «без улик»",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Isolated-юнит может не выполнить тесты, которые достигают мутанта, по посторонней причине. Пример: тест, не достигший мутанта, упал по таймауту, и Vitest-раннер пропустил остаток файла. Другой пример: упал или завис suite-хук. Такой юнит считается файлом без улик, и решение переходит к следующему файлу. Итог — Survived или NoCoverage без диагностики, а перепроверка `--mutant <id>` даёт Killed. В режиме по умолчанию isolated — единственный источник вердиктов, а у batch-пути такая защита есть. Как часто это случается на реальных проектах, не измерено (гипотеза: в CI чаще из-за параллельных юнитов).",
+    "evidence": "02-bugs.md:95 (high; воспроизведено на Vitest 5.0.5 и 5.1.0 и на node:test — data/verification/decisions.md:18). bugs/static-review.md:30-119: фикстуры abandon, hook, nt/hook; test/repros/BUG-900.test.ts. Код: core/run/read-isolated-unit.ts:106 (`facts.reached ? 'survived' : null`); core/run/get-unit-evidence.ts:19-21 (null превращается в 'none'); adapters/vitest/runner.ts:886-888 (abandoned после любого таймаута) и :630-637 (остальные тесты пропускаются). В IsolatedFacts нет признака «юнит неполон» (static-review.md:451-454). Тот же сток у BUG-206 (02-bugs.md:128): мутант покрыт в dry run, но не достигнут — молчаливый NoCoverage.",
+    "benefit": "Survived снова значит «все тесты покрывающих файлов прошли». Агент не пишет тесты под фантомных выживших. Полный прогон и перепроверка `--mutant` дают одинаковый вердикт.",
+    "risks": "+1 юнит на прерванный файл. На нестабильных сьютах вместо ложного Survived появятся Error с диагностикой и exit 1: это честно, но заметно. Меняется контракт адаптера (поле неполноты или список выполненных тестов), правка нужна в обоих адаптерах.",
+    "verify": "test/repros/BUG-900.test.ts (2 кейса) зелёный. Фикстуры abandon и hook (analysis/data/static-review/fixtures) дают Killed в полном прогоне. Юнит, неполный дважды подряд, даёт Error с диагностикой, а bail после убийства остаётся полным юнитом. Оракул analysis/tools/oracle на vt/* и nt/* даёт согласие не ниже прежнего (91,5 % и 96,7 %).",
+    "related_bugs": [
+     "BUG-900",
+     "BUG-206"
+    ]
+   },
+   {
+    "title": "Vitest-адаптер доверяет статическому графу Vite: require() и вычисляемый import() дают ложные NoCoverage/Survived",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "L",
+    "problem": "Vitest-адаптер переключает модули только в transform-хуке Vite, а тест-файлы для dry run отбирает статическим `vitest related`. Всё, чего Vite не видит, теряется:\n- модули из require()/createRequire исполняются без переключения, и все их мутанты получают NoCoverage (на фикстуре score 37,5 % вместо 87,5 %); диагностика never-served при этом называет неверные причины;\n- тест с вычисляемым import() не выбирается: если модуль статически импортирует слабый тест, мутант тихо получает Survived;\n- с хелпером в фабрике vi.mock вердикт зависит от набора выбранных мутантов: полный прогон даёт Killed, а `--mutant` и `--since` — NoCoverage. Это ломает цикл агента «тест → --mutant <id>».\nДокументация обещает поддержку .cjs без оговорок. node:test отбирает и переключает по фактической загрузке, и этих проблем у него нет.",
+    "evidence": "BUG-507, high: 02-bugs.md:91; decisions.md:27; bugs/cli-env.md:76-98 (vt-cjs-chain: физически убиваются 4 из 5 мутантов b.cjs, у Mootant все NoCoverage). BUG-903, low: 02-bugs.md:192, static-review.md:197-229. BUG-201, low: 02-bugs.md:125, data/isolation.md:91-96 и :146-152 (с --since — NoCoverage против Killed). Отсутствующая гарантия №2: 02-bugs.md:229-233. Код: adapters/vitest/create-mootant-plugin.ts:32-50, adapters/vitest/run-dry.ts:225-247, core/run-mutants.ts:379-395, core/run/run-dry-phase.ts:360-367 (текст never-served). Документация: docs/content/guide/compatibility.mdx:34, :56-57. Образец решения в node:test: adapters/node-test/preload/patch-module-compile.ts:14, adapters/node-test/run-dry.ts:75-80. Тот же класс в node:test + yarn PnP: все мутанты NoCoverage при exit 0 (BUG-820, 02-bugs.md:117).",
+    "benefit": "CJS-проекты под Vitest получают верные вердикты. Перепроверка `--mutant` совпадает с полным прогоном. Потеря связи «тест → модуль» становится видна в отчёте.",
+    "risks": "Патч Module.prototype._compile в воркере Vitest — второй путь загрузки; для него нужна та же сверка текста, что mismatched/resolveSwitchedText. Добавление тест-файлов с вычисляемым import() и `related` по всем перечисленным файлам удорожают dry run, в том числе в цикле агента.",
+    "verify": "test/repros/BUG-507.test.ts и BUG-201.test.ts проходят. analysis/tools/cli/physical-check.mjs на vt-cjs-chain и vt-require — 0 расхождений. `isolation.sh vt/mocks mocks jnhjhh9w 2hmxc740` даёт одинаковые вердикты при полном прогоне, `--mutant` и `--since`. Фикстура dynimport даёт Killed.",
+    "related_bugs": [
+     "BUG-507",
+     "BUG-205",
+     "BUG-903",
+     "BUG-201",
+     "BUG-820"
+    ]
+   },
+   {
+    "title": "Сбой инфраструктуры засчитывается как убийство, а кэш закрепляет ложный Killed",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Два вида сбоев дают Killed без проверки достижения мутанта и без повтора:\n- смерть процесса юнита (crash: OOM-killer, лимит памяти контейнера, внешний SIGKILL);\n- ошибка загрузки тест-файла (load-error: например, недоступный сервис на верхнем уровне теста).\nУбийство с причиной load-error ещё и кэшируется и переживает следующие прогоны. Ошибка оптимистичная: она завышает score и помогает пройти --threshold.",
+    "evidence": "02-bugs.md:120 (BUG-901, medium, перепроверен); :202 (BUG-602: SIGKILL через 1,5 с даёт Killed с diagnostics: [] в обоих адаптерах). bugs/static-review.md:121-170: на фикстуре loadcache прогон 1 даёт killed, прогон 2 — killed из кэша, --no-cache — survived. Код: core/run/read-isolated-unit.ts:42-44 (crash → Killed до любого анализа); :75-83 (load-error без проверки reached, хотя для hook-error она есть на :84); core/cache/create-run-cache.ts:313-318 (из записи исключён только crash). Обратная сторона: OOM, вызванный самим мутантом, должен остаться Killed (bugs/verdicts.md:91-100, vt/crash gt34y7x6).",
+    "benefit": "score не растёт от нестабильности CI, кэш перестаёт закреплять ложные убийства.",
+    "risks": "Подтверждение crash повтором добавляет +1 юнит на редкий настоящий crash. load-error без reached нельзя просто превратить в «нет улик»: получится ложный Survived, как в BUG-900. Его надо вести как неполный юнит.",
+    "verify": "test/repros/BUG-901.test.ts проходит. На loadcache второй прогон не берёт load-error из кэша. analysis/tools/adapters/tools/trace-adapter.js с TRACE_KILL_AFTER=1500 не даёт Killed. vt/crash gt34y7x6 остаётся Killed(crash).",
+    "related_bugs": [
+     "BUG-901",
+     "BUG-602"
+    ]
+   },
+   {
+    "title": "Ключ кэша не видит части входов: устаревшие вердикты в обе стороны без предупреждения",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "L",
+    "problem": "В режиме по умолчанию (без --incremental) кэш возвращает старые вердикты, включая ложный Killed, когда меняется вход вне ключа:\n- файл за виртуальным модулем Vite (addWatchFile);\n- файл, который тест читает через fs вне root (общие фикстуры монорепо);\n- код в node_modules без смены lockfile (patch-package);\n- tsconfig из references в пакете монорепо;\n- файл, загруженный process.loadEnvFile;\n- настройки Vitest вне фиксированного списка, если конфиг вычисляет их из окружения.\nДокументация обещает, что вердикт живёт, пока не изменились «the files … its tests read». Каждый класс узкий, но промах ничем не виден.",
+    "evidence": "02-bugs.md:103-108: BUG-402, 403, 410, 419 — medium, все перепроверены (data/verification/decisions.md:33-36). Матрица «r1 → правка → r2 из кэша против r3 с --no-cache», повторена через run-all.sh: bugs/cache-since.md:151-208. Код: adapters/shared/track-inputs.ts:31-37 (учитываются только чтения внутри root); adapters/vitest/get-module-file.ts:17-20 (виртуальные модули и node_modules отброшены); adapters/shared/list-tsconfig-files.ts:17-42 (только extends). Обещание: docs/content/guide/configuration.mdx:352-355. Не отслеживаются и входы главного процесса (.babelrc, .swcrc, postcss.config) — гипотеза, bugs/cache-since.md:255-262.",
+    "benefit": "Кэш, включённый по умолчанию, перестаёт давать ложные Killed и Survived в монорепозиториях и в проектах с плагинами Vite и patch-package.",
+    "risks": "Больше файлов в ключах — меньше попаданий в кэш; чтения вне root нужно фильтровать от временных и системных каталогов. Хэшировать весь node_modules дорого, вместо этого лучше брать установленный lockfile (node_modules/.package-lock.json, .modules.yaml) и каталог patches/.",
+    "verify": "test/repros/BUG-402/403/410/419.test.ts зелёные. Сценарии virtual_module, outside_root, nt_outside_root, node_modules_patch и tsconfig_reference в analysis/tools/cache/s-inputs.sh больше не дают «устарел». Контрольные сценарии inside_root и watched_real_module сохраняют прежнюю долю попаданий.",
+    "related_bugs": [
+     "BUG-402",
+     "BUG-403",
+     "BUG-410",
+     "BUG-419",
+     "BUG-415",
+     "BUG-409"
+    ]
+   },
+   {
+    "title": "Нестабильный тест в dry run выдаётся за поломку инструментирования, иногда — сразу всех файлов",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Вне --fast первый провал в инструментированном dry run сразу сверяется с прогоном без переключённых файлов. Если там тест прошёл, файл объявляется сломанным: instrumentation-break, все его мутанты Error, exit 1, кэш прогона не сохраняется. Если упавшие тесты не достигли ни одного сайта, сломанными объявляются все переключённые файлы. Так бывает при провале до вызова кода, ошибке трансформации или непарсящейся замене плагина. Пользователь видит, что Mootant «ломает его тесты», и CI краснеет без вины кода.",
+    "evidence": "BUG-902, medium: 02-bugs.md:121; decisions.md:20; фикстура flakydry; test/repros/BUG-902.test.ts. BUG-100, medium: 02-bugs.md:96; decisions.md:56; test/repros/BUG-100.test.ts; фикстуры collateral и flaky. BUG-905 — low. Код: core/run/run-dry-phase.ts:201 (повтор с инструментированием только при repeat, то есть в --fast); :161-170 и :275-296 (обвинение и Error); :516 (`broken.size === 0 ? new Set(related) : broken`); core/run-mutants.ts:516-520 (любая error-диагностика отменяет запись кэша, BUG-408).",
+    "benefit": "Нестабильные тесты не превращаются в ложные Error и красный CI. Невиновные файлы не теряют мутантов. Диагностика называет настоящую причину (unrepeatable-test).",
+    "risks": "Лишний инструментированный прогон упавших файлов, но только при провале. Если сузить подозреваемых до зависимостей упавших тест-файлов, настоящая поломка без покрытых сайтов может остаться неназванной; нужен запасной путь, например бисекция по файлам.",
+    "verify": "test/repros/BUG-902.test.ts, BUG-100.test.ts и BUG-905.test.ts проходят. В test/repros/BUG-100/run.sh у невиновного файла нет instrumentation-break. flakydry проходит без Error, с exit 0 и сохранённым кэшем.",
+    "related_bugs": [
+     "BUG-902",
+     "BUG-100",
+     "BUG-905",
+     "BUG-408"
+    ]
+   },
+   {
+    "title": "Часть «доказательных» правил пропуска молча теряет полезных мутантов, а run не показывает, сколько решили эвристики",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Правила с heuristic: false опираются на допущения: у условия нет эффекта, переменная читается один раз, NaN невозможен, у цикла один выход, null ≈ undefined. В реальных шаблонах они выбрасывают полезных мутантов: фикстура показывает 100 %, а физически применённый пропущенный мутант выживает. O19, R6, canonical-falsy-default и некоторые другие не возвращает даже strict, а отключить отдельное правило нельзя. В отчёте run нет счётчиков пропусков, поэтому «100 %» не говорит, сколько поведения решено догадкой. Масштаб умеренный: на тестах Mootant правила owned/subsumed скрыли 0 из 360 мутантов, в perfectionist solitary скрыл 13 из 81, из них полезных 3.",
+    "evidence": "BUG-302, 304, 307 — medium (02-bugs.md:100-102; decisions.md:45-46, 50). BUG-300, 301, 303, 310, 312 — low (02-bugs.md:129-137). bugs/skips.md:47-48 — strict их не возвращает; :434 — 1 833 пропуска в core под шестью правилами с heuristic: false; :440 — в run нет счётчиков; :150-238 — эмпирика. Код: core/mutators/return-value.ts:202-239 и 508-517 (R6 не проверяет число чтений, а аналогичное правило в core/mutators/missing-await.ts:162 проверяет); core/mutators/shared/get-logical-drops.ts:81-84; core/mutators/statement-removal.ts:152-188; core/skips/skip-rules.ts:170-173 и 230-237; types/report/run-report.d.ts:244-248 (skipped в run — только для HTML).",
+    "benefit": "Меньше тихих потерь мутантов. Пользователь видит долю решённого эвристикой и может вернуть спорное правило. «Меньше шума» не превращается в «меньше проверок».",
+    "risks": "Часть возвращённых мутантов окажется шумом. Смена флагов heuristic и новые поля summary меняют формат отчёта, это нужно отразить в changelog. Опция отключения отдельного правила расширяет конфиг.",
+    "verify": "test/repros/BUG-300…312.test.ts проходят. Фикстура analysis/data/skips/fx1 показывает выживших вместо 100 %. Повтор эксперимента unskip (analysis/experiments/skips-unskip.diff, analysis/tools/skips/analyze_run.sh) на core по-прежнему даёт 0 скрытых owned/subsumed.",
+    "related_bugs": [
+     "BUG-302",
+     "BUG-304",
+     "BUG-307",
+     "BUG-300",
+     "BUG-301",
+     "BUG-303",
+     "BUG-310",
+     "BUG-312"
+    ]
+   },
+   {
+    "title": "Vitest: необработанные ошибки, которые проект велит игнорировать, всё равно убивают мутантов",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Адаптер вешает собственные обработчики unhandledRejection и uncaughtException и засчитывает stray-error как убийство. При этом он игнорирует dangerouslyIgnoreUnhandledErrors и фильтр onUnhandledError, хотя обычный `vitest run` с той же мутацией проходит. Получается оптимистичный ложный Killed. Эталон в тестах самого проекта делает то же допущение и поймать это не может.",
+    "evidence": "02-bugs.md:99 (medium). decisions.md:40: «ошибка оптимистичная, поэтому опаснее пессимистичных». На фикстурах vt/unhandled и vt/unhandled2 мутанты knkyemhs и 7mkvyn7b получают Killed, эталон — survived (bugs/verdicts.md:142). Код: adapters/vitest/runner.ts:1249-1266, core/run/read-isolated-unit.ts:93-105. test/helpers/run-reference-mutants.ts разделяет допущение (bugs/verdicts.md:378-382).",
+    "benefit": "Проекты, сознательно глушащие посторонние ошибки, не получают ложных убийств; поведение совпадает с обычным vitest run.",
+    "risks": "Учесть фильтр onUnhandledError — уже M: его надо вызывать в воркере. При глобальном игнорировании мутант, бросающий необработанную ошибку, перестанет убиваться — так же, как в обычном vitest run.",
+    "verify": "test/repros/BUG-203.test.ts проходит. vt/unhandled и vt/unhandled2 дают Survived. Без этих опций vt/crash d2dn1btq и 6cm2bm5g остаются Killed(stray-error).",
+    "related_bugs": [
+     "BUG-203"
+    ]
+   },
+   {
+    "title": "Кэш молча не работает в CI и других частых условиях, причину не узнать",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Вердикты при этом не ложные: промах консервативен. Но обещание «Mootant caches verdicts between runs» не выполняется, а отчёт не объясняет почему (totalCached: null или 0). Причины:\n- «штамп сборки» — mtime файла пакета, поэтому любая переустановка (npm ci с восстановленным кэшем, другая машина) обнуляет весь кэш;\n- летучие provide()/define (случайный порт, время сборки) сбрасывают все вердикты;\n- тесты, перечисляющие process.env (RuleTester, spawn), зависят от GITHUB_RUN_ID и подобных переменных;\n- mtime в будущем у файла окружения выключает кэш;\n- с кастомным test environment кэша нет никогда.",
+    "evidence": "BUG-407, medium: 02-bugs.md:105; decisions.md:39; CI-эксперимент 06-ux-and-agents.md:322-347 — после npm ci 0 из 67, с touch -d 67 из 67. BUG-412, medium: 02-bugs.md:107. BUG-701, medium: 02-bugs.md:115 и 04-performance.md:188 — perfectionist m-warm 0 из 21 при изменённых переменных. BUG-404 и BUG-411 — low (02-bugs.md:139, 144). Код: core/cache/prepare-run-cache.ts:164 (`build: (await stat(import.meta.filename)).mtimeMs`); :138-141 и :184-186 (return null без причины); adapters/vitest/get-cache-inputs.ts:82-92. Обещание: readme.md:63.",
+    "benefit": "Тёплый кэш в CI реально работает: в эксперименте 67 из 67 вместо 0 из 67. Человек и агент видят, что сбросило ключ.",
+    "risks": "Идентификатор сборки по содержимому должен по-прежнему сбрасывать кэш при локальных пересборках mootant (хэш при сборке). Диагностику печатать только при существующем файле кэша и нуле попаданий, иначе шум.",
+    "verify": "test/repros/BUG-407/run.sh после переустановки даёт 4 из 4. Сценарии reinstall_stamp, future_mtime, volatile_provide и custom_environment печатают причину промаха. analysis/bench/repro/bug-701/repro.sh называет сбросившую ключ переменную.",
+    "related_bugs": [
+     "BUG-407",
+     "BUG-412",
+     "BUG-701",
+     "BUG-413",
+     "BUG-404",
+     "BUG-411",
+     "BUG-414"
+    ]
+   }
+  ],
+  "improvements": [
+   {
+    "title": "Не кэшировать убийства с причиной load-error и подтверждать crash повтором, как hang",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Ложный Killed от инфраструктуры (OOM, внешний SIGKILL, недоступный сервис при загрузке теста) принимается без повтора. Убийство с причиной load-error ещё и переживает прогон через кэш (BUG-901, BUG-602).",
+    "evidence": "core/cache/create-run-cache.ts:313-318 исключает из записи только crash — туда нужно добавить load-error. core/run/get-unit-evidence.ts:22-27 подтверждает только time-limit и hang — нужно добавить crash. То же предлагает рекомендация №3 в 01-architecture-adapters.md:1028. Фикстуры loadcache и crash — bugs/static-review.md:145-160; SIGKILL-декоратор BUG-602 — 02-bugs.md:202.",
+    "benefit": "Одним маленьким PR: ложный Killed больше не закрепляется в кэше, разовый OOM или убитый контейнер в CI не завышает score.",
+    "risks": "+1 юнит на настоящий crash. OOM, вызванный самим мутантом, повторяется и остаётся Killed. load-error без reached в текущем прогоне по-прежнему даёт Killed, пока нет исхода «юнит неполон».",
+    "verify": "На loadcache второй прогон не берёт load-error из кэша. trace-adapter.js с TRACE_KILL_AFTER=1500 даёт Survived после подтверждения. vt/crash gt34y7x6 остаётся Killed(crash). Проходит crash-кейс test/repros/BUG-901.test.ts.",
+    "related_bugs": [
+     "BUG-901",
+     "BUG-602"
+    ]
+   },
+   {
+    "title": "Штамп сборки — идентификатор, вшитый при сборке, а не mtime файла пакета",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Любая переустановка той же версии mootant (npm ci в CI с восстановленным кэшем, другая машина) меняет mtime и обнуляет весь кэш. Поэтому кэш между прогонами CI с npm не работает никогда (BUG-407).",
+    "evidence": "core/cache/prepare-run-cache.ts:164. 06-ux-and-agents.md:322-347 и analysis/ux/ci-cache-check.txt: после npm ci 0 из 67, с touch -d 67 из 67. decisions.md:39: medium по решению координатора. 06-ux-and-agents.md:781 и 826-841 (R3): оценка S, вшивать через define. Переносимые пути задуманы именно для переноса кэша (core/cache/get-portable-path.ts:4-7).",
+    "benefit": "Обещание «caches verdicts between runs» (readme.md:63) начинает выполняться в CI: тёплые прогоны main и PR берут вердикты из кэша.",
+    "risks": "Идентификатор должен меняться при любой пересборке неопубликованного кода (хэш собранного кода при сборке), иначе разработчик mootant получит старые вердикты.",
+    "verify": "test/repros/BUG-407/run.sh после переустановки даёт 4 из 4. Сценарий из analysis/ux/ci-cache-check.txt без touch выводит «Reused cached verdicts for 67 of …». Пересборка с изменённым кодом сбрасывает кэш.",
+    "related_bugs": [
+     "BUG-407"
+    ]
+   },
+   {
+    "title": "Пропуск с владельцем действует, только если владелец запускается в этом прогоне (BUG-305)",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "M",
+    "problem": "С --since изменённые строки остаются без мутантов, если владелец пропуска стоит на неизменённой строке, а гейт проходит с «score none».",
+    "evidence": "bug-prompts/BUG-305.md:98-136: ожидаемое поведение, критерий готовности, падающий тест. Изменённые строки читаются ещё до генерации (core/run-mutants.ts:186-189, core/list-mutants.ts:72-75), поэтому генерации можно передать результат отбора. Механизм «владелец не запускается» уже есть для ignore-комментариев (bug-prompts/BUG-305.md:117-121, create-run-context).",
+    "benefit": "PR-гейт проверяет то, что изменилось: самый массовый сценарий CI перестаёт давать ложное «зелёное».",
+    "risks": "Первым шагом (S) — предупреждение «N changed lines have only skipped candidates whose owners are not run» и счётчик в summary, чтобы закрыть тишину сразу. Затем полный фикс (M); без --since список мутантов и их id меняться не должны.",
+    "verify": "test/repros/BUG-305.test.ts проходит. Фикстура analysis/data/skips/fx-since даёт мутанта на изменённой строке и exit 1 с --threshold 80. since_exposure.py находит 0 таких строк. Эталоны test/fixtures/list без --since не меняются.",
+    "related_bugs": [
+     "BUG-305"
+    ]
+   },
+   {
+    "title": "Явный исход «юнит неполон»: повтор, затем Error с диагностикой",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Посторонний сбой в isolated-юните читается то как «нет улик» (ложный Survived/NoCoverage, BUG-900, BUG-206), то как убийство (load-error без reached, BUG-901). Нужен третий исход: «юнит ответа не дал».",
+    "evidence": "Повтор с последующим Error уже есть для юнитов без фактов (core/run/apply-isolated-result.ts:93-113). Vitest-раннер знает, что бросил юнит (adapters/vitest/runner.ts:886-888, abandoned), но ядру об этом не сообщает (adapters/vitest/build-isolated-facts.ts:46-59). Направление исправления — bugs/static-review.md:114-119 и 164-170. Заодно стоит проверять результаты адаптера (BUG-605, 02-bugs.md:161; рекомендация №6 в 01-architecture-adapters.md:1031).",
+    "benefit": "Survived и Killed снова означают то, что обещает types/run/run-status.d.ts. Вердикт не зависит от того, споткнулся ли соседний тест, и совпадает с перепроверкой `--mutant`.",
+    "risks": "Контракт IsolatedFacts меняется в обоих адаптерах. На нестабильных сьютах больше Error и exit 1. +1 юнит на неполный файл.",
+    "verify": "Проходят test/repros/BUG-900.test.ts, load-error-кейс BUG-901.test.ts и BUG-206.test.ts. Фикстуры abandon, hook, loaderr и vt/fscache дают ожидаемые вердикты. Оракул analysis/tools/oracle на vt/* и nt/* не показывает новых расхождений.",
+    "related_bugs": [
+     "BUG-900",
+     "BUG-901",
+     "BUG-206",
+     "BUG-605"
+    ]
+   },
+   {
+    "title": "Страница «Когда вердикту не верить» и точные тексты диагностик",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Пределы вердикта не описаны или описаны неверно:\n- require()/createRequire под Vitest: документация обещает .cjs, а never-served называет неверные причины;\n- что не входит в ключ кэша;\n- Timeout у «горячего», но конечного кода и бюджет 3× + 250 мс;\n- снапшоты не пишутся;\n- globalSetup даёт Error и exit 1;\n- PR только с тестами и «score none» проходят порог;\n- --fast даёт ложные Killed.",
+    "evidence": "docs/content/guide/compatibility.mdx:34 и :56-57. core/run/run-dry-phase.ts:360-367 — текст never-served (BUG-205, 02-bugs.md:198). docs/content/guide/configuration.mdx:352-359. В решениях по BUG-200 и BUG-204 — «описать в документации» (data/verification/decisions.md:41, 44). Перечень из 10 неявных допущений — bugs/verdicts.md:342-402. Рекомендация 6 — bugs/cache-since.md:349-354. cli/report/build-run-report.ts:150-155.",
+    "benefit": "Ещё до исправлений кода пользователь и агент сами калибруют доверие: знают, какой статус перепроверить и когда удалить кэш.",
+    "risks": "Документация может отстать от кода. Тексты диагностик держать под тестами, а пункты убирать по мере исправлений.",
+    "verify": "test:astro и test:spelling зелёные. Фикстура BUG-507 печатает never-served с причиной require()/createRequire. Каждый пункт страницы ссылается на тест или bug-prompt.",
+    "related_bugs": [
+     "BUG-205",
+     "BUG-507",
+     "BUG-200",
+     "BUG-204",
+     "BUG-403",
+     "BUG-410",
+     "BUG-903"
+    ]
+   },
+   {
+    "title": "Повторять упавшие тест-файлы с инструментированием, прежде чем обвинять его, и разбирать switched-текст при создании",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Один нестабильный провал в dry run выбрасывает файл с instrumentation-break, а провал без покрытых сайтов — все файлы прогона. Итог — Error, exit 1 и несохранённый кэш (BUG-902, BUG-100).",
+    "evidence": "В --fast повтор с инструментированием уже есть (core/run/run-dry-phase.ts:190-213, runCheckedDry), в режиме по умолчанию его нет (:161-170, затем recoverFromFailures на :275-296). Правило «все файлы» — :516. Разбор switched-текста при создании дешёв и локализует поломку до одного файла (bugs/static-review.md:286-290; bug-prompts/BUG-106.md:113-116).",
+    "benefit": "Нестабильные тесты не красят CI ложной «поломкой инструментирования». Невиновные файлы сохраняют мутантов. BUG-106 и непарсящиеся замены плагинов дают диагностику по одному файлу.",
+    "risks": "Ещё один dry-прогон упавших файлов, но только при провале. Без запасного пути (бисекция по файлам) настоящая поломка без покрытых сайтов может остаться неназванной.",
+    "verify": "Проходят test/repros/BUG-902.test.ts, BUG-100.test.ts, BUG-905.test.ts и BUG-106.test.ts. flakydry идёт без Error, с exit 0 и сохранённым кэшем. В test/repros/BUG-100/run.sh у невиновного файла нет instrumentation-break.",
+    "related_bugs": [
+     "BUG-902",
+     "BUG-100",
+     "BUG-905",
+     "BUG-106",
+     "BUG-408"
+    ]
+   },
+   {
+    "title": "Учитывать dangerouslyIgnoreUnhandledErrors (затем onUnhandledError) в Vitest-адаптере",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Необработанная ошибка, которую проект велит игнорировать, всё равно убивает мутанта — оптимистичный ложный Killed (BUG-203).",
+    "evidence": "adapters/vitest/runner.ts:1249-1266 — собственные обработчики unhandledRejection и uncaughtException. core/run/read-isolated-unit.ts:93-105. На vt/unhandled и vt/unhandled2 Mootant даёт Killed, эталон — survived (bugs/verdicts.md:142). decisions.md:40.",
+    "benefit": "Ложных убийств в таких проектах нет; поведение совпадает с обычным vitest run.",
+    "risks": "onUnhandledError придётся вызывать в воркере, это уже M. Эталон test/helpers/run-reference-mutants.ts разделяет то же допущение и должен исправляться вместе с кодом (bugs/verdicts.md:378-382).",
+    "verify": "test/repros/BUG-203.test.ts проходит. vt/unhandled и vt/unhandled2 дают Survived. Без этих опций vt/crash d2dn1btq и 6cm2bm5g остаются Killed(stray-error).",
+    "related_bugs": [
+     "BUG-203"
+    ]
+   },
+   {
+    "title": "Регрессионный контур доверия: воспроизведения в сьют, ночной оракул, A/B вердиктов для рискованных PR",
+    "kind": "improvement",
+    "severity": "n/a",
+    "effort": "M",
+    "problem": "Падающие тесты на дефекты вердикта лежат только в локальной ветке. Собственный эталон проекта разделяет допущения кода и работает только на фикстурах. Тесты эквивалентности вердиктов — главный страж — падают по таймаутам под нагрузкой.",
+    "evidence": "02-bugs.md:42-45: ветка experiment/bug-repros локальная, ссылка на analysis/experiments/bug-repros.diff битая (файла нет); в ветке 130 файлов, +3 403 строки относительно 170ec52. bugs/verdicts.md:378-382: test/helpers/run-reference-mutants.ts делает то же допущение, что и BUG-203. 05-tests.md:38-39 и :520-523: падение «verdict equivalence» — таймаут эталона (BUG-851). Готовые инструменты: analysis/tools/oracle/oracle.mjs, compare.mjs, analysis/tools/compare-verdicts.mjs. CI проекта — только ubuntu (bugs/cli-env.md:325-326).",
+    "benefit": "Исправленные дефекты не возвращаются. Согласие с эталоном (127/127, 157/157) становится проверяемым публичным утверждением. Ускорения раздела 4 принимаются только при равных вердиктах.",
+    "risks": "Время CI: прогон ночной, а не на каждый PR. Нужно сопровождать закреплённые версии 2–3 реальных проектов. Лимиты оракула должны выдерживать нагрузку (T2 в 05-tests.md:929).",
+    "verify": "Намеренный откат исправления BUG-900 или BUG-305 ловится контуром. Ночной оракул на ufo и defu даёт прежнее согласие. Блок verdict equivalence проходит при load ≈ 30.",
+    "related_bugs": [
+     "BUG-851",
+     "BUG-203",
+     "BUG-900",
+     "BUG-305"
+    ]
+   },
+   {
+    "title": "Пропуски на виду: счётчики в отчёте run и честные флаги heuristic",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "«100 %» в run не говорит, сколько кандидатов отсеяли правила и сколько из них — догадкой. Шесть правил с heuristic: false на деле опираются на допущения.",
+    "evidence": "types/report/run-report.d.ts:244-248 — skipped в run есть только для HTML. Подсчёт уже есть для list: cli/report/build-list-report.ts:126, cli/report/format-text-report.ts:127-128. bugs/skips.md:434 — 1 833 пропуска core у O19, R6, R4, loop-advance, loop-running и tail-return с heuristic: false; :568-572 и :581-588 — предложения 4 и 6. core/skips/skip-rules.ts:170-173 и 230-237. `list core --json --skipped` занимает 2,6 с на 16 279 мутантов (00-baseline.md:142-145).",
+    "benefit": "Пользователь видит, какую часть поведения решила эвристика, и знает, когда включить strict или аудит. --json перестаёт занижать долю догадок.",
+    "risks": "Меняются поля отчёта: нужны запись в changelog и, возможно, новая schemaVersion. Сбор пропусков в run немного удорожает листинг.",
+    "verify": "Снапшот текстового вывода run содержит строку skipped N (M heuristic). В --json есть summary.skippedByCategory и skippedHeuristic. Для analysis/data/skips/fx1 числа совпадают с `list --skipped`.",
+    "related_bugs": [
+     "BUG-302",
+     "BUG-304",
+     "BUG-310",
+     "BUG-312",
+     "BUG-303"
+    ]
+   },
+   {
+    "title": "Закрыть подтверждённые дыры ключа кэша: сначала монорепозитории (BUG-403, BUG-419), затем BUG-402 и BUG-410",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "L",
+    "problem": "Кэш по умолчанию возвращает устаревшие вердикты, включая ложный Killed, после правок общих фикстур вне root, tsconfig из references, файлов за виртуальными модулями и кода в node_modules.",
+    "evidence": "adapters/shared/track-inputs.ts:31-37 — чтения вне root отбрасываются. adapters/shared/list-tsconfig-files.ts:17-42 — только extends. adapters/vitest/get-module-file.ts:17-20, adapters/vitest/collect-dependencies.ts:93-100. Уточнение верификатора к BUG-402: обходить узлы, у которых file ?? id — не абсолютный путь (decisions.md:33). Оценка S–M на каждый баг — bugs/cache-since.md:325-333 и 346-348.",
+    "benefit": "Монорепозитории и проекты с плагинами Vite и patch-package получают надёжный кэш по умолчанию.",
+    "risks": "Меньше попаданий в кэш. Для node_modules — хэш установленного lockfile и patches/, а не всех файлов. Чтения вне root фильтровать от временных и системных каталогов.",
+    "verify": "Проходят test/repros/BUG-402/403/410/419.test.ts. Сценарии outside_root, tsconfig_reference, virtual_module и node_modules_patch (analysis/tools/cache/s-inputs.sh) не дают устаревших вердиктов. Контрольные сценарии сохраняют ту же долю попаданий.",
+    "related_bugs": [
+     "BUG-403",
+     "BUG-419",
+     "BUG-402",
+     "BUG-410",
+     "BUG-415",
+     "BUG-409"
+    ]
+   }
+  ],
+  "roadmap": {
+   "two_weeks": [
+    "S: не кэшировать убийства с причиной load-error и подтверждать crash повтором (core/cache/create-run-cache.ts:313-318, core/run/get-unit-evidence.ts:22-27) — BUG-901, BUG-602.",
+    "S: штамп сборки, вшитый при сборке, вместо mtime (core/cache/prepare-run-cache.ts:164) — BUG-407; кэш в CI с npm ci начинает работать.",
+    "S: предупреждение --since о строках, оставшихся без мутантов из-за владельцев вне отбора; затем M — полный фикс BUG-305 по bug-prompts/BUG-305.md.",
+    "M: исход «юнит неполон» → повтор → Error с диагностикой (BUG-900, load-error-часть BUG-901, BUG-206).",
+    "M: повторять упавшие тест-файлы с инструментированием, прежде чем объявлять instrumentation-break (BUG-902).",
+    "S: BUG-203 — учитывать dangerouslyIgnoreUnhandledErrors и заодно поправить эталон test/helpers/run-reference-mutants.ts.",
+    "S: страница «Когда вердикту не верить», точный текст never-served для require()/createRequire, список того, что не входит в ключ кэша.",
+    "S: выгрузить experiment/bug-repros в analysis/experiments/bug-repros.diff (ссылка в 02-bugs.md:43 битая) и переносить тест-воспроизведение в сьют вместе с каждым исправлением."
+   ],
+   "two_months": [
+    "L: дыры ключа кэша — BUG-403 и BUG-419 (монорепо), затем BUG-402 и BUG-410.",
+    "M: диагностика «почему кэш не использован», если файл кэша есть, а попаданий ноль (BUG-404, 411, 412, 701); provide/define перенести в ключ теста, а не окружения (BUG-412).",
+    "M: счётчики пропусков в run и честные флаги heuristic; точечные исправления BUG-304 (S–M), BUG-307 (S), BUG-302 (M); опция отключения отдельного правила (bugs/skips.md:561-567).",
+    "M: BUG-100 — сузить «все файлы сломаны» до зависимостей упавших тест-файлов; разбирать switched-текст при создании (BUG-106, BUG-905).",
+    "L: BUG-507 — переключать модули из require() в воркере Vitest по образцу adapters/node-test/preload/patch-module-compile.ts; для yarn PnP + node:test (BUG-820) — ошибка вместо warning.",
+    "M: ночной оракул на 2–3 реальных проектах и A/B вердиктов (analysis/tools/compare-verdicts.mjs) для PR в core/run, core/cache и adapters; сделать тесты эквивалентности вердиктов устойчивыми к нагрузке (T2, 05-tests.md:929).",
+    "M: режим --audit-skips из прототипа analysis/experiments/skips-unskip.diff — измерить точность solitary и других эвристик на 2–3 пользовательских проектах."
+   ],
+   "before_1_0": [
+    "Закрепить семантику вердиктов в контракте: признак неполного юнита в IsolatedFacts, проверка результатов адаптера (BUG-605), версия контракта; статусы и причины — под semver (07-compat-and-release.md §7.4).",
+    "Отбор тест-файлов Vitest, который не зависит от выбора мутантов и учитывает вычисляемые import() (BUG-201, BUG-903): `--mutant` и `--since` дают тот же вердикт, что полный прогон.",
+    "Выборочная перепроверка кэша (`--verify-cache <доля>`) как страховка от неизвестных дыр ключа, в том числе входов главного процесса Vite (.babelrc, postcss.config — bugs/cache-since.md:255-262, 355-359). Идея, не прототипирована.",
+    "Windows в CI: проверить гипотезы BUG-421 (две формы путей в ключах кэша) и BUG-511 (остановка зависших процессов).",
+    "Ускорения, меняющие отбор или изоляцию, принимать только при равных вердиктах: P2 отвергнут (ложные Survived), P1 — только opt-in (ложные Killed при общих файлах и портах), P3 — только с хэшем всего дерева (experiments/prototypes.md:16-20, 494-506).",
+    "Опубликовать методику и цифры согласия с эталоном (127/127, 157/157, 0 расхождений переключения на 123 867 мутантах), а после аудита — точность правил пропуска, как проверяемое отличие от Stryker (03-competitors.md:1563-1594)."
+   ]
+  },
+  "strengths": [
+   "Инструментирование проверено в масштабе. Switched-текст 123 867 мутантов из 1 466 файлов 9 проектов компилируется, кроме 4 файлов с BUG-106. Без активного мутанта тесты дают те же результаты, что на оригинале (ufo 487 тестов, defu, Vue, Svelte). Активный мутант совпадает с физически применённым по каждому тесту на 422 мутантах; ufo через Mootant — 157/157 (bugs/instrumentation.md:11-25, 133-194).",
+   "Режим по умолчанию на детерминированном коде совпадает с эталоном: на реальном коде 127/127, в --fast тоже. У isolated-юнита свой процесс в обоих адаптерах, вердикт не зависит от соседних мутантов, порядка и --concurrency. Вердикты детерминированы, кроме мутантов у границы бюджета (bugs/verdicts.md:15-18, 192-199, 285-307; data/isolation.md:98-123).",
+   "Граница «адаптер сообщает факты, ядро решает» и перепроверки ядра: hit limit считает ядро, batch-убийство требует контрольных попыток до и после, таймаут подтверждается повтором, провал dry run сверяется с прогоном без инструментирования (01-architecture-adapters.md:237-251, 992-1003). Это главное, что нужно сохранить при добавлении Rstest и Jest.",
+   "Единица isolated-прогона — весь покрывающий тест-файл. Это защита корректности, а не лишняя цена: прототип «только покрывающие тесты» дал 3 ложных Survived и 1 ложный Killed из 12 мутантов граничной фикстуры (experiments/prototypes.md:295-331). У Stryker на этом пути за 2026 год не меньше 5 issues о ложных Survived (03-competitors.md:433-447).",
+   "--fast не может дать ложный Survived: выживших перепроверяет isolated-путь (core/run/run-batch-phases.ts:91-97). Возможные ложные убийства честно помечены в отчёте (bugs/static-review.md:328-347; data/isolation.md:46-48).",
+   "Кэш консервативен и прозрачен. Dry run на каждом прогоне свежий и пересчитывает зависимости и ключи; Timeout, Error и crash не кэшируются; запись атомарна, битый файл игнорируется. У каждого мутанта есть флаг cached (types/report/run-report.d.ts:107), а --incremental всегда предупреждает (core/run-mutants.ts:501-514). Кэш строже incremental у Stryker (bugs/cache-since.md:15-23, 117-123, 210-249; 03-competitors.md:43-46).",
+   "Разбор git для --since надёжен: переименования, merge base, shallow-клон с подсказкой, спецсимволы в путях, бинарные файлы, конфликты, пользовательские настройки git diff (bugs/cache-since.md:364-396). Если мутантов нет, раннер не стартует (core/run-mutants.ts:241).",
+   "Каждый пропуск объясним: list --skipped --json даёт правило, категорию, причину, флаг heuristic и владельца. Все 95 правил описаны в документации, а она честно предупреждает: «a category is Mootant's decision, not a proof». На тестах Mootant правила owned/subsumed скрыли 0 из 360 мутантов (bugs/skips.md:442-477; docs/content/mutators.md:46-55).",
+   "Собственные тесты проекта используют оракулы, не зависящие от реализации: эквивалентность вердиктов с вручную применёнными мутантами и property-based проверку пропусков. Id мутантов стабильны и не содержат смещений — на них держатся кэш, цикл агента и будущие подавления (05-tests.md:860-893; core/identity/create-mutant-id.ts:61-73)."
+  ]
+ },
+ "propose:maintenance": {
+  "lens": "Сопровождение одним мейнтейнером и производительность: архитектура (плагинный API, владение мутантов, контракт адаптеров, Rstest/Jest), тесты проекта, скорость (dry run, сериализация юнитов, кэш, прототипы P1–P3), стоимость типичных правок",
+  "problems": [
+   {
+    "title": "Юниты одного тест-файла идут строго по очереди: на целевых прогонах isolated-фаза фактически однопоточна",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Контракт запрещает запускать тест-файл дважды одновременно (types/adapter/adapter-session.d.ts:14-19). Vitest-воркер после claim ждёт смерти процесса предыдущего юнита того же файла: опрашивает раз в 20 мс и всё это время занимает слот пула (adapters/vitest/worker/wait-for-turn.ts:32-49). В node:test ключ пула — путь файла (adapters/node-test/run-isolated.ts:96). Когда мутантов покрывает один тест-файл (модуль и его тест, --since на PR, один модуль, --mutant агента), раунд превращается в одну цепочку, остальные воркеры простаивают.",
+    "evidence": "Смоук (машина под нагрузкой, один прогон, --concurrency 2, поэтому только качественно). path-to-regexp: 339 юнитов одного файла, цепочка 426 с из 427 с раунда, занятость слотов 46 % (bench/smoke/smoke.md; 04-performance.md:199-211). cheerio и perfectionist: занятость 43–49 %, хвост 100 % (bench/smoke/smoke-subset.md, smoke-subset2.md). Догфудинг: 85 юнитов generate-file-mutants.test.ts по 10–13 с, около 15 мин на одном ядре (00-baseline.md:192-198). Стоимость мутанта у Mootant на смоуке не ниже, чем у Stryker: path-to-regexp 1,28 против 1,07 с, perfectionist 4,16 против 4,11 с. Общий выигрыш даёт в основном меньшее число мутантов. Прототип P1: вердикты совпадают на фикстурах без общих ресурсов (76/76 для Vitest и для node:test, --strict) и в 17 из 20 собственных тестов эквивалентности. Упали ровно три теста с общим файлом или портом. На стресс-фикстуре 4 и 6 ложных расхождений из 13 (experiments/prototypes.md:80-253).",
+    "benefit": "До ×W (×3 при --concurrency 3) на isolated-фазе там, где один файл покрывает почти всех мутантов. Ожидание до замера: path-to-regexp ×2–3, perfectionist ×1,5–2,5, cheerio ×1–1,2. Не измерено: на занятой машине Σ стоимостей юнитов у Vitest выросла на 24 %.",
+    "risks": "Ложные Killed (завышенный score) у тестов с фиксированным файлом, портом или БД. Общего способа это обнаружить нет: DryFile.modified видит только запись внутри проекта. Поэтому режим только opt-in. Растёт пик памяти. Без подсказки в отчёте opt-in почти никто не включит.",
+    "verify": "bench-proto.sh parallel-units на path-to-regexp, perfectionist и cheerio (m-cold) в эксклюзивном окне. Смотреть медиану wall и summary.duration.isolated; в units-report самая длинная цепочка должна исчезнуть, а занятость подойти к 100 %. В compare-*.md не должно быть расхождений.",
+    "related_bugs": []
+   },
+   {
+    "title": "Выживший в общем модуле стоит десятков свежих процессов, а каждый раунд ждёт свой самый долгий юнит",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "L",
+    "problem": "Выживший мутант должен пройти все покрывающие тест-файлы. Файлы берутся пакетами 1, 1, 2, 4, 8… (core/run/run-isolated-rounds.ts:69). Каждый раунд — отдельный запуск раннера с барьером до смерти всех воркеров (adapters/vitest/run-specifications.ts:41-42, adapters/node-test/run-in-pool.ts:55-62). Юнит — свежий процесс (isolate: true задан принудительно, adapters/vitest/configure-project.ts:46-48; в node:test — spawn на каждый юнит), и сами тесты занимают в нём малую долю времени.",
+    "evidence": "Догфудинг core/text. Dry run выбрал 8 393 теста из 10 491. Первый проход по 544 мутантам занял 58 с, добивание примерно 100 выживших — больше 30 мин (раунды 2 и 4 — около 14 мин каждый). Прогон не завершился за 42 мин (00-baseline.md:162-200; после 04:10 машина была занята, поэтому раунды 3–5 завышены). Разбивка юнита на path-to-regexp: старт процесса ~0,71 с, загрузка ~0,78 с, тесты ~0,27 с, то есть тесты — около 15 % (04-performance.md:199-211). Профиль 36 форков cheerio: node:internal/modules 21,9 %, vitest 12,2 %, GC 7,9 %, код mootant около 2 % (bench/smoke/profile-cheerio.md). На node:test (fast-json-stringify) wall у Mootant 130 с против 128 с у Stryker, CPU 77 с против 40 с (smoke-subset.md, качественно).",
+    "benefit": "Убрать хвосты раундов и простой воркеров: оценка ×1,2–2 на прогонах, где много выживших (04-performance.md, идея 3). Это сделает практичными догфудинг и мутацию общих утилит (utils/compare в perfectionist).",
+    "risks": "Дешёвых безопасных рычагов на стоимость самого юнита нет. Обрезка юнита до покрывающих тестов (P2) дала 3 ложных Survived из 12 и отвергнута (experiments/prototypes.md:257-358). Переиспользование воркера со сбросом графа модулей ломает изоляцию (01-architecture-adapters.md:577-592). Остаются расписание (более крупные пакеты, поток), которое по построению не меняет вердикт (core/run/decide-evidence.ts:3-16), и префорк процессов (L, средний риск).",
+    "verify": "По трассе units-report — доля хвоста и простоя по раундам, summary.runs.isolated. Догфудинг core/text с конфигом без интеграционных файлов (analysis/tools/tests/configs/vitest.mootant.config.ts) должен завершаться. compare-verdicts --strict — 0 расхождений.",
+    "related_bugs": []
+   },
+   {
+    "title": "Тёплый прогон и перепроверка --mutant всегда платят старт раннера и полный dry run",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "XL",
+    "problem": "Сессия адаптера стартует до чтения кэша (core/run-mutants.ts:271-300). Dry run (:410-420) идёт раньше подготовки кэша (:442-459) и применения вердиктов (:489). Кэш хранит только улики «мутант × тест-файл», без покрытия, списка тестов и длительностей, поэтому без запуска раннера его не применить. node:test в первом dry run гоняет все тест-файлы (adapters/node-test/run-dry.ts:75-80), а каждый вызов --mutant — новый процесс, то есть снова «первый» dry run.",
+    "evidence": "Смоук m-warm (всё из кэша): dry run занимает 95 % прогона у cheerio (15,0 из 15,8 с), 98 % у fast-json-stringify, 90 % у perfectionist. m-one (цикл агента): 88 % у cheerio (10,3 с wall), 73 % у perfectionist (16,4 с), 94 % у fast-json-stringify (28,3 с) (bench/smoke/smoke-subset.md, smoke-subset2.md). Мини-фикстура: тёплый прогон 2,2 с, из них dry run 1,8 с (00-baseline.md:202-210). Догфудинг: dry run core/text — 4 мин 37 с, это нижняя граница прогона даже при полном кэше. Прототип P3: 22 из 22 сценариев эквивалентны (--strict), раннер не стартует ровно в 6 сценариях «ничего не изменилось». Без проверки дерева получилось 2 устаревших вердикта из 76 (experiments/prototypes.md:362-668).",
+    "benefit": "P3: повторный прогон без изменений занимает секунды вместо старта и dry run (ожидание ×5–10 на cheerio). Частичный повтор, то есть dry run только для тест-файлов с изменившимися входами, ускорит цикл агента «тест → --mutant».",
+    "risks": "P3 срабатывает, только если в дереве ничего не изменилось. Правка теста агентом уводит прогон на обычный путь (сценарий s2-edit-test), поэтому для цикла агента нужен частичный повтор (XL). Хэширование всего дерева дорого на монорепо. Возможны устаревшие вердикты при недетерминированных тестах и файлах вне корня. Ослаблять проверку дерева нельзя.",
+    "verify": "bench-proto.sh dry-snapshot <проект> m-cold m-warm m-edit. В run-k.err должна быть строка «Reused the dry run…», summary.runs = {}. m-edit показывает цену проверки устаревшего снимка. compare-*.md — без расхождений.",
+    "related_bugs": [
+     "BUG-752",
+     "BUG-753",
+     "BUG-700"
+    ]
+   },
+   {
+    "title": "Кэш вердиктов в стандартном CI не срабатывает",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Четыре причины. (1) Штамп сборки в ключе — mtimeMs файла пакета (core/cache/prepare-run-cache.ts:164); npm ci ставит файлам время установки, и все записи становятся недействительными. (2) Тест-файл, который перечисляет process.env (spread, spawn без env, RuleTester), кладёт в ключ хэш всех переменных (adapters/shared/track-environment.ts:219-249). «Летучих» исключений всего 7 (adapters/shared/index-environment-hashes.ts:9-17), поэтому GITHUB_RUN_ID и npm_* сбрасывают кэш на каждом прогоне. (3) Тайм-ауты по hit-limit не кэшируются (core/cache/create-run-cache.ts:313-319), и при одном таком мутанте прогон «всё из кэша» недостижим. (4) При меняющихся provide/define кэш не срабатывает никогда.",
+    "evidence": "ux/ci-cache-check.txt: npm ci, прогон, снова npm ci с восстановленным кэшем — 0 вердиктов из 67; с touch -d — 67 из 67 (06-ux-and-agents.md:310-356). Перепроверка оставила BUG-407 в medium именно из-за CI (data/verification/decisions.md). BUG-701: perfectionist m-warm — 0 из 21 при изменившемся окружении (117,9 с, дольше холодного) против 19 из 21 (14,4 с) при неизменном (bugs/perf.md). BUG-413: другой GITHUB_RUN_ID или запуск через npm run — 0 из 4. BUG-752: тёплый прогон vitest-units без изменений даёт runs = {dry:1, isolated:1}. BUG-412: 0 из 4.",
+    "benefit": "Кэш в CI, обещанный readme, начинает работать: полный прогон main и перезапуски берут вердикты из кэша. Без этого P3 тоже ничего не даст.",
+    "risks": "Build id должен меняться при каждой пересборке неопубликованной версии. Исключение CI-переменных из «*» — эвристика: тест, который перечисляет окружение и зависит от GITHUB_RUN_ID, получит устаревший вердикт (маловероятно). Кэширование hit-limit меняет формат кэша — нужно поднять CACHE_VERSION.",
+    "verify": "Сценарий ci-cache-check без touch: «Reused cached verdicts for 67 of 79». analysis/bench/repro/bug-701/repro.sh с другим значением CI-переменной — 5 из 5. Тёплый прогон vitest-units без изменений — без isolated-юнитов.",
+    "related_bugs": [
+     "BUG-407",
+     "BUG-701",
+     "BUG-413",
+     "BUG-752",
+     "BUG-412"
+    ]
+   },
+   {
+    "title": "Плагинный API выставляет наружу 40 внутренних хелперов, и каждая новая синтаксическая проверка его расширяет",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "L",
+    "problem": "MutatorContext.syntax даёт 40 методов (types/syntax/syntax-helpers.d.ts). Фасад core/syntax/create-syntax-helpers.ts:136-178 почти целиком состоит из лямбд node => f(tree, node). 16 методов нужны одному встроенному файлу, 3 не нужны никому (getLowerBound, isLogicalOperand, isPropertyKey). Новый факт для встроенного мутатора — это 5 файлов: реализация, тест, метод интерфейса с JSDoc, лямбда и тест фасада. API не документирован, а после 1.0 каждый метод станет обязательством semver. Фасад ещё и прячет зависимости: depcruise не видит 16 файлов, от которых зависит update-operator, knip не видит 3 мёртвых метода.",
+    "evidence": "01-architecture.md:943-1003 (§8.2), :1152-1170 (трасса а2), :1283-1291 (5 → 2 модуля). Коммиты b72d16f (+33 строки в интерфейсе, +16 в фасаде, +51 в тесте фасада), cda98a7, a5d3a03. 40 записей фасада сверены с кодом.",
+    "benefit": "Новый факт — 2 файла вместо 5 (около −25 строк). Публичный API перестаёт расти сам. Авторы плагинов получают документированный набор из 10–15 методов.",
+    "risks": "Breaking-изменение для недокументированного API; в 0.x допустимо, внешних плагинов не видно. Придётся расширить RunContext и добавить тип контекста в Mutator.",
+    "verify": "Тесты мутаторов и приёмочная фикстура list (test/cli/index.test.ts:158-200) проходят без изменения ожиданий. Тест фасада сокращён до курируемого набора. tsc на примере плагина видит только публичный тип.",
+    "related_bugs": [
+     "BUG-800"
+    ]
+   },
+   {
+    "title": "Движок «владения и избыточности» — цикл из 11 файлов без спецификации в репозитории",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "L",
+    "problem": "Мутатор решает, пропустить ли вариант, по планам других мутаторов. Эти планы — цикл из 11 файлов core/mutators/shared плюс get-comparison-plan.ts (617 строк кода). 7 из 20 мутаторов транзитивно тянут 84–95 файлов по импортам и 119–129 с учётом фасада (около 4,2–4,7 тыс. строк). Id мутаторов-владельцев записаны строками в 12+ файлах, типы их не проверяют. Каталог правил («catalog 2.2», O1–O19, R1–R7), на который ссылаются 102 файла, в репозитории отсутствует (гипотеза: это личные заметки автора).",
+    "evidence": "01-architecture.md:518-603 (§5.3), :1172-1195 (правка пересекающегося мутатора требует понять 13–15 модулей, около 1 600 строк), architecture/data/scc.txt. Подтверждённые баги правил отсева находятся именно здесь: BUG-305 (high), BUG-302, BUG-304, BUG-307 (medium) (02-bugs.md, data/verification/decisions.md).",
+    "benefit": "Ключевую фичу (отсев шума) можно ревьюить и править без автора. Для правки пересекающегося мутатора нужно понять 3–4 модуля вместо 13–15. Опечатку в id ловит tsc.",
+    "risks": "Перенос 16 файлов в plans/ — средний риск: семантика пропусков тонкая. Каталог нужно написать; если заметок нет, это L.",
+    "verify": "Фикстура list совпадает байт в байт (expected-mutants*.json, expected-skipped*.json); тесты планов перенесены без изменений; покрытие 100 %. Скрипт проверяет, что каждая ссылка «catalog N.M», O1–O19, R1–R7 в core/ ведёт на заголовок каталога.",
+    "related_bugs": [
+     "BUG-305",
+     "BUG-302",
+     "BUG-304",
+     "BUG-307"
+    ]
+   },
+   {
+    "title": "Контракт адаптера — внутренний API, который стал публичным случайно: новый раннер копирует инфраструктуру, правила раннеров расходятся",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "L",
+    "problem": "У контракта нет версии, ядро не проверяет результаты адаптера (BUG-605: пустой tries роняет прогон с TypeError без имени адаптера). Четыре возможности сжаты в один флаг batch (types/adapter/test-adapter.d.ts:25-29), а runBatch обязателен, поэтому node-test держит заглушку (adapters/node-test/start-node-test-session.ts:206-207). Ядро знает раскладку папок адаптеров (core/run/select-run-files.ts:27-28, BUG-607). Одно правило реализовано дважды разным кодом: бюджет сторожа dry run (BUG-603), таймаут хука — Timeout у Vitest и Killed у node:test (BUG-604). Расписание юнитов, пульс, сторож и нормализацию фактов (около 700–1000 строк) каждый новый адаптер должен повторить.",
+    "evidence": "01-architecture-adapters.md:237-308 (§3.4–3.6), :622-721 (§7.1), :723-852 (§8). Rstest 0.12.6 через текущий контракт — L; проверено на фикстуре: путь теста виден в setup-файле, мутант активируется, процесс свежий, но один файл дважды за run() не запускается. Jest 30.5.2 — XL. С целевым контрактом и kit — M и L. Для нового встроенного раннера нужны правки в 6 местах вне его папки (01-architecture.md:832-901).",
+    "benefit": "Rstest — M вместо L, Jest — L вместо XL. Правила crash, hang и hook-timeout пишутся один раз и сразу верны для новых раннеров. BUG-600…604 исправляются в одном месте, а не в двух.",
+    "risks": "Kit становится публичным API со своим semver, поэтому в него стоит включать только устоявшееся. Старую форму batch нужно поддерживать слоем совместимости.",
+    "verify": "Контрактный набор на общей фикстуре зелёный для всех адаптеров (01-architecture-adapters.md:969-990, шаг 0). e2e в test/adapters/{vitest,node-test}/index.test.ts проходят без изменений. Правило depcruise: adapters/* не импортирует core/*, кроме kit.",
+    "related_bugs": [
+     "BUG-603",
+     "BUG-604",
+     "BUG-605",
+     "BUG-607"
+    ]
+   },
+   {
+    "title": "У отмены нет владельца: процессы-сироты крутятся бесконечно, а прерванный прогон теряет все вердикты",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "В TTY спиннер вызывает process.exit(code) прямо в обработчике сигнала (cli/terminal/create-spinner.ts:143-163). Поэтому finally с session.close() и work.remove() (core/run-mutants.ts:320-325) не выполняется. У Vitest-адаптера обработчиков сигналов нет. node-test ловит только SIGINT и SIGTERM (adapters/node-test/track-process-group.ts:7). Кэш пишется только в конце прогона (core/run-mutants.ts:516).",
+    "evidence": "BUG-601 (medium после перепроверки): 18 из 18 прерванных прогонов оставили рабочий каталог. После SIGTERM или SIGHUP процессу CLI зависший юнит остаётся сиротой и больше 75 с грузит CPU на 30–100 % (01-architecture-adapters.md:413-449, data/verification/decisions.md). Осиротевший mootant run верификатора пришлось завершать вручную (decisions.md, строка BUG-856). BUG-418: после SIGINT на 12-й секунде файла кэша нет, следующий прогон начинается с нуля (06-ux-and-agents.md:310-356). StrykerJS частичные результаты сохраняет.",
+    "benefit": "Ни child.kill() из харнесса агента, ни отмена задачи в CI, ни timeout-minutes не оставляют процессов, жгущих CPU. Прерванный долгий прогон продолжается с уже готовых вердиктов.",
+    "risks": "Обработчики сигналов нужно корректно снимать (тесты, будущий программный API). Инкрементальная запись кэша требует решить, как часто писать и как сохранить атомарность.",
+    "verify": "Интеграционный тест для обоих адаптеров: SIGINT, SIGTERM и SIGHUP на фикстуре с зависающим мутантом. После него нет процессов с cwd фикстуры и нет каталога mootant-*. Прогон, прерванный после N юнитов, при повторе берёт N вердиктов из кэша.",
+    "related_bugs": [
+     "BUG-601",
+     "BUG-600",
+     "BUG-418",
+     "BUG-503",
+     "BUG-504"
+    ]
+   },
+   {
+    "title": "Тест-сьют: wall задаёт один файл, а красный результат при исправном коде зависит от машины и нагрузки",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Время test:unit почти целиком определяет test/adapters/vitest/index.test.ts с вложенными прогонами Mootant на фикстурах. Сьют краснеет без дефекта в коде: NODE_OPTIONS ломает порог покрытия, TERM=linux роняет 4 теста, root — 1, глобальный core.hooksPath — 8, mootant.config выше по дереву — 7. test:astro краснеет после pnpm build: tsconfig.json:2-4 не исключает dist/. Под нагрузкой десятки тестов падают по времени. При этом release:check = pnpm test && pnpm run build (package.json:57).",
+    "evidence": "Тихий прогон quiet-2: wall 260,2 с; из 342,5 с суммы по файлам 254 с (74 %) приходятся на один файл (00-baseline.md:109-119). load-1: 1 354,7 с этого файла при wall 1 382 с (05-tests.md:388-470). Окружение: BUG-850, 853, 854, 863, 864. Нагрузка: два прогона — 22 и 10 падений, всего 24 разных теста (BUG-851, 852, 750, 751; 05-tests.md:511-610). Гипотеза: dry run догфудинга core/text (4 мин 37 с) упирается в тот же файл. Он импортирует core/run-mutants и core/list-mutants, а через них core/generate и core/text (test/adapters/vitest/index.test.ts:34-35). Значит, сравнение dry run с test:unit не доказывает, что dry run сам по себе медленнее (идея 11 в 04-performance.md).",
+    "benefit": "Быстрее каждый цикл правки и джоба Unit в CI. release:check зелёный с любой машины. Догфудинг не обрывается.",
+    "risks": "После разреза файла выше пиковая нагрузка (вложенные прогоны с concurrency 2), поэтому разрез стоит делать вместе с лимитами по стене. Глобальная нормализация окружения может скрыть тест, которому нужна настоящая переменная.",
+    "verify": "vitest --run --reporter=json в тишине до и после: wall и Σ по файлам. analysis/tools/tests/env-matrix.sh. Прогоны с TERM=linux, NODE_OPTIONS=--max-old-space-size=4096, под root, с core.hooksPath на exit 1. Прогон под искусственной нагрузкой из bug-prompts/BUG-851.md.",
+    "related_bugs": [
+     "BUG-850",
+     "BUG-851",
+     "BUG-852",
+     "BUG-853",
+     "BUG-854",
+     "BUG-863",
+     "BUG-864",
+     "BUG-750",
+     "BUG-751"
+    ]
+   }
+  ],
+  "improvements": [
+   {
+    "title": "Вшитый build id вместо mtime в ключе кэша (BUG-407)",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "S",
+    "problem": "Ключ окружения кэша включает mtimeMs файла dist/core/cache/prepare-run-cache.js (core/cache/prepare-run-cache.ts:164). После npm ci он другой, и в CI кэш не срабатывает никогда.",
+    "evidence": "ux/ci-cache-check.txt: после npm ci с восстановленным кэшем — 0 из 67, после touch -d — 67 из 67. С pnpm и тем же store mtime сохраняется, поэтому в самом проекте проблема не видна (06-ux-and-agents.md:310-356, R3). Координатор оставил BUG-407 в medium из-за CI (data/verification/decisions.md).",
+    "benefit": "Полный прогон main и перезапуски в CI берут вердикты из кэша, как обещает readme. Это самый дешёвый способ ускорить повторные прогоны в разы.",
+    "risks": "Id должен меняться при каждой сборке, иначе пересборка неопубликованной версии возьмёт старые вердикты. Вшивать его через define при сборке; для запуска из исходников нужен запасной вариант.",
+    "verify": "Сценарий ci-cache-check без touch: после второго npm ci — «Reused cached verdicts for 67 of 79 mutants». Тест prepare-run-cache: ключ меняется вместе с id и не зависит от mtime.",
+    "related_bugs": [
+     "BUG-407"
+    ]
+   },
+   {
+    "title": "Разрезать test/adapters/vitest/index.test.ts на 3–4 файла по describe",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Файл в 1 920 строк с блоками describe на :458, :481, :801 и :1440 выполняется в одном воркере и задаёт wall test:unit, а вероятно, и dry run догфудинга.",
+    "evidence": "00-baseline.md:109-119: 254 с из 342,5 с суммы, wall 260 с. 05-tests.md:471-509 (T4).",
+    "benefit": "Оценка: wall test:unit в тишине ×1,5–2; дальше он упрётся в самые долгие блоки, «verdict equivalence» и «with the cache». Под нагрузкой ×2–2,5 (05-tests.md). Быстрее и джоба Unit в CI. Не измерено.",
+    "risks": "Больше одновременных вложенных прогонов — выше пиковая нагрузка и риск таймаутов, поэтому делать вместе с правкой лимитов (следующий пункт). Хелперы файла (runAllPaths, expectAgreement) перенести в test/helpers.",
+    "verify": "vitest --run --reporter=json в тишине до и после: wall и Σ по файлам. Под нагрузкой падений не больше, чем до разреза.",
+    "related_bugs": [
+     "BUG-851"
+    ]
+   },
+   {
+    "title": "Сьют без ложных красных: независимость от окружения (T1), устойчивость к нагрузке (T2), dist в exclude",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "pnpm test и release:check краснеют при исправном коде: в Docker под root, при TERM=linux, с любым NODE_OPTIONS, с глобальным git-хуком, с чужим конфигом выше по дереву, после pnpm build и на загруженной машине. T1 — работа на S.",
+    "evidence": "05-tests.md:921-977 (T1, T2). 00-baseline.md:69-107. BUG-850: с NODE_OPTIONS покрытие файла 94,11 % вместо 100 %. BUG-853, 854, 863, 864. Под нагрузкой падают оракулы с лимитом 1 с и 4 с по стене, тесты масштаба на 200–300 тыс. элементов и строгие float-сравнения (BUG-851, 852, 750, 751). tsconfig.json:2-4 без dist в exclude.",
+    "benefit": "pnpm test и release:check зелёные в Docker, devcontainer, за прокси, под отладчиком VS Code и на загруженной машине. Меньше времени уходит на разбор падений, не связанных с кодом.",
+    "risks": "Большие лимиты по стене медленнее ловят настоящие зависания; при 5 с вместо 1 с потерь нет. Тесты cli/terminal должны и дальше сами подменять переменные окружения.",
+    "verify": "env-matrix.sh. Прогоны с TERM=linux, NODE_OPTIONS, под root, с глобальным git-хуком exit 1. pnpm build && pnpm test:astro зелёный. Прогон под нагрузкой из bug-prompts/BUG-851.md зелёный, тихий прогон медленнее не более чем на 5 %.",
+    "related_bugs": [
+     "BUG-850",
+     "BUG-853",
+     "BUG-854",
+     "BUG-863",
+     "BUG-864",
+     "BUG-851",
+     "BUG-852",
+     "BUG-750",
+     "BUG-751"
+    ]
+   },
+   {
+    "title": "run.parallelUnits (прототип P1) как opt-in, со списком последовательных файлов и подсказкой в отчёте",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Юниты одного тест-файла идут по очереди (проблема 1), и на целевых прогонах isolated-фаза однопоточна.",
+    "evidence": "experiments/perf-parallel-units.diff, experiments/prototypes.md:80-253. В адаптерах изменение занимает две строки (adapters/vitest/runner.ts:543-545 в прототипе, adapters/node-test/run-isolated.ts:98). Вердикты параллельного режима уже хранятся под отдельным ключом кэша. Эквивалентность 76/76 на фикстурах без общих ресурсов; расхождения появляются ровно там, где тесты делят файл или порт. Основная работа до продакшна — конфиг, документация и тесты.",
+    "benefit": "До ×W на isolated-фазе для --since на PR, одного модуля и цикла агента. Предложение (не проверено): в отчёте подсказывать «раунд N был одной цепочкой файла X; если его тесты не делят файлы и порты, включите run.parallelUnits». Цепочки ядро уже считает (core/run/run-isolated-rounds.ts:94, numberChains), так что opt-in станет находимым.",
+    "risks": "Ложные Killed при общих ресурсах (на стресс-фикстуре 4–6 из 13). Режим auto по DryFile.modified — эвристика, по умолчанию его не включать. Нужен run.serialTestFiles для исключений. Выше пик памяти.",
+    "verify": "bench-proto.sh parallel-units на path-to-regexp и perfectionist, compare-verdicts --strict. Контрактный тест: при false юниты одного файла не перекрываются по времени, при true перекрываются.",
+    "related_bugs": []
+   },
+   {
+    "title": "Кэш для тестов, перечисляющих окружение, и для тайм-аутов по hit-limit (BUG-701, BUG-752)",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Любая изменившаяся переменная окружения сбрасывает вердикты тест-файлов, записавших «*». Тайм-аут по hit-limit не кэшируется никогда, и тёплый прогон снова запускает раннер.",
+    "evidence": "bugs/perf.md (BUG-701, repro: при X=2 из кэша берётся 1 вердикт из 5). bugs/cache-since.md (BUG-413: другой GITHUB_RUN_ID или npm run — 0 из 4). bugs/perf-proto.md (BUG-752): лимит max(floor, factor × hits) от загрузки машины не зависит (core/run/get-try-limits.ts:26). Кэширование hit-limit уже реализовано в experiments/perf-dry-snapshot.diff (core/cache/create-run-cache.ts).",
+    "benefit": "Тёплый кэш в CI для проектов на ESLint RuleTester, execa/tinyexec и всего, что запускает процессы. Прогон «всё из кэша» становится достижимым, а это предпосылка P3.",
+    "risks": "Список «летучих» CI-переменных (GITHUB_RUN_*, RUNNER_TEMP, npm_lifecycle_* и т. п.) — эвристика. Нужна диагностика, которая называет тест-файлы с «*». Кэширование hit-limit добавляет статус в формат, поэтому нужно поднять CACHE_VERSION.",
+    "verify": "analysis/bench/repro/bug-701/repro.sh с другим значением CI-переменной — 5 из 5. perfectionist m-warm с другим GITHUB_RUN_ID. Тёплый прогон vitest-units — в summary.runs нет isolated.",
+    "related_bugs": [
+     "BUG-701",
+     "BUG-413",
+     "BUG-752"
+    ]
+   },
+   {
+    "title": "Единый владелец отмены и запись кэша по ходу прогона",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Прерывание оставляет процессы-сироты и рабочий каталог, а вердикты, полученные до прерывания, теряются (проблема 8).",
+    "evidence": "01-architecture-adapters.md:413-449 и :969-990 (шаг 2). BUG-601: 18 из 18 прерванных прогонов оставили каталог (decisions.md). BUG-418 (06-ux-and-agents.md:310-356).",
+    "benefit": "Один обработчик SIGINT/SIGTERM/SIGHUP в CLI и AbortSignal в AdapterContext; close() Vitest-адаптера убивает воркеры по известным pid. Харнесс агента, отмена в CI и timeout-minutes не оставляют процессов, а повторный прогон продолжается с готовых вердиктов.",
+    "risks": "Обработчики сигналов нужно корректно снимать. Для инкрементальной записи кэша нужно выбрать частоту записи и сохранить атомарность.",
+    "verify": "Контрактный сценарий «прерывание» для обоих адаптеров: нет процессов с cwd фикстуры и каталога mootant-*. Прогон, прерванный после N юнитов, при повторе берёт N вердиктов из кэша.",
+    "related_bugs": [
+     "BUG-601",
+     "BUG-600",
+     "BUG-418"
+    ]
+   },
+   {
+    "title": "Каталог владения в репозитории и типизированные id мутаторов",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Спецификации правил отсева (O1–O19, R1–R7, «catalog N.M») нет в репозитории, а id мутаторов-владельцев записаны строками.",
+    "evidence": "01-architecture.md:571-603 (пп. 1 и 3). Ссылки на каталог — в 102 файлах. 'logical-operator' встречается 15 раз в 12 файлах (ARCH-9).",
+    "benefit": "Правила отсева можно ревьюить и править без автора. Каталог — основа для аудита эвристик (03-competitors.md §6.5) и для исправления BUG-302, 304, 305, 307. Опечатку в id ловит tsc.",
+    "risks": "Сама правка безопасна: это документация и типы. Происхождение каталога (гипотеза о личных заметках) нужно подтвердить у автора; если заметок нет, работа вырастает до L.",
+    "verify": "Скрипт проверяет, что каждая ссылка «catalog N.M», O1–O19, R1–R7 в core/ ведёт на заголовок docs/internals/ownership-catalog.md. type BuiltInMutatorId = keyof typeof corePlugin.mutators — tsc без ошибок.",
+    "related_bugs": [
+     "BUG-305",
+     "BUG-302",
+     "BUG-304",
+     "BUG-307"
+    ]
+   },
+   {
+    "title": "Меньше барьеров раундов: сначала крупнее пакеты у выживших, затем потоковое isolated-исполнение",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Выживший с 24 покрывающими файлами проходит 6 раундов, и каждый раунд ждёт свой самый долгий юнит.",
+    "evidence": "core/run/run-isolated-rounds.ts:69. experiments/prototypes.md:672-701 (утилиты perfectionist: 6 раундов → 3). Догфудинг: раунды 2 и 4 — около 14 мин (00-baseline.md:172-179). Вердикт — улика первого по рангу файла (core/run/decide-evidence.ts:3-16), поэтому расписание его не меняет. Потоковое исполнение — 01-architecture-adapters.md:577-587 и шаг 9 плана.",
+    "benefit": "Оценка ×1,2–2 на прогонах, где много выживших (04-performance.md, идея 3); вместе с P1 эффект сильнее. Не измерено.",
+    "risks": "Лишние юниты и CPU у мутантов, которых убил бы поздний файл. Поток (L) усложняет расписание и требует runIsolatedStream в контракте за флагом возможности.",
+    "verify": "По units-report на perfectionist и cheerio: summary.runs.isolated, wall раундов, доля хвоста. compare-verdicts --strict — 0 расхождений.",
+    "related_bugs": []
+   },
+   {
+    "title": "Контрактный набор тестов для всех адаптеров на общей фикстуре",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Правила одного контракта реализованы в двух адаптерах, а расхождения между ними тесты не ловят: тесты адаптеров в основном на моках, сквозные — на разных фикстурах.",
+    "evidence": "01-architecture-adapters.md:969-990 (шаг 0), :1022-1033 (п. 1). BUG-603 и BUG-604 нашлись только при сравнении двух адаптеров на эквивалентных фикстурах. Существующие блоки «verdict equivalence» (test/adapters/vitest/index.test.ts:801, test/adapters/node-test/index.test.ts:332) уже почти контрактные.",
+    "benefit": "Страховочная сетка для P1, P3, отмены и kit; критерий готовности для Vitest 4, Rstest и Jest. Сценарии BUG-600…604 сначала помечаются it.fails.",
+    "risks": "Растёт время test:unit (настоящие раннеры). Держать 10–15 сценариев и переносить в набор существующие тесты эквивалентности, а не дублировать их.",
+    "verify": "Набор проходит для обоих адаптеров; откат исправления BUG-604 делает его красным.",
+    "related_bugs": [
+     "BUG-603",
+     "BUG-604",
+     "BUG-600",
+     "BUG-601",
+     "BUG-602"
+    ]
+   },
+   {
+    "title": "core/run/timeout-policy.ts — одно место для политики подтверждения таймаута (ARCH-3)",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Одно правило записано в шести файлах. Масштаб 2 — в core/run/plan-isolated.ts:23 и run-batch-phases.ts:76,78. Условие scale > 1 и формула 2·k+1 — в plan-batch.ts:69,106 и get-batch-unit-cost.ts:24,35. Причины, требующие подтверждения, — в get-unit-evidence.ts:22-28 и apply-batch-result.ts:163-178.",
+    "evidence": "01-architecture.md:1197-1252 (§9.2); строки сверены с кодом.",
+    "benefit": "Изменение политики — 1 модуль и 1 тест вместо 6 и 6; для понимания нужно 4 модуля вместо 10. Нельзя поменять масштаб в одном пути и забыть про другой. Это делает безопасным кэширование hit-limit и правки бюджета.",
+    "risks": "Низкие: поведение не меняется.",
+    "verify": "Тесты core/run/{plan-isolated,plan-batch,run-batch-phases,get-batch-unit-cost,get-unit-evidence,apply-batch-result}.test.ts проходят без изменения ожиданий, плюс run-mutants.test.ts и e2e с таймаутами.",
+    "related_bugs": [
+     "BUG-752",
+     "BUG-204"
+    ]
+   },
+   {
+    "title": "Разобраться с отменами джобов CI проекта (7 ручных перезапусков из 15)",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "7 из 15 последних прогонов workflow Test на main перезапускались вручную: джобы отменялись на шагах Checkout или Install Tools после 7–11 мин ожидания.",
+    "evidence": "00-baseline.md:121-129 (прогоны № 70, 71, 73, 75, 76, 79, 80). Причина — гипотеза: step-security/harden-runner с egress-policy: block стоит в каждом джобе (.github/workflows/test.yml:15-18 и далее).",
+    "benefit": "Меньше ручных перезапусков после каждого пуша: экономия времени мейнтейнера.",
+    "risks": "Ослаблять egress-политику вслепую нельзя, это защита цепочки поставок. Лучше временно включить audit для диагностики, а затем добавить нужные хосты в allowlist.",
+    "verify": "Логи Harden Runner в отменённых джобах показывают заблокированный хост; 15 следующих прогонов проходят без ручных перезапусков.",
+    "related_bugs": []
+   },
+   {
+    "title": "Быстрый путь ширины строки для печатного ASCII (BUG-702)",
+    "kind": "improvement",
+    "severity": "low",
+    "effort": "S",
+    "problem": "Текстовый mootant list в 2,8 раза медленнее JSON-варианта: getDisplayWidth режет каждую строку на графемы через Intl.Segmenter, даже чистый ASCII.",
+    "evidence": "experiments/perf-display-width.md: hyperfine, 5 прогонов в эксклюзивном окне, 7,78 ± 0,36 → 6,28 ± 0,45 с (−19 %). Вывод на 17 098 строк совпадает байт в байт, 230 тестов зелёные. Diff — 12 строк (experiments/perf-display-width-ascii-fast-path.diff).",
+    "benefit": "Текстовый list на 16 тыс. мутантов быстрее на 19 %. Это единственный выигрыш, уже измеренный в эксклюзивном окне.",
+    "risks": "Нет: для печатного ASCII ширина равна длине строки.",
+    "verify": "cmp вывода list core до и после; hyperfine. Существующий test/cli/terminal/get-display-width.test.ts покрывает обе ветки.",
+    "related_bugs": [
+     "BUG-702"
+    ]
+   },
+   {
+    "title": "Прототип P3 в продакшн: повтор dry run без запуска раннера при неизменном дереве",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "L",
+    "problem": "Тёплый прогон без изменений тратит 90–98 % времени на старт раннера и dry run (проблема 3).",
+    "evidence": "experiments/prototypes.md:362-668: 22 из 22 сценариев эквивалентны (--strict). Отрицательный контроль: без проверки дерева 2 устаревших вердикта из 76. Грубое время на мини-фикстуре — 0,44–0,68 с против 2,0–4,0 с (не замер).",
+    "benefit": "Повторный прогон без изменений (перезапуск в CI, локальный повтор, агент без правок) занимает секунды. Снимок dry run становится основой частичного повтора.",
+    "risks": "Применимость узкая: любая правка в дереве уводит прогон на обычный путь. Хэш дерева дорог на монорепо, а снимок по размеру сопоставим с dry run. Снимок один на проект (сценарий s8). Нужен CACHE_VERSION.",
+    "verify": "bench-proto.sh dry-snapshot cheerio и perfectionist (m-cold, m-warm, m-edit): строка «Reused the dry run…», summary.runs = {}, compare-*.md без расхождений. Отрицательный контроль оформить тестом.",
+    "related_bugs": [
+     "BUG-752",
+     "BUG-753"
+    ]
+   },
+   {
+    "title": "Внутренний контекст для встроенных мутаторов и курируемый публичный syntax (ARCH-1)",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "L",
+    "problem": "Каждый новый факт для встроенного мутатора — 5 файлов и новый публичный метод; после 1.0 все 40 методов станут обязательствами semver.",
+    "evidence": "01-architecture.md:982-1003 (рекомендация §8.2), :1283-1291 (сводка: 5 → 2 модуля).",
+    "benefit": "Новый факт — 2 файла. Публичный API — 10–15 документированных методов и страница «Writing a plugin». Графы depcruise и knip показывают реальные зависимости.",
+    "risks": "Breaking-изменение для недокументированного API; в 0.x допустимо, должно попасть в changelog.",
+    "verify": "Тесты мутаторов и фикстура list проходят без изменения ожиданий; tsc на примере плагина.",
+    "related_bugs": [
+     "BUG-800"
+    ]
+   }
+  ],
+  "roadmap": {
+   "two_weeks": [
+    "Дождаться замеров в эксклюзивном окне (analysis/bench/run.sh, ярусы 1–2; bench-proto.sh для P1 и P3 в порядке из experiments/prototypes.md:705-801). До них не публиковать цифры «быстрее Stryker» и не включать P1 и P3.",
+    "Быстрые правки кэша и вывода: вшитый build id (BUG-407) и быстрый путь ширины для ASCII (готовый experiments/perf-display-width-ascii-fast-path.diff).",
+    "Сьют: разрезать test/adapters/vitest/index.test.ts; T1 — NODE_OPTIONS, TERM, root, core.hooksPath, конфиг выше по дереву, dist в exclude tsconfig.json; затем тихий замер test:unit.",
+    "CI проекта: прочитать логи Harden Runner в отменённых джобах (7 ручных перезапусков из 15) и добавить нужные хосты в allowlist.",
+    "BUG-701 и BUG-752: список «летучих» CI-переменных, диагностика «тест-файл перечисляет окружение», кэширование hit-limit с подъёмом CACHE_VERSION.",
+    "Если замер P1 подтвердит выигрыш: run.parallelUnits (false | true), run.serialTestFiles и подсказка в отчёте; по умолчанию false.",
+    "Дешёвые страховки: типизированные id мутаторов, depcruise с baseline в CI (analysis/architecture/scripts/depcruise.config.cjs), проверка skip.rule у плагина (BUG-800)."
+   ],
+   "two_months": [
+    "Контрактный набор тестов адаптеров (M). Затем единый владелец отмены и запись кэша по ходу прогона (M; BUG-600, 601, 418). Затем проверка результатов адаптера, явные capabilities и runtimeFiles (по S; BUG-605, 607). Затем общий нормализатор фактов и общее правило бюджета сторожа (BUG-603, 604).",
+    "core/run/timeout-policy.ts (M), после него P3 в продакшн (L): несколько снимков по набору переключаемых файлов, быстрый хэш дерева по mtime и размеру, описание границ в документации.",
+    "Крупнее пакеты у выживших (S: прототип и замер). Потоковое isolated (L) — только если трасса после P1 покажет хвосты раундов.",
+    "Каталог владения в docs/internals (M), затем core/mutators/plans/ (L). Правки правил отсева (BUG-302, 304, 305, 307) — после каталога.",
+    "Следующий раннер — Vitest 4 (L, 07-compat-and-release.md §7.1.6) поверх контрактного набора. Rstest — после kit и после выхода Rstest 1.0."
+   ],
+   "before_1_0": [
+    "ARCH-1: внутренний контекст встроенных мутаторов, курируемый syntax (10–15 методов), страница «Writing a plugin», Plugin.skipRules — одним breaking-релизом 0.x с changelog.",
+    "mootant/adapter (kit) с полем contract; встроенные адаптеры импортируют только его. Затем Rstest (M) и Jest (L).",
+    "Частичный повтор dry run, только для тест-файлов с изменившимися входами (XL), — главный ускоритель цикла агента --mutant. Для node:test — фильтр первого dry run по сохранённому списку загруженных модулей вместо прогона всех файлов.",
+    "Префорк процессов юнитов (L) — только если после P1 и потокового режима трасса покажет старт процесса на критическом пути.",
+    "Правило «модуль = концепт» записать в contributing.md как критерий ревью и слить 4 семейства (logging, type-view, loops, member-chain) по протоколу «мутанты до/после» (05-tests.md:356-386). Массовую кампанию не устраивать.",
+    "Пакет: .d.ts только для публичных входов и проверка состава npm pack (S–M). Бандлинг входов CLI, воркера и preload (около −150 мс на вызов CLI) — только вместе с e2e на собранном пакете."
+   ]
+  },
+  "strengths": [
+   "Разделение «факты против решений»: адаптер сообщает сырые факты, статус решает ядро (types/adapter/test-adapter.d.ts:4-9, core/run/classify-try.ts, core/run/read-isolated-unit.ts). Семантика вердикта одна для всех раннеров, а трассирующий декоратор пишется за 100 строк на публичных типах (01-architecture-adapters.md:60-100, :992-1020).",
+   "Переключение мутантов в рантайме и общий кэш трансформаций Vite в памяти: между мутантами ничего не перекомпилируется. Главный процесс в профиле cheerio простаивает 83 % времени, код mootant в воркерах — около 2 % CPU. Оптимизировать стоит расписание и число юнитов, а не ядро (bench/smoke/profile-cheerio.md).",
+   "Детерминированный план: ранжирование по путям, импортам и покрытию, без длительностей (core/run/rank-mutant-files.ts:8-21). Вердикт берётся из первого по рангу файла с уликой (core/run/decide-evidence.ts:3-16), поэтому любую смену расписания (P1, более крупные пакеты, поток) можно проверить побайтным сравнением вердиктов.",
+   "Изоляция isolated-пути: процесс на юнит, вердикты не зависят от соседей, порядка и concurrency; оракул совпал в 127 случаях из 127 на реальном коде (02-bugs.md). Соблюдена дисциплина «ускорение не ценой вердикта»: P2 и переиспользование воркеров отвергнуты (experiments/prototypes.md:295-358).",
+   "Ядро не знает раннеров: 0 упоминаний vitest и node:test в core/, 0 нарушений направлений слоёв, ядро тестируется фейковым адаптером (01-architecture.md:39-71, :249-262).",
+   "ESLint-модель мутаторов: независимый мутатор — это 3–4 исходных файла, тест, фикстура и страница документации. Единственный случайный переход — «All 20» в configuration.mdx:147. Реестр и пресеты защищают явное включение мутатора (01-architecture.md:1130-1150).",
+   "Тест-сьют страхует рефакторинг: оракулы с физически применёнными мутантами, приёмочный эталон list, property-based генерация с детерминированным ГСЧ, типизированные моки (83 из 84). По картам перегруппировки по смыслу ломаются 2 теста, остальные 137–186 требуют только правки импорта (05-tests.md:253-302, :860-919).",
+   "Модель ключей кэша верная: учитываются файлы и переменные окружения, прочитанные тестами, lockfile и мажорная версия Node; запись атомарна, записи валидируются. Ломаются штампы (BUG-407, BUG-701), а не модель (07-compat-and-release.md:15-66, п. 7; 03-competitors.md §7.1, п. 4).",
+   "Таймауты: hit-limit считается по числу срабатываний сайтов и не зависит от загрузки машины (core/run/get-try-limits.ts:26); time-limit и hang подтверждаются повтором; сторож работает на часах, захваченных до запуска тестов (adapters/shared/capture-clock.ts). Отсюда мало «таймаутного» шума: на смоуке path-to-regexp 3 Timeout у Mootant против 19 у Stryker (качественно)."
+  ]
+ },
+ "critic": {
+  "top_problems": [
+   {
+    "title": "Установить Mootant по документации нельзя: на npm лежит заглушка 0.0.0",
+    "kind": "problem",
+    "severity": "critical",
+    "effort": "S",
+    "problem": "`npm install -D mootant` (так в readme, getting-started и на лендинге) ставит OIDC-заглушку `mootant@0.0.0` без `bin`. После неё `npx mootant run src` падает с `could not determine executable to run`. Из GitHub пакет тоже не ставится: в `files` только `bin` и `dist`, `prepare` нет. Это блокирует всех новых пользователей и агентов. У тех, кто уже поставил заглушку, в package.json остался диапазон `^0.0.0`, и он не подтянет 0.1.0. В таблице багов итог — high («шаг релиза»), но по шкале того же отчёта («инструмент неработоспособен для всех», 02-bugs.md:35) это critical.",
+    "evidence": "02-bugs.md:94 (BUG-653, воспроизведён, не опровергнут); data/verification/decisions.md:23 (ловушка `^0.0.0`; та же команда в docs/components/Hero.astro:54); 06-ux-and-agents.md:57-76 (`npm view mootant` → latest 0.0.0, «DO NOT USE THIS PACKAGE»); package.json:45-48 (`files`, `prepare` нет); readme.md:77-78; 07-compat-and-release.md:17-20 (тегов и changelog нет).",
+    "benefit": "Начинает работать первая команда из документации. Без этого пользователю недоступно всё остальное.",
+    "risks": "Публикация закрепит в ожиданиях пользователей формат конфига, `schemaVersion: 3`, схему id и коды выхода. В заметках к релизу нужно прямо сказать, что в 0.x возможны ломающие изменения. Первый `changelogen --release` соберёт всю историю (07 §7.4.4 п.9), поэтому заметки к 0.1.0 лучше написать вручную.",
+    "verify": "В пустом каталоге `npm init -y && npm i -D vitest@5 mootant && npx mootant --version` печатает `mootant/0.1.0`. `npm view mootant dist-tags.latest` = 0.1.0. `npm view mootant@0.1.0 dist.attestations` не пуст.",
+    "related_bugs": [
+     "BUG-653"
+    ]
+   },
+   {
+    "title": "`--since` молча теряет мутантов изменённых строк, и CI-гейт проходит с «score none»",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Отбор `--since` идёт уже после правил пропуска. Если «владелец» пропуска (O19, R4–R6, solitary) стоит на неизменённой строке, мутант изменённой строки не возвращается, и строка остаётся без мутантов. При нуле мутантов score = none, а `passed` = true при любом `--threshold`, и раннер даже не стартует. Главный CI-сценарий из readme пропускает непроверенную правку без единого предупреждения.",
+    "evidence": "02-bugs.md:90 (high, воспроизведён 3/3). decisions.md:49: `--since HEAD --threshold 80` даёт «score none» и exit 0, а полный прогон — 0 % и exit 1; масштаб пересчитан независимо: 357 строк в core, 268 в perfectionist. Код: core/run-mutants.ts:192-207 (сначала listFileMutants с пропусками, потом selectChangedMutants) и :241 (ранний выход); core/files/select-changed-mutants.ts:58-64 (фильтрует mutants и skipped, не зная о владельцах); cli/report/build-run-report.ts:151-156 (при `score.total === null` гейт пройден). Документация: «Most subsumed changes come back when the other mutant does not run… owned changes stay skipped» (docs/content/mutators.md:62-63). Для R4–R6 и solitary нарушено само обещание, для O19 — его обоснование «владелец запускается».",
+    "benefit": "Гейт на PR снова означает «изменённые строки проверены мутантами». Правки внутри if и return перестают проходить без проверки.",
+    "risks": "С `--since` мутантов станет чуть больше, и PR-прогон удлинится. Нельзя вернуть дубль, если владелец тоже попал в отбор. Без `--since` состав и id мутантов меняться не должны. Та же логика нужна для `--mutant` и узких путей.",
+    "verify": "Проходит тест из bug-prompts/BUG-305.md (он же test/repros/BUG-305.test.ts). На analysis/data/skips/fx-since `run --since HEAD --threshold 80` даёт мутанта и exit 1. analysis/tools/skips/since_exposure.py на core и perfectionist находит 0 таких строк. Без `--since` вывод `list --json` побайтно прежний.",
+    "related_bugs": [
+     "BUG-305"
+    ]
+   },
+   {
+    "title": "Нештатный исход isolated-юнита превращается в вердикт: ложный Survived/NoCoverage и ложный Killed, закреплённый кэшем",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Здесь две стороны одного механизма.\n(1) В юните из-за постороннего сбоя могут не выполниться тесты, которые достигают мутанта: например, по таймауту упал тест, не дошедший до мутанта, или упал suite-хук. Такой юнит считается «файлом без улик», и мутант получает Survived или NoCoverage без диагностики, хотя `--mutant <id>` даёт Killed. В режиме по умолчанию isolated — единственный источник вердиктов. Тот же сток у BUG-206: мутант покрыт в dry run, но не достигнут.\n(2) Смерть процесса юнита (OOM, лимит контейнера, внешний SIGKILL) и ошибка загрузки тест-файла дают Killed без проверки достижения и без повтора. Убийство с причиной load-error ещё и кэшируется. Эта ошибка оптимистичная: она завышает score.\nЧастоту на реальных проектах не измеряли.",
+    "evidence": "02-bugs.md:95 (BUG-900, high; воспроизведён на Vitest 5.0.5 и 5.1.0 и на node:test — decisions.md:18); 02-bugs.md:120 (BUG-901, medium, decisions.md:19); 02-bugs.md:202 (BUG-602: SIGKILL через 1,5 с даёт Killed с `diagnostics: []`); 02-bugs.md:128 (BUG-206). Код: core/run/read-isolated-unit.ts:42-44 (crash → Killed), :64-73 (timedOut без reached → null), :75-83 (load-error без проверки reached, хотя у hook-error она есть на :84), :106; core/run/get-unit-evidence.ts:19-21 (null → 'none'), :22-27 (повтор только для time-limit и hang); adapters/vitest/runner.ts:886-888 и :630-637 (после таймаута остаток файла пропускается); adapters/vitest/build-isolated-facts.ts:46-59 (`incomplete: null` — ядро не узнаёт о брошенном юните); core/cache/create-run-cache.ts:313-318 (из записи исключён только crash). Фикстуры abandon, hook и loadcache — bugs/static-review.md:30-170.",
+    "benefit": "Survived снова значит «все покрывающие файлы прошли», а Killed — «тест поймал мутанта». Полный прогон и перепроверка `--mutant` дают одинаковый вердикт, и score не растёт от нестабильности CI.",
+    "risks": "Каждый неполный или упавший файл стоит ещё одного юнита. На нестабильных сьютах вместо ложного Survived появятся Error с диагностикой и exit 1. Меняется контракт IsolatedFacts в обоих адаптерах. OOM, вызванный самим мутантом, должен остаться Killed (vt/crash gt34y7x6, bugs/verdicts.md:91-100). Если load-error без reached просто превратить в «нет улик», получится тот же BUG-900.",
+    "verify": "Проходят тесты из bug-prompts/BUG-900.md и BUG-901.md, а также test/repros/BUG-206.test.ts (ветка experiment/bug-repros). Фикстуры abandon и hook дают Killed. На loadcache второй прогон не берёт load-error из кэша. trace-adapter.js с `TRACE_KILL_AFTER=1500` не даёт Killed. Оракул analysis/tools/oracle на vt/* и nt/* показывает согласие не ниже прежнего.",
+    "related_bugs": [
+     "BUG-900",
+     "BUG-206",
+     "BUG-901",
+     "BUG-602"
+    ]
+   },
+   {
+    "title": "Vitest-адаптер доверяет статическому графу Vite: `require()` и вычисляемый `import()` дают ложные NoCoverage/Survived, а вердикт зависит от набора выбранных мутантов",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "L",
+    "problem": "Мутанты переключаются только в transform-хуке Vite, а тест-файлы для dry run отбирает статический `vitest related`. Всё, чего Vite не видит, теряется:\n- модули из `require()` или `createRequire` исполняются без переключения, и их мутанты получают NoCoverage, хотя физически 4 из 5 убиваются; диагностика `never-served` при этом называет неверную причину;\n- тест с вычисляемым `import()` не выбирается, и мутант тихо получает Survived, если модуль статически импортирует слабый тест;\n- с хелпером в фабрике `vi.mock` полный прогон даёт Killed, а `--mutant` и `--since` — NoCoverage. Это ломает цикл агента.\nДокументация обещает поддержку `.cjs` без оговорок. В node:test тесты отбираются по фактической загрузке, и этих проблем нет, но в связке yarn PnP + node:test все мутанты получают NoCoverage при exit 0 (BUG-820).",
+    "evidence": "02-bugs.md:91 (BUG-507, high; по decisions.md:27 тест теряется при отборе в adapters/vitest/run-dry.ts:225-236); 02-bugs.md:125 (BUG-201), :192 (BUG-903), :198 (BUG-205), :117 (BUG-820); 02-bugs.md:229-233 (отсутствующая гарантия №2); data/isolation.md:91-96 и :146-152 (`--since` даёт NoCoverage вместо Killed). Код: adapters/vitest/create-mootant-plugin.ts:32-50; adapters/vitest/run-dry.ts:225-247; core/run/run-dry-phase.ts:360-367 (текст never-served). Образец решения: adapters/node-test/preload/patch-module-compile.ts:14 и adapters/node-test/run-dry.ts:75-80. Документация: docs/content/guide/compatibility.mdx:34 и :56-57. PnP: data/compat-experiments.md M10 (12 no coverage, exit 0).",
+    "benefit": "CJS-проекты под Vitest получают верные вердикты, `--mutant` совпадает с полным прогоном. Если связь «тест → модуль» потеряна, это видно в отчёте, а не прячется за NoCoverage.",
+    "risks": "Второй путь загрузки (патч `Module.prototype._compile` в воркере) нужно сверять с текстом так же, как transform-хук (mismatched/resolveSwitchedText). Отбор тестов, не зависящий от выбранных мутантов, удорожает dry run в цикле агента. Ошибку для PnP выдавать, только если ни один процесс не увидел переключаемых модулей.",
+    "verify": "Проходят тесты из bug-prompts/BUG-507.md, BUG-201.md и BUG-820.md. analysis/tools/cli/physical-check.mjs на vt-cjs-chain и vt-require даёт 0 расхождений. `isolation.sh vt/mocks mocks jnhjhh9w 2hmxc740` даёт одинаковые вердикты при полном прогоне, с `--mutant` и с `--since`. Фикстура dynimport даёт Killed.",
+    "related_bugs": [
+     "BUG-507",
+     "BUG-205",
+     "BUG-201",
+     "BUG-903",
+     "BUG-820"
+    ]
+   },
+   {
+    "title": "Монорепозитории с `test.projects` и собственным `root` не запускаются вовсе",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Самая распространённая схема монорепозитория (`projects: ['packages/*']`) из корня падает с сообщением «Tests fail without mutants… The test runner did not report this file», хотя `vitest --run` зелёный. Плагин Mootant попадает только в корневой Vite-сервер. Обходной путь — запуск из пакета — работает, но документация его не называет.",
+    "evidence": "02-bugs.md:92 (BUG-508, high). decisions.md:28: воспроизведён 2/2 и на независимой фикстуре; нарушен JSDoc-контракт create-mootant-plugin.ts:21; единственная мультипроектная фикстура использует общий root. Код: adapters/vitest/start-vitest-session.ts:91-117 (плагин передаётся только в createVitest), create-mootant-plugin.ts:53 (configureVitest). Обходной путь: data/compat-experiments.md M10 (npm workspaces, запуск из packages/a).",
+    "benefit": "Начинают работать монорепозитории — частая форма именно у библиотек, которые первыми берут мутационное тестирование.",
+    "risks": "Внедрение плагина в Vite-конфиг каждого проекта опирается на внутренности Vitest; оценка M — гипотеза. Проверку checkProjectConfig для таких проектов нужно сохранить.",
+    "verify": "Проходит тест из bug-prompts/BUG-508.md. На фикстуре из двух проектов со своим root и одного без него вердикты совпадают с ручным применением мутантов. `pool: 'vmThreads'` в проекте с root по-прежнему даёт ошибку.",
+    "related_bugs": [
+     "BUG-508"
+    ]
+   },
+   {
+    "title": "Поддержан только Vitest 5, а ему два месяца: ядро аудитории отрезано",
+    "kind": "problem",
+    "severity": "high",
+    "effort": "L",
+    "problem": "На Vitest 4 и 3, которые ещё получают патчи, первый запуск обрывается сообщением «mootant runs Vitest 5, but … has Vitest 4.1.12». Около 80 % скачиваний раннеров Stryker приходится на vitest-runner с peer `vitest >=2`. Какая доля проектов уже на v5, неизвестно; гипотеза — меньшинство. Снять проверку версии мало: адаптер завязан на API пула и раннера v5.",
+    "evidence": "adapters/vitest/detect-vitest.ts:45 (`!== '5'`), adapters/vitest/start-vitest-session.ts:58-64. 07-compat-and-release.md:21-26 и :176-246 (§7.1.5–7.1.6; там же оговорка, что скачивания — не пользователи). data/compat-experiments.md M11: со снятой проверкой Vitest 4 падает с `reading 'logger'` и таймаутом пула. 01-architecture-adapters.md:53-57.",
+    "benefit": "На запуске 0.x попробовать Mootant смогут в разы больше проектов. Ценность этой работы максимальна сейчас и падает по мере перехода экосистемы на v5.",
+    "risks": "Одному мейнтейнеру придётся вести два варианта интеграции с пулом. Без контрактного набора тестов адаптеров легко потерять изоляцию мутантов.",
+    "verify": "Блок «verdict equivalence» в test/adapters/vitest/index.test.ts зелёный на Vitest 4.1.x. На двух реальных проектах с v4 вердикты совпадают с ручным применением мутантов (analysis/tools/oracle).",
+    "related_bugs": []
+   },
+   {
+    "title": "Agent skill, заявленный главным отличием, отсутствует",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Skill обещают описание пакета, лендинг, getting-started и пункт меню сайта. При этом `npx skills add azat-io/mootant` отвечает «No skills found» с exit 1, `/agent-skill` даёт 404, а в README skill не упомянут вовсе. Пользователь, пришедший ради агентов, сразу упирается в невыполненное обещание. Как дефект кода это medium (decisions.md:24), но для позиционирования это главный пробел.",
+    "evidence": "02-bugs.md:114 (BUG-651), :164 (BUG-650); decisions.md:24-25; analysis/ux/skills-add-output.txt; package.json:4; docs/content/guide/getting-started.mdx:136-145; docs/components/Header.astro:15; readme.md:51-64 (слова skill нет); каталога skills/ в репозитории нет. Черновик analysis/ux/SKILL.draft.md (129 строк) CLI skills 1.7.6 находит и ставит (06-ux-and-agents.md §6.3).",
+    "benefit": "Агент получает правила цикла: `--json` → тест → `--mutant`, вызов через `npx`, что делать с эквивалентными мутантами, не трогать исходники.",
+    "risks": "Skill нужно держать в синхроне с флагами CLI и полями JSON. Поэтому references стоит генерировать из docs/content/mutators/*.md, а в CI проверять frontmatter и `npx skills add . --list`.",
+    "verify": "`npx skills add azat-io/mootant --list` показывает `mootant`. Ссылка в шапке сайта не ведёт на 404 после `astro build`. Агент на docs/demo убивает q31p и подтверждает это через `--mutant`.",
+    "related_bugs": [
+     "BUG-651",
+     "BUG-650"
+    ]
+   },
+   {
+    "title": "Кэш по умолчанию возвращает устаревшие вердикты в обе стороны, если меняются входы вне ключа",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "L",
+    "problem": "Без `--incremental` кэш отдаёт старые вердикты, в том числе ложный Killed, после правки:\n- файла за виртуальным модулем Vite (addWatchFile);\n- файла, который тест читает через fs вне root (общие фикстуры монорепо);\n- кода в node_modules без смены lockfile (patch-package);\n- tsconfig из `references` в пакете монорепо.\nТак же ведут себя `process.loadEnvFile` и настройки Vitest, которые конфиг вычисляет из окружения. Документация обещает, что вердикт живёт, пока не изменились «the files … its tests read». Каждый класс узкий, но промах ничем не виден.",
+    "evidence": "02-bugs.md:103-108 (BUG-402, 403, 410, 419 — medium; decisions.md:33-36); 02-bugs.md:143 и :146 (BUG-409, BUG-415 — low). bugs/cache-since.md:15-30 и матрица «r1 → правка → r2 из кэша против r3 с `--no-cache`». Код: adapters/shared/track-inputs.ts:31-37 (учитываются только чтения внутри root и вне node_modules); adapters/vitest/get-module-file.ts:17-20; adapters/shared/list-tsconfig-files.ts:17-42 (только extends); adapters/vitest/collect-dependencies.ts:93-100. Обещание: docs/content/guide/configuration.mdx:352-355.",
+    "benefit": "Кэш, включённый по умолчанию, перестаёт давать ложные Killed и Survived в монорепозиториях и в проектах с плагинами Vite и patch-package.",
+    "risks": "Больше файлов в ключах — меньше попаданий. Чтения вне root нужно фильтровать от tmp и системных каталогов. Для node_modules хэшировать установленный lockfile и patches/, а не всё дерево. Для BUG-402 обходить узлы, у которых `file ?? id` — не абсолютный путь (decisions.md:33).",
+    "verify": "Проходят тесты из bug-prompts/BUG-402.md, BUG-403.md, BUG-410.md и BUG-419.md. Сценарии virtual_module, outside_root, nt_outside_root, node_modules_patch и tsconfig_reference (analysis/tools/cache/s-inputs.sh) больше не дают устаревших вердиктов. Контрольные inside_root и watched_real_module сохраняют прежнюю долю попаданий.",
+    "related_bugs": [
+     "BUG-402",
+     "BUG-403",
+     "BUG-410",
+     "BUG-419",
+     "BUG-415",
+     "BUG-409"
+    ]
+   },
+   {
+    "title": "Isolated-фаза плохо параллелится: юниты одного тест-файла идут строго по очереди, а раунды выживших разделены барьерами",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "L",
+    "problem": "Контракт запрещает гонять один тест-файл дважды одновременно. Воркер Vitest после claim ждёт смерти процесса предыдущего юнита и всё это время держит слот; в node:test ключ пула — путь файла. Когда мутантов покрывает один файл (модуль и его тест, `--since` на PR, `--mutant` агента), раунд превращается в одну цепочку. Выжившие проходят раунды по 1, 1, 2, 4, 8 файлов, и каждый раунд ждёт свой самый долгий юнит. Юнит — свежий процесс, и сами тесты в нём — малая доля стоимости. В смоуке Mootant тратил на мутанта не меньше Stryker, а выигрывал в основном за счёт меньшего числа мутантов. Цель автора «заметно быстрее» упирается в расписание, а не в ядро.",
+    "evidence": "Код: types/adapter/adapter-session.d.ts:14-19; adapters/vitest/worker/wait-for-turn.ts:28-49; adapters/node-test/run-isolated.ts:96; core/run/run-isolated-rounds.ts:69; adapters/vitest/configure-project.ts:46-49 (`isolate: true`). Смоук (один прогон, load 13–41, `--concurrency 2`; только качественно):\n- path-to-regexp: раунд — одна цепочка одного файла, слоты заняты меньше чем наполовину, тесты — около 15 % стоимости юнита (bench/smoke/smoke.md; 04-performance.md:199-211);\n- у cheerio и perfectionist такая же картина (bench/smoke/smoke-subset.md:40-44, 118-119);\n- на мутанта Mootant дороже Stryker, на полезного мутанта — дешевле (smoke.md:8-9, smoke-subset.md:101-104).\nДогфудинг: 85 юнитов одного файла шли друг за другом, около 15 минут на одном ядре; раунды 2 и 4 — по 14 минут (00-baseline.md:171-198). Профиль форков cheerio: на код mootant приходится около 2 % CPU (bench/smoke/profile-cheerio.md).",
+    "benefit": "Целевые прогоны — PR, один модуль, цикл агента — станут в разы быстрее. До замера isolated-фаза path-to-regexp оценивается в ×2–3 (experiments/prototypes.md:193-200). Догфудинг общих модулей становится практичным.",
+    "risks": "Параллельные юниты дают ложные Killed у тестов с общим файлом, портом или БД: на стресс-фикстуре 4 и 6 расхождений из 13 (prototypes.md:154). Поэтому параллельность только opt-in. Обрезка юнита (P2) и переиспользование воркера отвергнуты, потому что меняют вердикт (prototypes.md:295-358; 01-architecture-adapters.md:589-592). Под нагрузкой суммарная стоимость юнитов в P1 выросла на 24 % (prototypes.md:168-174).",
+    "verify": "В эксклюзивном окне запустить `analysis/tools/perf-proto/bench-proto.sh parallel-units` на path-to-regexp, perfectionist и cheerio (m-cold) и сравнить медиану wall и `summary.duration.isolated`; в units-report самая длинная цепочка должна исчезнуть. compare-verdicts --strict — 0 расхождений. Для крупных пакетов выживших смотреть `summary.runs.isolated` и wall раундов.",
+    "related_bugs": []
+   },
+   {
+    "title": "Тёплый прогон и перепроверка `--mutant` всегда платят старт раннера и dry run",
+    "kind": "problem",
+    "severity": "medium",
+    "effort": "XL",
+    "problem": "Сессия адаптера стартует до чтения кэша, а dry run идёт раньше подготовки и применения кэша. Кэш хранит только улики «мутант × тест-файл», без покрытия и списка тестов, поэтому применить его без раннера нельзя. node:test в первом dry run гоняет все тест-файлы, а каждый `--mutant` — это новый процесс. На большом проекте цикл агента «тест → перепроверка» занимает минуты, и обещание «Fast reruns» выполняется лишь частично.",
+    "evidence": "core/run-mutants.ts:275 (adapter.start), :411 (runDryPhase), :444 (prepareRunCache), :489 (reuseCachedVerdicts); adapters/node-test/run-dry.ts:75-80. Смоук: в тёплом прогоне, где все вердикты из кэша, dry run — подавляющая часть времени (90–98 % summary.total), а при перепроверке одного мутанта — 73–94 % (bench/smoke/smoke-subset.md:32-34 и :76-78; smoke-subset2.md:17-18). Мини-фикстура: тёплый прогон 2,2 с, из них dry run 1,8 с (00-baseline.md:202-210). Обещание: docs/components/Why.astro:26-28. Прототип P3 эквивалентен в 22 из 22 сценариев, но раннер не стартует только когда ничего не изменилось; правка теста агентом уводит прогон на обычный путь (experiments/prototypes.md:16-20 и :520-541).",
+    "benefit": "Повторный прогон без изменений займёт секунды (P3). Частичный dry run — только для тест-файлов с изменившимися входами — сделает цикл агента интерактивным и даст основу будущему MCP (06 §6.5).",
+    "risks": "Устаревшее покрытие ведёт к неверному выбору тестов и ложным Survived или NoCoverage. Проверку всего дерева ослаблять нельзя: без неё 2 устаревших вердикта из 76 (prototypes.md:494-506). Хэш дерева дорог на монорепо. Снимок пока один на проект.",
+    "verify": "`bench-proto.sh dry-snapshot` на cheerio и perfectionist (m-cold, m-warm, m-edit): в выводе строка «Reused the dry run…», `summary.runs = {}`, compare-*.md без расхождений. Отрицательный контроль p3-negative-control.sh оформлен тестом.",
+    "related_bugs": [
+     "BUG-752",
+     "BUG-753"
+    ]
+   }
+  ],
+  "top_improvements": [
+   {
+    "title": "Опубликовать 0.1.0 и закрыть ловушки первого релиза",
+    "kind": "improvement",
+    "severity": "critical",
+    "effort": "S",
+    "problem": "Та же проблема, что №1 в топе проблем (BUG-653). Пункт стоит в обоих списках сознательно: это и самая важная проблема, и самое выгодное действие.",
+    "evidence": "decisions.md:23; 06-ux-and-agents.md:57-76. 00-baseline.md:82-95: после `pnpm build` `test:astro` краснеет, потому что tsconfig.json:2-4 не исключает dist, и повторный release:check падает. .github/workflows/release.yml:9-13 (лишние права, `id-token` на весь джоб) и :44-53 (GitHub Release создаётся до publish; `--no-git-checks` — флаг pnpm). package.json:57-59 (release:check, `git add .`) при `.mootant/` вне .gitignore (07 §7.4.4 п.8). Changelog нет (07 §7.4.4 п.9).",
+    "benefit": "Установка из документации начинает работать. До тега нужны правки на S:\n- `\"exclude\": [\"dist\", …]` в tsconfig.json;\n- правильный порядок шагов и права в release.yml;\n- `npm pkg fix`;\n- `.mootant/` в .gitignore;\n- заметки к 0.1.0, написанные вручную, с советом `npm i -D mootant@latest` для тех, у кого `^0.0.0`.\nПосле публикации — `npm deprecate mootant@0.0.0`.",
+    "risks": "Релиз закрепит текущие контракты. Ожидаемые в 0.x ломающие правки — коды выхода (улучшение №9) и корень проекта (BUG-826) — нужно объявить в changelog. `workflow_dispatch` с любой ветки стоит ограничить environment.",
+    "verify": "`npm init -y && npm i -D vitest@5 mootant && npx mootant --version` печатает `mootant/0.1.0`. `pnpm build && pnpm release:check` зелёный два раза подряд. `npm view mootant@0.1.0 dist.attestations` не пуст.",
+    "related_bugs": [
+     "BUG-653"
+    ]
+   },
+   {
+    "title": "Положить `skills/mootant/SKILL.md` из проверенного черновика и починить ссылку `/agent-skill`",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Та же проблема, что №7 в топе проблем. Пункт стоит в обоих списках сознательно: ключевое отличие проекта чинится одним файлом.",
+    "evidence": "analysis/ux/SKILL.draft.md — 129 строк, около 1,7 тыс. токенов; `npx skills add <repo> --list` его находит, а `-y` ставит (06-ux-and-agents.md §6.3). Раскладка как в azat-io/ghostwriter. docs/components/Header.astro:15; decisions.md:24-25.",
+    "benefit": "Минимальный шаг: один файл и ссылка на раздел getting-started вместо 404. Следующий шаг (M): references/ из разделов «Kill a surviving mutant» (218–360 токенов на мутатор) и проверка skill в CI.",
+    "risks": "Оговорки черновика про `npx` и гранулярность игнора нужно обновить после исправления BUG-652 и появления игнора по id. Skill придётся держать в синхроне с CLI.",
+    "verify": "`npx skills add azat-io/mootant --list` показывает `mootant`. Проверка ссылок после `astro build` зелёная. Агент на docs/demo по фразе «fix the surviving mutants in src» убивает q31p и подтверждает это через `--mutant`.",
+    "related_bugs": [
+     "BUG-651",
+     "BUG-650"
+    ]
+   },
+   {
+    "title": "Кэш в CI: идентификатор сборки, вшитый при сборке, вместо mtime (BUG-407), затем идентификаторы прогона CI вне `*`-хэша (BUG-701)",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Штамп сборки в ключе окружения — mtimeMs файла пакета. `npm ci` ставит файлам время установки, и весь кэш становится недействительным: в CI с npm кэш не работает никогда. Тесты, которые перечисляют process.env (RuleTester, запуск дочерних процессов), вдобавок теряют кэш из-за `GITHUB_RUN_ID` и подобных переменных. Вердикты при этом не ложные (промах консервативен), но обещание readme «caches verdicts between runs. In CI…» не выполняется.",
+    "evidence": "core/cache/prepare-run-cache.ts:164. analysis/ux/ci-cache-check.txt: после `npm ci` с восстановленным кэшем все 67 мутантов прогоняются заново, после `touch -d` — «Reused cached verdicts for 67 of 79». decisions.md:39: medium по решению координатора именно из-за CI. adapters/shared/index-environment-hashes.ts:9-17: в списке «летучих» переменных всего 7 имён. 02-bugs.md:115 (BUG-701: perfectionist в тёплом прогоне берёт из кэша 0 из 21 вердикта при изменившемся окружении и 19 из 21 при неизменном). readme.md:63-64.",
+    "benefit": "Полный прогон main и проверки PR берут вердикты из кэша. Переносимые пути в ключах (core/cache/get-portable-path.ts:4-7) начинают работать между машинами.",
+    "risks": "Идентификатор должен меняться при каждой пересборке неопубликованного кода: хэш собранного кода через `define`, с запасным вариантом для запуска из исходников. Из `*` исключать только идентификаторы прогона (`GITHUB_RUN_*`, `RUNNER_*`, `CI_JOB_ID`), иначе вердикты устареют. Следующий шаг — диагностика «почему кэш не использован» (bugs/cache-since.md, рек. 2).",
+    "verify": "Сценарий ci-cache-check без `touch` выводит «Reused cached verdicts for 67 of 79». test/repros/BUG-407/run.sh после переустановки даёт 4 из 4. Пересборка с изменённым кодом сбрасывает кэш. analysis/bench/repro/bug-701/repro.sh с другим `GITHUB_RUN_ID` даёт 5 из 5.",
+    "related_bugs": [
+     "BUG-407",
+     "BUG-701",
+     "BUG-413"
+    ]
+   },
+   {
+    "title": "`--since`: сразу — диагностика, затем пропуск с владельцем действует, только если владелец запускается",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Исправление проблемы №2 (BUG-305). Пункт стоит в обоих списках, потому что у high-проблемы есть шаг на S, который сразу снимает тишину.",
+    "evidence": "Изменённые строки читаются ещё до генерации мутантов (core/run-mutants.ts:186-192), поэтому генерации можно передать отбор. Проверка «владелец запускается» уже есть: runs() в core/mutators/shared/create-run-context.ts:47-59 учитывает пресет и ignore-комментарии. Для O19 используется статический контекст, где runs() всегда true (core/mutators/shared/create-static-run-context.ts:4-20; bug-prompts/BUG-305.md:19-30). Ожидаемое поведение и критерий готовности — в bug-prompts/BUG-305.md.",
+    "benefit": "Шаг 1 (S): предупреждение «N changed lines have only skipped candidates whose owners are not run» и счётчик в summary — гейт перестаёт молчать. Шаг 2 (M): мутант изменённой строки возвращается, если его владелец не попал в отбор, и PR-гейт проверяет то, что действительно изменилось.",
+    "risks": "В PR станет немного больше мутантов. Нельзя вернуть дубль, если владелец тоже отобран. То же нужно сделать для `--mutant` и узких путей. Без `--since` id и состав мутантов меняться не должны.",
+    "verify": "Проходит тест из bug-prompts/BUG-305.md. fx-since даёт мутанта `door.open(user) -> ;` и exit 1 при `--threshold 80`. since_exposure.py находит 0 таких строк. Эталоны test/fixtures/list без `--since` не меняются.",
+    "related_bugs": [
+     "BUG-305"
+    ]
+   },
+   {
+    "title": "Нештатный исход юнита — не вердикт: сразу не кэшировать load-error и подтверждать crash повтором, затем исход «юнит неполон» → повтор → Error",
+    "kind": "improvement",
+    "severity": "high",
+    "effort": "M",
+    "problem": "Исправление проблемы №3. Пункт стоит в обоих списках, потому что первый шаг — две правки размером S.",
+    "evidence": "Шаг 1: добавить load-error к исключению из записи в core/cache/create-run-cache.ts:313-318 и crash к подтверждаемым причинам в core/run/get-unit-evidence.ts:22-27. То же предлагает рекомендация №3 в 01-architecture-adapters.md §12. Шаг 2: путь «повтор → Error» уже есть для юнитов без фактов (core/run/apply-isolated-result.ts:93-113). Vitest-раннер знает, что бросил юнит (adapters/vitest/runner.ts:886-888), но ядру об этом не сообщает (adapters/vitest/build-isolated-facts.ts:46-59). Направление исправления — bugs/static-review.md:114-119 и :164-170. Заодно стоит проверять результаты адаптера (BUG-605).",
+    "benefit": "Первым маленьким PR ложный Killed перестаёт закрепляться в кэше, а разовый OOM в CI больше не завышает score. Вторым PR уходят ложные Survived и NoCoverage от сбоев соседних тестов, и вердикт совпадает с `--mutant`.",
+    "risks": "Настоящий crash и неполный файл стоят ещё одного юнита. На нестабильных сьютах станет больше Error и exit 1. Контракт IsolatedFacts меняется в обоих адаптерах. Bail после убийства должен по-прежнему считаться полным юнитом.",
+    "verify": "Проходят тесты из bug-prompts/BUG-900.md, BUG-901.md и BUG-602.md. На loadcache второй прогон не берёт load-error из кэша. `TRACE_KILL_AFTER=1500` даёт Survived после подтверждения. vt/crash gt34y7x6 остаётся Killed(crash). Фикстуры abandon и hook дают Killed. Оракул на vt/* и nt/* без новых расхождений.",
+    "related_bugs": [
+     "BUG-901",
+     "BUG-602",
+     "BUG-900",
+     "BUG-206",
+     "BUG-605"
+    ]
+   },
+   {
+    "title": "Первый запуск без спотыканий: `npx` в подсказках перепроверки, `.mootant/.gitignore`, проверка версии Node",
+    "kind": "improvement",
+    "severity": "low",
+    "effort": "S",
+    "problem": "Скопированная строка `re-check one: mootant run src --mutant 69kd` даёт `command not found`. То же с полем `recheck` в JSON, блоком «Run it again» в HTML и агентом в skill-session.ansi. HTML-отчёт с исходниками и первыми строками ошибок тестов легко попадает в коммит. На Node ниже 20.19 пользователь видит стек `toSorted is not a function` вместо сообщения о версии.",
+    "evidence": "02-bugs.md:165 (BUG-652: cli/report/format-command.ts:77, cli/report/format-run-text-report.ts:173, cli/html/client/render-mutant-panel.ts:197). 06-ux-and-agents.md §6.1 шаг 4: `git add -A` закоммитил report.html на 4223 строки, а cli/html/write-html-report.ts:10-16 создаёт только каталог. 02-bugs.md:156 (BUG-515, bin/mootant.js:3-5). 02-bugs.md:176 (BUG-825, секреты в HTML).",
+    "benefit": "Каждая подсказка работает при копировании и у человека, и у агента. Отчёт с кодом не утекает в git. Вместо стека — понятная ошибка о версии Node.",
+    "risks": "Менеджер пакетов можно угадать неверно (по lockfile или `npm_config_user_agent`), поэтому в JSON стоит отдавать ещё и массив `recheckArgs`. Существующий `.gitignore` пользователя перезаписывать нельзя.",
+    "verify": "Строка `re-check one:` из TTY-отчёта запускается в bash. `git status` чист после `--html`. bin на Node 18 печатает требуемую версию.",
+    "related_bugs": [
+     "BUG-652",
+     "BUG-515",
+     "BUG-825"
+    ]
+   },
+   {
+    "title": "Документация, которая калибрует доверие: CI-рецепт, Troubleshooting и «когда вердикту не верить»; подсказка для shallow clone",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "S",
+    "problem": "Первый CI-конфиг ломается на каждой детали: клон глубиной 1 даёт `unknown revision` без подсказки, кэш не переживает `npm ci`, PR из форков не может оставить комментарий. Пределы вердикта не описаны или описаны неверно:\n- `.cjs` под Vitest заявлен без оговорок;\n- не сказано, что не входит в ключ кэша;\n- нет объяснения Timeout у «горячего» кода и бюджета 3× + 250 мс;\n- не сказано, что «score none» проходит порог;\n- нет пометки, что монорепо работает только при запуске из пакета (до исправления BUG-508);\n- не описаны PnP + node:test и контейнеры без `ps`.",
+    "evidence": "docs/content/guide/getting-started.mdx:132-134 — одна фраза, без YAML. analysis/ux/ci-since-check.txt: `fetch-depth: 2` + `--since HEAD^1` работает. analysis/ux/mootant-workflow.yml: actionlint без замечаний, но на GitHub workflow не запускался (06 §6.8). core/git/get-merge-base.ts:33-35 (BUG-406). docs/content/guide/compatibility.mdx:34, :56-57. docs/content/guide/configuration.mdx:352-359. core/run/run-dry-phase.ts:360-367 (текст never-served). decisions.md:41 и :44: BUG-200 и BUG-204 — «описать в документации». bugs/cache-since.md, рек. 6. 06 D3, D4, D8.",
+    "benefit": "Ещё до исправлений кода пользователь и агент знают, какой статус перепроверить и когда удалить кэш, а первый CI собирается по готовому рецепту.",
+    "risks": "Документация отстаёт от кода. Пункты нужно убирать по мере исправлений, и каждый должен ссылаться на тест или bug-prompt. Workflow перед публикацией нужно прогнать на тестовом репозитории.",
+    "verify": "Workflow зелёный на тестовом PR. Клон глубиной 1 печатает совет про `fetch-depth`. `test:astro` и `test:spelling` зелёные. Сообщения об ошибках ссылаются на Troubleshooting.",
+    "related_bugs": [
+     "BUG-406",
+     "BUG-205",
+     "BUG-200",
+     "BUG-204",
+     "BUG-403",
+     "BUG-410",
+     "BUG-822"
+    ]
+   },
+   {
+    "title": "Повторять упавшие тест-файлы dry run с инструментированием, прежде чем объявлять instrumentation-break",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Вне `--fast` первый провал в инструментированном dry run сразу сверяется с прогоном без переключённых файлов. Один нестабильный тест — и файл объявлен сломанным: все его мутанты Error, exit 1, кэш не сохраняется. Если упавшие тесты не достигли ни одного сайта, сломанными объявляются все файлы прогона.",
+    "evidence": "02-bugs.md:121 (BUG-902, decisions.md:20); 02-bugs.md:96 (BUG-100, decisions.md:56). core/run/run-dry-phase.ts:158-170 (recoverFromFailures без повтора); :190-213 и :201 (повтор с инструментированием только при `repeat`, то есть в `--fast`); :505-517 (`broken.size === 0 ? new Set(related) : broken`). core/run-mutants.ts:516-520 (кэш не сохраняется, BUG-408).",
+    "benefit": "Нестабильные тесты не красят CI ложной «поломкой инструментирования», невиновные файлы сохраняют мутантов, кэш сохраняется.",
+    "risks": "Лишний инструментированный прогон упавших файлов, но только при провале. Если сузить подозреваемых до зависимостей упавших файлов, настоящая поломка без покрытых сайтов может остаться неназванной. Нужен запасной путь: бисекция по файлам или проверка разбора switched-текста при создании (BUG-905, BUG-106).",
+    "verify": "Проходят тесты из bug-prompts/BUG-902.md, BUG-100.md и BUG-905.md. flakydry проходит без Error, с exit 0 и сохранённым кэшем. В test/repros/BUG-100/run.sh у невиновного файла нет instrumentation-break.",
+    "related_bugs": [
+     "BUG-902",
+     "BUG-100",
+     "BUG-905",
+     "BUG-408"
+    ]
+   },
+   {
+    "title": "Контракт `--json`: JSON и при ошибке, различимые коды выхода, чистый stdout",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Любой вывод внутри процесса Mootant попадает в stdout и ломает `JSON.parse`: `console.log` в vitest.config, vite-plugin-svelte, вероятно, баннер dotenv@17. При ошибке с `--json` stdout пуст. Exit 1 означает одновременно «порог не пройден», «тесты падают без мутантов» и «неверный аргумент».",
+    "evidence": "02-bugs.md:111 (BUG-509; decisions.md:31 — «для агентов прямой отказ интерфейса»). cli/run-mutation.ts:63-75 и :83-94. adapters/vitest/start-vitest-session.ts:111-116: перехвачен только вывод Vitest. cli/index.ts:15-19. docs/content/guide/cli.mdx:125-126. analysis/ux/first-run/09-json-edge-cases.txt. 03-competitors.md §6.11 (коды выхода cargo-mutants).",
+    "benefit": "Агент и CI различают исходы без разбора stderr. Это ещё и дешёвое отличие от Stryker, у которого есть только exit 1 по порогу `break`.",
+    "risks": "Смена кодов выхода ломает скрипты с проверкой `$? -eq 1`, поэтому её стоит сделать в 0.x как можно раньше и записать в changelog. Перехват stdout не должен прятать вывод тестов в текстовом режиме.",
+    "verify": "`mootant run src --mutant zzzz --json` печатает `{\"error\":{\"code\":\"unknown-mutant\",…}}` и выходит с кодом, отличным от порогового. stdout фикстуры test/repros/BUG-509 парсится как JSON. В test/cli есть тест на каждый код выхода.",
+    "related_bugs": [
+     "BUG-509",
+     "BUG-652"
+    ]
+   },
+   {
+    "title": "`run.parallelUnits` (прототип P1) как opt-in, со списком последовательных файлов и подсказкой в отчёте",
+    "kind": "improvement",
+    "severity": "medium",
+    "effort": "M",
+    "problem": "Решает проблему №9 для целевых прогонов: юниты одного тест-файла идут по очереди, и раунд превращается в одну цепочку.",
+    "evidence": "experiments/prototypes.md:16-20 и :104-128: в адаптерах меняются две строки (в прототипе adapters/vitest/runner.ts:543-545 и adapters/node-test/run-isolated.ts:98), вердикты параллельного режима лежат в кэше под отдельным ключом. prototypes.md:147-155:\n- 76 из 76 совпадений на фикстурах без общих ресурсов, и в Vitest, и в node:test;\n- 17 из 20 тестов «verdict equivalence»: упали ровно три теста с общим файлом или портом;\n- на стресс-фикстуре 4 и 6 расхождений из 13.\nprototypes.md:245-253: оценка M. experiments/perf-parallel-units.diff. Ядро уже считает цепочки (core/run/run-isolated-rounds.ts:94).",
+    "benefit": "До ×W на isolated-фазе для `--since` на PR, одного модуля и цикла агента. Ожидание до замера: path-to-regexp ×2–3, perfectionist ×1,5–2,5, cheerio около ×1. Подсказка в отчёте («раунд N был одной цепочкой файла X…») сделает opt-in заметным; это предложение, оно не проверено.",
+    "risks": "Ложные Killed при общих ресурсах, поэтому только opt-in. Режим `'auto'` по DryFile.modified — эвристика, по умолчанию его не включать. Растёт пик памяти. На занятой машине выигрыша может не быть: под нагрузкой суммарная стоимость юнитов выросла на 24 %. Мержить только после подтверждающего замера.",
+    "verify": "В эксклюзивном окне `bench-proto.sh parallel-units` на path-to-regexp и perfectionist: медиана wall и isolated. compare-verdicts --strict — 0 расхождений. Контрактный тест: при false юниты одного файла не перекрываются по времени, при true перекрываются.",
+    "related_bugs": []
+   }
+  ],
+  "roadmap": {
+   "two_weeks": [
+    "Релиз 0.1.0 (S): exclude dist в tsconfig.json, порядок шагов и права release.yml, `npm pkg fix`, `.mootant/` в .gitignore, заметки к 0.1.0 с советом для `^0.0.0`; затем `npm deprecate mootant@0.0.0` (BUG-653).",
+    "skills/mootant/SKILL.md из analysis/ux/SKILL.draft.md и рабочая ссылка «Agent skill» (S; BUG-651, BUG-650).",
+    "Доверие, правки на S: не кэшировать load-error и подтверждать crash повтором (BUG-901, BUG-602); предупреждение `--since` о строках, где есть только пропущенные кандидаты (BUG-305, шаг 1); учитывать `dangerouslyIgnoreUnhandledErrors` и поправить эталон test/helpers/run-reference-mutants.ts (BUG-203).",
+    "Доверие, правки на M: полный фикс BUG-305 по промпту; исход «юнит неполон» → повтор → Error (BUG-900, BUG-206).",
+    "Кэш в CI: идентификатор сборки вместо mtime (BUG-407, S).",
+    "Первый запуск (S): `npx` в подсказках (BUG-652), `.mootant/.gitignore`, проверка версии Node в bin (BUG-515).",
+    "Документация (S): CI-рецепт и Troubleshooting; «когда вердикту не верить» — CJS под Vitest, запуск монорепо из пакета до BUG-508, PnP + node:test, контейнеры без ps, что не входит в ключ кэша; совет про fetch-depth в ошибке `unknown git revision` (BUG-406).",
+    "Тест-сьют (S): независимость от окружения T1 (BUG-850, 853, 854, 863, 864) и разрез test/adapters/vitest/index.test.ts (T4), чтобы release:check был зелёным на любой машине.",
+    "Замеры в эксклюзивном окне: ярусы 1–2 стенда analysis/bench и прототипы P1 и P3 по experiments/prototypes.md:705-801. До них не писать «быстрее Stryker» и не включать P1/P3.",
+    "Попутно (S): готовый diff ширины ASCII (BUG-702); логи Harden Runner в отменённых джобах CI проекта — 7 ручных перезапусков из 15 (00-baseline.md:121-129)."
+   ],
+   "two_months": [
+    "Доверие: повтор упавших файлов dry run с инструментированием (BUG-902, BUG-100; M); контракт `--json` — JSON при ошибке, коды выхода, чистый stdout (BUG-509; M), пока никто не завязался на exit 1.",
+    "Совместимость: монорепо `test.projects` со своим root (BUG-508; M); переключение `require()` в воркере Vitest по образцу adapters/node-test/preload/patch-module-compile.ts (BUG-507; M–L); для PnP + node:test — ошибка вместо тихих 0 % (BUG-820; S).",
+    "Кэш: дыры ключа BUG-403 и BUG-419, затем BUG-402 и BUG-410 (S–M каждая); диагностика «почему кэш не использован» (BUG-404, 411, 412; M); CI-переменные вне `*` (BUG-701); кэширование hit-limit с подъёмом CACHE_VERSION (BUG-752).",
+    "Процессы: убивать зависшие воркеры без ps (BUG-502; S–M); единый владелец отмены и запись кэша по ходу прогона (BUG-601, 600, 418; M); выход после отчёта (BUG-506; S–M).",
+    "Контрактный набор тестов адаптеров на общей фикстуре (M), затем адаптер Vitest 4 (L).",
+    "Скорость, по итогам замеров и только при равных вердиктах (compare-verdicts --strict): P1 `run.parallelUnits` opt-in (M), крупнее пакеты файлов у выживших (S), P3 — повтор dry run без раннера (L).",
+    "Агентам: игнор одного мутанта по id (M); `newTestFile` и ссылка на «Kill a surviving mutant» в JSON (S).",
+    "Пропуски: счётчики пропусков в отчёте run и честные флаги heuristic; точечные BUG-304, 307, 302; каталог правил владения в репозитории и типизированные id мутаторов (M).",
+    "Остальные medium-баги с промптами — по одному PR: BUG-104, 106, 510, 800, 850, 851."
+   ],
+   "before_1_0": [
+    "Публичный API:\n- разделить на стабильный (конфиг, defineConfig, Plugin/Preset, минимальный Mutator) и экспериментальный (`mootant/adapter`, syntax/hints);\n- внутренний контекст встроенных мутаторов и курируемый syntax на 10–15 методов со страницей «Writing a plugin» (ARCH-1);\n- `Plugin.skipRules` (BUG-800);\n- экспорт типов отчёта и JSON Schema; API-отчёт в CI.",
+    "Контракты:\n- semver-политика для пресетов и эвристик (07 §7.4.3);\n- раздел changelog «влияет на score» и снапшоты числа мутантов;\n- объявить schemaVersion, схему id и коды выхода;\n- ограничить поиск конфига и печатать путь загруженного конфига (BUG-826).",
+    "Релиз: build и publish в разных джобах, минимум прав, environment, smoke-тест tarball на обоих адаптерах перед публикацией (07 §7.4.4).",
+    "Контракт адаптера: версия, проверка результатов (BUG-605), явные capabilities, AbortSignal, adapter-kit. Rstest — после его 1.0, Jest — по спросу (01-architecture-adapters.md §12).",
+    "Цикл агента: частичный повтор dry run только для тест-файлов с изменившимися входами (XL), поверх P3.",
+    "Windows: smoke-джоб на windows-latest и macos-latest или явное «не поддерживается» (гипотезы BUG-511, 421, 512).",
+    "Проверка типов у выживших TS-мутантов (03 §6.1), чтобы тезис «меньше шума» выдерживал сравнение со Stryker и его checker; `--format github`/SARIF и `--json-file` (06 R6–R7).",
+    "Ночной оракул на 2–3 реальных проектах. Цифры против Stryker и точность эвристик публиковать только с методикой и после бенчмарка: раздел «Эмпирическая проверка» в 03 пока пуст.",
+    "Сознательно не делать: команду init (06 §6.1); MCP до появления тёплого процесса (06 §6.5); формат TOON (на 14–20 % длиннее JSON); обрезку юнитов P2 и переиспользование воркеров — они меняют вердикты."
+   ]
+  },
+  "strengths": [
+   "Механизм вердикта на детерминированном коде совпадает с эталоном. На core/text самого Mootant — 127 из 127 в обоих режимах, на ufo — 157 из 157 по каждому тесту. У isolated-юнита свой процесс, и вердикт не зависит от соседних мутантов, их порядка и `--concurrency` (bugs/verdicts.md:8-18; bugs/instrumentation.md:192-193; data/isolation.md:98-110). Оговорка: внешние проекты оракулом не прогонялись (bugs/verdicts.md:40-42).",
+   "Инструментирование сделано аккуратно. Switched-текст 123 867 мутантов (1 466 файлов, 9 проектов, strict) компилируется, кроме 4 файлов с BUG-106. Без активного мутанта тесты дают те же результаты, что на оригинале (ufo, defu, Vue, Svelte). Активный мутант совпадает с физически применённым по каждому тесту на 422 мутантах (bugs/instrumentation.md:11-25).",
+   "Граница «адаптер сообщает факты, ядро решает» проведена правильно, и ядро перепроверяет то, что может: лимит срабатываний, контрольные попытки batch, подтверждение таймаута, провалы dry run без инструментирования (types/adapter/test-adapter.d.ts:4-9; 01-architecture-adapters.md:992-1003). Ядро не знает раннеров, нарушений направлений слоёв ноль (01-architecture.md:49-56). Это главное, что нужно сохранить при добавлении Vitest 4, Rstest и Jest.",
+   "Единица isolated-прогона — весь покрывающий тест-файл. Это защита корректности, а не лишняя цена: прототип обрезки юнита дал ложные Survived и ложный Killed (experiments/prototypes.md:295-331). `--fast` не может дать ложный Survived, потому что выживших перепроверяет isolated-путь (core/run/run-batch-phases.ts:91-97; data/isolation.md:46-48).",
+   "План детерминирован: файлы ранжируются по путям, импортам и покрытию, а не по длительностям (core/run/rank-mutant-files.ts:8-21), и вердикт берётся из первого по рангу файла с уликой (core/run/decide-evidence.ts:3-16). Поэтому любую смену расписания — P1, крупные пакеты, поток — можно проверить побайтным сравнением вердиктов.",
+   "Таймауты почти не дают шума:\n- hit-limit считается по срабатываниям сайтов и не зависит от загрузки машины (core/run/get-try-limits.ts:26);\n- time-limit и hang подтверждаются повтором (core/run/get-unit-evidence.ts:22-27);\n- часы сторожа захвачены до запуска тестов (adapters/shared/capture-clock.ts).\nВ смоуке path-to-regexp Timeout у Mootant заметно меньше, чем у Stryker (bench/smoke/smoke.md, качественно).",
+   "Модель кэша верная и консервативная. Ключ включает тексты, зависимости из свежего dry run, файлы и переменные, прочитанные тестами, lockfile и версии. Запись атомарна, записи валидируются, Timeout, Error и crash не кэшируются, у каждого мутанта есть флаг cached (bugs/cache-since.md:15-23; 07-compat-and-release.md §7.2.4). Кэш строже инкрементального режима Stryker (03-competitors.md, «Кратко» п.5). Ломаются штампы и края, а не сама модель.",
+   "`--since` есть из коробки, и разбор git надёжен: merge base, merge-ref, переименования, незакоммиченные и неотслеживаемые файлы, спецсимволы, бинарные файлы (bugs/cache-since.md:364-396; 06-ux-and-agents.md §6.2). Если мутантов нет, раннер не стартует (core/run-mutants.ts:241). У StrykerJS аналога нет (03-competitors.md §7.1 п.5).",
+   "Каждый пропуск объясним: `list --skipped --json` показывает правило, категорию, причину, флаг heuristic и владельца. Все 95 правил описаны в документации (сверка 95 из 95), и она честно называет категорию решением, а не доказательством. На тестах Mootant правила owned/subsumed не спрятали ни одного выжившего — 0 из 360 (bugs/skips.md, «Что выдержало проверку»; docs/content/mutators.md:46-55).",
+   "Основа цикла агента уже есть: стабильные id без строк и столбцов (core/identity/create-mutant-id.ts:51-73), `--mutant` по префиксу, slim JSON с `recheck` и `testFiles`. Один проход агента поднял score с 35 до 48 % и вскрыл реальную слабую проверку `rejects.toThrow('down')`, которая проходит при `throw undefined` (06-ux-and-agents.md §6.1, шаг 6).",
+   "После установки первый опыт хороший:\n- конфигурация не нужна, раннер находится сам;\n- в отчёте есть дифф и тест-файл, HTML-отчёт работает офлайн;\n- повторный прогон без изменений идёт 1,1 с, а после правки теста перезапускаются только затронутые мутанты (06-ux-and-agents.md §6.1, шаги 3–4).\nКоманда init не нужна.",
+   "Основа скорости правильная: мутанты переключаются в рантайме, а кэш трансформаций Vite общий и живёт в памяти. Код mootant в воркерах занимает около 2 % CPU, главный процесс простаивает 83 % времени (bench/smoke/profile-cheerio.md). Ускорять нужно расписание и число юнитов, а не ядро.",
+   "Установка лёгкая: поверх Vitest Mootant добавляет 5 пакетов и 11,8 МБ, Stryker — 168 пакетов и 61,5 МБ (data/install-size.md; 03-competitors.md §3.8). ESLint-модель реализована чисто: независимый мутатор — это 3–4 файла плюс тест, фикстура и страница документации, копипасты 0,03 % (01-architecture.md:57-66).",
+   "Тест-сьют — сильная сторона: оракулы не зависят от реализации (эквивалентность с физически применёнными мутантами, эталон list), генерация проверяется property-based тестами с детерминированным ГСЧ, порог 100 % по четырём метрикам действительно соблюдается. Перегруппировка по картам раздела 1 ломает по смыслу только 2 теста (05-tests.md:14-24 и :861-919).",
+   "Гигиена поставки: действия закреплены по SHA, harden-runner с allowlist, OIDC trusted publishing без NPM_TOKEN, `--ignore-scripts`, minimumReleaseAge; конфиг строго валидируется с подсказками (07-compat-and-release.md §7.2.4).",
+   "В Vue и Svelte мутируются выражения шаблонов, а компиляция шаблона проверяется (core/instrument/check-vue-compile.ts, check-svelte-compile.ts). Stryker в `.vue` мутирует только скрипт (03-competitors.md §7.1 п.9)."
+  ],
+  "removed": [
+   "Л1 «--since молча теряет мутантов…» и Л2 «CI-гейт --since молча пропускает…» — дубли; объединены в проблему №2.",
+   "Л1 «Сбой соседнего теста → ложный Survived» и Л1 «Сбой инфраструктуры засчитывается как убийство» — один механизм (нештатный исход юнита) и одно семейство исправлений; объединены в проблему №3.",
+   "Л2 «Тихо неверный результат: CJS через require() и yarn PnP» — объединён с Л1 «Vitest-адаптер доверяет статическому графу Vite» в проблему №4.",
+   "Л1 «Нестабильный тест в dry run выдаётся за поломку инструментирования» — в топ проблем не вошёл: medium, отказ громкий, а не тихий вердикт; исправление — улучшение №8.",
+   "Л1 «Часть доказательных правил пропуска теряет мутантов» — в топ не вошёл: по эмпирике узко (0 из 360 скрытых на тестах Mootant, 3 полезных из 81 у solitary в perfectionist — bugs/skips.md); в формулировке была неточность про heuristic (см. evidence_problems); в дорожной карте на 2 месяца.",
+   "Л1 «Vitest: необработанные ошибки, которые проект велит игнорировать» (BUG-203) — узкий триггер; S-фикс перенесён в дорожную карту на 2 недели.",
+   "Л1 «Кэш молча не работает в CI», Л2 «CI не работает из коробки», Л3 «Кэш в стандартном CI не срабатывает» — тройной дубль. Промах консервативен, вердикты не ложные (decisions.md:39), поэтому в топе проблем его нет. Главное действие — улучшение №3, shallow clone — №7, BUG-412, 414, 418 — в дорожной карте.",
+   "Л2 «Машинный интерфейс для агентов и CI ненадёжен» — перенесён в улучшения №9 (контракт --json) и №6 (npx).",
+   "Л2 «Прогон может зависнуть или оставить процессы» и Л3 «У отмены нет владельца» — дубли. Medium, срабатывают только при сочетании условий (нет ps плюс синхронный цикл без сайтов; сигнал только процессу CLI); BUG-511 — гипотеза. Перенесены в дорожную карту на 2 месяца.",
+   "Л2 «Позиционирование против Stryker не подкреплено фактами» — не дефект кода. Факты о скорости и шуме против Stryker пока не измерены (04 §4.5 пуст, 03 «Эмпирическая проверка» пуст). README-факты без цифр скорости можно добавить сразу; страница миграции и цифры — до 1.0.",
+   "Л2 «Цикл агента и тёплые перезапуски платят старт и dry run» и Л3 «Тёплый прогон и --mutant всегда платят старт раннера и dry run» — дубли; объединены в проблему №10.",
+   "Л2 «К 1.0 не определены контракты стабильности» и Л3 «Плагинный API выставляет 40 хелперов» — объединены и перенесены в дорожную карту до 1.0: внешних плагинов пока нет, срочности нет, но решить это нужно до 1.0.",
+   "Л3 «Юниты одного тест-файла идут по очереди» и Л3 «Выживший в общем модуле стоит десятков процессов» — одна тема (расписание isolated-фазы); объединены в проблему №9.",
+   "Л3 «Движок владения — цикл из 11 файлов без спецификации» — в топ не вошёл: это сопровождаемость, а не пользовательский отказ. Перенос 16 файлов в plans/ — рефакторинг с риском и без прямой пользы (принципы 9 и 12 задания). Оставлено дешёвое: каталог правил и типизированные id (2 месяца).",
+   "Л3 «Контракт адаптера — случайно публичный API» — пользователям до Rstest и Jest не мешает. Контрактные тесты — в 2 месяцах, adapter-kit — до 1.0.",
+   "Л3 «Тест-сьют: wall задаёт один файл, красный при исправном коде» и улучшения Л3 «Разрезать index.test.ts» и «Сьют без ложных красных» — польза мейнтейнеру, а не пользователям; дёшево, поэтому в дорожной карте на 2 недели (T1, T4).",
+   "Л1 «Не кэшировать load-error, подтверждать crash» и Л1 «Явный исход юнит неполон» — объединены в улучшение №5 (шаг S плюс шаг M).",
+   "Л1 «Штамп сборки», Л2 «Починить кэш в CI», Л3 «Вшитый build id» — тройной дубль; стали улучшением №3.",
+   "Л1 «Пропуск с владельцем действует, только если владелец запущен» и Л2 «Вернуть в выборку --since…» — дубль; стали улучшением №4.",
+   "Л1 «Страница „Когда вердикту не верить“» и Л2 «Страницы CI и Troubleshooting» — одна работа (документация пределов); объединены в улучшение №7.",
+   "Л1 «Регрессионный контур доверия» — это процесс, а не улучшение для пользователя. Перенос тестов-воспроизведений вместе с фиксами и ночной оракул — в дорожной карте.",
+   "Л1 «Пропуски на виду: счётчики и честные флаги» — M, польза средняя; перенесено на 2 месяца.",
+   "Л1 «Закрыть дыры ключа кэша» — в сумме L; это исправление проблемы №8, оно в дорожной карте на 2 месяца.",
+   "Л2 «Монорепо: настраивать каждый проект Vitest» и Л2 «CJS и PnP» — исправления проблем №5 и №4; в дорожной карте (PnP — S, остальное — M по гипотезе).",
+   "Л2 «Процессы: убивать без ps, выход после отчёта, сигналы» — 2 месяца.",
+   "Л2 «--format github и --json-file» — M; зависит от работающего кэша и контракта --json; до 1.0.",
+   "Л2 «Игнор одного мутанта по id» — M; 2 месяца.",
+   "Л2 «Адаптер Vitest 4 после контрактных тестов» — L; по соотношению польза/трудоёмкость в топ не проходит; 2 месяца, после контрактного набора.",
+   "Л3 «Кэш для тестов, перечисляющих окружение, и hit-limit» — BUG-701 вошёл в улучшение №3, BUG-752 — в 2 месяца вместе с P3.",
+   "Л3 «Единый владелец отмены и запись кэша по ходу» — 2 месяца.",
+   "Л3 «Каталог владения и типизированные id мутаторов» — польза косвенная; 2 месяца.",
+   "Л3 «Меньше барьеров раундов» — эффект не измерен; прототип на S после замеров (2 месяца).",
+   "Л3 «Контрактный набор тестов адаптеров» — страховка рефакторинга, а не польза для пользователя сама по себе; 2 месяца, перед Vitest 4.",
+   "Л3 «core/run/timeout-policy.ts (ARCH-3)» — рефакторинг без изменения поведения (принципы 9 и 12); делать попутно с правками таймаутов (BUG-752, 202, 204), а не отдельным пунктом.",
+   "Л3 «Разобраться с отменами джобов CI проекта» — экономит время мейнтейнера, причина — гипотеза; S в 2 неделях.",
+   "Л3 «Быстрый путь ширины для ASCII (BUG-702)» — выигрыш измерен (−19 %), но польза мала: текстовый list на 16 тыс. мутантов — редкий сценарий; готовый diff в 2 неделях.",
+   "Л3 «P3 в продакшн» — L, применим только когда ничего не изменилось; 2 месяца после замеров.",
+   "Л3 «Внутренний контекст встроенных мутаторов (ARCH-1)» — до 1.0, вместе с разделением API."
+  ],
+  "evidence_problems": [
+   "02-bugs.md:42-45 ссылается на analysis/experiments/bug-repros.diff, но такого файла нет (ls analysis/experiments). Ветка experiment/bug-repros только локальная: .git/refs/heads/experiment/bug-repros есть, а в refs/remotes/origin — только analysis, claude и main. Пушится лишь analysis/2026-11. Поэтому в «как проверить» опорой служит код тестов внутри bug-prompts/*.md, а diff нужно выгрузить.",
+   "Счётчики перепроверки расходятся: 02-bugs.md:28-29 — «из 47 перепроверенных», 02-bugs.md:81 — «перепроверено 42… самодостаточных промптов 47», в data/verification/decisions.md 43 строки (15–57), файлов bug-prompts/BUG-*.md — 50.",
+   "02-bugs.md:49-51 («differential-проверку на сотнях тысяч мутантов») и кандидат Л1 («0 расхождений переключения на 123 867 мутантах») завышают объём проверки. На корпусе 123 867 мутантов проверены компиляция, один сайт на мутант и структурный аудит. Поведение сверено с физическим применением на 422 мутантах и 1 105 ловушках (bugs/instrumentation.md:16-25). В сильных сторонах формулировка исправлена.",
+   "Довод «127 из 127 на реальном коде» узкий: это только core/text самого Mootant (120 Killed, 3 Survived), а внешние проекты оракулом не запускались (bugs/verdicts.md:40-42). Второе подтверждение на чужом коде — ufo, 157 из 157, из проверки инструментирования (bugs/instrumentation.md:192-193).",
+   "Кандидат Л1 о правилах пропуска относит «NaN невозможен» к допущениям правил с `heuristic: false`. Но canonical-falsy-default (BUG-307) помечен `heuristic: true` (core/skips/skip-rules.ts:10-13). Шесть правил с `heuristic: false` — O19, R4, R6, loop-advance, loop-running, tail-return (bugs/skips.md, таблица сверки с документацией). Часть BUG-302 про R4 опровергнута (decisions.md:50).",
+   "Кандидат Л1 о BUG-305 цитирует документацию как «subsumed changes come back when the other mutant does not run». В тексте сказано: «Most subsumed changes come back… owned changes stay skipped» (docs/content/mutators.md:62-63). Для O19 (owned) нарушено не обещание, а его обоснование «владелец запускается» (decisions.md:49). В пункте №2 формулировка исправлена.",
+   "Кандидат Л3 «стоимость мутанта у Mootant не ниже, чем у Stryker» односторонний: в тех же смоуках на полезного мутанта Mootant дешевле (path-to-regexp — 13,7 против 19,4 с; perfectionist — 12,5 против 14,0 с; bench/smoke/smoke.md:8-9, smoke-subset.md:101-104). Все эти цифры — один прогон при load 13–41 и `--concurrency 2`, поэтому в итоговых пунктах они использованы только качественно.",
+   "04-performance.md:227 (идея 11) выводит «dry run медленнее обычного прогона» из сравнения 4 мин 37 с с 252 с test:unit. Это не доказано: оба времени определяет test/adapters/vitest/index.test.ts (254 из 342,5 с суммы файлов при wall 260 с — 00-baseline.md:113-117). Этот файл импортирует core/run-mutants и core/list-mutants (test/adapters/vitest/index.test.ts:34-35) и поэтому входит в dry run core/text. Нужен профиль воркеров dry run.",
+   "07-compat-and-release.md §7.4.5 называет сброс кэша при переустановке пакета «мелочью». Но 06-ux-and-agents.md §6.2 и decisions.md:39 показывают, что из-за этого кэш в CI с npm не работает никогда (0 из 67), и итог — medium. Оценки нужно согласовать.",
+   "Кандидат Л2 о зависаниях не упоминает второе условие BUG-502: нужен не только отсутствующий совместимый ps, но и синхронный цикл без сайтов мутантов (decisions.md:29). Без него частота завышена. BusyBox — гипотеза.",
+   "Кандидат Л2 «около 80 % пользователей Stryker работают через vitest-runner» опирается на долю еженедельных скачиваний пакетов-раннеров; сам отчёт оговаривает, что скачивания — не пользователи (07-compat-and-release.md §7.1.5). Формулировка исправлена.",
+   "Раздел 3 «Эмпирическая проверка» пуст (03-competitors.md:1596 — «Заполняется по данным раздела 4»). В 04-performance.md:231-233 стоит «Результаты будут добавлены», в 01-architecture-adapters.md остались метки «[ДАННЫЕ РАЗДЕЛА 4]» (§6.4 и §12 п.7). Задание требовало сравнения на 2–3 реальных проектах и ручного разбора 20–30 выживших — этого нет. Утверждения «меньше шума» и «быстрее Stryker» на внешних проектах не проверены.",
+   "BUG-653 в 02-bugs.md:94 имеет итог high («шаг релиза»). По шкале того же отчёта (02-bugs.md:35: critical — «инструмент неработоспособен для всех») это critical: не работают ни документированная установка, ни установка из GitHub. В топе указан critical с этой оговоркой.",
+   "04-performance.md:184: «cheerio: 17,8 с, из них dry run 15 с (95 %)» — 95 % посчитано от summary.total (15,8 с), а от wall это 84 % (bench/smoke/smoke-subset.md:17 и :34). Мелочь, но в отчёте смешаны wall и total.",
+   "Мелкие неточности ссылок у кандидатов: проверка `passed` — cli/report/build-run-report.ts:151-156 (указано 150-155); bug-prompts/BUG-305.md:98-136 — это код падающего теста, а не «ожидаемое поведение»."
+  ]
+ }
+}
