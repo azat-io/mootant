@@ -4,7 +4,8 @@
 # runs the given points of analysis/bench/run.sh twice with the same build —
 # "off" without the prototype's variable, "on" with it — into results
 # directories of their own, compares the verdicts of every run of "on" with
-# run 1 of "off" (compare-verdicts.mjs), and puts the build of the bench back.
+# run 1 of "off" (compare-verdicts.mjs), and puts the build of the bench back
+# exactly as it was (file times included: they are part of the cache keys).
 #
 # Usage: bench-proto.sh <prototype> <project> <point>...
 #   prototype: parallel-units | trim-units | trim-units-covering | dry-snapshot
@@ -44,11 +45,21 @@ mkdir -p "$OUT"
 # run.sh records the base tarball in versions-*.txt; this records what ran.
 printf '%s %s %s=%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PROJECT" "$VAR" "$VALUE" \
   "$(sha256sum "$TGZ")" >>"$OUT/proto.txt"
+# The bench's own build is copied aside and put back as it was, file times
+# included: they are part of the cache keys of the bench's warm snapshots.
+TARGET=$(readlink -f "$PROJECT_DIR/node_modules/mootant")
+BACKUP=$OUT/.mootant-backup-$PROJECT
 restore() {
-  "$HERE/use-mootant.sh" "$PROJECT_DIR" "$MOOTANT_TGZ" >/dev/null
+  find "$TARGET" -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} +
+  cp -a "$BACKUP/." "$TARGET/"
+  rm -rf "$BACKUP" "$PROJECT_DIR/node_modules/.cache/mootant"
+  echo "restored the bench build of $PROJECT"
 }
 DRY=${BENCH_DRY:-0}
 if [ "$DRY" != 1 ]; then
+  rm -rf "$BACKUP"
+  mkdir -p "$BACKUP"
+  find "$TARGET" -mindepth 1 -maxdepth 1 ! -name node_modules -exec cp -a {} "$BACKUP/" \;
   trap restore EXIT
   "$HERE/use-mootant.sh" "$PROJECT_DIR" "$TGZ"
 fi
