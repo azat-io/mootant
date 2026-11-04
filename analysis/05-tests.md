@@ -415,13 +415,32 @@ JSON-репортер; `analysis/data/tests/load-1.files.tsv`,
 | 9 | `test/core/run-mutants.test.ts` | 7,7 | 31 | загрузка компиляторов Svelte/Vue |
 | 10 | `test/core/cache/prune-cache-entries.test.ts` | 6,9 | 2 | 200 002 записи кэша |
 
-Медленные тесты (топ по load-1): 17 из 20 самых долгих — в
-`test/adapters/vitest/index.test.ts`. Это «verdict equivalence …» (Vue
-120 с, Svelte 60 с, default/fast 60 с) и «vitest adapter with the cache …»
-(до 75 с). Остальные в топе: «node:test verdict equivalence agrees with
-mutants applied by hand» (72,8 с) и «formatHeader handles a body of more
-lines than a function takes arguments» (44,8 с). Полный топ-200 —
+Топ-20 тестов (load-1). 18 из 20 — в `test/adapters/vitest/index.test.ts`;
+«упал» — таймаут под нагрузкой (§5.4). Полный топ-200 —
 `analysis/data/tests/load-1.tests-top200.tsv`.
+
+| # | с | Статус | Файл | Тест |
+| ---: | ---: | --- | --- | --- |
+| 1 | 120,0 | упал | `adapters/vitest/index.test.ts` | verdict equivalence > agrees with mutants applied by hand in Vue components and templates |
+| 2 | 75,4 | ok | `adapters/vitest/index.test.ts` | vitest adapter with the cache > runs mutants again after a change of a file loaded outside Vite |
+| 3 | 72,8 | упал | `adapters/node-test/index.test.ts` | node:test verdict equivalence > agrees with mutants applied by hand |
+| 4 | 63,1 | ok | `adapters/vitest/index.test.ts` | vitest adapter with the cache > keeps the cache of tests with side effects true to what they… |
+| 5 | 60,9 | упал | `adapters/vitest/index.test.ts` | vitest adapter with the cache > reuses every verdict of an unchanged project |
+| 6 | 60,6 | упал | `adapters/vitest/index.test.ts` | vitest adapter with the cache > runs the mutants of a changed source file again |
+| 7 | 60,3 | упал | `adapters/vitest/index.test.ts` | verdict equivalence > skips only the message mutants of logging calls and runs the rest as b… |
+| 8 | 60,1 | упал | `adapters/vitest/index.test.ts` | vitest adapter with the cache > runs every mutant again when the test runner configuration c… |
+| 9 | 60,0 | упал | `adapters/vitest/index.test.ts` | verdict equivalence > agrees with mutants applied by hand in Svelte components, templates an… |
+| 10 | 60,0 | упал | `adapters/vitest/index.test.ts` | verdict equivalence > counts errors of worker-scoped fixture cleanup against the mutant |
+| 11 | 60,0 | упал | `adapters/vitest/index.test.ts` | verdict equivalence > agrees with mutants applied by hand in the default and fast modes |
+| 12 | 58,3 | ok | `adapters/vitest/index.test.ts` | vitest adapter with the cache > runs the units of a test file again when its snapshot changes |
+| 13 | 58,0 | ok | `adapters/vitest/index.test.ts` | vitest adapter with the cache > neither reads nor writes the cache when it is off |
+| 14 | 57,7 | ok | `adapters/vitest/index.test.ts` | verdict equivalence > counts errors of the environment teardown against the mutant |
+| 15 | 51,9 | ok | `adapters/vitest/index.test.ts` | vitest adapter with the cache > reuses batch kills in fast mode only |
+| 16 | 49,9 | ok | `adapters/vitest/index.test.ts` | verdict equivalence > keeps concurrent tests concurrent by default, and warns that fast mode… |
+| 17 | 45,7 | ok | `adapters/vitest/index.test.ts` | vitest adapter with the cache > runs only the units of a changed test file again |
+| 18 | 44,8 | упал | `cli/report/format-header.test.ts` | formatHeader > handles a body of more lines than a function takes arguments |
+| 19 | 40,4 | ok | `adapters/vitest/index.test.ts` | verdict equivalence > runs the test file named after the module first, takes its verdict fir… |
+| 20 | 38,8 | ok | `adapters/vitest/index.test.ts` | vitest adapter with the cache > keeps what teardown and recursive listings read in the cache… |
 
 **Медленные фикстуры.** Это интеграционные проекты, на которых тесты гоняют
 вложенные прогоны Mootant. Каждый тест на них — полный цикл «старт Vitest →
@@ -450,7 +469,8 @@ dry run → раунды isolated», плюс эталонный прогон н
    the cache`, и, возможно, Vue/Svelte отдельно. Vitest параллелит файлы, но
    не тесты внутри файла. Сейчас этот файл идёт в одном воркере и задаёт wall
    всего `test:unit`. По load-1: остальные 636 файлов дают 537 с суммарно,
-   то есть ≈ 180 с на трёх воркерах. Значит, после разреза wall упирается в
+   то есть ≈ 180 с на трёх воркерах (дефолт Vitest 5 в режиме `run` —
+   `availableParallelism() − 1`, функция `getDefaultMaxWorkers`). Значит, после разреза wall упирается в
    самую длинную часть, а не в 1 355 с. Под нагрузкой ожидаемый выигрыш
    ×2–2,5. В тишине — пропорционально доле этого файла, которую покажет
    quiet-2.
@@ -720,6 +740,14 @@ Timeout 2 (бесконечные циклы в `fit-parts.ts:21,26` пойма�
 `Object.defineProperty(process, 'platform', …)`). Остались ровно те 19, что
 классифицированы как эквивалентные и шумовые: классификация совпала с
 фактом без исключений. Score модуля 88,7 % → 93,7 %.
+
+Мелочь для инструмента: на мутант `z2gry0wp7b1h` (`fit-parts.ts:21`, вечный
+цикл) в отчёте две одинаковые диагностики `worker-hang` — «The worker running
+test/cli/create-run-progress.test.ts with mutant z2gry0wp7b1h stopped
+responding and was stopped.» По-видимому, вторая — от повторного прогона,
+который подтверждает таймаут (`core/run/apply-isolated-result.ts:118-128`).
+Их стоит схлопывать: агенту, читающему `--json`, вторая копия ничего не
+добавляет.
 
 Самая полезная находка:
 `cli/terminal/create-spinner.ts:184` (`rows = countTerminalRows(frame, …)`
