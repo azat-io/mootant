@@ -380,13 +380,14 @@ index 0000000..b5ac139
 +}
 diff --git a/core/cache/list-variable-hashes.ts b/core/cache/list-variable-hashes.ts
 new file mode 100644
-index 0000000..9e9756b
+index 0000000..d6ae53d
 --- /dev/null
 +++ b/core/cache/list-variable-hashes.ts
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,76 @@
 +import { createHash } from 'node:crypto'
 +
 +import { compareCodeUnits } from '../compare-code-units'
++import { createDigest } from './create-digest'
 +
 +/**
 + * Variables that change verdicts whatever reads them (dates, collation, the
@@ -396,11 +397,28 @@ index 0000000..9e9756b
 +const VERDICT_VARIABLES = /^(?:LANG|NODE_ENV|NODE_OPTIONS|LC_.+|TZ)$/u
 +
 +/**
++ * Variables that change from one shell to another and are left out of `*`, as
++ * the adapters leave them out of theirs (`indexEnvironmentHashes`).
++ */
++const VOLATILE = new Set([
++  'ITERM_SESSION_ID',
++  'TERM_SESSION_ID',
++  'WINDOWID',
++  'OLDPWD',
++  'SHLVL',
++  'PWD',
++  '_',
++])
++
++/**
 + * Hashes the values of environment variables of the main process for a dry run
 + * snapshot (`DrySnapshot.variables`): the given names, which test files read,
-+ * and every variable that changes verdicts whatever reads it, set or not.
++ * and every variable that changes verdicts whatever reads it, set or not. The
++ * name `*`, for test files that listed every variable, stands for a hash of
++ * every variable but the volatile ones, so adding, removing or changing any of
++ * them changes it.
 + *
-+ * @param names - Names the test files read.
++ * @param names - Names the test files read, `*` included.
 + * @param environment - Environment variables of the main process.
 + * @returns Name and SHA-256 in hex of each value, or null when unset, by name.
 + */
@@ -416,14 +434,31 @@ index 0000000..9e9756b
 +  }
 +  all.add('NODE_OPTIONS')
 +  return [...all].toSorted(compareCodeUnits).map(name => {
-+    let value = environment[name]
-+    return [
-+      name,
-+      value === undefined ? null : (
-+        createHash('sha256').update(value).digest('hex')
-+      ),
-+    ]
++    if (name === '*') {
++      return [
++        name,
++        createDigest(
++          Object.keys(environment)
++            .filter(key => !VOLATILE.has(key))
++            .toSorted(compareCodeUnits)
++            .map(key => [key, hashValue(environment[key])]),
++        ),
++      ]
++    }
++    return [name, hashValue(environment[name])]
 +  })
++}
++
++/**
++ * Hashes the value of one variable.
++ *
++ * @param value - Value, or undefined when unset.
++ * @returns SHA-256 in hex, or null when unset.
++ */
++function hashValue(value: undefined | string): string | null {
++  return value === undefined ? null : (
++      createHash('sha256').update(value).digest('hex')
++    )
 +}
 diff --git a/core/cache/prepare-run-cache.ts b/core/cache/prepare-run-cache.ts
 index bd28640..9e6320a 100644
@@ -545,10 +580,10 @@ index ddf49d6..2cf94c6 100644
   * Paths an entry may come from.
 diff --git a/core/cache/write-dry-snapshot.ts b/core/cache/write-dry-snapshot.ts
 new file mode 100644
-index 0000000..abaff0f
+index 0000000..377b9d6
 --- /dev/null
 +++ b/core/cache/write-dry-snapshot.ts
-@@ -0,0 +1,132 @@
+@@ -0,0 +1,131 @@
 +import { writeFile, rename, mkdir, rm } from 'node:fs/promises'
 +import path from 'node:path'
 +
@@ -621,9 +656,11 @@ index 0000000..abaff0f
 + * whose inputs are all unchanged can skip the test runner (`DrySnapshot`). The
 + * files the keys were built from are hashed again; nothing is saved when one of
 + * them changed during the run, when a test file of the dry run cannot tell what
-+ * it depended on or read every environment variable, or when the adapter tells
-+ * nothing for the cache. The file is written to a temporary file and renamed,
-+ * so a reader never sees half of it.
++ * it depended on, or when the adapter tells nothing for the cache. A test file
++ * that listed every environment variable makes the snapshot hold only while
++ * every variable but the volatile ones stays the same (`listVariableHashes`).
++ * The file is written to a temporary file and renamed, so a reader never sees
++ * half of it.
 + *
 + * @param input - Dry phase, cache, session and where to save.
 + * @returns Null when saved, else why nothing was saved.
@@ -636,13 +673,10 @@ index 0000000..abaff0f
 +  if (dry.files.some(file => !Array.isArray(file.dependencies))) {
 +    return 'a test file cannot tell what it depended on'
 +  }
-+  let names = new Set(dry.files.flatMap(file => file.environment ?? []))
-+  if (names.has('*')) {
-+    return 'a test file read every environment variable'
-+  }
 +  if (session.cacheInputs === undefined) {
 +    return 'the adapter tells nothing for the cache'
 +  }
++  let names = new Set(dry.files.flatMap(file => file.environment ?? []))
 +  let paths = [...cache.hashes.keys()].toSorted(compareCodeUnits)
 +  let hashes = await hashFiles(paths)
 +  if (paths.some(file => hashes.get(file) !== cache.hashes.get(file))) {
@@ -1184,10 +1218,10 @@ index 0000000..642652f
 +})
 diff --git a/test/core/cache/list-variable-hashes.test.ts b/test/core/cache/list-variable-hashes.test.ts
 new file mode 100644
-index 0000000..479bff5
+index 0000000..799de72
 --- /dev/null
 +++ b/test/core/cache/list-variable-hashes.test.ts
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,60 @@
 +import { describe, expect, it } from 'vitest'
 +import { createHash } from 'node:crypto'
 +
@@ -1219,6 +1253,24 @@ index 0000000..479bff5
 +      ['NODE_OPTIONS', null],
 +      ['TZ', hash('UTC')],
 +    ])
++  })
++
++  it('hashes every variable but the volatile ones under *', () => {
++    /**
++     * Reads the hash `*` stands for in an environment.
++     *
++     * @param environment - Environment variables.
++     * @returns Hash under `*`.
++     */
++    function star(environment: NodeJS.ProcessEnv): string | null {
++      let hashes = new Map(listVariableHashes(['*'], environment))
++      return hashes.get('*')!
++    }
++    let first = star({ OTHER: 'x', PWD: '/a' })
++
++    expect(star({ OTHER: 'x', PWD: '/b' })).toBe(first)
++    expect(star({ OTHER: 'y', PWD: '/a' })).not.toBe(first)
++    expect(star({ OTHER: 'x', PWD: '/a', NEW: '1' })).not.toBe(first)
 +  })
 +
 +  it('reads the environment of the process by default', () => {

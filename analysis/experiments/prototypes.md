@@ -17,7 +17,7 @@
 |---|---|---|---|---|---|
 | P1 | параллельные юниты одного тест-файла (`experiment/perf-parallel-units`, `eb5e261`) | `MOOTANT_PARALLEL_UNITS=1` | **совпадают** на трёх фикстурах без общих ресурсов (Vitest ×2 прогона, node:test), `--strict`; на стресс-фикстуре с общим файлом и портом — 4 и 6 расхождений из 13 (ложные Killed), база детерминирована | годится как **opt-in**; по умолчанию — нет | M |
 | P2 | префиксная обрезка isolated-юнита (`experiment/perf-trim-units`, `6033fc0`), вариант P2' «только покрывающие» | `MOOTANT_TRIM_UNITS=prefix` / `covering` | на фикстуре с независимыми тестами совпадают; на граничной фикстуре **P2: 3 ложных Survived из 12, P2': 3 ложных Survived + 1 ложный Killed + 1 Killed→NoCoverage** | **отрицательный результат**: выигрыш P2 есть только у выживших и ровно там, где он может скрыть убийство; принцип 7 не выполнен | — (не рекомендуется) |
-| P3 | полный кэш без запуска раннера (`experiment/perf-dry-snapshot`, `96ec389`) + кэширование тайм-аутов по лимиту срабатываний | `MOOTANT_REUSE_DRY_RUN=1` | **совпадают** во всех 22 сценариях (16 Vitest, 6 node:test), `--strict`; раннер не стартует ровно в «ничего не изменилось» (6 из 22), в остальных — обычный путь с правильной причиной; отрицательный контроль (без проверки дерева) даёт 2 устаревших вердикта из 76 | годится; применимость — только «ничего не изменилось» (повторный прогон, CI с восстановленным кэшем, агент перепроверяет без правок) | L |
+| P3 | полный кэш без запуска раннера (`experiment/perf-dry-snapshot`, `96ec389` + `c275905`) + кэширование тайм-аутов по лимиту срабатываний | `MOOTANT_REUSE_DRY_RUN=1` | **совпадают** во всех 22 сценариях (16 Vitest, 6 node:test), `--strict`; раннер не стартует ровно в «ничего не изменилось» (6 из 22), в остальных — обычный путь с правильной причиной; отрицательный контроль (без проверки дерева) даёт 2 устаревших вердикта из 76 | годится; применимость — только «ничего не изменилось» (повторный прогон, CI с восстановленным кэшем, агент перепроверяет без правок) | L |
 
 Общее для всех прототипов:
 
@@ -397,8 +397,15 @@ Timeout-мутантом при каждом тёплом прогоне сно�
      тест-файлам), файл, затеняющий модуль при разрешении импорта.
 
    Снимок не пишется, если у тест-файла нет списка зависимостей (своя среда
-   тестов), если тест читал все переменные (`*`), если у адаптера нет
-   `cacheInputs`, если в прогоне были ошибки или кэш не сохранён.
+   тестов), если у адаптера нет `cacheInputs`, если в прогоне были ошибки или
+   кэш не сохранён. Если тест перечислял все переменные (`*` — так делают тесты
+   ESLint/RuleTester, всё, что разворачивает `process.env` или запускает
+   процессы; см. BUG-701 в `analysis/bugs/perf.md`), в `variables` попадает хэш
+   **всех** переменных главного процесса, кроме изменчивых (`PWD`, `OLDPWD`,
+   `SHLVL`, `_`, … — тот же список, что у адаптеров,
+   `adapters/shared/index-environment-hashes.ts:10-18`), и снимок устаревает при
+   любом изменении окружения (коммит `c275905`; первая версия в этом случае
+   снимок не писала вовсе, и на perfectionist P3 не сработал бы никогда).
 2. **Повтор без раннера** — `replayDrySnapshot` (`core/run-mutants.ts:739-781`),
    вызывается до создания рабочего каталога и старта адаптера
    (`core/run-mutants.ts:281-301`): те же фазы `execute`, но вместо
@@ -725,7 +732,7 @@ grep -h 'Эквивалентны\|НЕ эквивалентны' /home/user/pro
 |---|---|---|---|---|
 | P1 | `experiment/perf-parallel-units` / `eb5e261` | `/home/user/wt/perf-parallel-units` | `analysis/experiments/perf-parallel-units.diff` | `/home/user/artifacts/proto-parallel-units/mootant-0.1.0.tgz` |
 | P2 | `experiment/perf-trim-units` / `6033fc0` | `/home/user/wt/perf-trim-units` | `analysis/experiments/perf-trim-units.diff` | `/home/user/artifacts/proto-trim-units/mootant-0.1.0.tgz` |
-| P3 | `experiment/perf-dry-snapshot` / `96ec389` | `/home/user/wt/perf-dry-snapshot` | `analysis/experiments/perf-dry-snapshot.diff` | `/home/user/artifacts/proto-dry-snapshot/mootant-0.1.0.tgz` |
+| P3 | `experiment/perf-dry-snapshot` / `96ec389`, `c275905` | `/home/user/wt/perf-dry-snapshot` | `analysis/experiments/perf-dry-snapshot.diff` | `/home/user/artifacts/proto-dry-snapshot/mootant-0.1.0.tgz` |
 
 Инструменты: `analysis/tools/compare-verdicts.mjs`,
 `analysis/tools/perf-proto/{setup-fixture,use-mootant,run-mootant,check-dry-snapshot,p3-negative-control,bench-proto}.sh`;
