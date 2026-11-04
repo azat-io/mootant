@@ -1,0 +1,71 @@
+diff --git a/src/price.ts b/src/price.ts
+index 20d4083..4cbd99a 100644
+--- a/src/price.ts
++++ b/src/price.ts
+@@ -22,6 +22,7 @@ export function getTotal(items: Item[]): number {
+ }
+ 
+ export function applyDiscount(total: number, percent: number): number {
++  // mootant-ignore-next-line comparison-operator: percent 0 gives the same total in both branches
+   if (percent <= 0) {
+     return total
+   }
+diff --git a/test/price.test.ts b/test/price.test.ts
+index 1f0bfdf..5c78536 100644
+--- a/test/price.test.ts
++++ b/test/price.test.ts
+@@ -14,6 +14,14 @@ describe('getDiscount', () => {
+   it('gives small orders nothing', () => {
+     expect(getDiscount(50, false)).toBe(0)
+   })
++
++  it('gives orders of exactly 100 10% off', () => {
++    expect(getDiscount(100, false)).toBe(10)
++  })
++
++  it('gives orders of 99 nothing', () => {
++    expect(getDiscount(99, false)).toBe(0)
++  })
+ })
+ 
+ describe('getTotal', () => {
+@@ -30,4 +38,12 @@ describe('applyDiscount', () => {
+   it('applies a percent', () => {
+     expect(applyDiscount(100, 10)).toBe(90)
+   })
++
++  it('applies a discount of 1%', () => {
++    expect(applyDiscount(200, 1)).toBe(198)
++  })
++
++  it('keeps the total for a negative percent', () => {
++    expect(applyDiscount(200, -10)).toBe(200)
++  })
+ })
+diff --git a/test/retry.test.ts b/test/retry.test.ts
+index 253bb41..7f9c5f5 100644
+--- a/test/retry.test.ts
++++ b/test/retry.test.ts
+@@ -1,7 +1,21 @@
+-import { expect, it } from 'vitest'
++import { expect, it, vi } from 'vitest'
+ 
+ import { retry } from '../src/retry'
+ 
+ it('returns the result', async () => {
+   await expect(retry(async () => 42)).resolves.toBe(42)
+ })
++
++it('retries a rejected task', async () => {
++  let task = vi.fn()
++    .mockRejectedValueOnce(new Error('first'))
++    .mockResolvedValueOnce('second')
++  await expect(retry(task)).resolves.toBe('second')
++  expect(task).toHaveBeenCalledTimes(2)
++})
++
++it('gives up after 3 attempts with the last error', async () => {
++  let task = vi.fn().mockRejectedValue(new Error('down'))
++  await expect(retry(task)).rejects.toMatchObject({ message: 'down' })
++  expect(task).toHaveBeenCalledTimes(3)
++})

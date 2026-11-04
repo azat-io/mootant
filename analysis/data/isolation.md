@@ -120,3 +120,76 @@
    (`core/run/run-batch-phases.ts:91-97`), вердикт B верный.
 4. `--fast` с `--concurrency 1` не убирает ложные убийства: это не гонка, а
    общий модульный граф в одном процессе.
+
+### Static-мутанты (код при загрузке модуля), Vitest
+
+| Пара | Мутант | полный | `--fast` | A | B | AB | BA | AB `--fast` | AB c1 | AB `--fast` c1 | эталон |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| load (`src/constants.js`, top-level) | A `hj0yd0hb` `3 * 2` → `3 / 2` | Killed [static] | Killed [static] | Killed | — | Killed | Killed | Killed [static] | Killed | Killed [static] | killed |
+| | B `e7cxkzve` `LIMIT > 5` → `LIMIT >= 5` | Survived [static] | Survived [static] | — | Survived | Survived | Survived | Survived [static] | Survived | Survived [static] | survived |
+
+Static-мутанты всегда идут isolated, в том числе в `--fast`
+(`core/run/classify-mutants.ts:94-115`, причина `static`), поэтому batch на
+них не влияет.
+
+### node:test
+
+| Пара | Мутант | полный | A | B | AB | BA | AB `--fast` | AB c1 | AB `--fast` c1 | эталон |
+|---|---|---|---|---|---|---|---|---|---|---|
+| counter (`nt/state`) | A `09w15scc` `count = 0` → `;` | Survived | Survived | — | Survived | Survived | Survived | Survived | Survived | survived |
+| | B `x9ahzmww` `count += step` → `count -= step` | Killed | — | Killed | Killed | Killed | Killed | Killed | Killed | killed |
+
+`--fast` у node:test ничего не меняет (заметка «node-test has no batch mode, so
+fast mode runs every mutant isolated»): тот же мутант, что в Vitest `--fast`
+даёт ложный Killed, здесь `Survived`, как у эталона.
+
+### `--since` (тот же механизм, что BUG-201)
+
+Копия `vt/mocks` как git-репозиторий, изменена только строка 2 `src/api.js`,
+`mootant run src --since HEAD`: оба мутанта строки (`18v42cm0`, `jnhjhh9w`) —
+`NoCoverage`, в полном прогоне и у эталона — `Killed`/`killed`. В CI с
+`--since` это ложные непокрытые мутанты на изменённых строках.
+Отчёт: `/home/user/projects/oracle/results/mocks/since.json`.
+
+### Файловая система — общий ресурс между единицами
+
+Фикстура `vt/fscache`: тест кэширует результат в `.cache/21.json` внутри
+проекта. Dry run (кэша нет) вычисляет и пишет файл, а каждая isolated-единица
+уже читает его и до мутантов `compute` не доходит. Итог (эталон — свежая копия
+на каждого мутанта, `git clean -x`):
+
+| Мутант | Mootant | эталон |
+|---|---|---|
+| `43bfzptb` `value * 2` → `value / 2` (`compute.js`) | **NoCoverage**, при этом `tests: 1`, `coveredBy: [doubles through the on-disk cache]` | killed |
+| `ch4kze59` `2` → `3` | **NoCoverage** (то же) | killed |
+| `3hbdt5q6` `result` → `undefined` | **NoCoverage** (то же) | killed |
+| `7dtdwjsz` `existsSync(file)` → `true` | **Survived** | killed |
+
+Процессы единиц изолированы, а диск — нет: результат единицы зависит от того,
+что оставили dry run и предыдущие единицы того же сеанса. Обычный `vitest run`
+на «грязной» копии повёл бы себя так же, поэтому ошибка не в изоляции как
+таковой, а в том, что противоречие «покрыт в dry run, но ни одна единица не
+достигла» Mootant превращает в `NoCoverage` без диагностики (BUG-206;
+`core/run/decide-results.ts:50`, `core/run/get-final-status.ts:36`).
+
+## Итог эксперимента
+
+- **Isolated-путь (по умолчанию)**: вердикт мутанта не зависит от других
+  мутантов, их порядка, `--concurrency` и переиспользования воркеров — у каждой
+  единицы свой процесс в обоих адаптерах. Зависимость есть от *множества
+  файлов* прогона (BUG-201: `--mutant`, узкие пути, `--since`) и от
+  состояния диска, которое оставили предыдущие запуски тестов (BUG-206).
+- **Batch-путь (`--fast`, только Vitest)**: состояние модулей общее для всех
+  попыток процесса. Защита контрольными попытками (до и после мутанта)
+  работает для состояния, которое читает исходный код, но не для состояния,
+  которое мутант перестал сбрасывать (ложные Killed, документировано), и не
+  для «горячих» конечных циклов (BUG-202). Выжившие и сомнительные
+  перепроверяются isolated, поэтому ложных Survived batch не даёт — в пару
+  memo B кэш, заполненный контрольной попыткой, спрятал мутанта в batch, но
+  isolated-перепроверка дала верный Killed.
+- Влияния одного мутанта batch на другого (A оставляет состояние, которое
+  ломает попытку B при здоровых контролях) воспроизвести не удалось: в
+  проверенных конструкциях порча состояния ломала и контрольную попытку, и
+  тогда оба мутанта уходят на isolated (`apply-batch-result.ts:305-320`).
+  Теоретически возможно, если испорченное состояние читает только
+  мутированный путь B, — **гипотеза**, не подтверждена.

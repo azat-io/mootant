@@ -51,7 +51,8 @@
 после ошибки, модуль `src/format.ts` без тестов, `console.log` в коде.
 `npm test`: 12 тестов, 0,8 с. Путь — строго по readme и
 `docs/content/guide/getting-started.mdx`. Все выводы сохранены в
-`analysis/ux/first-run/`.
+`analysis/ux/first-run/`; проект воссоздаёт `analysis/ux/first-run/create-project.sh`,
+изменения тестов из шага 6 — `analysis/ux/first-run/agent-loop.patch`.
 
 ### Шаг 1. Установка (readme.md:77-78, getting-started.mdx:65-69)
 
@@ -164,10 +165,11 @@ test» с покрывающим тестом и строкой, соседни�
 - Нет ссылки на страницу мутатора с разделом «Kill a surviving mutant», хотя
   такие разделы есть у всех 20 мутаторов.
 - `git status` после первого `--html` показывает `?? .mootant/`. Readme
-  просит добавить каталог в `.gitignore` (readme.md:98), но инструмент мог бы
-  сам класть `.mootant/.gitignore` с `*`, как pytest делает для
-  `.pytest_cache` (`cli/html/write-html-report.ts:10-16` создаёт только
-  каталог).
+  просит добавить каталог в `.gitignore` (readme.md:98), но этот шаг легко
+  пропустить: в моём же проекте следующий `git add -A` закоммитил
+  `.mootant/report.html` (4223 строки с исходным кодом). Инструмент мог бы сам
+  класть `.mootant/.gitignore` с `*`, как pytest делает для `.pytest_cache`
+  (`cli/html/write-html-report.ts:10-16` создаёт только каталог).
 
 ### Шаг 5. Исправление выжившего мутанта
 
