@@ -185,7 +185,7 @@ CLI `mootant list --json --verbose` (тот же конфиг и пресет, �
    порядок (992 мутанта); обратный порядок путей: идентичные id и порядок.
    Запуск из подкаталога в проекте без конфига даёт другие id (992 из 992):
    корень = cwd (`core/config/prepare-run.ts:133`), display path входит в
-   хэш (`core/identity/create-mutant-id.ts:58-66`). Это задокументировано
+   хэш (`core/identity/create-mutant-id.ts:61-73`). Это задокументировано
    (`docs/content/guide/configuration.mdx:126-130`: «Without a configuration
    file, the current directory is the root»), поэтому не баг, но ловушка:
    `--mutant <id>` и кэш (`node_modules/.cache/mootant` в корне) из другого
@@ -261,11 +261,14 @@ switched-файлы. Затем `recoverFromFailures` (`:275-296`) удаляе�
 before initialization` (оригинал работает). Аудит корпусов: 0 привязок
 `globalThis` в 1 300 файлах — редкость (встречается в полифил-коде, напр.
 README пакета `globalthis` предлагает `var globalThis = require('globalthis')()`).
-Исправление: обращаться к runtime через имя, которое не может быть затенено
-в пользовательском коде (например, проверять наличие привязки `globalThis` и
-тогда использовать `(0, eval)('this')`/`Function('return this')()` один раз в
-начале файла под уникальным именем), либо пропускать файлы с такой привязкой
-с диагностикой.
+Исправление: вставка в начало файла не поможет — модульная `const
+globalThis` всплывает, и любое обращение к ней до объявления даёт TDZ.
+Надёжнее обращаться к runtime без разрешения идентификатора, например
+`({}).constructor.__mootant?.hit(id)` (неперечислимое свойство конструктора
+`Object`: только обращения к свойствам, ни одного идентификатора, который
+можно затенить) или хотя бы распознавать привязку `globalThis` в
+файле при инструментировании и для такого файла использовать другую проверку
+либо давать диагностику вместо молчаливого `NoCoverage`.
 
 ### BUG-102 — нет source map
 
@@ -322,7 +325,7 @@ instrumented dry run → `instrumentation-break`, все мутанты файл
 Switched-текст всегда берёт replacement и original в скобки
 (`core/instrument/render-mutant-range.ts:91-95`). oxc в режиме
 `sourceType: 'unambiguous'` (так модули разбирают Vite 8 и rolldown, и так же
-`core/parser/parse-file.ts:118`) в файле с `import`/`export` читает скобку,
+`core/parser/parse-file.ts:77`) в файле с `import`/`export` читает скобку,
 за которой сразу идёт литерал `/<!--…/`, как HTML-комментарий и сообщает
 «HTML comments are not allowed in modules». Минимальные случаи
 (oxc-parser 0.156.0 и 0.157.0): `const a = (/<!--x/g)\nexport {}` — ошибка;
@@ -355,7 +358,7 @@ switched … and pass without it» (фикстура `BUG-106/run.sh`: 9/9 `Erro
    `createSwitchedFiles` (`core/instrument/create-switched-files.ts:74-104`)
    проверяет только компиляцию Svelte/шаблона Vue. Корректность держится на
    том, что replacement'ы встроенных мутаторов — выражения/операторы, а
-   `groupReplacement` (`core/generate/group-replacement.ts:162-187`) обрамляет
+   `groupReplacement` (`core/generate/group-replacement.ts:170-196`) обрамляет
    скобками там, где это нужно. Для плагинных мутаторов непарсящийся текст
    (`needsParentheses` возвращает true, когда текст не парсится, и просто
    оборачивает его) уходит в switched-файл и через BUG-100 ломает весь прогон

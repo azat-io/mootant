@@ -546,7 +546,7 @@ mutants; fix them first (2 tests)»: `cli/index.test.ts:211` и
 
 Все прогоны: `/home/user/wt/tests-e` (worktree от `170ec52`),
 `TERM=xterm-256color node bin/mootant.js run <пути> --concurrency 2 --json
---all --verbose`, load average машины 25–33 (другие агенты).
+--all --verbose`, load average машины 18–33 (другие агенты).
 
 **Оговорка о конфиге.** Для `core/git` использован
 `vitest.mootant.config.ts`: конфиг проекта без трёх интеграционных
@@ -570,7 +570,7 @@ mutants; fix them first (2 tests)»: `cli/index.test.ts:211` и
 | --- | ---: | --- |
 | **Реальная дыра в тестах** | 14 | `parse-unified-diff.ts:47` удаление `remaining = Number(removed) + count`; `read-changed-lines.ts:77` `--numstat` без `base` |
 | Слабая проверка текста ошибки (`toThrow(подстрока)`) | 3 | `find-git-root.ts:22`, `get-merge-base.ts:23`, `read-changed-lines.ts:112`: `stderr.trim()` → `stderr` |
-| Эквивалентные по инварианту окружения (git, Node) | 17 | `code !== 0` → `code > 0` (×6), `'utf8'` → `''` в `Buffer.from`, `split('\t', 2)` → `3` |
+| Эквивалентные (инварианты кода, git, Node) | 17 | `code !== 0` → `code > 0` (×6), `'utf8'` → `''` в `Buffer.from`, `split('\t', 2)` → `3` |
 | Шумовые (размер буфера) | 3 | `run-git.ts:6` `256 * 1024 * 1024`: `256` → `257`, `1024` → `1025` |
 
 **Проверка дыр (подтверждено).** Я написал 61 строку тестов
@@ -617,7 +617,10 @@ as headers») проверяет, что строки ханка, похожие
    границ значений: `.length ≥ 0`, `indexOf ≥ -1`
    (`core/syntax/get-value-bound.ts:271`). Но поле объекта, который вернула
    функция проекта, ему не видно. Это мутант того же вида, что `length !== 0`
-   → `length > 0`, который Mootant уже отсекает. Отдельная эвристика по имени
+   → `length > 0`, который Mootant уже отсекает. Проверено пробой
+   `mootant list`: для `items.length !== 0` мутант `> 0` пропущен правилом
+   `lower-bound` («a length is never negative»), а для `code !== 0` выдан.
+   Отдельная эвристика по имени
    (`code`/`status`/`exitCode`) была бы шумной, так что оставить как есть и
    задокументировать `mootant-ignore` — разумный выбор.
 2. `Buffer.from(symbol, 'utf8')` → `Buffer.from(symbol, '')`
@@ -640,7 +643,13 @@ as headers») проверяет, что строки ханка, похожие
    `diff --git`); снятие якорей регэкспов (`find-git-root.ts:24`
    `/\r?\n$/u` → `/\r?\n/u`; `^` в `HUNK_PATTERN`). Инструмент знать этого не
    может. Это законные выжившие, их место — в `mootant-ignore` с причиной.
-6. Шум: `256 * 1024 * 1024` → `257`/`1025` (`run-git.ts:6`). Числовые
+6. Инварианты самого кода: `remaining > 0` → `!= 0` и `count === 0` →
+   `<= 0` (`parse-unified-diff.ts:29,48`). Счётчик уменьшается только под
+   `> 0`, а `count` — `Number` от `\d+`, отрицательным он не бывает.
+   Решатель границ (`core/syntax/solve-value-bounds.ts`) знает о декрементах
+   счётчиков (комментарии `:85`, `:393`), но `remaining` присваивается из
+   `Number(removed) + count`, и нижнюю границу 0 для него он не выводит.
+7. Шум: `256 * 1024 * 1024` → `257`/`1025` (`run-git.ts:6`). Числовые
    литералы в произведении степеней двойки, задающем лимит размера, — тот же
    класс, что задержки таймеров, которые Mootant уже отсекает (`TIMER_DELAY_SKIP`,
    `core/generate/collect-candidates.ts:244-282`). **Кандидат в правило шума**
