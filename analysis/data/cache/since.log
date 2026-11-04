@@ -94,3 +94,8 @@ Auto-merging src/lines.ts
   [cfg-diff.mnemonicPrefix] --since HEAD exit=0
     "src/lines.ts": lines 2
   [cfg-diff.algorithm] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-color.diff] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-diff.relative] --since HEAD exit=0
+    "src/lines.ts": lines 2
