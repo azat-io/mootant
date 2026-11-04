@@ -124,7 +124,7 @@ BUG-901; отдельно не воспроизводил (**гипотеза**:
 | модульный кэш, мемоизация отключена | `state`, `prd6tx8n`, `jngxgvvz` | **Timeout (hit-limit)** / survived (BUG-200) | **Timeout (hit-limit)** / survived |
 | кэш прячет мутанта в batch | `state`, `twzenj03` `n < 2` → `n <= 2` | Killed / killed; `--fast`: survived в batch → isolated → Killed | Killed / killed |
 | `globalThis`, `process.env`, прототипы (top-level, static) | `state/src/registry.js`, 12 мутантов | совпадают все | совпадают все |
-| `vi.mock` с фабрикой, `{ spy: true }`, `vi.doMock`, `vi.spyOn` | `mocks`, 10 мутантов | совпадают все в полном прогоне; **`--mutant`/узкий путь — NoCoverage** (BUG-201) | — (node:test без моков модулей) |
+| `vi.mock` с фабрикой, `vi.mock(…, { spy: true })`, `vi.doMock` + `importOriginal` | `mocks`, 10 мутантов | совпадают все в полном прогоне; **`--mutant`/узкий путь — NoCoverage** (BUG-201) | — (node:test без моков модулей) |
 | вычисляемый `import()` через переменную | `dynamic`, `y1rmnxcp` `a + b` → `a` | **Survived** / killed (тест не выбран, документировано как «may not be selected») | Killed / killed |
 | шаблонный `import(\`../src/${name}.js\`)` | `dynamic`, `tzcw9x1g`, `tw7j08nf` | Killed / killed (Vite делает из него glob) | Killed / killed |
 | `createRequire` CJS-файла | `dynamic`, `src/legacy.cjs`, 4 мутанта | **NoCoverage** / killed + неточный `never-served` (BUG-205) | Killed / killed |
@@ -259,8 +259,8 @@ Vitest не останавливается после падения, и сле�
   (BUG-201, в том числе `--since`); (2) диск общий для dry run и единиц
   (BUG-206); (3) в `--fast` общий модульный граф даёт документированные
   ложные Killed и ложный Timeout (BUG-202). Влияния одного batch-мутанта на
-  другой при здоровых контрольных попытках не нашёл (гипотеза о такой
-  возможности описана в `isolation.md`).
+  другой в проверенных парах не было; отдельной фикстуры под это не строил
+  (гипотеза о такой возможности — в `isolation.md`).
 
 ## Как адаптер отличает падение теста от сбоя раннера
 
@@ -423,5 +423,5 @@ batch-убийства воспроизводятся стабильно — э�
   проверялись (`isolate: false` + `threads` проверен только на фикстуре без
   такого состояния).
 - Влияние одного batch-мутанта на другой при здоровых контрольных попытках —
-  не воспроизведено (см. «Изоляция»).
+  отдельной фикстурой не проверялось (см. «Изоляция»).
 - Ложный `Killed` от посторонней ошибки загрузки (H6) — только по коду.
