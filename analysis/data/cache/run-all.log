@@ -864,3 +864,11 @@
   [middle] --since HEAD exit=0
     "src/lines.ts": lines 2,3
   EXPECT: new line 5 (the line before the gap at the end)
+  [end] --since HEAD exit=0
+    "src/lines.ts": lines 5
+=== merge_commits (05:13:03)
+Auto-merging src/lines.ts
+  EXPECT: line 2 only (feature's change; f came from main through the merge, d is only on main)
+  [merged] --since main exit=0
+    "src/lines.ts": lines 2
+=== shallow_clone (05:13:07)
