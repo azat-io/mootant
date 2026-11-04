@@ -1,0 +1,5 @@
+=== rename_committed (05:12:48)
+  EXPECT (by the documented rule 'lines changed'): nothing; a pure rename changes no line
+  [pure] --since main exit=0
+    (no mutants selected)
+  EXPECT: line 3 only

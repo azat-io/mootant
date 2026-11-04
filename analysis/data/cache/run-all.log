@@ -835,3 +835,14 @@
   rxef04cnhtr7 Killed     cached=true src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
   summary: total=4 killed=2 survived=2 cached=4 score=50
 === interrupted (05:12:40)
+  exit after SIGINT: 130
+    + dry run  2 tests in 2.2s
+  cache dir:
+    ls: cannot access '/home/user/projects/cache/corrupt-interrupted/node_modules/.cache/mootant/': No such file or directory
+  /tmp/mootant-* dirs before: 128, after: 129
+    left: 18845 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/projects/cache/corrupt-interrupted/node_modules/vitest/suppress-warnings.cjs --conditions node --conditions development /home/user/projects/cache/corrupt-interrupted/node_modules/vitest/dist/workers/forks.js
+=== rename_committed (05:12:48)
+  EXPECT (by the documented rule 'lines changed'): nothing; a pure rename changes no line
+  [pure] --since main exit=0
+    (no mutants selected)
+  EXPECT: line 3 only
