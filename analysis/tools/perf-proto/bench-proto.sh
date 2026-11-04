@@ -41,6 +41,9 @@ TGZ=$(ls /home/user/artifacts/$TGZ_DIR/mootant-*.tgz | head -1)
 bench_project "$PROJECT"
 OUT=$BENCH_PROJECTS/results-proto/$PROTO
 mkdir -p "$OUT"
+# run.sh records the base tarball in versions-*.txt; this records what ran.
+printf '%s %s %s=%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PROJECT" "$VAR" "$VALUE" \
+  "$(sha256sum "$TGZ")" >>"$OUT/proto.txt"
 restore() {
   "$HERE/use-mootant.sh" "$PROJECT_DIR" "$MOOTANT_TGZ" >/dev/null
 }

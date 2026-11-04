@@ -212,7 +212,10 @@ $T parallel-units fast-json-stringify m-cold
 # по желанию: $T parallel-units perfectionist m-fast
 node analysis/bench/summarize.mjs /home/user/projects/bench/results-proto/parallel-units/off
 node analysis/bench/summarize.mjs /home/user/projects/bench/results-proto/parallel-units/on
-# трасса юнитов: run-k.units.json → lib/units-report.mjs (длина цепочки, занятость слотов)
+# трасса юнитов (длина цепочки одного файла, занятость слотов, ожидание очереди):
+R=/home/user/projects/bench/results-proto/parallel-units
+node analysis/bench/lib/units-report.mjs $R/off/path-to-regexp/m-cold/run-1.units.json --workers 3
+node analysis/bench/lib/units-report.mjs $R/on/path-to-regexp/m-cold/run-1.units.json --workers 3
 ```
 
 Что смотреть: wall и `summary.duration.isolated` (медиана), «самая длинная
@@ -775,6 +778,12 @@ grep -h 'Эквивалентны\|НЕ эквивалентны' /home/user/pro
 | P1 | `experiment/perf-parallel-units` / `eb5e261` | `/home/user/wt/perf-parallel-units` | `analysis/experiments/perf-parallel-units.diff` | `/home/user/artifacts/proto-parallel-units/mootant-0.1.0.tgz` |
 | P2 | `experiment/perf-trim-units` / `6033fc0` | `/home/user/wt/perf-trim-units` | `analysis/experiments/perf-trim-units.diff` | `/home/user/artifacts/proto-trim-units/mootant-0.1.0.tgz` |
 | P3 | `experiment/perf-dry-snapshot` / `96ec389`, `c275905` | `/home/user/wt/perf-dry-snapshot` | `analysis/experiments/perf-dry-snapshot.diff` | `/home/user/artifacts/proto-dry-snapshot/mootant-0.1.0.tgz` |
+
+Tarball'ы:
+
+- `/home/user/artifacts/proto-dry-snapshot/mootant-0.1.0.tgz` — sha256 `f3e493f3e6ec697b…`, `dist` совпадает со сборкой последнего коммита ветки (проверено `diff -r` пересборки)
+- `/home/user/artifacts/proto-parallel-units/mootant-0.1.0.tgz` — sha256 `64e994a759b285c8…`, `dist` совпадает со сборкой последнего коммита ветки (проверено `diff -r` пересборки)
+- `/home/user/artifacts/proto-trim-units/mootant-0.1.0.tgz` — sha256 `2afa60b7954bb597…`, `dist` совпадает со сборкой последнего коммита ветки (проверено `diff -r` пересборки)
 
 Инструменты: `analysis/tools/compare-verdicts.mjs`,
 `analysis/tools/perf-proto/{setup-fixture,use-mootant,run-mootant,check-dry-snapshot,p3-negative-control,bench-proto}.sh`;
