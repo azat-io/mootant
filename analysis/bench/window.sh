@@ -7,7 +7,7 @@ export PATH=/home/user/tools/bin:$PATH
 RESULTS=${BENCH_RESULTS:-/home/user/projects/bench/results}
 LOG=$RESULTS/window.log
 mkdir -p "$RESULTS"
-steps=${*:-"unit dw tiers profiles"}
+steps=${*:-"unit dw tiers profiles protos"}
 note() { echo "$(date -u +%FT%TZ) $*" | tee -a "$LOG"; }
 note "window start; steps: $steps; $(uptime)"
 for step in $steps; do
@@ -31,6 +31,17 @@ for step in $steps; do
       for p in perfectionist path-to-regexp cheerio fast-json-stringify; do
         note "step profile: $p"
         (cd /home/user/mootant && analysis/bench/profile.sh "$p") >> "$RESULTS/profile.log" 2>&1
+      done
+      ;;
+    protos)
+      T=/home/user/mootant/analysis/tools/perf-proto/bench-proto.sh
+      for args in "parallel-units path-to-regexp m-cold" "dry-snapshot cheerio m-cold m-warm m-edit" \
+                  "parallel-units perfectionist m-cold" "dry-snapshot perfectionist m-cold m-warm m-edit" \
+                  "parallel-units fast-json-stringify m-cold" "dry-snapshot fast-json-stringify m-cold m-warm" \
+                  "parallel-units cheerio m-cold"; do
+        note "step proto: $args"
+        (cd /home/user/mootant && $T $args) >> "$RESULTS/protos.log" 2>&1
+        note "proto $args done: exit $?"
       done
       ;;
   esac
