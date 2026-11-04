@@ -1,0 +1,6 @@
+{
+  "name": "static-badplugin",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "vitest run" }
+}

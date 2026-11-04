@@ -1,0 +1,6 @@
+{
+  "name": "static-shadow",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "vitest run" }
+}
