@@ -102,3 +102,8 @@ Auto-merging src/lines.ts
   [cfg-diff.external] --since HEAD exit=0
     "src/lines.ts": lines 2
   [cfg-core.quotePath] --since HEAD exit=0
+    "src/lines.ts": lines 2
+=== submodule (05:13:58)
+  EXPECT: ? (submodules are ignored by design)
+  [sub] --since HEAD exit=0
+    (no mutants selected)
