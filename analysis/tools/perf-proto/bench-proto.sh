@@ -6,7 +6,7 @@
 # directories of their own, compares the verdicts of every run of "on" with
 # run 1 of "off" (compare-verdicts.mjs), and puts the build of the bench back.
 #
-# Usage: bench-proto.sh <prototype> <project> <point>... [-- runs]
+# Usage: bench-proto.sh <prototype> <project> <point>...
 #   prototype: parallel-units | trim-units | trim-units-covering | dry-snapshot
 #   project:   path-to-regexp | cheerio | perfectionist | fast-json-stringify
 #   point:     m-cold | m-warm | m-fast | m-edit | m-edit-inc ... (run.sh)
@@ -17,6 +17,9 @@
 # and .../compare-<project>-<point>.md; summarize each with
 #   node analysis/bench/summarize.mjs $BENCH_PROJECTS/results-proto/<prototype>/on
 # BENCH_DRY=1 prints what would run, without installing or running anything.
+# BENCH_PROTO_MODES="on" skips the "off" runs (default "off on"); verdicts are
+# then compared with run 1 of the main bench ($BENCH_RESULTS/<project>/<point>,
+# the base tarball), when it exists. BENCH_RUNS sets the runs per point (run.sh).
 set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 BENCH=$(cd "$HERE/../../bench" && pwd)
@@ -47,7 +50,8 @@ if [ "$DRY" != 1 ]; then
   "$HERE/use-mootant.sh" "$PROJECT_DIR" "$TGZ"
 fi
 unset MOOTANT_PARALLEL_UNITS MOOTANT_TRIM_UNITS MOOTANT_REUSE_DRY_RUN
-for mode in off on; do
+MODES=${BENCH_PROTO_MODES:-off on}
+for mode in $MODES; do
   if [ "$mode" = on ]; then
     export "$VAR=$VALUE"
   fi
@@ -65,11 +69,12 @@ done
 unset "$VAR"
 for point in "${POINTS[@]}"; do
   base=$OUT/off/$PROJECT/$point/run-1.json
+  [ -f "$base" ] || base=$BENCH_RESULTS/$PROJECT/$point/run-1.json
   report=$OUT/compare-$PROJECT-$point.md
   : >"$report"
   for run in "$OUT"/on/"$PROJECT"/"$point"/run-*.json; do
     [ -f "$base" ] && [ -f "$run" ] || continue
-    echo "### $(basename "$run") (on) vs run-1 (off)" >>"$report"
+    echo "### $(basename "$run") (on) vs $base" >>"$report"
     node "$HERE/../compare-verdicts.mjs" "$base" "$run" --label off,on >>"$report"
     echo >>"$report"
   done
