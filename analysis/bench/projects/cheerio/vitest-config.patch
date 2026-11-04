@@ -1,0 +1,16 @@
+diff --git a/vitest.config.ts b/vitest.config.ts
+index edbb5c0a..420ddb68 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -11,8 +11,10 @@ const config: ViteUserConfig = defineConfig({
+         '*.config.ts',
+       ],
+     },
++    // bench: no type tests; tsc on every start of Vitest would weigh on both
++    // tools and kills no runtime mutant.
+     typecheck: {
+-      enabled: true,
++      enabled: false,
+       include: ['src/api/extract.spec.ts'],
+     },
+   },

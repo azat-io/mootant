@@ -35,3 +35,9 @@ mootant exit=129
 cleanup: killed 2089
 cleanup: killed 5108
 work dirs left: 1
+
+# Note: the vitest SIGTERM case above printed a bash syntax error because the
+# script was edited while it ran (the cleanup pattern was fixed); its process
+# listings before that line are valid. The node-test runs killed the script
+# itself (its command line contained "node"), so the node-test SIGHUP orphan
+# 31546 was killed by hand after being seen alive (R, 33% CPU) 16-24 s later.

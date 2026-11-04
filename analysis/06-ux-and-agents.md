@@ -404,8 +404,8 @@ runs. In CI, check changed lines…», а полный прогон `main` на 
 | --- | --- | --- | --- |
 | Только изменённое | `--since <ref>`: строки от merge base, незакоммиченные и неотслеживаемые файлы включены | `mutate` с диапазонами строк `file:10-20` (`configuration.md:441`), `--incremental` | `--in-diff <file>` по готовому диффу (`in-diff.md`) |
 | Кэш между прогонами | `node_modules/.cache/mootant`, сбрасывается после `npm ci` (BUG-407) | `reports/stryker-incremental.json`, можно коммитить или кэшировать; частичное сохранение при прерывании | кэша нет; `--iterate` пропускает пойманные ранее по `mutants.out` (`iterate.md`) |
-| Шардирование | нет | нет | `--shard k/n`, `slice` и `round-robin`, пример матрицы (`shards.md`) |
-| Машиночитаемый вывод | `--json` в stdout, HTML со встроенным JSON | `json` по схеме mutation-testing-elements | каталог `mutants.out`: `mutants.json`, `outcomes.json`, дифф и лог на мутант, `caught.txt`/`missed.txt` (`mutants-out.md`) |
+| Шардирование | нет | нет (в `stryker-js/docs` не упоминается) | `--shard k/n`, `slice` и `round-robin`, пример матрицы (`shards.md`) |
+| Машиночитаемый вывод | `--json` в stdout вместо текста, HTML со встроенным JSON | репортёр `json` пишет файл `reports/mutation/mutation.json` (схема mutation-testing-elements) параллельно с текстовым (`configuration.md:387-395`) | каталог `mutants.out`: `mutants.json`, `outcomes.json`, дифф и лог на мутант, `caught.txt`/`missed.txt` (`mutants-out.md`) |
 | Хостинг отчётов и бейдж | нет | Stryker Dashboard: отчёты по веткам и модулям, бейдж (`configuration.md:169-194`) | нет |
 | Аннотации в PR | нет | встроенных нет | встроенных нет |
 | Коды выхода | 0 / 1 | 1 при `score < break` | 0, 1, 2, 3, 4, 5, 6, 70 |
@@ -504,7 +504,8 @@ frontmatter, имя = каталог, меньше 500 строк, ссылки)
 `test/discount.test.ts`, запускает `mootant run src --mutant q31p780qv6yk` и
 видит `killed 1`. Для одного простого мутанта он понятен, и данных хватает:
 дифф, тестовый файл с числом покрывающих тестов, один покрывающий тест с
-именем и строкой, готовая команда перепроверки, стабильный id. На
+именем (и строкой — у Vitest, у `node:test` строки нет), готовая команда
+перепроверки, стабильный id. На
 `first-run` этот цикл поднял score с 35 % до 50 % за один проход (6.1, шаг 6).
 
 Чего агенту не хватает, в порядке важности:
