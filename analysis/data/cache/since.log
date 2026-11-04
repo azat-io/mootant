@@ -3,3 +3,12 @@
   [pure] --since main exit=0
     (no mutants selected)
   EXPECT: line 3 only
+  [edited] --since main exit=0
+    "src/renamed.ts": lines 3
+=== rename_unstaged (05:12:53)
+  EXPECT: same as a staged rename (nothing); actual: an untracked file counts whole
+  [mv] --since main exit=0
+    "src/renamed.ts": lines 1,2,3,4,5,6
+  [staged] --since main exit=0
+    (no mutants selected)
+=== staged_unstaged_untracked (05:12:56)
