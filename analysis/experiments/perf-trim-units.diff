@@ -1,0 +1,577 @@
+diff --git a/adapters/vitest/runner.ts b/adapters/vitest/runner.ts
+index 56d8d10..92a8fd6 100644
+--- a/adapters/vitest/runner.ts
++++ b/adapters/vitest/runner.ts
+@@ -13,14 +13,18 @@ import { createHash } from 'node:crypto'
+ import { TestRunner } from 'vitest'
+ import path from 'node:path'
+ 
++import type {
++  IsolatedUnit,
++  UnitTrim,
++} from '../../types/adapter/isolated-plan'
+ import type { BatchUnit, BatchTest } from '../../types/adapter/batch-plan'
+ import type { MutantRuntime } from '../../types/adapter/mutant-runtime'
+-import type { IsolatedUnit } from '../../types/adapter/isolated-plan'
+ import type { InputTracking } from '../shared/types/input-tracking'
+ import type { VitestWorkerOptions } from './types/vitest-worker'
+ import type { TryFacts } from '../../types/adapter/try-facts'
+ 
+ import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
++import { selectTrimmedTests } from './worker/select-trimmed-tests'
+ import { watchWorkerClose } from './worker/watch-worker-close'
+ import { listDependencies } from './worker/list-dependencies'
+ import { getErrorMessage } from '../shared/get-error-message'
+@@ -352,6 +356,12 @@ export default class MootantRunner extends TestRunner {
+    */
+   private lastTest: string | null = null
+ 
++  /**
++   * Tests an isolated unit is cut down to (`IsolatedUnit.trim`), or null to
++   * run the whole file.
++   */
++  private trim: UnitTrim | null = null
++
+   /**
+    * Whether suites and tests run one at a time even where the user marked them
+    * concurrent: in a batch run and in a dry run that tries each test twice.
+@@ -549,6 +559,7 @@ export default class MootantRunner extends TestRunner {
+       let unit = plan!.units[index] as IsolatedUnit
+       runtime.active = unit.mutant
+       runtime.hitLimit = unit.limits.hitLimit
++      this.trim = unit.trim ?? null
+       this.budget = unit.limits.timeout
+       this.config.hookTimeout = Math.min(hookTimeout, unit.limits.timeout)
+     } else {
+@@ -576,8 +587,11 @@ export default class MootantRunner extends TestRunner {
+    * and in a dry run that tries each test twice, starts every attempt in an
+    * outermost `aroundEach` hook, and selects the tests of a batch unit: every
+    * test up to the last planned one. An isolated unit runs every test of the
+-   * file, concurrent tests concurrently. A dry run reads the hook timeouts of
+-   * every test and of the file's suite hooks first, for the watchdog.
++   * file, concurrent tests concurrently, unless it is trimmed
++   * (`IsolatedUnit.trim`): then every test up to the last covering one, or only
++   * the covering ones; a unit none of whose covering tests was collected runs
++   * the whole file. A dry run reads the hook timeouts of every test and of the
++   * file's suite hooks first, for the watchdog.
+    *
+    * @param files - Collected test files.
+    */
+@@ -600,6 +614,13 @@ export default class MootantRunner extends TestRunner {
+         this.loadError ??= getErrorMessage(file.result.errors?.[0])
+       }
+     }
++    if (this.trim !== null && this.runnable === null) {
++      this.runnable = selectTrimmedTests(
++        files.flatMap(file => listTests(file)),
++        this.trim,
++      )
++      return
++    }
+     if (this.batch === null || this.runnable !== null) {
+       return
+     }
+diff --git a/adapters/vitest/worker/select-trimmed-tests.ts b/adapters/vitest/worker/select-trimmed-tests.ts
+new file mode 100644
+index 0000000..109cc2d
+--- /dev/null
++++ b/adapters/vitest/worker/select-trimmed-tests.ts
+@@ -0,0 +1,29 @@
++import type { RunnerTestCase } from 'vitest'
++
++import type { UnitTrim } from '../../../types/adapter/isolated-plan'
++
++/**
++ * Selects the tests a trimmed isolated unit runs (`UnitTrim`): every test up to
++ * the last covering test in file order with `prefix`, or only the covering
++ * tests with `covering`.
++ *
++ * @param tests - Collected tests of the file in file order.
++ * @param trim - Covering tests of the unit and the mode.
++ * @returns Ids of the tests to run, or null to run every test when no covering
++ *   test was collected, such as after the file changed.
++ */
++export function selectTrimmedTests(
++  tests: readonly RunnerTestCase[],
++  trim: UnitTrim,
++): Set<string> | null {
++  let covering = new Set(trim.tests)
++  let last = tests.findLastIndex(test => covering.has(test.id))
++  if (last === -1) {
++    return null
++  }
++  let selected =
++    trim.mode === 'prefix' ?
++      tests.slice(0, last + 1)
++    : tests.filter(test => covering.has(test.id))
++  return new Set(selected.map(test => test.id))
++}
+diff --git a/core/cache/prepare-run-cache.ts b/core/cache/prepare-run-cache.ts
+index bd28640..cf95655 100644
+--- a/core/cache/prepare-run-cache.ts
++++ b/core/cache/prepare-run-cache.ts
+@@ -7,6 +7,7 @@ import type { ActiveMutator } from '../../types/mutator/active-mutator'
+ import type { DryRunResult } from '../../types/adapter/dry-run-result'
+ import type { TestAdapter } from '../../types/adapter/test-adapter'
+ import type { FileMutants } from '../../types/mutant/file-mutants'
++import type { UnitTrim } from '../../types/adapter/isolated-plan'
+ import type { StoredCache } from '../../types/cache/stored-cache'
+ import type { DryAnalysis } from '../../types/run/dry-analysis'
+ import type { LimitSettings } from '../../types/run/run-state'
+@@ -29,6 +30,13 @@ interface PrepareInput {
+    */
+   setup: { mutators: ActiveMutator[]; settings: unknown; preset: string }
+ 
++  /**
++   * How isolated units are cut down to their covering tests, or null or
++   * omitted for whole test files; trimmed runs keep their verdicts apart, since
++   * a trimmed unit may miss a kill a whole file finds.
++   */
++  trimUnits?: UnitTrim['mode'] | null
++
+   /**
+    * Every file the paths of the run list mutants from, the files `--since` or
+    * `--mutant` leave out included, so the keys do not depend on the selection,
+@@ -156,13 +164,16 @@ export async function prepareRunCache(
+       settings: setup.settings,
+       preset: setup.preset,
+     },
++    settings:
++      (input.trimUnits ?? null) === null ? inputs.settings : (
++        { runner: inputs.settings ?? null, trimUnits: input.trimUnits }
++      ),
+     runner: {
+       version: input.adapter.version ?? null,
+       runner: session.version ?? null,
+       adapter: input.adapter.name,
+     },
+     build: (await stat(import.meta.filename)).mtimeMs,
+-    settings: inputs.settings,
+     limits: input.limits,
+     hashes,
+     files,
+diff --git a/core/run-mutants.ts b/core/run-mutants.ts
+index abb3c9e..0e599b3 100644
+--- a/core/run-mutants.ts
++++ b/core/run-mutants.ts
+@@ -40,6 +40,7 @@ import { createRunState } from './run/create-run-state'
+ import { getDisplayPath } from './run/get-display-path'
+ import { selectRunFiles } from './run/select-run-files'
+ import { resolveAdapter } from './run/resolve-adapter'
++import { readTrimUnits } from './run/read-trim-units'
+ import { saveRunCache } from './cache/save-run-cache'
+ import { readRunCache } from './cache/read-run-cache'
+ import { getCachePath } from './cache/get-cache-path'
+@@ -439,6 +440,7 @@ async function execute(context: {
+     )
+   }
+   let now = Date.now()
++  let trimUnits = readTrimUnits()
+   let cache =
+     stored === null ? null : (
+       await prepareRunCache({
+@@ -448,6 +450,7 @@ async function execute(context: {
+         started: context.startedAt,
+         adapter: context.adapter,
+         dry: dryPhase.dry,
++        trimUnits,
+         analysis,
+         session,
+         stored,
+@@ -468,6 +471,7 @@ async function execute(context: {
+     batch: context.adapter.batch,
+     report: options.onProgress,
+     mutants: pending,
++    trimUnits,
+     analysis,
+     hosted,
+     limits,
+diff --git a/core/run/create-run-state.ts b/core/run/create-run-state.ts
+index a32c498..bf67c18 100644
+--- a/core/run/create-run-state.ts
++++ b/core/run/create-run-state.ts
+@@ -1,4 +1,5 @@
+ import type { LimitSettings, RunState } from '../../types/run/run-state'
++import type { UnitTrim } from '../../types/adapter/isolated-plan'
+ import type { DryAnalysis } from '../../types/run/dry-analysis'
+ import type { RunEvent } from '../../types/run/run-event'
+ import type { Mutant } from '../../types/mutant/mutant'
+@@ -17,6 +18,12 @@ interface RunStateInput {
+    */
+   imports: ReadonlyMap<string, readonly string[]>
+ 
++  /**
++   * How isolated units are cut down to the tests that reached their mutant, or
++   * null or omitted for whole test files.
++   */
++  trimUnits?: UnitTrim['mode'] | null
++
+   /**
+    * Receives the events of the run, such as the start of each run of the test
+    * runner; when omitted, nothing counts the decided mutants as they come.
+@@ -93,6 +100,7 @@ export function createRunState(input: RunStateInput): RunState {
+           reported: null,
+           running: null,
+         },
++    ...((input.trimUnits ?? null) !== null && { trimUnits: input.trimUnits }),
+     moduleTests: indexModuleTests(input.hosted, analysis),
+     report: input.report ?? (() => {}),
+     workers: input.workers,
+diff --git a/core/run/get-unit-trim.ts b/core/run/get-unit-trim.ts
+new file mode 100644
+index 0000000..5018b3a
+--- /dev/null
++++ b/core/run/get-unit-trim.ts
+@@ -0,0 +1,33 @@
++import type { IsolatedRequest, RunState } from '../../types/run/run-state'
++import type { UnitTrim } from '../../types/adapter/isolated-plan'
++
++import { getTestFileKey } from './get-test-file-key'
++
++/**
++ * Picks the tests an isolated unit is cut down to when the run trims units
++ * (`RunState.trimUnits`): the tests of the unit's file that reached its mutant
++ * in the dry run. A static mutant, reached while a test file loaded, keeps
++ * whole files, since any test may see what loading did; so does a file where
++ * no test reached the mutant.
++ *
++ * @param state - State of the run.
++ * @param request - Mutant and test file of the unit.
++ * @returns Trim of the unit, or null to run the whole file.
++ */
++export function getUnitTrim(
++  state: RunState,
++  request: IsolatedRequest,
++): UnitTrim | null {
++  let mode = state.trimUnits ?? null
++  if (mode === null) {
++    return null
++  }
++  let mutant = state.mutants.get(request.mutant)!
++  if (mutant.static) {
++    return null
++  }
++  let tests = mutant.coveredBy.filter(
++    id => getTestFileKey(state.analysis.tests.get(id)!) === request.file,
++  )
++  return tests.length === 0 ? null : { tests, mode }
++}
+diff --git a/core/run/plan-isolated.ts b/core/run/plan-isolated.ts
+index 71a1ee0..63bf1b7 100644
+--- a/core/run/plan-isolated.ts
++++ b/core/run/plan-isolated.ts
+@@ -2,12 +2,14 @@ import type { IsolatedRequest, RunState } from '../../types/run/run-state'
+ import type { IsolatedPlan } from '../../types/adapter/isolated-plan'
+ 
+ import { getTryLimits } from './get-try-limits'
++import { getUnitTrim } from './get-unit-trim'
+ 
+ /**
+  * Plans one isolated run: a unit per request on its whole test file, with
+  * limits that add up the work outside tries (loading the file and its suite
+  * hooks) and one try of every test of the file. Units that confirm a timeout
+- * get doubled bounds.
++ * get doubled bounds. When the run trims units, a unit names the tests it is
++ * cut down to (`getUnitTrim`) and keeps the limits of the whole file.
+  *
+  * @param state - State of the run.
+  * @param requests - Mutants and test files to run, in order.
+@@ -39,7 +41,14 @@ export function planIsolated(
+         }
+       }
+       let { project, file } = analysis.testFiles.get(request.file)!
+-      return { mutant: request.mutant, limits: total, project, file }
++      let trim = getUnitTrim(state, request)
++      return {
++        ...(trim !== null && { trim }),
++        mutant: request.mutant,
++        limits: total,
++        project,
++        file,
++      }
+     }),
+   }
+ }
+diff --git a/core/run/read-trim-units.ts b/core/run/read-trim-units.ts
+new file mode 100644
+index 0000000..d026c7c
+--- /dev/null
++++ b/core/run/read-trim-units.ts
+@@ -0,0 +1,22 @@
++import type { UnitTrim } from '../../types/adapter/isolated-plan'
++
++/**
++ * Name of the environment variable that turns on trimmed isolated units in this
++ * prototype; a release would read a setting of the configuration instead.
++ */
++const VARIABLE = 'MOOTANT_TRIM_UNITS'
++
++/**
++ * Reads how isolated units are cut down to the tests that reached their mutant
++ * (`UnitTrim`): `prefix` or `covering` from `MOOTANT_TRIM_UNITS`, anything else
++ * keeps whole test files.
++ *
++ * @param environment - Environment variables to read.
++ * @returns Mode of trimming, or null for whole test files.
++ */
++export function readTrimUnits(
++  environment: NodeJS.ProcessEnv = process.env,
++): UnitTrim['mode'] | null {
++  let value = environment[VARIABLE]
++  return value === 'prefix' || value === 'covering' ? value : null
++}
+diff --git a/test/adapters/vitest/runner.test.ts b/test/adapters/vitest/runner.test.ts
+index f63abbc..eb43df3 100644
+--- a/test/adapters/vitest/runner.test.ts
++++ b/test/adapters/vitest/runner.test.ts
+@@ -993,6 +993,59 @@ describe('mootantRunner', () => {
+     await expect(readRecords()).resolves.toStrictEqual({})
+   })
+ 
++  it('cuts a trimmed isolated unit down to the tests it names', async () => {
++    setOptions('isolated')
++    writePlan([
++      { ...ISOLATED_UNIT, trim: { mode: 'prefix', tests: ['b'] } },
++      { ...ISOLATED_UNIT, trim: { tests: ['b', 'd'], mode: 'covering' } },
++      { ...ISOLATED_UNIT, trim: { mode: 'prefix', tests: ['x'] } },
++    ])
++    /**
++     * Runs the fake file once with a new runner, the next unit of the plan.
++     *
++     * @returns Modes of the tests and of the suite after the run.
++     */
++    async function runUnit(): Promise<string[]> {
++      let { runner } = createRunner()
++      let suite = createSuite([createTest('d')])
++      let tests = [
++        createTest('a'),
++        createTest('b', runtime => {
++          runtime.hit('m')
++        }),
++        createTest('c'),
++        suite,
++        createTest('e'),
++      ]
++      await runFile(runner, createFile(tests))
++      return [...tests.slice(0, 3), suite.tasks[0]!, tests[4]!].map(
++        task => task.mode,
++      )
++    }
++
++    await expect(runUnit()).resolves.toStrictEqual([
++      'run',
++      'run',
++      'skip',
++      'skip',
++      'skip',
++    ])
++    await expect(runUnit()).resolves.toStrictEqual([
++      'skip',
++      'run',
++      'skip',
++      'run',
++      'skip',
++    ])
++    await expect(runUnit()).resolves.toStrictEqual([
++      'run',
++      'run',
++      'run',
++      'run',
++      'run',
++    ])
++  })
++
+   it('runs the file with the mutant active from loading until a test kills it in an isolated run', async () => {
+     setOptions('isolated')
+     writePlan([ISOLATED_UNIT, ISOLATED_UNIT])
+diff --git a/test/adapters/vitest/worker/select-trimmed-tests.test.ts b/test/adapters/vitest/worker/select-trimmed-tests.test.ts
+new file mode 100644
+index 0000000..a5fc41f
+--- /dev/null
++++ b/test/adapters/vitest/worker/select-trimmed-tests.test.ts
+@@ -0,0 +1,37 @@
++import type { RunnerTestCase } from 'vitest'
++
++import { describe, expect, it } from 'vitest'
++
++import { selectTrimmedTests } from '../../../../adapters/vitest/worker/select-trimmed-tests'
++
++/**
++ * Creates fake collected tests with the given ids.
++ *
++ * @param ids - Ids in file order.
++ * @returns Fake tests that only have an id.
++ */
++function createTests(ids: string[]): RunnerTestCase[] {
++  return ids.map(id => ({ id }) as RunnerTestCase)
++}
++
++describe('selectTrimmedTests', () => {
++  let tests = createTests(['a', 'b', 'c', 'd', 'e'])
++
++  it('keeps every test up to the last covering one with prefix', () => {
++    expect(
++      selectTrimmedTests(tests, { tests: ['d', 'b'], mode: 'prefix' }),
++    ).toStrictEqual(new Set(['a', 'b', 'c', 'd']))
++  })
++
++  it('keeps only the covering tests with covering', () => {
++    expect(
++      selectTrimmedTests(tests, { tests: ['d', 'b'], mode: 'covering' }),
++    ).toStrictEqual(new Set(['b', 'd']))
++  })
++
++  it('runs every test when no covering test was collected', () => {
++    expect(
++      selectTrimmedTests(tests, { mode: 'prefix', tests: ['x'] }),
++    ).toBeNull()
++  })
++})
+diff --git a/test/core/run/plan-isolated.test.ts b/test/core/run/plan-isolated.test.ts
+index 9fc2f57..7c8818a 100644
+--- a/test/core/run/plan-isolated.test.ts
++++ b/test/core/run/plan-isolated.test.ts
+@@ -81,4 +81,40 @@ describe('planIsolated', () => {
+       ]).units[0]!.limits,
+     ).toStrictEqual({ hitLimit: 100_000, timeout: 250 })
+   })
++
++  it('names the covering tests of a unit when the run trims units', async () => {
++    let { state } = await createTestRun(
++      {
++        tests: [
++          { file: '/t/a.test.ts', covers: ['m1'], id: 'a1' },
++          { file: '/t/a.test.ts', id: 'a2' },
++          { file: '/t/b.test.ts', covers: ['m1'], id: 'b1' },
++          { file: '/t/a.test.ts', covers: ['m1'], id: 'a3' },
++        ],
++        files: [{ file: '/t/a.test.ts', loadCovers: ['m2'] }],
++      },
++      { mutants: ['m1', 'm2'], isolate: true },
++    )
++    state.trimUnits = 'prefix'
++    let requests = ['m1', 'm2'].map(mutant => ({
++      file: '/t/a.test.ts',
++      confirming: false,
++      retried: false,
++      mutant,
++    }))
++
++    let units = planIsolated(state, requests).units.map(unit => unit.trim)
++
++    expect(units[0]!.mode).toBe('prefix')
++    expect(units[0]!.tests.toSorted()).toStrictEqual(['a1', 'a3'])
++    expect(units[1]).toBeUndefined()
++    expect(
++      planIsolated(state, [{ ...requests[0]!, file: '/t/b.test.ts' }]).units[0]!
++        .trim,
++    ).toStrictEqual({ mode: 'prefix', tests: ['b1'] })
++
++    state.trimUnits = null
++
++    expect(planIsolated(state, requests).units[0]!.trim).toBeUndefined()
++  })
+ })
+diff --git a/test/core/run/read-trim-units.test.ts b/test/core/run/read-trim-units.test.ts
+new file mode 100644
+index 0000000..480f06e
+--- /dev/null
++++ b/test/core/run/read-trim-units.test.ts
+@@ -0,0 +1,19 @@
++import { describe, expect, it } from 'vitest'
++
++import { readTrimUnits } from '../../../core/run/read-trim-units'
++
++describe('readTrimUnits', () => {
++  it('reads prefix and covering, anything else keeps whole files', () => {
++    expect(readTrimUnits({ MOOTANT_TRIM_UNITS: 'prefix' })).toBe('prefix')
++    expect(readTrimUnits({ MOOTANT_TRIM_UNITS: 'covering' })).toBe('covering')
++    expect(readTrimUnits({ MOOTANT_TRIM_UNITS: '1' })).toBeNull()
++    expect(readTrimUnits({})).toBeNull()
++  })
++
++  it('reads the environment of the process by default', () => {
++    let value = process.env['MOOTANT_TRIM_UNITS']
++    expect(readTrimUnits()).toBe(
++      value === 'prefix' || value === 'covering' ? value : null,
++    )
++  })
++})
+diff --git a/types/adapter/isolated-plan.d.ts b/types/adapter/isolated-plan.d.ts
+index 12a6c0d..c01ef10 100644
+--- a/types/adapter/isolated-plan.d.ts
++++ b/types/adapter/isolated-plan.d.ts
+@@ -6,7 +6,8 @@ import type { TryLimits } from './try-limits'
+  * that does not reach the mutant may still see the state an earlier test left,
+  * until a test fails after the mutant was reached. That failure kills the
+  * mutant whatever runs next, so the adapter may skip the tests left; suite
+- * hooks that started, fixture cleanup and teardown still run.
++ * hooks that started, fixture cleanup and teardown still run. A unit with
++ * `trim` may skip more (a prototype, see `UnitTrim`).
+  */
+ export interface IsolatedUnit {
+   /**
+@@ -14,6 +15,12 @@ export interface IsolatedUnit {
+    */
+   limits: TryLimits
+ 
++  /**
++   * Tests of the file the unit is cut down to, or omitted to run the whole
++   * file. An adapter that cannot select tests runs the whole file.
++   */
++  trim?: UnitTrim
++
+   /**
+    * Name of the test runner's project to run the test file in (see
+    * `DryFile.project`).
+@@ -31,6 +38,28 @@ export interface IsolatedUnit {
+   file: string
+ }
+ 
++/**
++ * How an isolated unit is cut down to the tests that reached its mutant in the
++ * dry run (prototype, `MOOTANT_TRIM_UNITS`). With `prefix`, every test up to
++ * the last of them runs, as in a batch unit, and the tests after it are
++ * skipped: a test after it did not reach the mutant in the dry run, so it can
++ * only fail through state an earlier test left, which this mode gives up. With
++ * `covering`, only they run: a test that relies on an earlier test it skipped
++ * may fail whatever the mutant, so this mode may also kill wrongly.
++ */
++export interface UnitTrim {
++  /**
++   * Which tests run: those up to the last covering test, or only covering
++   * tests.
++   */
++  mode: 'covering' | 'prefix'
++
++  /**
++   * Ids of the tests of the file that reached the mutant in the dry run.
++   */
++  tests: string[]
++}
++
+ /**
+  * Units of one isolated run. Several units may share a test file; they never
+  * run at the same time.
+diff --git a/types/run/run-state.d.ts b/types/run/run-state.d.ts
+index 85b066b..8d05c65 100644
+--- a/types/run/run-state.d.ts
++++ b/types/run/run-state.d.ts
+@@ -1,3 +1,4 @@
++import type { UnitTrim } from '../adapter/isolated-plan'
+ import type { Diagnostic } from '../mutant/diagnostic'
+ import type { LiveVerdicts } from './live-verdicts'
+ import type { RunCache } from '../cache/run-cache'
+@@ -28,6 +29,12 @@ export interface RunState {
+    */
+   runs: Partial<Record<RunKind, number>>
+ 
++  /**
++   * How isolated units are cut down to the tests that reached their mutant
++   * (`UnitTrim`), or null or omitted for whole test files.
++   */
++  trimUnits?: UnitTrim['mode'] | null
++
+   /**
+    * Every pending mutant of the run by id, with its route and evidence.
+    */

@@ -1,0 +1,643 @@
+diff --git a/adapters/node-test/run-isolated.ts b/adapters/node-test/run-isolated.ts
+index 033d383..4aee661 100644
+--- a/adapters/node-test/run-isolated.ts
++++ b/adapters/node-test/run-isolated.ts
+@@ -19,16 +19,18 @@ import { runInPool } from './run-in-pool'
+ /**
+  * Executes isolated units, each in a test process of its own with its mutant
+  * active from the start, with the session's processes at once but never two
+- * units of one test file at once, in plan order per file (`runInPool`). A unit
+- * stops starting tests after a test failed once the mutant was reached, unless
+- * its test file reported a todo test or suite in its dry run, since node:test
+- * reports todo tests only some time after they ran; tests that failed in the
+- * file's dry run of a process that still exited with 0 never count. A unit that
+- * stopped for a failure that turned out a todo test, as one that only the
+- * mutant made todo, runs again without stopping (`checkTodoBail`). A watchdog
+- * stops a unit past its timeout (`getUnitDeadline`). Every unit reports its
+- * facts (`buildIsolatedFacts`) and, once its process reached its end, what it
+- * read, to the result and, as it ends, to the context's `onUnitEnd`.
++ * units of one test file at once, in plan order per file (`runInPool`), unless
++ * the context allows parallel units, when every unit has a key of its own. A
++ * unit stops starting tests after a test failed once the mutant was reached,
++ * unless its test file reported a todo test or suite in its dry run, since
++ * node:test reports todo tests only some time after they ran; tests that failed
++ * in the file's dry run of a process that still exited with 0 never count. A
++ * unit that stopped for a failure that turned out a todo test, as one that only
++ * the mutant made todo, runs again without stopping (`checkTodoBail`). A
++ * watchdog stops a unit past its timeout (`getUnitDeadline`). Every unit
++ * reports its facts (`buildIsolatedFacts`) and, once its process reached its
++ * end, what it read, to the result and, as it ends, to the context's
++ * `onUnitEnd`.
+  *
+  * @param handle - Live session.
+  * @param plan - Units to run.
+@@ -93,7 +95,7 @@ export async function runIsolated(
+         context.onUnitEnd?.({ unit: index, facts })
+         return facts
+       },
+-      key: unit.file,
++      key: context.parallelUnits === true ? `${index}\n` : unit.file,
+     })),
+     handle.workers,
+   )
+diff --git a/adapters/vitest/run-specifications.ts b/adapters/vitest/run-specifications.ts
+index 4d2bfc6..2e84f27 100644
+--- a/adapters/vitest/run-specifications.ts
++++ b/adapters/vitest/run-specifications.ts
+@@ -13,7 +13,9 @@ import { waitForWorkers } from './wait-for-workers'
+  * teardown, the test environment's teardown included. The caller's watchdog
+  * must run until this resolves: the wait relies on it to stop workers that hang
+  * in their teardown. Failing tests and stray errors are expected in mootant's
+- * runs, so the exit code Vitest sets for them is restored.
++ * runs, so the exit code Vitest sets for them is restored. When the context
++ * allows parallel units, the workers are told not to wait for the unit before
++ * of the same test file.
+  *
+  * @param handle - Live Vitest instance of the session.
+  * @param worker - Kind of the run the workers perform and, for a dry run, the
+@@ -27,13 +29,14 @@ import { waitForWorkers } from './wait-for-workers'
+  */
+ export async function runSpecifications(
+   handle: VitestHandle,
+-  worker: Omit<VitestWorkerOptions, 'directory' | 'root'>,
++  worker: Omit<VitestWorkerOptions, 'directory' | 'parallel' | 'root'>,
+   specifications: TestSpecification[],
+ ): Promise<string | null> {
+   let { context, vitest } = handle
+   let { exitCode } = process
+   vitest.provide('mootant', {
+     ...worker,
++    ...(context.parallelUnits === true && { parallel: true }),
+     directory: context.workDirectory,
+     root: context.root,
+   })
+diff --git a/adapters/vitest/runner.ts b/adapters/vitest/runner.ts
+index 56d8d10..6955fda 100644
+--- a/adapters/vitest/runner.ts
++++ b/adapters/vitest/runner.ts
+@@ -213,7 +213,8 @@ let clock = captureClock()
+  * neither. A test environment other than Vitest's own loads and sets up before
+  * the runner exists, out of sight, so its units report no dependencies and are
+  * never cached. A unit waits until the worker of the unit before it of the same
+- * test file is gone, so a test file never runs twice at once.
++ * test file is gone, so a test file never runs twice at once, unless the run
++ * allows parallel isolated units (`VitestWorkerOptions.parallel`).
+  *
+  * Tests the user marked concurrent stay concurrent in isolated units and in a
+  * dry run that tries each test once, as in a plain run; a batch run and a dry
+@@ -502,9 +503,10 @@ export default class MootantRunner extends TestRunner {
+   }
+ 
+   /**
+-   * Claims a unit, waits for the unit before it of the same test file, and
+-   * prepares the runtime before the test file and its setup files load. Vitest
+-   * awaits this hook once per test file.
++   * Claims a unit, waits for the unit before it of the same test file, unless
++   * the run allows parallel isolated units, and prepares the runtime before the
++   * test file and its setup files load. Vitest awaits this hook once per test
++   * file.
+    *
+    * @param paths - Absolute path of the test file.
+    */
+@@ -538,7 +540,9 @@ export default class MootantRunner extends TestRunner {
+       this.runnable = new Set()
+       return
+     }
+-    await waitForTurn(options.directory, { index, hash }, clock)
++    if (options.parallel !== true || options.mode !== 'isolated') {
++      await waitForTurn(options.directory, { index, hash }, clock)
++    }
+     this.started = clock.now()
+     this.unitIndex = plan!.indexes[index]!
+     this.outName = `${hash}-${index}`
+diff --git a/adapters/vitest/types/vitest-worker.d.ts b/adapters/vitest/types/vitest-worker.d.ts
+index 251b633..0f17c88 100644
+--- a/adapters/vitest/types/vitest-worker.d.ts
++++ b/adapters/vitest/types/vitest-worker.d.ts
+@@ -141,6 +141,44 @@ export type VitestOutRecord =
+       kind: 'test'
+     }
+ 
++/**
++ * Options the main process provides to workers under the key `mootant`.
++ */
++export interface VitestWorkerOptions {
++  /**
++   * Watchdog budgets of a dry run (`DryRunRequest.timeouts`), or null in batch
++   * and isolated runs, whose plans carry their own.
++   */
++  timeouts: { test: number; file: number } | null
++
++  /**
++   * Kind of the run.
++   */
++  mode: 'isolated' | 'batch' | 'dry'
++
++  /**
++   * Whether a unit starts without waiting for the unit before it of the same
++   * test file (`AdapterContext.parallelUnits`); false or omitted waits.
++   */
++  parallel?: boolean
++
++  /**
++   * Work directory of this run.
++   */
++  directory: string
++
++  /**
++   * Whether a dry run tries every test twice in a row (`DryRunRequest.repeat`);
++   * false in batch and isolated runs.
++   */
++  repeat: boolean
++
++  /**
++   * Project root; files the test code reads count as inputs only inside it.
++   */
++  root: string
++}
++
+ /**
+  * Content of `beat/<pid>.json`; the main process timestamps it when it first
+  * sees `sequence`.
+@@ -187,38 +225,6 @@ export interface VitestHeartbeat {
+   pid: number
+ }
+ 
+-/**
+- * Options the main process provides to workers under the key `mootant`.
+- */
+-export interface VitestWorkerOptions {
+-  /**
+-   * Watchdog budgets of a dry run (`DryRunRequest.timeouts`), or null in batch
+-   * and isolated runs, whose plans carry their own.
+-   */
+-  timeouts: { test: number; file: number } | null
+-
+-  /**
+-   * Kind of the run.
+-   */
+-  mode: 'isolated' | 'batch' | 'dry'
+-
+-  /**
+-   * Work directory of this run.
+-   */
+-  directory: string
+-
+-  /**
+-   * Whether a dry run tries every test twice in a row (`DryRunRequest.repeat`);
+-   * false in batch and isolated runs.
+-   */
+-  repeat: boolean
+-
+-  /**
+-   * Project root; files the test code reads count as inputs only inside it.
+-   */
+-  root: string
+-}
+-
+ /**
+  * Plan file of one test file: `plan/<hash of the path>.json`.
+  */
+diff --git a/core/cache/prepare-run-cache.ts b/core/cache/prepare-run-cache.ts
+index bd28640..6a8fd58 100644
+--- a/core/cache/prepare-run-cache.ts
++++ b/core/cache/prepare-run-cache.ts
+@@ -46,6 +46,13 @@ interface PrepareInput {
+    */
+   session: AdapterSession
+ 
++  /**
++   * Whether isolated units of one test file run at the same time; such runs
++   * keep their verdicts apart from those of serial runs, since tests that rely
++   * on a test file never running twice at once may give other verdicts.
++   */
++  parallelUnits?: boolean
++
+   /**
+    * Coverage and tests of the dry run.
+    */
+@@ -102,7 +109,8 @@ interface PrepareInput {
+  * file gets one when a file of the environment changed. Dependencies the test
+  * code of the dry run changed itself (`DryFile.modified`) are hashed as they
+  * are now, which is what the next run starts from; `saveRunCache` checks that
+- * their contents stayed so.
++ * their contents stayed so. A run with parallel units has an environment key of
++ * its own.
+  *
+  * @param input - Session, dry run, settings and the stored entries.
+  * @returns Cache of the run, or null when the adapter cannot tell what verdicts
+@@ -161,8 +169,11 @@ export async function prepareRunCache(
+       runner: session.version ?? null,
+       adapter: input.adapter.name,
+     },
++    settings:
++      input.parallelUnits === true ?
++        { runner: inputs.settings ?? null, parallelUnits: true }
++      : inputs.settings,
+     build: (await stat(import.meta.filename)).mtimeMs,
+-    settings: inputs.settings,
+     limits: input.limits,
+     hashes,
+     files,
+diff --git a/core/run-mutants.ts b/core/run-mutants.ts
+index abb3c9e..3d59760 100644
+--- a/core/run-mutants.ts
++++ b/core/run-mutants.ts
+@@ -28,6 +28,7 @@ import { applyCachedBatch } from './cache/apply-cached-batch'
+ import { applyCachedUnits } from './cache/apply-cached-units'
+ import { runIsolatedRounds } from './run/run-isolated-rounds'
+ import { computeStaticCost } from './run/compute-static-cost'
++import { readParallelUnits } from './run/read-parallel-units'
+ import { loadVueCompiler } from './parser/load-vue-compiler'
+ import { prepareRunCache } from './cache/prepare-run-cache'
+ import { listFileMutants } from './files/list-file-mutants'
+@@ -269,6 +270,7 @@ export async function runMutants(
+     }
+   }
+   let work = await createWorkDirectory()
++  let parallelUnits = readParallelUnits()
+   try {
+     let switched: SwitchedFile[] = []
+     let live: { state: RunState | null } = { state: null }
+@@ -296,12 +298,14 @@ export async function runMutants(
+       concurrency: runSettings.concurrency,
+       workDirectory: work.path,
+       files: switched,
++      parallelUnits,
+       root,
+     })
+     try {
+       return await execute({
+         diagnostics: listing.diagnostics,
+         listed: listing.files,
++        parallelUnits,
+         runSettings,
+         startedAt,
+         listedIds,
+@@ -350,6 +354,8 @@ export async function runMutants(
+  *   mode and whether the cache is on, resolved by `resolveRunSettings`.
+  * @param context.live - Holder of the state of the run once it exists, so the
+  *   units that end count in the live verdict counts.
++ * @param context.parallelUnits - Whether isolated units of one test file may
++ *   run at the same time (`AdapterContext.parallelUnits`).
+  * @returns Result of the run.
+  */
+ async function execute(context: {
+@@ -361,6 +367,7 @@ async function execute(context: {
+   diagnostics: Diagnostic[]
+   switched: SwitchedFile[]
+   session: AdapterSession
++  parallelUnits: boolean
+   listed: FileMutants[]
+   adapter: TestAdapter
+   files: FileMutants[]
+@@ -444,6 +451,7 @@ async function execute(context: {
+       await prepareRunCache({
+         files: selectRunFiles(context.listed, testFiles, getPackageDirectory())
+           .files,
++        parallelUnits: context.parallelUnits,
+         incremental: runSettings.incremental,
+         started: context.startedAt,
+         adapter: context.adapter,
+@@ -465,6 +473,7 @@ async function execute(context: {
+     imports: await readTestImports(
+       [...analysis.testFiles.values()].map(entry => entry.file),
+     ),
++    parallelUnits: context.parallelUnits,
+     batch: context.adapter.batch,
+     report: options.onProgress,
+     mutants: pending,
+diff --git a/core/run/create-run-state.ts b/core/run/create-run-state.ts
+index a32c498..4e4a08a 100644
+--- a/core/run/create-run-state.ts
++++ b/core/run/create-run-state.ts
+@@ -34,6 +34,11 @@ interface RunStateInput {
+    */
+   hosted: readonly Mutant[]
+ 
++  /**
++   * Whether isolated units of one test file may run at the same time.
++   */
++  parallelUnits?: boolean
++
+   /**
+    * Coverage and stability of the dry run.
+    */
+@@ -94,6 +99,7 @@ export function createRunState(input: RunStateInput): RunState {
+           running: null,
+         },
+     moduleTests: indexModuleTests(input.hosted, analysis),
++    parallelUnits: input.parallelUnits === true,
+     report: input.report ?? (() => {}),
+     workers: input.workers,
+     imports: input.imports,
+diff --git a/core/run/read-parallel-units.ts b/core/run/read-parallel-units.ts
+new file mode 100644
+index 0000000..d970018
+--- /dev/null
++++ b/core/run/read-parallel-units.ts
+@@ -0,0 +1,22 @@
++/**
++ * Name of the environment variable that turns on parallel units of one test
++ * file in this prototype; a release would read `run.parallelUnits` of the
++ * configuration instead.
++ */
++const VARIABLE = 'MOOTANT_PARALLEL_UNITS'
++
++/**
++ * Tells whether isolated units of one test file may run at the same time
++ * (`AdapterContext.parallelUnits`): only when `MOOTANT_PARALLEL_UNITS` is `1` or
++ * `true`. Off by default, since tests may rely on a test file never running
++ * twice at once, as with a fixed file, port or database.
++ *
++ * @param environment - Environment variables to read.
++ * @returns Whether parallel units are on.
++ */
++export function readParallelUnits(
++  environment: NodeJS.ProcessEnv = process.env,
++): boolean {
++  let value = environment[VARIABLE]
++  return value === '1' || value === 'true'
++}
+diff --git a/core/run/run-isolated-rounds.ts b/core/run/run-isolated-rounds.ts
+index 07844a5..8cd4053 100644
+--- a/core/run/run-isolated-rounds.ts
++++ b/core/run/run-isolated-rounds.ts
+@@ -26,7 +26,9 @@ import { countRun } from './count-run'
+  * as a unit missing twice gets an `Error` verdict and a timeout is confirmed
+  * once, so the rounds end. While a round runs, its units count in the live
+  * verdict counts as they end (`previewIsolatedUnit`), and every mutant is
+- * counted again once its result is recorded (`countVerdicts`).
++ * counted again once its result is recorded (`countVerdicts`). With parallel
++ * units (`RunState.parallelUnits`) the units of one test file form no serial
++ * chain in the estimate of a round.
+  *
+  * @param session - Live test runner.
+  * @param state - State of the run, updated in place.
+@@ -91,7 +93,11 @@ async function runRound(
+         plan.units[index]!.limits.timeout
+       : getFileCost(state, request.file),
+     ),
+-    chains: numberChains(requests.map(request => request.file)),
++    chains: numberChains(
++      requests.map((request, index) =>
++        state.parallelUnits === true ? `${index}\n` : request.file,
++      ),
++    ),
+     workers: state.workers,
+     mutants: mutants.size,
+   })
+diff --git a/test/adapters/node-test/run-isolated.test.ts b/test/adapters/node-test/run-isolated.test.ts
+index 48be8e6..871d064 100644
+--- a/test/adapters/node-test/run-isolated.test.ts
++++ b/test/adapters/node-test/run-isolated.test.ts
+@@ -141,6 +141,67 @@ describe('runIsolated', () => {
+     )
+   })
+ 
++  it('runs units of one test file at once only with parallel units', async () => {
++    directory = await mkdtemp(path.join(tmpdir(), 'mootant-isolated-'))
++    let file = path.join(directory, 'a.test.js')
++    /**
++     * Runs two units of one test file and counts how many ran at once.
++     *
++     * @param parallelUnits - Whether the context allows parallel units.
++     * @returns Most units that ran at the same time.
++     */
++    async function countOverlap(parallelUnits: boolean): Promise<number> {
++      let running = 0
++      let most = 0
++      vi.mocked(runTestFile).mockImplementation(async () => {
++        running += 1
++        most = Math.max(most, running)
++        await new Promise(resolve => {
++          setTimeout(resolve, 20)
++        })
++        running -= 1
++        return createTestProcessOutcome([createNodeTestEnd({ reached: true })])
++      })
++      let handle: NodeTestHandle = {
++        context: {
++          workDirectory: directory,
++          concurrency: null,
++          root: directory,
++          parallelUnits,
++          files: [],
++        },
++        state: {
++          expected: new Map(),
++          modules: new Map(),
++          todo: new Map(),
++          plan: null,
++          count: 0,
++        },
++        preload: '/m/preload/preload.js',
++        checkTypeScript: () => null,
++        testTimeout: 0,
++        files: [file],
++        node: 'node',
++        workers: 2,
++        tsx: false,
++        args: [],
++        env: {},
++      }
++      let limits = { hitLimit: 10, timeout: 500 }
++      let result = await runIsolated(handle, {
++        units: [
++          { mutant: 'm1', project: '', limits, file },
++          { mutant: 'm2', project: '', limits, file },
++        ],
++      })
++      expect(result.units.map(unit => unit.unit)).toStrictEqual([0, 1])
++      return most
++    }
++
++    await expect(countOverlap(false)).resolves.toBe(1)
++    await expect(countOverlap(true)).resolves.toBe(2)
++  })
++
+   it('runs a unit again without bail when it stopped for a todo test', async () => {
+     directory = await mkdtemp(path.join(tmpdir(), 'mootant-isolated-'))
+     let file = path.join(directory, 'a.test.js')
+diff --git a/test/adapters/vitest/run-specifications.test.ts b/test/adapters/vitest/run-specifications.test.ts
+index 1d73a37..1503998 100644
+--- a/test/adapters/vitest/run-specifications.test.ts
++++ b/test/adapters/vitest/run-specifications.test.ts
+@@ -46,6 +46,26 @@ describe('runSpecifications', () => {
+     expect(waitForWorkers).toHaveBeenCalledWith('/work')
+   })
+ 
++  it('tells the workers about parallel units when the context allows them', async () => {
++    let handle = createHandle(() => Promise.resolve({ unhandledErrors: [] }))
++    handle.context.parallelUnits = true
++
++    await runSpecifications(
++      handle,
++      { mode: 'isolated', timeouts: null, repeat: false },
++      [],
++    )
++
++    expect(handle.vitest.provide).toHaveBeenCalledWith('mootant', {
++      directory: '/work',
++      mode: 'isolated',
++      timeouts: null,
++      parallel: true,
++      repeat: false,
++      root: '/p',
++    })
++  })
++
+   it('returns the first unhandled error', async () => {
+     let handle = createHandle(() =>
+       Promise.resolve({
+diff --git a/test/adapters/vitest/runner.test.ts b/test/adapters/vitest/runner.test.ts
+index f63abbc..dd53104 100644
+--- a/test/adapters/vitest/runner.test.ts
++++ b/test/adapters/vitest/runner.test.ts
+@@ -17,6 +17,7 @@ import {
+ } from 'vitest'
+ import { readFile, readdir, mkdtemp, mkdir, rm } from 'node:fs/promises'
+ import { writeFileSync, readFileSync, existsSync } from 'node:fs'
++import { spawn } from 'node:child_process'
+ import { TestRunner } from 'vitest'
+ import { tmpdir } from 'node:os'
+ import path from 'node:path'
+@@ -1559,4 +1560,48 @@ describe('mootantRunner', () => {
+     expect(stray).toHaveBeenCalledTimes(2)
+     expect(ignored).not.toHaveBeenCalled()
+   })
++
++  it('waits for the worker of the unit before only without parallel units', async () => {
++    let child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 10000)'])
++    let exited = new Promise(resolve => {
++      child.on('exit', resolve)
++    })
++    /**
++     * Claims the second unit of the file while the worker of the first one
++     * still runs.
++     *
++     * @param parallel - Whether the run allows parallel units.
++     * @returns Whether the unit started within half a second, and the start.
++     */
++    async function claimSecond(
++      parallel: boolean,
++    ): Promise<{ started: Promise<boolean>; early: boolean }> {
++      await rm(path.join(directory, 'claim'), { recursive: true })
++      await mkdir(path.join(directory, 'claim'))
++      writeFileSync(path.join(directory, 'claim', `${hash}-0`), String(child.pid))
++      setOptions('isolated')
++      options.parallel = parallel
++      writePlan([ISOLATED_UNIT, ISOLATED_UNIT])
++      let { runner } = createRunner()
++      let started = (async () => {
++        await runner.onBeforeCollect([FILE])
++        return true
++      })()
++      let waited = new Promise<boolean>(resolve => {
++        setTimeout(() => {
++          resolve(false)
++        }, 500)
++      })
++      return { early: await Promise.race([started, waited]), started }
++    }
++
++    let parallel = await claimSecond(true)
++    let serial = await claimSecond(false)
++    child.kill()
++    await exited
++
++    expect(parallel.early).toBe(true)
++    expect(serial.early).toBe(false)
++    await expect(serial.started).resolves.toBe(true)
++  })
+ })
+diff --git a/test/core/run/read-parallel-units.test.ts b/test/core/run/read-parallel-units.test.ts
+new file mode 100644
+index 0000000..db696cc
+--- /dev/null
++++ b/test/core/run/read-parallel-units.test.ts
+@@ -0,0 +1,19 @@
++import { describe, expect, it } from 'vitest'
++
++import { readParallelUnits } from '../../../core/run/read-parallel-units'
++
++describe('readParallelUnits', () => {
++  it('turns parallel units on only for 1 and true', () => {
++    expect(readParallelUnits({ MOOTANT_PARALLEL_UNITS: '1' })).toBe(true)
++    expect(readParallelUnits({ MOOTANT_PARALLEL_UNITS: 'true' })).toBe(true)
++    expect(readParallelUnits({ MOOTANT_PARALLEL_UNITS: '0' })).toBe(false)
++    expect(readParallelUnits({ MOOTANT_PARALLEL_UNITS: '' })).toBe(false)
++    expect(readParallelUnits({})).toBe(false)
++  })
++
++  it('reads the environment of the process by default', () => {
++    expect(readParallelUnits()).toBe(
++      ['true', '1'].includes(process.env['MOOTANT_PARALLEL_UNITS'] ?? ''),
++    )
++  })
++})
+diff --git a/types/adapter/adapter-context.d.ts b/types/adapter/adapter-context.d.ts
+index a885d5d..500b6a1 100644
+--- a/types/adapter/adapter-context.d.ts
++++ b/types/adapter/adapter-context.d.ts
+@@ -38,6 +38,14 @@ export interface AdapterContext {
+    */
+   concurrency: number | null
+ 
++  /**
++   * Whether isolated units of one test file may run at the same time, each in
++   * a worker of its own: the project's tests must not rely on a test file never
++   * running twice at once, as with a fixed file, port or database. False or
++   * omitted runs them one after another, in plan order.
++   */
++  parallelUnits?: boolean
++
+   /**
+    * Directory for files of this run (plans, results, heartbeats); the core
+    * creates it and removes it after `close`.
+diff --git a/types/adapter/adapter-session.d.ts b/types/adapter/adapter-session.d.ts
+index 92dd3db..93f016e 100644
+--- a/types/adapter/adapter-session.d.ts
++++ b/types/adapter/adapter-session.d.ts
+@@ -15,7 +15,8 @@ export interface AdapterSession {
+    * Executes isolated units in one run. Several units may share a test file;
+    * they run one after another, in plan order, never at the same time, since a
+    * plain run of the test runner never runs a test file twice at once and tests
+-   * may rely on it (a fixed file, port or database).
++   * may rely on it (a fixed file, port or database), unless the context allows
++   * parallel units (`AdapterContext.parallelUnits`).
+    */
+   runIsolated(plan: IsolatedPlan): Promise<IsolatedResult>
+ 
+diff --git a/types/adapter/isolated-plan.d.ts b/types/adapter/isolated-plan.d.ts
+index 12a6c0d..a9b7b31 100644
+--- a/types/adapter/isolated-plan.d.ts
++++ b/types/adapter/isolated-plan.d.ts
+@@ -33,7 +33,8 @@ export interface IsolatedUnit {
+ 
+ /**
+  * Units of one isolated run. Several units may share a test file; they never
+- * run at the same time.
++ * run at the same time, unless the context allows parallel units
++ * (`AdapterContext.parallelUnits`).
+  */
+ export interface IsolatedPlan {
+   /**
+diff --git a/types/run/run-state.d.ts b/types/run/run-state.d.ts
+index 85b066b..f356f4d 100644
+--- a/types/run/run-state.d.ts
++++ b/types/run/run-state.d.ts
+@@ -50,6 +50,13 @@ export interface RunState {
+    */
+   live: LiveVerdicts | null
+ 
++  /**
++   * Whether isolated units of one test file may run at the same time
++   * (`AdapterContext.parallelUnits`), so they form no serial chain; false or
++   * omitted when they run one after another.
++   */
++  parallelUnits?: boolean
++
+   /**
+    * Verdicts of earlier runs to reuse and the evidence of this run to store, or
+    * null when the cache is off.

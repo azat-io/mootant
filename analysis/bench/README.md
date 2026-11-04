@@ -171,7 +171,51 @@ Mootant.
 
 ## План и оценка длительности
 
-TBD (после смоук-прогонов).
+Порядок — по важности (`run.sh` идёт по ярусам, внутри яруса — сверху вниз;
+`--tier N` ограничивает план ярусами ≤ N; уже снятая точка пропускается,
+поэтому план можно прерывать и продолжать). Оценки — для свободной машины,
+по смоук-прогонам (см. ниже) с поправкой на нагрузку: CPU-время смоука
+(user+sys дерева процессов меньше зависит от чужой нагрузки, чем wall),
+делённое на эффективный параллелизм (до 3,2 для Stryker; для Mootant — с
+учётом того, что юниты одного тест-файла идут по очереди, см. трассу), и
+масштабированное от подмножества смоука к `MUTATE`. Точность — в пределах
+×0,5–×2; при первом реальном прогоне ярус 1 уточнит остальное.
+
+| ярус | точки | зачем | оценка одного прогона | всего (×3, тест-сьюты и `list` ×5) |
+|---|---|---|---|---|
+| 1 | perfectionist `test`, `m-cold`, `s-cold` | главное сравнение на обязательном и самом большом проекте | test ~1,2 мин; m-cold 8–12 мин (dry run ≈ весь сьют ~1 мин + цепочка ~208 юнитов правила одного тест-файла); s-cold 5–10 мин | ~60 мин |
+| 1 | path-to-regexp `test`, `m-cold`, `s-cold` | маленький проект с одним тест-файлом — крайний случай сериализации юнитов Mootant | test ~2 с; m-cold 2,5–4 мин (339 юнитов подряд); s-cold 1–2 мин | ~15 мин |
+| 1 | cheerio `test`, `m-cold`, `s-cold` | средний проект | test ~6 с; m-cold 3–6 мин; s-cold 3–6 мин | ~30 мин |
+| 1 | fast-json-stringify `test`, `m-cold`, `s-cold` | node:test (процесс на юнит) против tap-runner Stryker | test ~10 с; m-cold 3–6 мин; s-cold 3–6 мин | ~30 мин |
+| 2 | все четыре `m-one` | **доля dry run**: старт + полный dry run + один мутант | 0,2–1,5 мин | ~7 мин |
+| 2 | все четыре `m-warm` | тёплый кэш без изменений (гипотеза: стоит не меньше старта + dry run) | ≈ `m-one` | ~7 мин |
+| 2 | три Vitest-проекта `m-fast` | batch-режим | 30–80 % `m-cold` | ~30 мин |
+| 3 | все четыре `m-edit-inc`, `m-since` | `--incremental` после правки, `--since` на синтетическом коммите | ≈ `m-one` + несколько мутантов | ~15 мин |
+| 4 | все четыре `m-edit` | обычный кэш после той же правки (сколько вердиктов он теряет без `--incremental`) | ≈ `m-cold` | ~65 мин |
+| 4 | все `m-list-text`, `m-list-json` | текстовый отчёт `list` против JSON | 1–3 с | ~2 мин |
+| 5 | cheerio, perfectionist `s-tsc` | Stryker с typescript-checker | ×3 к `s-cold` (смоук cheerio: 256 против 86 с) | ~2 ч |
+| 5 | path-to-regexp, cheerio `s-edit-inc` | инкрементальный Stryker после той же правки | праймер (полный прогон) + 3 коротких | ~10 мин |
+| 5 | path-to-regexp, cheerio `m-nocache` | цена записи кэша (`--no-cache` против `m-cold`) | ≈ `m-cold` | ~25 мин |
+| 6 | fast-json-stringify `s-command` (×1) | command runner Stryker: весь `node --test` на мутанта | ~1 ч | ~1 ч |
+| 6 | mootant-self `m-one` (×3), `m-cold` (×1), `m-warm` (×3) на `core/text` (догфудинг) | dry run на 8 393 тестах самого Mootant | m-one ~5 мин; m-cold > 42 мин (в догфудинге не завершился) | 1,5–2,5 ч |
+| — | `profile.sh <project>` для четырёх проектов | CPU-профили и разбивка (не замеры) | 5–15 мин на проект | ~40 мин |
+
+Итого машинного времени: **ярусы 1–3 и профили — около 4 ч** (диапазон
+3–6 ч); с ярусом 4 — ~5 ч; весь план — 9–12 ч. Если окно меньше 4 ч,
+запускать `run.sh --tier 2`, затем `profile.sh perfectionist` и
+`profile.sh path-to-regexp`.
+
+Перед стартом: `setup.sh` (если стенд ещё не собран; ~10 мин), затем
+`uptime` (load average должен быть < 0,5), `df -h /` (нужно ≥ 5 ГБ: отчёты
+`--verbose` и снимки кэша). Команда полного плана:
+
+```sh
+cd /home/user/mootant && export PATH=/home/user/tools/bin:$PATH
+analysis/bench/run.sh --tier 3 2>&1 | tee -a /home/user/projects/bench/results/run.log
+for p in perfectionist path-to-regexp cheerio fast-json-stringify; do analysis/bench/profile.sh $p; done
+analysis/bench/run.sh 2>&1 | tee -a /home/user/projects/bench/results/run.log   # ярусы 4–6, если есть время
+node analysis/bench/summarize.mjs > analysis/bench/results.md
+```
 
 ## Профилирование
 
