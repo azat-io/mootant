@@ -1,0 +1,132 @@
+diff --git a/test/cli/terminal/create-spinner.test.ts b/test/cli/terminal/create-spinner.test.ts
+index dc818f9..a595af4 100644
+--- a/test/cli/terminal/create-spinner.test.ts
++++ b/test/cli/terminal/create-spinner.test.ts
+@@ -147,6 +147,34 @@ describe('createSpinner', () => {
+     spinner.stop()
+   })
+ 
++  it('erases the frame drawn after a printed line on the next frame', () => {
++    let spinner = createSpinner(() => 'testing', colors).start()
++    spinner.print('note')
++    takeOutput()
++
++    vi.advanceTimersByTime(80)
++
++    expect(takeOutput()).toBe(
++      `${HIDE_CURSOR}${LINE_START}${ERASE_LINE}${colors.greenBright('⠙')} testing`,
++    )
++
++    spinner.stop()
++  })
++
++  it('cycles through all ten frames', () => {
++    let spinner = createSpinner(() => '', colors).start()
++
++    vi.advanceTimersByTime(800)
++
++    expect(
++      [...takeOutput().matchAll(/\u{1B}\[92m(?<frame>.)\u{1B}\[39m/gu)]
++        .map(match => match.groups!['frame'])
++        .join(''),
++    ).toBe('⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠋')
++
++    spinner.stop()
++  })
++
+   it('erases the frame, shows the cursor and stops once', () => {
+     let spinner = createSpinner(() => 'testing', colors).start()
+     takeOutput()
+diff --git a/test/cli/terminal/fit-parts.test.ts b/test/cli/terminal/fit-parts.test.ts
+index 0a50167..762a9bd 100644
+--- a/test/cli/terminal/fit-parts.test.ts
++++ b/test/cli/terminal/fit-parts.test.ts
+@@ -20,6 +20,19 @@ describe('fitParts', () => {
+     expect(fitParts(parts, ' · ', 2)).toBe('')
+   })
+ 
++  it('leaves out the first of the parts with the same highest rank', () => {
++    expect(
++      fitParts(
++        [
++          { text: 'a', rank: 1 },
++          { text: 'b', rank: 1 },
++        ],
++        ' ',
++        1,
++      ),
++    ).toBe('b')
++  })
++
+   it('measures parts by their reserved room and shows only those with a text', () => {
+     let parts = [
+       { text: '1/9', width: 5, rank: 1 },
+diff --git a/test/cli/terminal/get-text-style.test.ts b/test/cli/terminal/get-text-style.test.ts
+index adb1d9f..3611fef 100644
+--- a/test/cli/terminal/get-text-style.test.ts
++++ b/test/cli/terminal/get-text-style.test.ts
+@@ -23,6 +23,18 @@ describe('getTextStyle', () => {
+     expect(getTextStyle({ isTTY: true }).width).toBe(80)
+   })
+ 
++  it('colors a pipe on Windows', () => {
++    vi.stubEnv('NO_COLOR', '')
++    vi.stubEnv('FORCE_COLOR', '')
++    vi.stubEnv('CI', '')
++    let platform = Object.getOwnPropertyDescriptor(process, 'platform')!
++    Object.defineProperty(process, 'platform', { ...platform, value: 'win32' })
++    let style = getTextStyle({})
++    Object.defineProperty(process, 'platform', platform)
++
++    expect(style.colors.red('x')).toBe('\u{1B}[31mx\u{1B}[39m')
++  })
++
+   it('cuts nothing and colors nothing in a file or a pipe', () => {
+     vi.stubEnv('FORCE_COLOR', '')
+     vi.stubEnv('CI', '')
+diff --git a/test/cli/terminal/measure-parts.test.ts b/test/cli/terminal/measure-parts.test.ts
+index e77e7a5..1f5d559 100644
+--- a/test/cli/terminal/measure-parts.test.ts
++++ b/test/cli/terminal/measure-parts.test.ts
+@@ -14,5 +14,6 @@ describe('measureParts', () => {
+       ),
+     ).toBe(12)
+     expect(measureParts([], ' · ')).toBe(0)
++    expect(measureParts([{ text: '', rank: 1 }], ' · ')).toBe(0)
+   })
+ })
+diff --git a/test/cli/terminal/strip-ansi.test.ts b/test/cli/terminal/strip-ansi.test.ts
+index b9e681f..461c6aa 100644
+--- a/test/cli/terminal/strip-ansi.test.ts
++++ b/test/cli/terminal/strip-ansi.test.ts
+@@ -30,6 +30,15 @@ describe('stripAnsi', () => {
+     expect(stripAnsi(input)).toBe(input)
+   })
+ 
++  it.each([
++    { description: 'an escape not followed by [', input: 'a\u{1B}]b', expected: 'a\u{1B}]b' },
++    { description: 'another control before [', input: 'a\t[1mb', expected: 'a\t[1mb' },
++    { description: 'a code start at the end', input: 'a\u{1B}[', expected: 'a' },
++    { description: 'an unended code at the end', input: 'a\u{1B}[12', expected: 'a' },
++  ])('handles $description', ({ expected, input }) => {
++    expect(stripAnsi(input)).toBe(expected)
++  })
++
+   it('keeps an escape sequence without parameters that is not a color code', () => {
+     let input = `text \u{1B}[x tail`
+ 
+diff --git a/test/cli/terminal/wrap-text.test.ts b/test/cli/terminal/wrap-text.test.ts
+index 874b061..6a06826 100644
+--- a/test/cli/terminal/wrap-text.test.ts
++++ b/test/cli/terminal/wrap-text.test.ts
+@@ -11,6 +11,10 @@ describe('wrapText', () => {
+     ])
+   })
+ 
++  it('keeps a first word wider than the width on the first line', () => {
++    expect(wrapText('abcdef gh', 3)).toStrictEqual(['abcdef', 'gh'])
++  })
++
+   it('keeps a word wider than the width on its own line', () => {
+     expect(wrapText('a very-long-word b', 5)).toStrictEqual([
+       'a',

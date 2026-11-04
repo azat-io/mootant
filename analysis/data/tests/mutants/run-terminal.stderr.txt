@@ -1,0 +1,30 @@
+M-bM-^\M-^T dry run  260 tests in 49.7s
+M-bM-^\M-^T testing 301 mutants  301/301 test runs in 3m 02s
+M-bM-^\M-^T testing 34 survivors with more test files  34/34 test runs in 39.9s
+M-bM-^\M-^T testing 24 survivors with more test files  46/46 test runs in 2m 34s
+M-bM-^\M-^T testing 14 survivors with more test files  56/56 test runs in 1m 26s
+M-bM-^\M-^T testing 14 survivors with more test files  82/82 test runs in 2m 09s
+M-bM-^\M-^T testing 5 survivors with more test files  41/41 test runs in 1m 39s
+	Command being timed: "timeout 6000 node bin/mootant.js run cli/terminal --config mootant.loaded.config.ts --concurrency 2 --json --all --verbose"
+	User time (seconds): 234.06
+	System time (seconds): 35.40
+	Percent of CPU this job got: 36%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 12:23.36
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 560452
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 15
+	Minor (reclaiming a frame) page faults: 8523074
+	Voluntary context switches: 210874
+	Involuntary context switches: 213593
+	Swaps: 0
+	File system inputs: 70872
+	File system outputs: 58840
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
