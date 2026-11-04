@@ -320,6 +320,12 @@ batch-убийства воспроизводятся стабильно — э�
 - `setupFiles` (Vitest) и `--import`-setup (node:test), импортирующие
   мутируемый модуль, — мутанты переключаются (`Killed [static]`).
 - `import()` внутри теста и `vi.resetModules()` — совпадают.
+- `pool: 'threads'` + `isolate: false` + `maxWorkers: 1` (`vt/state-noisolate`):
+  Mootant предупреждает двумя `config-overridden` и гоняет forks + isolate;
+  эталон с конфигурацией пользователя дал те же 38/40 совпадений, что и
+  isolated-конфигурация (оба расхождения — BUG-200). Тесты, зависящие от
+  состояния *между файлами* при `isolate: false`, по построению разойдутся —
+  об этом и говорит предупреждение.
 - `test.concurrent`/`describe.concurrent`, fake timers Vitest и
   `t.mock.timers` node:test, `retry`, `repeats`, `skip`, `todo`, `only`
   (Node 22 игнорирует `only` без `--test-only` одинаково у Mootant и у
@@ -412,10 +418,10 @@ batch-убийства воспроизводятся стабильно — э�
   только этот тест, — `Survived`/`NoCoverage` против killed).
 - **Реальный проект на node:test** — по той же причине; в самом Mootant кода на
   node:test нет.
-- Windows, Node 20/24, Vitest `threads`/`isolate: false` в эталоне (Mootant
-  их принудительно меняет на forks + isolate с предупреждением, эталон
-  гонялся только с настройками по умолчанию), монорепозитории и `projects`
-  Vitest, браузерный режим — не проверялись.
+- Windows, Node 20/24, монорепозитории и `projects` Vitest, браузерный
+  режим, тесты с состоянием между файлами при `isolate: false` — не
+  проверялись (`isolate: false` + `threads` проверен только на фикстуре без
+  такого состояния).
 - Влияние одного batch-мутанта на другой при здоровых контрольных попытках —
   не воспроизведено (см. «Изоляция»).
 - Ложный `Killed` от посторонней ошибки загрузки (H6) — только по коду.

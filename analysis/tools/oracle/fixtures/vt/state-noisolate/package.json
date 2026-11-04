@@ -1,0 +1,1 @@
+{ "name": "vt-state-noisolate", "private": true, "type": "module", "scripts": { "test": "vitest run" } }
