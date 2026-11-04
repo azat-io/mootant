@@ -3,14 +3,14 @@
 > Коммит 170ec52 (`main`), пакет `mootant-0.1.0-170ec52.tgz`, Node 22.23.4,
 > Vitest 5.0.5 + Vite 8.3.5. Машина 4 vCPU / 15 GB, общая: во время прогонов
 > load average был 4–32 (параллельно работали другие агенты), поэтому каждое
-> расхождение по времени перепроверено повтором. ID багов: BUG-200…BUG-205.
+> расхождение по времени перепроверено повтором. ID багов: BUG-200…BUG-206.
 
 ## Коротко
 
 - Эталон (физическая мутация + обычный `vitest run` / `node --test` всего
-  набора) прогнан на 18 стресс-фикстурах (Vitest и эквивалентные node:test) и на
-  реальном коде самого Mootant (`core/text`, 127 мутантов, 528 тестов): 531
-  физических прогонов, плюс 9 режимов на 7 пар мутантов (изоляция) и
+  набора) прогнан на 17 стресс-фикстурах (10 Vitest и 7 эквивалентных node:test) и на
+  реальном коде самого Mootant (`core/text`, 127 мутантов, 528 тестов): 634
+  физических прогона, плюс 9 режимов на 7 пар мутантов (изоляция) и
   3–5 повторов на 7 конфигураций (детерминизм).
 - **Режиму по умолчанию в целом можно доверять**: реальный код — 127 из 127
   совпадений (и в `--fast`); изоляция isolated-единиц настоящая (свежий процесс
@@ -83,7 +83,7 @@
 | BUG-200 | Мутант, который лишь делает код «горячее» в 100+ раз (отключённая мемоизация, кэш), получает окончательный `Timeout(hit-limit)`, хотя обычный прогон тестов проходит за миллисекунды; оба адаптера | medium | подтверждён | `core/run/read-isolated-unit.ts:31-38`, `core/run/classify-try.ts:26-28`, `core/config/resolve-run-settings.ts:25-28`, `core/runtime/install-mutant-runtime.ts:42-43` | `test/repros/BUG-200.test.ts`; фикстуры `vt/state`, `nt/state` (мутанты `prd6tx8n`, `jngxgvvz`) |
 | BUG-201 | Vitest: вердикт мутанта зависит от остальных файлов прогона: полный прогон `Killed`, `--mutant <id>` / узкие пути (и по той же причине `--since`) — `NoCoverage`. `related` dry run = только файлы выбранных мутантов, а статический анализ Vitest пропускает тест, который грузит оригинал модуля через хелпер в фабрике `vi.mock` (или вычисляемым `import()`). Нарушен инвариант из `core/run-mutants.ts:340-342` | medium | подтверждён | `core/run-mutants.ts:379-395`, `core/run/run-dry-phase.ts:156`, `adapters/vitest/run-dry.ts:225-244` | `test/repros/BUG-201.test.ts`; `isolation.sh vt/mocks mocks jnhjhh9w 2hmxc740` |
 | BUG-202 | `--fast`: `hit-limit` в batch окончателен и считается по лимиту одной попытки, в N раз меньшему лимита isolated-юнита: конечный «горячий» цикл даёт `Timeout`, режим по умолчанию и эталон — `Survived` | medium | подтверждён | `core/run/apply-batch-result.ts:163-171`, `core/run/plan-batch.ts:92-96` | `test/repros/BUG-202.test.ts`; `vt/crash`, мутант `eb0ye9vm` |
-| BUG-203 | Vitest: необработанная ошибка, которую проект игнорирует (`dangerouslyIgnoreUnhandledErrors`, `onUnhandledError`), убивает мутанта (`stray-error`), хотя `vitest run` с мутацией завершается с кодом 0 | medium | подтверждён | `adapters/vitest/runner.ts:665-686`, `:1249-1266`, `core/run/read-isolated-unit.ts:46-63`, `:93-105` | `test/repros/BUG-203.test.ts`; `vt/unhandled` (`knkyemhs`, `7mkvyn7b`) |
+| BUG-203 | Vitest: необработанная ошибка, которую проект игнорирует (`dangerouslyIgnoreUnhandledErrors`, `onUnhandledError`), убивает мутанта (`stray-error`), хотя `vitest run` с мутацией завершается с кодом 0 | medium | подтверждён | `adapters/vitest/runner.ts:665-686`, `:1249-1266`, `core/run/read-isolated-unit.ts:46-63`, `:93-105` | `test/repros/BUG-203.test.ts`; `vt/unhandled` (`dangerouslyIgnoreUnhandledErrors`) и `vt/unhandled2` (`onUnhandledError: () => false`): `knkyemhs`, `7mkvyn7b` — Killed, эталон survived |
 | BUG-204 | Временной бюджет `3 × длительность dry run + 250 мс` (у юнита — сумма по тестам файла плюс загрузка; при подтверждении ×2) много меньше собственного таймаута раннера, а результат зависит от шума замеров dry run: мутант, лишь замедляющий проходящий тест, получает `Timeout`. `9trb33kh` (`Math.min` → `Math.max`, тест идёт ~2 с): Vitest — `Timeout(time-limit)` в 4 из 5 прогонов, node:test — `Timeout(hang)` в 4 из 5, в оставшихся — `Survived`; эталон — survived. То есть вердикт ещё и недетерминирован | medium | подтверждён | `core/run/get-try-limits.ts:16-28`, `core/config/resolve-run-settings.ts:29-32`, `core/run/get-unit-evidence.ts:15-30`, `adapters/vitest/runner.ts:552`, `:853`, `adapters/node-test/get-unit-deadline.ts` | `test/repros/BUG-204.test.ts` (замедление до 4 с — детерминированно); `vt/slow`, `nt/slow` + `determinism.sh` |
 | BUG-205 | Vitest: CJS-файл, который тест грузит через `createRequire`, исполняется без переключения, все его мутанты `NoCoverage` (эталон: убиты); диагностика `never-served` называет неверные причины («no test imports it, or tests import a built copy, an external or a pre-bundled dependency»), в `compatibility.mdx` случай не описан (описаны только вычисляемый `import()`, дочерние процессы и воркеры) | low | подтверждён | `core/run/run-dry-phase.ts:360-367`, `docs/content/guide/compatibility.mdx` (раздел Vitest) | `vt/dynamic`, `src/legacy.cjs` (4 мутанта) |
 | BUG-206 | Мутант, который dry run покрыл, но ни одна isolated-единица не достигла, получает `NoCoverage` без диагностики, а отчёт при этом перечисляет покрывающий тест (`tests: 1`, `coveredBy: [...]`). Пример — тест, кэширующий результат на диске между запусками: dry run пишет кэш, единицы его читают и до мутанта не доходят; эталон на свежей копии мутанта убивает. Родственно BUG-900 (другой триггер, тот же сток) | low | подтверждён | `core/run/decide-results.ts:50`, `core/run/get-final-status.ts:36` | `vt/fscache` (`43bfzptb`, `ch4kze59`, `3hbdt5q6` — NoCoverage, `7dtdwjsz` — Survived; эталон — killed) |
@@ -111,7 +111,6 @@ BUG-901; отдельно не воспроизводил (**гипотеза**:
 | H6 | `crash` и `load-error` дают Killed без проверки reached | `read-isolated-unit.ts:42-44`, `:75-83` | по коду да; `crash` — BUG-901 другого агента; ложный случай сам не воспроизводил |
 | H7 | node:test: `process.exit(0)` посреди теста — файл «прошёл» и у Mootant, и у `node --test` | `adapters/node-test/preload/create-try-tracker.ts:173-180` | подтверждено, это согласие, не баг: `nt/crash` `5nbbr7jm` — `Survived`, эталон `survived` (`node --test` сам даёт exit 0). В Vitest тот же мутант `Killed` у обоих: Vitest бросает «process.exit unexpectedly called» |
 
-(разделы с матрицами — ниже)
 
 ## Стресс-фикстуры: что говорит Mootant и что эталон
 
@@ -140,7 +139,7 @@ BUG-901; отдельно не воспроизводил (**гипотеза**:
 | `process.exitCode = 1` | `crash`, `t8tvwwbe` | Survived / survived (Vitest код воркера не смотрит) | Killed (hook-error) / killed |
 | бросок при загрузке модуля | `crash`, `1q7p1tzs` `JSON.parse('')` | Killed (load-error) [static] / killed | Killed (load-error) [static] / killed |
 | unhandled rejection, uncaught exception в микрозадаче | `crash`, `d2dn1btq`, `6cm2bm5g` | Killed (stray-error) / killed | Killed (stray-error) / killed |
-| то же при `dangerouslyIgnoreUnhandledErrors: true` | `unhandled`, `knkyemhs`, `7mkvyn7b` | **Killed (stray-error)** / survived (BUG-203) | — |
+| то же при `dangerouslyIgnoreUnhandledErrors: true` или `onUnhandledError() { return false }` | `unhandled`, `unhandled2`, `knkyemhs`, `7mkvyn7b` | **Killed (stray-error)** / survived (BUG-203) | — |
 | бесконечный синхронный цикл (strict) | `crash`, `mqzeg79s` `index++` → `index--`, `s4b8m9bv` | Timeout (hit-limit) / timeout | Timeout (hit-limit) / timeout |
 | бесконечная рекурсия | `crash`, `vge39vdq` `count - 1` → `count + 1` | Killed (RangeError) / killed | Killed / killed |
 | бесконечный асинхронный цикл на таймерах (strict) | `slow`, `6nb7t7bq`, `05ztzkkx` | Timeout (time-limit) / killed-timeout | Timeout (hang) / timeout (у node:test нет таймаута теста по умолчанию) |
@@ -223,7 +222,7 @@ Vitest не останавливается после падения, и сле�
 двоичный поиск) подтверждены: эталон висит до внешнего таймаута 120 с.
 
 Для node:test реального проекта нет (те же ограничения на внешний код; в
-репозитории Mootant кода на node:test нет) — его заменяют шесть фикстур `nt/*`.
+репозитории Mootant кода на node:test нет) — его заменяют семь фикстур `nt/*`.
 
 ## Разбор расхождений (Vitest 20 + 3 в `--fast`, node:test 7–8, реальный код 0)
 
@@ -232,7 +231,7 @@ Vitest не останавливается после падения, и сле�
 | ложный Timeout по `hit-limit` | Vitest 2, node:test 2 | `prd6tx8n`, `jngxgvvz` | лимит сайтов ловит «горячий», но конечный код | BUG-200 |
 | ложный Timeout по `hit-limit`, только `--fast` | 1 | `eb0ye9vm` | лимит одной batch-попытки и окончательность batch-Timeout | BUG-202 |
 | ложный Timeout по времени | Vitest 1 (и node:test в 4 из 5 повторов) | `9trb33kh` | бюджет 3× + 250 мс против замедления до ~2 с, зависит от шума dry run | BUG-204 |
-| ложный Killed (stray) | 2 | `knkyemhs`, `7mkvyn7b` | игнорируется `dangerouslyIgnoreUnhandledErrors` | BUG-203 |
+| ложный Killed (stray) | 2 (и те же 2 в `unhandled2`) | `knkyemhs`, `7mkvyn7b` | игнорируются `dangerouslyIgnoreUnhandledErrors` / `onUnhandledError` | BUG-203 |
 | ложный Killed, только `--fast` | 2 | `09w15scc`, `7kq6qzrd` | общий модульный граф batch, мутант не сбрасывает состояние контрольной попытки | документировано |
 | Killed vs survived (снапшот) | 1 | `x90jyavh` | Mootant не пишет снапшоты (как CI); эталон без `CI` дописывает новый ключ. С `CI=1` эталон — killed | не баг, семантика CI |
 | ложный Survived | 1 | `y1rmnxcp` | тест с `import(переменная)` не выбран статическим анализом Vitest | документировано («may not be selected»), без диагностики |
@@ -328,7 +327,7 @@ batch-убийства воспроизводятся стабильно — э�
 - Unhandled rejection / uncaught exception (без опций игнорирования),
   `process.exit`, `process.exitCode`, бесконечная рекурсия, бесконечные
   циклы, OOM, 4 МБ вывода в stdout — совпадают (кроме BUG-202 в `--fast`).
-- Применение replacement: на 531 прогоне эталона текст мутанта ни разу не
+- Применение replacement: на 634 прогонах эталона текст мутанта ни разу не
   разобрался иначе, чем `(replacement)` инструментирования (0 случаев
   приоритета), смещения всегда указывали на `original` (0 `invalid`).
 - Реальный код (`core/text` Mootant, 127 мутантов): 100 % согласия в обоих
