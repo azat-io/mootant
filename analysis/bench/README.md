@@ -21,6 +21,9 @@ analysis/bench/run.sh --tier 1          # главное сравнение; з�
 analysis/bench/run.sh                   # весь план; прерванный план продолжится с места остановки
 node analysis/bench/summarize.mjs > analysis/bench/results.md
 analysis/bench/profile.sh cheerio       # CPU-профили и разбивка по фазам (не в режиме замера)
+# сквозная проверка стенда на маленьком подмножестве (~10–20 мин на проект):
+BENCH_RESULTS=/home/user/projects/bench/results/smoke-x BENCH_SUBSET=1 BENCH_CONCURRENCY=2 \
+  BENCH_RUNS=1 BENCH_TEST_RUNS=1 analysis/bench/run.sh cheerio
 ```
 
 Предпосылки: Node 22.23.4, `export PATH=/home/user/tools/bin:$PATH` (pnpm 12;
@@ -168,8 +171,10 @@ squirrelchat/smol-toml `bba6a4bb` (Vitest 5).
   (`summary.runs`), число юнитов и средняя стоимость юнита вместе со стартом
   процесса (`summary.staticCost`), старт процесса на юнит = (Σ
   staticCost.duration − Σ mutants.duration) / юнитов.
-- **Фазы Stryker** — поле `performance` отчёта (setup — песочница и
-  инструментирование, initialRun — dry run, mutation) и «вне фаз».
+- **Фазы Stryker** — по журналу (Stryker 10.1.1 не заполняет поле
+  `performance` отчёта): setup = от старта процесса до «Starting initial test
+  run» (чтение проекта, инструментирование, песочница, запуск test runner-ов),
+  initialRun = dry run, mutation = до «Done in», «вне фаз» = после.
 - **Загрузка воркеров** (Mootant + Vitest, по трассе): занятость слотов =
   Σ(done − start) / (3 · wall раундов); ожидание очереди тест-файла =
   Σ(start − claim) / (3 · wall) — время, когда воркер уже занял слот, но ждёт,
@@ -270,7 +275,7 @@ node analysis/bench/summarize.mjs > analysis/bench/results.md
 `mutants[].duration`, это spawn → `onBeforeCollect`), `loadDuration` (импорт
 тест-файла и всего, что он тянет, вместе с запросами трансформаций к Vite
 главного процесса) и Σ `tries[].duration` (тесты); (3) CPU-профили воркеров
-(`workers`), где видно, что внутри загрузки: модульный загрузчик node, runner
+(режим `run`), где видно, что внутри загрузки: модульный загрузчик node, runner
 Vitest, сами модули проекта, `node_modules`.
 
 Отдельный вопрос — простой воркеров (наблюдение из догфудинга: 85 юнитов одного
@@ -337,9 +342,11 @@ perfectionist и fast-json-stringify (только счётчики мутант
      там нечего (`extends` указывает на пакет), на время это не влияет;
    - cheerio: выключен `typecheck` в `vitest.config.ts` (tsc при каждом старте
      Vitest, 44 % обычного тест-сьюта; type-тесты не убивают мутантов);
-   - fast-json-stringify: удалён `test/webpack.test.js` (сборка библиотеки
+   - fast-json-stringify: удалены `test/webpack.test.js` (сборка библиотеки
      webpack-ом, 16,6 из 56 с тест-сьюта на смоуке, одна проверка без своей
-     логики); зависимостей без lockfile — `npm install --before=2026-11-03`.
+     логики) и `test/property-names.test.js` (проходит под `node --test`, но
+     tap-runner Stryker считает его упавшим в начальном прогоне и не
+     стартует); lockfile-а нет — `npm install --before=2026-11-03`.
 8. **Одновременные прогоны одного тест-файла у Stryker.** Три test runner
    Stryker работают в одной песочнице и могут одновременно гонять один
    тест-файл с разными мутантами. Тест, пишущий фиксированный файл
@@ -348,7 +355,13 @@ perfectionist и fast-json-stringify (только счётчики мутант
    мутанта. Mootant такие юниты сериализует (`types/adapter/adapter-session.d.ts:14-20`),
    за что и платит простоем. Колонка «одинаковые счётчики» ловит
    недетерминизм; в разделе 3 при сравнении наборов это надо учитывать.
-9. **Подмножества файлов** выбраны так, чтобы полный прогон Mootant шёл
+9. **Окружение одинаково во всех прогонах проекта.** Тесты, которые
+   перечисляют `process.env`, кладут в ключ кэша Mootant хэш всех переменных
+   (BUG-701), поэтому `lib/measure-one.sh` и `prepare/state.sh` снимают
+   `HYPERFINE_RANDOMIZED_ENVIRONMENT_OFFSET` (hyperfine задаёт её каждому
+   прогону) и держат один `TMPDIR` на проект (`$BENCH_RESULTS/tmp/<project>`).
+   Без этого `perfectionist:m-warm` не брал из кэша ничего.
+10. **Подмножества файлов** выбраны так, чтобы полный прогон Mootant шёл
    минуты, а не часы; на целых проектах соотношения могут быть другими (у
    Mootant время сильно зависит от числа тест-файлов, покрывающих мутанты, —
    см. сериализацию юнитов одного файла).

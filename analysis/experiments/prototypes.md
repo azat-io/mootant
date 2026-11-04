@@ -133,7 +133,7 @@ file, port or database)». Ядро это учитывает: юниты одн
 
 | фикстура | что внутри | прогоны | результат (`compare-verdicts.mjs --strict`) |
 |---|---|---|---|
-| `vitest-units` (Vitest) | 76 мутантов в 2 модулях, 3 тест-файла; почти все мутанты `src/text.js` покрывает один `test/text.test.js` (55 юнитов одного файла в раунде 1); 13 Survived, 1 Timeout, 4 NoCoverage | база ×2, P1 on ×2, P1 off ×1 | все пары **эквивалентны**: 76/76 (Killed 58, Survived 13, Timeout 1, NoCoverage 4), совпадают и убивший тест, и причина |
+| `vitest-units` (Vitest) | 76 мутантов в 2 модулях, 3 тест-файла; мутантов `src/text.js` первым по рангу покрывает один `test/text.test.js` (55 isolated-юнитов на `src/text.js` за прогон, `summary.staticCost`, 41 мутант убит в этом файле); 13 Survived, 1 Timeout, 4 NoCoverage | база ×2, P1 on ×2, P1 off ×1 | все пары **эквивалентны**: 76/76 (Killed 58, Survived 13, Timeout 1, NoCoverage 4), совпадают и убивший тест, и причина |
 | `node-units` (node:test) | то же на `node --test` | база, P1 on, P1 off | **эквивалентны** 76/76 (Killed 54, Survived 15, Timeout 1, NoCoverage 6) |
 | `shared-resource` (Vitest, стресс) | 13 мутантов `label()`; `test/fixed-file.test.js` пишет и читает `tmp/shared.txt` с паузой 400 мс; `test/fixed-port.test.js` слушает порт 47531 | база ×2, P1 on ×2 | база: два прогона совпадают (9 Killed, 4 Survived — детерминирована); **P1: 4 и 6 расхождений** — все 4 выживших становятся Killed (чужой юнит перезаписал или удалил файл, `EADDRINUSE`), у 2 убитых меняется убивший файл |
 
@@ -257,7 +257,7 @@ id тестов этого файла, достигших мутанта в dry 
 | `types/adapter/isolated-plan.d.ts` | `IsolatedUnit.trim?: UnitTrim` (`{ tests: string[]; mode: 'prefix' \| 'covering' }`) с описанием, что каждый режим теряет |
 | `core/run/read-trim-units.ts` (новый) | режим из `MOOTANT_TRIM_UNITS` |
 | `core/run/get-unit-trim.ts` (новый) | покрывающие тесты файла юнита; `null` для статического мутанта и файла без покрывающих |
-| `core/run/plan-isolated.ts:44-51` | юнит получает `trim` |
+| `core/run/plan-isolated.ts:43-50` | юнит получает `trim` |
 | `core/run-mutants.ts:443,453,474`, `core/run/create-run-state.ts:25,103`, `types/run/run-state.d.ts:36` | режим в состоянии прогона |
 | `core/cache/prepare-run-cache.ts:38,167-170` | отдельный ключ окружения кэша для обрезанных прогонов |
 | `adapters/vitest/worker/select-trimmed-tests.ts` (новый), `adapters/vitest/runner.ts:562,617-623` | воркер строит `runnable` из `trim` в `onCollected`; если ни одного покрывающего теста не нашлось — весь файл |
@@ -291,7 +291,7 @@ node:test `trim` игнорирует (весь файл) — в прототи�
   мутант `String(name).trim() → String(name)` (для `'a'` эквивалентный, база —
   Survived) получает **ложный Killed** (тест падает при любом мутанте); мутант
   `return entries.get(key) → undefined` не достигается вовсе → **Killed →
-  NoCoverage** (недостигнутый юнит ничего не решает, `core/run/get-final-status.ts:34-39`
+  NoCoverage** (недостигнутый юнит ничего не решает, `core/run/get-final-status.ts:33-36`
   — та же механика, что BUG-900).
 
 Почему это принципиально, а не свойство фикстуры: у **убиваемого** покрывающим
@@ -352,7 +352,7 @@ node /home/user/mootant/analysis/tools/compare-verdicts.mjs $R/prefix-base-1.jso
 Кэш (`node_modules/.cache/mootant/run-v3.json`) хранит только улики
 (мутант × тест-файл) с ключом над хэшами исходника, тест-файла и всех его
 зависимостей из dry run, ключом окружения и «лишними» входами юнита
-(`core/cache/create-run-cache.ts:136-151`, `core/cache/prepare-run-cache.ts:91-111`).
+(`core/cache/create-run-cache.ts:129-150`, `core/cache/prepare-run-cache.ts:91-111`).
 Какие тест-файлы покрывают мутанта, какие тесты есть и сколько они длятся,
 список тест-файлов сессии, входы адаптера (`cacheInputs`) — всё это берётся из
 живой сессии и свежего dry run и нигде не сохраняется. Поэтому без запуска
@@ -399,17 +399,17 @@ Timeout-мутантом при каждом тёплом прогоне сно�
    Снимок не пишется, если у тест-файла нет списка зависимостей (своя среда
    тестов), если тест читал все переменные (`*`), если у адаптера нет
    `cacheInputs`, если в прогоне были ошибки или кэш не сохранён.
-2. **Повтор без раннера** — `replayDrySnapshot` (`core/run-mutants.ts:739-787`),
+2. **Повтор без раннера** — `replayDrySnapshot` (`core/run-mutants.ts:739-781`),
    вызывается до создания рабочего каталога и старта адаптера
    (`core/run-mutants.ts:281-301`): те же фазы `execute`, но вместо
-   `runDryPhase` — сохранённая dry-фаза (`core/run-mutants.ts:477-498`), а вместо
+   `runDryPhase` — сохранённая dry-фаза (`core/run-mutants.ts:477-495`), а вместо
    сессии — заглушка, которая отдаёт сохранённые список файлов, `cacheInputs`,
    версию и отказывается что-либо запускать (`core/cache/create-snapshot-session.ts`).
    Проверка снимка — после построения переключаемых файлов
    (`core/run-mutants.ts:456-476`, `core/cache/check-dry-snapshot.ts`: ключ →
    переменные → файлы → дерево). Кэш вердиктов готовится как обычно, от свежих
    хэшей; если после `reuseCachedVerdicts` хоть одному мутанту нужен прогон
-   (`hasWorkLeft`, `core/run-mutants.ts:888-895`) — `DryReuseMiss`
+   (`hasWorkLeft`, `core/run-mutants.ts:565-575` и `:888-895`) — `DryReuseMiss`
    (`core/cache/dry-reuse-miss.ts`), события, накопленные за повтор,
    отбрасываются, и прогон идёт обычным путём с раннером; до этого момента
    ничего не запускалось и не записывалось. При успехе события отдаются разом и
@@ -420,7 +420,7 @@ Timeout-мутантом при каждом тёплом прогоне сно�
    включённой переменной isolated-улика `Timeout` с причиной `hit-limit`
    сохраняется и переиспользуется как убийство. Счётчик срабатываний сайтов не
    зависит от загрузки машины (лимит — `max(floor, factor × hits dry run)`,
-   `core/run/get-try-limits.ts:25-26`), так что такая улика повторима так же, как
+   `core/run/get-try-limits.ts:26`), так что такая улика повторима так же, как
    убийство assert-ом. Тайм-ауты по времени (`time-limit`, `hang`) и краши
    по-прежнему не кэшируются. Без переменной записи `Timeout` не читаются
    (`core/cache/create-run-cache.ts:280`), так что обычный прогон ведёт себя как
