@@ -46,12 +46,55 @@ function splitRow(line) {
   return cells
 }
 
+let ranges = {
+  'instrumentation.md': [100, 199],
+  'verdicts.md': [200, 299],
+  'skips.md': [300, 399],
+  'cache-since.md': [400, 499],
+  'cli-env.md': [500, 599],
+  'adapters.md': [600, 649],
+  'ux.md': [650, 699],
+  'perf.md': [700, 749],
+  'perf-proto.md': [750, 799],
+  'architecture.md': [800, 819],
+  'release.md': [820, 849],
+  'tests.md': [850, 899],
+  'static-review.md': [900, 949],
+}
+
+/**
+ * Lines of the main bug table of a file: rows after a header that has an ID
+ * and a severity column, until the first line that is not a table row.
+ */
+function mainTableRows(text) {
+  let lines = text.split('\n')
+  let start = lines.findIndex(
+    line => /^\|\s*ID\s*\|/u.test(line) && /серь[её]зн/iu.test(line),
+  )
+  if (start === -1) {
+    return []
+  }
+  let rows = []
+  for (let line of lines.slice(start + 2)) {
+    if (!line.startsWith('|')) {
+      break
+    }
+    rows.push(line)
+  }
+  return rows
+}
+
 let rows = []
 let directory = path.join(root, 'bugs')
 for (let file of readdirSync(directory).filter(name => name.endsWith('.md'))) {
   let seen = new Set()
-  for (let line of readFileSync(path.join(directory, file), 'utf8').split('\n')) {
-    if (!/^\| (\*\*)?BUG-/u.test(line)) {
+  let range = ranges[file] ?? [0, 9999]
+  for (let line of mainTableRows(readFileSync(path.join(directory, file), 'utf8'))) {
+    if (!/^\| (\*\*)?BUG-\d+/u.test(line)) {
+      continue
+    }
+    let number = Number(/BUG-(\d+)/u.exec(line)[1])
+    if (number < range[0] || number > range[1]) {
       continue
     }
     let [id, description, severity, status, where, repro] = splitRow(line)
