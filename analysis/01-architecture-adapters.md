@@ -338,7 +338,7 @@ sequenceDiagram
   participant P as процесс node, 1 на файл/юнит (detached, своя группа)
   participant H as preload + module hooks (в P)
   Core->>A: start(context) [run-mutants.ts:275]
-  A->>A: findTestCommand, readNodeRuntime (spawn node), filterExecArgv, listNodeTestFiles, checkTypeScript [start-node-test-session.ts:71-151]
+  A->>A: findTestCommand, readNodeRuntime (execFile node -p), filterExecArgv, listNodeTestFiles, checkTypeScript [start-node-test-session.ts:71-151]
   Core->>A: listTestFiles() → files + setup [start-node-test-session.ts:212]
   Core->>A: dryRun({files:null, related, repeat:false}) [run-dry-phase.ts:482]
   A->>WD: switched/plan.json + switched/<i>.json [run-dry.ts:212-227, write-switch-plan.ts:16-31]
@@ -401,7 +401,7 @@ sequenceDiagram
 | Зависание при сворачивании воркера | пульс покрывает teardown; без пульса — убийство через 70 с (`adapters/vitest/wait-for-workers.ts:20, 113`) | неприменимо (процесс на юнит) | — |
 | Ctrl+C в терминале (TTY) | воркеры в той же группе получают SIGINT и умирают | процессы-лидеры своих групп убиты обработчиком адаптера (`adapters/node-test/track-process-group.ts:40-46`) | спиннер делает `process.exit(130)` (`cli/terminal/create-spinner.ts:147-160`) → `finally` не выполняется → **каталог `mootant-*` остаётся** (оба адаптера) **[подтверждено]** |
 | SIGINT группе без TTY (CI, `kill -INT -pgid`) | воркеры умирают | убиты обработчиком | обработчиков нет → смерть по сигналу, код 130 → **каталог остаётся** (оба) **[подтверждено]** |
-| SIGTERM только главному процессу (`kill`, `timeout`, отмена задачи CI) | **обработчика нет**: воркер в синхронном цикле осиротел (ppid 1, R) и жил ещё ≈5 с; **зависший юнит** (`fixture-hang`) осиротел и крутился >75 с при ~30–37 % CPU, пока я не убил его вручную — бесконечно (BUG-601) **[подтверждено]** | процессы убиты обработчиком, код 143 | каталог остаётся (оба) **[подтверждено]** |
+| SIGTERM только главному процессу (`kill`, `timeout`, отмена задачи CI) | **обработчика нет**: воркер в синхронном цикле осиротел (ppid 1, R) и жил до конца цикла (через 0,5 с жив, через 6,5 с нет); **зависший юнит** (`fixture-hang`) осиротел и крутился >75 с при ~30–37 % CPU, пока я не убил его вручную — бесконечно (BUG-601) **[подтверждено]** | процессы убиты обработчиком, код 143 | каталог остаётся (оба) **[подтверждено]** |
 | SIGHUP главному процессу (закрыли терминал, оборвался SSH) | обработчика нет → зависший воркер — сирота | **обработчики только на SIGINT/SIGTERM** (`adapters/node-test/track-process-group.ts:7`), а процессы `detached` (`adapters/node-test/run-test-process.ts:117-123`) в своих сессиях SIGHUP не получают → зависший процесс юнита — сирота (R, 30–40 % CPU через 11 с) **[подтверждено]**, BUG-601 | каталог остаётся |
 
 Итог: **отмена — единственная часть жизненного цикла, у которой нет
@@ -411,11 +411,11 @@ SIGHUP), у Vitest — никакой, а рабочий каталог не у�
 node-test план переключения содержит полный переключённый текст каждого
 мутируемого файла), но накапливается в `/tmp` при каждом Ctrl+C.
 Предложение (раздел 9): `AdapterContext.signal` + единый обработчик
-SIGINT/SIGTERM в CLI, который прерывает прогон, вызывает `session.close()`
-и `work.remove()` и только потом выходит с 130/143; `close()` vitest-
+SIGINT/SIGTERM/SIGHUP в CLI, который прерывает прогон, вызывает `session.close()`
+и `work.remove()` и только потом выходит с 130/143/129; `close()` vitest-
 адаптера обязан убить все воркеры (pid уже известны: `worker/<pid>`).
 Проверка: интеграционный тест, который запускает `mootant run` на
-фикстуре с медленным тестом, посылает SIGTERM/SIGINT и проверяет, что нет
+фикстуре с зависающим мутантом, посылает SIGINT/SIGTERM/SIGHUP и проверяет, что нет
 ни каталога, ни живых процессов с `cwd` фикстуры — для обоих адаптеров.
 
 
@@ -460,9 +460,11 @@ data/isolation.md]**. Здесь — механизмы по коду и то, �
 
 Отсутствующая гарантия: **смерть процесса, не вызванная мутантом,
 неотличима от kill.** Внешний SIGKILL (OOM killer, ограничение CI, `kill`)
-во время юнита даёт `Killed` даже если мутант не был достигнут; `reached`
-при `crash` адаптер передаёт (`adapters/vitest/build-isolated-facts.ts:37`),
-но ядро его не смотрит. См. BUG-602 и 4.4.
+во время юнита даёт `Killed`. Проверка `reached` (адаптер его передаёт:
+`adapters/vitest/build-isolated-facts.ts:37`, ядро не смотрит) не спасла бы:
+в эксперименте мутант был достигнут и выжил бы — процесс убит во время
+следующего, ожидающего теста. Нужен повтор юнита, как для таймаутов
+(BUG-602, 4.4).
 
 ## 6. Производительность: что переиспользуется, а что нет
 
