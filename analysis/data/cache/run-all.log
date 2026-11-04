@@ -880,3 +880,15 @@ Auto-merging src/lines.ts
     (no mutants selected)
   EXPECT: an error with the 'git fetch --deepen' hint
   [pr-depth1] --since origin/main exit=1
+    (not JSON) 
+    stderr: Error: --since: origin/main and HEAD have no common commit; a shallow clone may need "git fetch --deepen".
+  after deepening (both sides reach the branch point). EXPECT: line 5 only
+  [pr-deepened] --since origin/main exit=0
+    "src/lines.ts": lines 5
+=== unknown_ref (05:13:16)
+  [unknown] --since no-such-branch exit=1
+    (not JSON) 
+    stderr: Error: --since: unknown git revision "no-such-branch".
+  run --json with an unknown ref (is stdout valid JSON?):
+    exit=1 stdout= stderr=Error: --since: unknown git revision "no-such-branch".
+=== odd_paths (05:13:20)
