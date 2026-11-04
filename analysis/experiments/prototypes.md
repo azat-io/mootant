@@ -55,9 +55,10 @@
   - P2: `vitest run test/adapters/vitest test/core/run test/core/cache test/core/run-mutants.test.ts` —
     484 из 486; упали два теста «verdict equivalence» из
     `test/adapters/vitest/index.test.ts` ровно по своим тайм-аутам (60 и 120 с)
-    при параллельном прогоне P1; ПОВТОР_P2;
+    при параллельном прогоне P1 (load ~15); повтор блока «verdict equivalence» отдельно при load ~5 — 15 из 15 (база в тех же условиях — 15 из 15);
   - P3: `vitest run test/core/cache test/core/run test/core/run-mutants.test.ts` —
-    все проходят (с новыми тестами); ПОВТОР_P3.
+    все проходят (с новыми тестами); блок «verdict equivalence» `test/adapters/vitest/index.test.ts` при load ~5 — 15 из 15 (при load ~15 один тест упал по тайм-ауту 60 с, база при load ~8 — 15 из 15).
+  - P1, блоки «verdict equivalence» обоих адаптеров (`test/adapters/vitest/index.test.ts`, `test/adapters/node-test/index.test.ts`): без переменной — 20 из 20; **с `MOOTANT_PARALLEL_UNITS=1` — 17 из 20**, см. раздел P1.
   Нестабильные тесты раннера, встреченные по ходу (`runner.test.ts`), падают и
   на базе — BUG-750, BUG-751.
 
@@ -149,6 +150,7 @@ file, port or database)». Ядро это учитывает: юниты одн
 |---|---|---|---|
 | `vitest-units` (Vitest) | 76 мутантов в 2 модулях, 3 тест-файла; мутантов `src/text.js` первым по рангу покрывает один `test/text.test.js` (55 isolated-юнитов на `src/text.js` за прогон, `summary.staticCost`, 41 мутант убит в этом файле); 13 Survived, 1 Timeout, 4 NoCoverage | база ×2, P1 on ×2, P1 off ×1 | все пары **эквивалентны**: 76/76 (Killed 58, Survived 13, Timeout 1, NoCoverage 4), совпадают и убивший тест, и причина |
 | `node-units` (node:test) | то же на `node --test` | база, P1 on, P1 off | **эквивалентны** 76/76 (Killed 54, Survived 15, Timeout 1, NoCoverage 6) |
+| собственные «verdict equivalence» Mootant (`test/adapters/{vitest,node-test}/index.test.ts`: вердикты против физически применённых мутантов на фикстурах `test/fixtures/equivalence/*`) | 20 тестов, в т.ч. Vue, Svelte, fast-режим, teardown окружения | с `MOOTANT_PARALLEL_UNITS=1`, один прогон | **17 из 20**; упали ровно три теста, построенные на общем ресурсе: «never runs a test file twice at once» обоих адаптеров (фикстура `shared` — один фиксированный файл на все юниты, `test/adapters/vitest/index.test.ts:1062-1066`, `test/adapters/node-test/index.test.ts:452-457`) и «counts errors of worker-scoped fixture cleanup against the mutant» (фикстура `teardown` держит фиксированный порт до очистки фикстуры, `test/adapters/vitest/index.test.ts:891-900`) — то есть именно то, от чего защищает контракт; без переменной — 20 из 20 |
 | `shared-resource` (Vitest, стресс) | 13 мутантов `label()`; `test/fixed-file.test.js` пишет и читает `tmp/shared.txt` с паузой 400 мс; `test/fixed-port.test.js` слушает порт 47531 | база ×2, P1 on ×2 | база: два прогона совпадают (9 Killed, 4 Survived — детерминирована); **P1: 4 и 6 расхождений** — все 4 выживших становятся Killed (чужой юнит перезаписал или удалил файл, `EADDRINUSE`), у 2 убитых меняется убивший файл |
 
 Команды (результаты — `/home/user/projects/perf-proto/results/p1/`):
