@@ -1,0 +1,217 @@
+* mootant list src --skipped                                                      preset recommended
+
+mutants         79 in 5 files
+skipped         56: 1 equivalent, 3 noise, 3 timeout, 19 owned, 30 subsumed
+
+src/format.ts
+  1:55  string-literal       'USD' -> ''                0hqs
+  2:10  string-literal       `${value.toFixed(2)} ${currency}` -> `${value.toFixed(2)}${currency}`  yef5
+  2:27  number-literal       2 -> 3                     kgza
+  6:10  comparison-operator  count === 1 -> count <= 1  6d3m
+  6:10  comparison-operator  count === 1 -> count >= 1  wn30
+  6:10  comparison-operator  count === 1 -> false       g4g0
+  6:24  string-literal       `${count} ${word}` -> ''   v3v7
+  6:45  string-literal       `${count} ${word}s` -> ''  w76j
+
+src/price.ts
+  10:7   comparison-operator  total >= 100 -> total > 100         69kd
+  10:7   comparison-operator  total >= 100 -> total == 100        6r5y
+  10:7   comparison-operator  total >= 100 -> total >= 99         x223
+  11:12  number-literal       10 -> 11                            yjj1
+  13:10  condition            isMember -> true                    1nm0
+  13:10  condition            isMember -> false                   j1sb
+  13:21  number-literal       5 -> 6                              wjsw
+  13:25  number-literal       0 -> 1                              f6hg
+  17:15  number-literal       0 -> 1                              sx6s
+  19:5   assignment-operator  total += item.price * item.quantity -> total -= item.price * item.quantity  9wb2
+  19:14  arithmetic-operator  item.price * item.quantity -> item.price / item.quantity  pf5t
+  21:10  arithmetic-operator  Math.round(total * 100) / 100 -> Math.round(total * 100) * 100  x72b
+  21:21  arithmetic-operator  total * 100 -> total / 100          f472
+  21:29  number-literal       100 -> 101                          9ghe
+  21:36  number-literal       100 -> 101                          tam5
+  25:7   comparison-operator  percent <= 0 -> percent < 0         8yjn
+  25:7   comparison-operator  percent <= 0 -> percent == 0        qra1
+  25:7   comparison-operator  percent <= 0 -> percent <= 1        m37n
+  26:12  return-value         total -> 0                          nekb
+  28:10  arithmetic-operator  total - (total * percent) / 100 -> total + (total * percent) / 100  x8bh
+  28:18  arithmetic-operator  (total * percent) / 100 -> (total * percent) * 100  prv2
+  28:19  arithmetic-operator  total * percent -> total / percent  15vz
+  28:38  number-literal       100 -> 101                          tq1v
+
+src/retry.ts
+  3:14  number-literal       3 -> 4                                      wddk
+  6:22  number-literal       1 -> 2                                      079b
+  6:25  comparison-operator  attempt <= attempts -> attempt < attempts   ggxa
+  6:25  comparison-operator  attempt <= attempts -> attempt == attempts  k193
+  8:14  missing-await        await task() -> task()                      wjh2
+  10:7  statement-removal    lastError = error -> ;                      vjfx
+  13:3  statement-removal    throw lastError -> ;                        t0d7
+
+src/slug.ts
+  5:10   method-call          title .trim() .toLowerCase() -> title .trim() .toUpperCase()  yeb8
+  5:10   method-call          title .trim() -> title                  zy0x
+  8:15   regex-pattern        [^a-z0-9] -> [^]                        vhc2
+  8:26   regex-flag           g -> (empty)                            eemk
+  8:29   string-literal       '-' -> ''                               39x5
+  9:15   regex-pattern        ^-+| -> (empty)                         0r1g
+  9:15   regex-pattern        ^ -> (empty)                            axk3
+  9:18   regex-pattern        |-+$ -> (empty)                         3bjx
+  9:21   regex-pattern        $ -> (empty)                            7xh4
+  9:23   regex-flag           g -> (empty)                            qhb8
+  9:26   string-literal       '' -> 'mootant'                         2grx
+  13:10  logical-operator     /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64 -> slug.length <= 64  t9v9
+  13:11  regex-pattern        ^ -> (empty)                            aths
+  13:12  regex-pattern        [a-z0-9] -> [^]                         h3dy
+  13:25  regex-pattern        [a-z0-9] -> [^]                         mra1
+  13:35  regex-pattern        * -> +                                  cpjd
+  13:36  regex-pattern        $ -> (empty)                            bw7y
+  13:53  comparison-operator  slug.length <= 64 -> slug.length < 64   adp6
+  13:53  comparison-operator  slug.length <= 64 -> slug.length == 64  das5
+  13:53  comparison-operator  slug.length <= 64 -> slug.length <= 65  pj0x
+
+src/user.ts
+  8:26   array-element        [] -> [undefined]                      ydz3
+  9:7    comparison-operator  user.name.trim() === '' -> true        nhvz
+  9:7    comparison-operator  user.name.trim() === '' -> false       b54d
+  9:7    method-call          user.name.trim() -> user.name          24vz
+  10:17  string-literal       'name is required' -> ''               zspa
+  12:7   logical-operator     user.email !== undefined && !user.email.includes('@') -> !user.email.includes('@')  yr3r
+  12:7   logical-operator     user.email !== undefined && !user.email.includes('@') -> user.email !== undefined  r31q
+  12:7   logical-operator     user.email !== undefined && !user.email.includes('@') -> false  4a2n
+  13:17  string-literal       'email is invalid' -> ''               xrj1
+  15:7   logical-operator     user.age !== undefined && (user.age < 0 || user.age > 150) -> (user.age < 0 || user.age > 150)  3nwe
+  15:34  comparison-operator  user.age < 0 -> user.age <= 0          7arf
+  15:34  comparison-operator  user.age < 0 -> user.age != 0          gk79
+  15:34  comparison-operator  user.age < 0 -> user.age < -1          kadg
+  15:50  comparison-operator  user.age > 150 -> user.age >= 150      xsb6
+  15:50  comparison-operator  user.age > 150 -> user.age != 150      n3t3
+  15:50  comparison-operator  user.age > 150 -> user.age > 151       4pyg
+  16:17  string-literal       'age is out of range' -> ''            arae
+  23:10  logical-operator     user.name || user.email || 'Anonymous' -> user.name || user.email  phjc
+  23:10  logical-operator     user.name || user.email -> user.email  0wct
+  23:10  logical-operator     user.name || user.email -> user.name   pcxz
+  23:37  string-literal       'Anonymous' -> ''                      jkbj
+
+skipped:
+
+src/format.ts
+  2:10  return-value    `${value.toFixed(2)} ${currency}` -> ''  subsumed  solitary
+        a finer string-literal mutant lies inside the code it removes, and killing that mutant needs a test that observes this code
+  6:10  return-value    count === 1 ? `${count} ${word}` : `${count} ${word}s` -> ''  subsumed  solitary
+        a finer comparison-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code
+  6:10  condition       count === 1 -> true                      subsumed  comparison-region
+        a comparison-operator mutant makes the comparison true on part of the inputs where the constant does
+  6:10  condition       count === 1 -> false                     owned     O1
+        it makes the comparison false, as comparison-operator does
+  6:20  number-literal  1 -> 2                                   subsumed  O4
+        a comparison-operator mutant changes the comparison on part of the inputs where this change does
+
+src/price.ts
+  10:7   condition          total >= 100 -> true                      subsumed  comparison-region
+         a comparison-operator mutant makes the comparison true on part of the inputs where the constant does
+  10:7   condition          total >= 100 -> false                     subsumed  comparison-region
+         a comparison-operator mutant makes the comparison false on part of the inputs where the constant does
+  10:16  number-literal     100 -> 101                                subsumed  O4
+         a comparison-operator mutant changes the comparison on part of the inputs where this change does
+  11:5   statement-removal  return 10 -> ;                            subsumed  R4
+         removing the whole then-branch forces the test to false, as comparison-operator does on some inputs
+  13:10  return-value       isMember ? 5 : 0 -> 0                     subsumed  solitary
+         a finer condition mutant lies inside the code it removes, and killing that mutant needs a test that observes this code
+  19:5   statement-removal  total += item.price * item.quantity -> ;  subsumed  solitary
+         a finer assignment-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code
+  21:10  return-value       Math.round(total * 100) / 100 -> 0        subsumed  solitary
+         a finer arithmetic-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code
+  25:7   condition          percent <= 0 -> true                      subsumed  comparison-region
+         a comparison-operator mutant makes the comparison true on part of the inputs where the constant does
+  25:7   condition          percent <= 0 -> false                     subsumed  comparison-region
+         a comparison-operator mutant makes the comparison false on part of the inputs where the constant does
+  25:18  number-literal     0 -> 1                                    owned     shifted-literal
+         it shifts the literal by one, as comparison-operator does
+  28:10  return-value       total - (total * percent) / 100 -> 0      subsumed  solitary
+         a finer arithmetic-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code
+
+src/retry.ts
+  6:25  comparison-operator  attempt <= attempts -> true   timeout     loop-running
+        true may keep the loop running forever
+  6:25  condition            attempt <= attempts -> true   timeout     loop-running
+        true may keep the loop running forever
+  6:25  condition            attempt <= attempts -> false  subsumed    comparison-region
+        a comparison-operator mutant makes the comparison false on part of the inputs where the constant does
+  6:46  update-operator      attempt++ -> attempt--        timeout     loop-advance
+        it changes the update that advances a loop, so it may keep the loop running forever
+  6:46  update-operator      attempt++ -> ++attempt        equivalent  unused-result
+        the value of the update is unused, so prefix and postfix do the same
+  8:14  return-value         await task() -> undefined     subsumed    solitary
+        a finer missing-await mutant lies inside the code it removes, and killing that mutant needs a test that observes this code
+
+src/slug.ts
+  5:10   return-value      title .trim() .toLowerCase() .replace(/[^a-z0-9]+/g, '-')... -> ''     subsumed  solitary
+         a finer method-call mutant lies inside the code it removes, and killing that mutant needs a test that observes this code
+  13:10  logical-operator  /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64 -> /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)  subsumed  R2
+         a mutant inside the expression gives the same result as this drop on some inputs
+  13:10  logical-operator  /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64 -> false  subsumed  R2
+         a mutant inside the group makes it falsy on some inputs
+  13:10  return-value      /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64 -> true   subsumed  R6
+         it makes the result true, as logical-operator does on some inputs
+  13:10  return-value      /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64 -> false  subsumed  R6
+         it makes the result false, as comparison-operator does on some inputs
+  13:68  number-literal    64 -> 65                                                               owned     shifted-literal
+         it shifts the literal by one, as comparison-operator does
+
+src/user.ts
+  9:7    condition            user.name.trim() === '' -> true                   owned     O1
+         it makes the comparison true, as comparison-operator does
+  9:7    condition            user.name.trim() === '' -> false                  owned     O1
+         it makes the comparison false, as comparison-operator does
+  9:28   string-literal       '' -> 'mootant'                                   subsumed  O4
+         a comparison-operator mutant changes the comparison on part of the inputs where this change does
+  10:5   statement-removal    errors.push('name is required') -> ;              owned     O19
+         removing the whole then-branch forces the test to false, as comparison-operator does
+  12:7   condition            user.email !== undefined && !user.email.includes('@') -> true  owned     O1
+         the constants of a && or || group are left to logical-operator
+  12:7   condition            user.email !== undefined && !user.email.includes('@') -> false  owned     O1
+         the constants of a && or || group are left to logical-operator
+  12:7   comparison-operator  user.email !== undefined -> true                  owned     O3
+         the truth value of an operand of && or || is left to logical-operator
+  12:7   comparison-operator  user.email !== undefined -> false                 owned     O3
+         the truth value of an operand of && or || is left to logical-operator
+  12:35  condition            !user.email.includes('@') -> true                 owned     O3
+         the truth value of an operand of && or || is left to logical-operator
+  12:35  condition            !user.email.includes('@') -> false                owned     O3
+         the truth value of an operand of && or || is left to logical-operator
+  12:56  string-literal       '@' -> ''                                         owned     O8
+         an empty lookup key only makes a tested lookup constant, as another mutator does
+  13:5   statement-removal    errors.push('email is invalid') -> ;              owned     O19
+         removing the whole then-branch forces the test to false, as logical-operator does
+  15:7   condition            user.age !== undefined && (user.age < 0 || user.age > 150) -> true  owned     O1
+         the constants of a && or || group are left to logical-operator
+  15:7   condition            user.age !== undefined && (user.age < 0 || user.age > 150) -> false  owned     O1
+         the constants of a && or || group are left to logical-operator
+  15:7   logical-operator     user.age !== undefined && (user.age < 0 || user.age > 150) -> user.age !== undefined  subsumed  R2
+         a mutant inside the expression gives the same result as this drop on some inputs
+  15:7   logical-operator     user.age !== undefined && (user.age < 0 || user.age > 150) -> false  subsumed  R2
+         a mutant inside the group makes it falsy on some inputs
+  15:7   comparison-operator  user.age !== undefined -> true                    owned     O3
+         the truth value of an operand of && or || is left to logical-operator
+  15:7   comparison-operator  user.age !== undefined -> false                   owned     O3
+         the truth value of an operand of && or || is left to logical-operator
+  15:34  logical-operator     user.age < 0 || user.age > 150 -> user.age > 150  subsumed  R2
+         a mutant inside the left operand makes it falsy on some inputs
+  15:34  logical-operator     user.age < 0 || user.age > 150 -> user.age < 0    subsumed  R2
+         a mutant inside the expression gives the same result as this drop on some inputs
+  15:45  number-literal       0 -> 1                                            subsumed  O4
+         a comparison-operator mutant changes the comparison on part of the inputs where this change does
+  15:61  number-literal       150 -> 151                                        owned     shifted-literal
+         it shifts the literal by one, as comparison-operator does
+  16:5   statement-removal    errors.push('age is out of range') -> ;           subsumed  R4
+         removing the whole then-branch forces the test to false, as comparison-operator does on some inputs
+  18:10  return-value         errors -> []                                      subsumed  solitary
+         a finer array-element mutant lies inside the code it removes, and killing that mutant needs a test that observes this code
+  22:3   statement-removal    console.log('displayName called') -> ;            noise     log-message
+         it only removes a log message
+  22:15  string-literal       'displayName called' -> ''                        noise     log-message
+         it only changes the text of a log message
+  23:10  return-value         user.name || user.email || 'Anonymous' -> ''      subsumed  solitary
+         a finer logical-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code
+  23:10  logical-operator     user.name || user.email -> (user.name ?? user.email)  noise     nullish-swap
+         ?? and || differ here only on falsy values that the nullishSwap option does not count, such as the default itself

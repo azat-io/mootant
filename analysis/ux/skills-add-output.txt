@@ -1,0 +1,54 @@
+$ cd /home/user/projects/ux/skill-check   # пустой каталог
+$ npx -y skills@1.7.6 add azat-io/mootant   (exit 1)
+
+|
+•   claude-code_2-1-318_agent  Agent detected — installing non-interactively
+|
+o  Source: https://github.com/azat-io/mootant.git
+|
+|
+o  No skills found
+|
+—  No valid skills found. Skills require a SKILL.md with name and description.
+
+
+real	0m3.653s
+user	0m1.592s
+sys	0m0.676s
+
+$ npx -y skills@1.7.6 add azat-io/mootant --list --full-depth   (exit 1)
+
+|
+•   claude-code_2-1-318_agent  Agent detected — installing non-interactively
+|
+o  Source: https://github.com/azat-io/mootant.git
+|
+|
+o  No skills found
+|
+—  No valid skills found. Skills require a SKILL.md with name and description.
+
+
+# Контрольный опыт: локальный репозиторий с skills/mootant/SKILL.md (= analysis/ux/SKILL.draft.md)
+$ npx -y skills@1.7.6 add ./fake-repo --list
+
+|
+•   claude-code_2-1-318_agent  Agent detected — installing non-interactively
+|
+o  Source: /home/user/projects/ux/skill-check/fake-repo
+|
+o  Local path validated
+|
+o  Found 1 skill
+
+|
+o  Available Skills
+|
+|    mootant
+|
+|      Finds weak tests with Mootant mutation testing and writes the tests that are missing. Use when the user asks to find gaps in tests, improve or harden tests, kill surviving mutants, raise the mutation score, or check the tests of changed code in a JavaScript or TypeScript project tested with Vitest 5 or node:test.
+
+|
+—  Use --skill <name> to install specific skills
+
+$ npx -y skills@1.7.6 add ./fake-repo -y  → ./.agents/skills/mootant/SKILL.md + симлинк .claude/skills/mootant, skills-lock.json

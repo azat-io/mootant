@@ -1,0 +1,93 @@
+[1G[0K\[1G[0K[92m*[39m [1mmootant list src[22m                                                                [90mpreset recommended[39m
+
+[90mmutants         [39m79 in 5 files
+
+[1msrc/format.ts[22m
+  [90m1:55[39m  [90mstring-literal     [39m  'USD' -> ''                0hqs
+  [90m2:10[39m  [90mstring-literal     [39m  ....toFixed(2)} ${currency}` -> ....toFixed(2)}${currency}`  yef5
+  [90m2:27[39m  [90mnumber-literal     [39m  2 -> 3                     kgza
+  [90m6:10[39m  [90mcomparison-operator[39m  count === 1 -> count <= 1  6d3m
+  [90m6:10[39m  [90mcomparison-operator[39m  count === 1 -> count >= 1  wn30
+  [90m6:10[39m  [90mcomparison-operator[39m  count === 1 -> false       g4g0
+  [90m6:24[39m  [90mstring-literal     [39m  `${count} ${word}` -> ''   v3v7
+  [90m6:45[39m  [90mstring-literal     [39m  `${count} ${word}s` -> ''  w76j
+
+[1msrc/price.ts[22m
+  [90m10:7 [39m  [90mcomparison-operator[39m  total >= 100 -> total > 100         69kd
+  [90m10:7 [39m  [90mcomparison-operator[39m  total >= 100 -> total == 100        6r5y
+  [90m10:7 [39m  [90mcomparison-operator[39m  total >= 100 -> total >= 99         x223
+  [90m11:12[39m  [90mnumber-literal     [39m  10 -> 11                            yjj1
+  [90m13:10[39m  [90mcondition          [39m  isMember -> true                    1nm0
+  [90m13:10[39m  [90mcondition          [39m  isMember -> false                   j1sb
+  [90m13:21[39m  [90mnumber-literal     [39m  5 -> 6                              wjsw
+  [90m13:25[39m  [90mnumber-literal     [39m  0 -> 1                              f6hg
+  [90m17:15[39m  [90mnumber-literal     [39m  0 -> 1                              sx6s
+  [90m19:5 [39m  [90massignment-operator[39m  total += item.price * item.... -> total -= item.price * item....  9wb2
+  [90m19:14[39m  [90marithmetic-operator[39m  item.price * item.quantity -> item.price / item.quantity  pf5t
+  [90m21:10[39m  [90marithmetic-operator[39m  Math.round(total * 100) / 100 -> Math.round(total * 100) * 100  x72b
+  [90m21:21[39m  [90marithmetic-operator[39m  total * 100 -> total / 100          f472
+  [90m21:29[39m  [90mnumber-literal     [39m  100 -> 101                          9ghe
+  [90m21:36[39m  [90mnumber-literal     [39m  100 -> 101                          tam5
+  [90m25:7 [39m  [90mcomparison-operator[39m  percent <= 0 -> percent < 0         8yjn
+  [90m25:7 [39m  [90mcomparison-operator[39m  percent <= 0 -> percent == 0        qra1
+  [90m25:7 [39m  [90mcomparison-operator[39m  percent <= 0 -> percent <= 1        m37n
+  [90m26:12[39m  [90mreturn-value       [39m  total -> 0                          nekb
+  [90m28:10[39m  [90marithmetic-operator[39m  total - (total * percent) /... -> total + (total * percent) /...  x8bh
+  [90m28:18[39m  [90marithmetic-operator[39m  (total * percent) / 100 -> (total * percent) * 100  prv2
+  [90m28:19[39m  [90marithmetic-operator[39m  total * percent -> total / percent  15vz
+  [90m28:38[39m  [90mnumber-literal     [39m  100 -> 101                          tq1v
+
+[1msrc/retry.ts[22m
+  [90m3:14[39m  [90mnumber-literal     [39m  3 -> 4                                      wddk
+  [90m6:22[39m  [90mnumber-literal     [39m  1 -> 2                                      079b
+  [90m6:25[39m  [90mcomparison-operator[39m  attempt <= attempts -> attempt < attempts   ggxa
+  [90m6:25[39m  [90mcomparison-operator[39m  attempt <= attempts -> attempt == attempts  k193
+  [90m8:14[39m  [90mmissing-await      [39m  await task() -> task()                      wjh2
+  [90m10:7[39m  [90mstatement-removal  [39m  lastError = error -> ;                      vjfx
+  [90m13:3[39m  [90mstatement-removal  [39m  throw lastError -> ;                        t0d7
+
+[1msrc/slug.ts[22m
+  [90m5:10 [39m  [90mmethod-call        [39m  title .trim() .toLowerCase() -> title .trim() .toUpperCase()  yeb8
+  [90m5:10 [39m  [90mmethod-call        [39m  title .trim() -> title                  zy0x
+  [90m8:15 [39m  [90mregex-pattern      [39m  [^a-z0-9] -> [^]                        vhc2
+  [90m8:26 [39m  [90mregex-flag         [39m  g -> (empty)                            eemk
+  [90m8:29 [39m  [90mstring-literal     [39m  '-' -> ''                               39x5
+  [90m9:15 [39m  [90mregex-pattern      [39m  ^-+| -> (empty)                         0r1g
+  [90m9:15 [39m  [90mregex-pattern      [39m  ^ -> (empty)                            axk3
+  [90m9:18 [39m  [90mregex-pattern      [39m  |-+$ -> (empty)                         3bjx
+  [90m9:21 [39m  [90mregex-pattern      [39m  $ -> (empty)                            7xh4
+  [90m9:23 [39m  [90mregex-flag         [39m  g -> (empty)                            qhb8
+  [90m9:26 [39m  [90mstring-literal     [39m  '' -> 'mootant'                         2grx
+  [90m13:10[39m  [90mlogical-operator   [39m  /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.... -> slug....  t9v9
+  [90m13:11[39m  [90mregex-pattern      [39m  ^ -> (empty)                            aths
+  [90m13:12[39m  [90mregex-pattern      [39m  [a-z0-9] -> [^]                         h3dy
+  [90m13:25[39m  [90mregex-pattern      [39m  [a-z0-9] -> [^]                         mra1
+  [90m13:35[39m  [90mregex-pattern      [39m  * -> +                                  cpjd
+  [90m13:36[39m  [90mregex-pattern      [39m  $ -> (empty)                            bw7y
+  [90m13:53[39m  [90mcomparison-operator[39m  slug.length <= 64 -> slug.length < 64   adp6
+  [90m13:53[39m  [90mcomparison-operator[39m  slug.length <= 64 -> slug.length == 64  das5
+  [90m13:53[39m  [90mcomparison-operator[39m  slug.length <= 64 -> slug.length <= 65  pj0x
+
+[1msrc/user.ts[22m
+  [90m8:26 [39m  [90marray-element      [39m  [] -> [undefined]                      ydz3
+  [90m9:7  [39m  [90mcomparison-operator[39m  user.name.trim() === '' -> true        nhvz
+  [90m9:7  [39m  [90mcomparison-operator[39m  user.name.trim() === '' -> false       b54d
+  [90m9:7  [39m  [90mmethod-call        [39m  user.name.trim() -> user.name          24vz
+  [90m10:17[39m  [90mstring-literal     [39m  'name is required' -> ''               zspa
+  [90m12:7 [39m  [90mlogical-operator   [39m  user.email !== undefined && !user.email.... -> !user.email....  yr3r
+  [90m12:7 [39m  [90mlogical-operator   [39m  ... undefined && !user.email.includes('@') -> ... undefined  r31q
+  [90m12:7 [39m  [90mlogical-operator   [39m  user.email !== undefined && !user.email.includes('@') -> false  4a2n
+  [90m13:17[39m  [90mstring-literal     [39m  'email is invalid' -> ''               xrj1
+  [90m15:7 [39m  [90mlogical-operator   [39m  user.age !== undefined && (user.age < 0 ... -> (user.age < 0 ...  3nwe
+  [90m15:34[39m  [90mcomparison-operator[39m  user.age < 0 -> user.age <= 0          7arf
+  [90m15:34[39m  [90mcomparison-operator[39m  user.age < 0 -> user.age != 0          gk79
+  [90m15:34[39m  [90mcomparison-operator[39m  user.age < 0 -> user.age < -1          kadg
+  [90m15:50[39m  [90mcomparison-operator[39m  user.age > 150 -> user.age >= 150      xsb6
+  [90m15:50[39m  [90mcomparison-operator[39m  user.age > 150 -> user.age != 150      n3t3
+  [90m15:50[39m  [90mcomparison-operator[39m  user.age > 150 -> user.age > 151       4pyg
+  [90m16:17[39m  [90mstring-literal     [39m  'age is out of range' -> ''            arae
+  [90m23:10[39m  [90mlogical-operator   [39m  ....name || user.email || 'Anonymous' -> ....name || user.email  phjc
+  [90m23:10[39m  [90mlogical-operator   [39m  user.name || user.email -> user.email  0wct
+  [90m23:10[39m  [90mlogical-operator   [39m  user.name || user.email -> user.name   pcxz
+  [90m23:37[39m  [90mstring-literal     [39m  'Anonymous' -> ''                      jkbj
+[1G[0K\[1G[0K

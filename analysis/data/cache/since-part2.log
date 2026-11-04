@@ -1,0 +1,36 @@
+=== merge_commits (04:16:00)
+Auto-merging src/lines.ts
+  EXPECT: line 2 only (feature's change; f came from main through the merge, d is only on main)
+  [merged] --since main exit=0
+    "src/lines.ts": lines 2
+=== shallow_clone (04:16:01)
+  EXPECT: a hint that the clone is shallow
+  [head1] --since HEAD~1 exit=1
+    (not JSON) 
+    stderr: Error: --since: unknown git revision "HEAD~1".
+  [originmain] --since origin/main exit=0
+    (no mutants selected)
+=== unknown_ref (04:16:02)
+  [unknown] --since no-such-branch exit=1
+    (not JSON) 
+    stderr: Error: --since: unknown git revision "no-such-branch".
+  run --json with an unknown ref (is stdout valid JSON?):
+    exit=1 stdout= stderr=Error: --since: unknown git revision "no-such-branch".
+=== odd_paths (04:16:03)
+  EXPECT: line 4 in every file
+  [odd] --since HEAD exit=0
+    "src/-dash.ts": lines 4
+    "src/back\\slash.ts": lines 4
+    "src/lines.ts": lines 4
+    "src/quote\"d.ts": lines 4
+    "src/tab\there.ts": lines 4
+    "src/with space.ts": lines 4
+    "src/кириллица.ts": lines 4
+=== binary_file (04:16:04)
+  EXPECT: whole file (git counts it as binary)
+  [nul] --since HEAD exit=0
+    "src/lines.ts": lines 1,2,3,4,5,6,7
+=== tests_only (04:16:05)
+  EXPECT (documented): nothing
+  [tests] --since HEAD exit=0
+    (no mutants selected)

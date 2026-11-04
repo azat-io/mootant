@@ -1,0 +1,130 @@
+{
+  "strict": {
+    "total": {
+      "lines": 56900,
+      "tokens": 361095,
+      "sources": 650,
+      "clones": 2,
+      "duplicatedLines": 16,
+      "duplicatedTokens": 181,
+      "percentage": 0.03,
+      "percentageTokens": 0.05,
+      "newDuplicatedLines": 0,
+      "newClones": 0
+    },
+    "clones": [
+      {
+        "lines": 9,
+        "tokens": 82,
+        "first": "adapters/node-test/list-package-files.ts:14-22",
+        "second": "adapters/shared/list-tsconfig-files.ts:17-25"
+      },
+      {
+        "lines": 9,
+        "tokens": 99,
+        "first": "core/mutators/shared/get-owner-constant.ts:60-68",
+        "second": "core/mutators/shared/get-toward-mutant.ts:78-86"
+      }
+    ]
+  },
+  "weak": {
+    "total": {
+      "lines": 56424,
+      "tokens": 360951,
+      "sources": 651,
+      "clones": 14,
+      "duplicatedLines": 109,
+      "duplicatedTokens": 1087,
+      "percentage": 0.19,
+      "percentageTokens": 0.3,
+      "newDuplicatedLines": 0,
+      "newClones": 0
+    },
+    "clones": [
+      {
+        "lines": 17,
+        "tokens": 84,
+        "first": "cli/html/client/render-mutant-link.ts:1-17",
+        "second": "cli/html/client/render-mutant-row.ts:1-19"
+      },
+      {
+        "lines": 16,
+        "tokens": 75,
+        "first": "cli/html/client/render-files-table.ts:4-19",
+        "second": "cli/html/client/render-spotlight.ts:3-13"
+      },
+      {
+        "lines": 5,
+        "tokens": 61,
+        "first": "cli/html/client/index-report.ts:80-84",
+        "second": "cli/html/client/render-mutators-view.ts:22-26"
+      },
+      {
+        "lines": 8,
+        "tokens": 71,
+        "first": "cli/report/build-list-report.ts:191-198",
+        "second": "cli/html/client/unpack-run-report.ts:165-172"
+      },
+      {
+        "lines": 5,
+        "tokens": 92,
+        "first": "cli/parse-arguments.ts:414-418",
+        "second": "cli/parse-arguments.ts:364-368"
+      },
+      {
+        "lines": 6,
+        "tokens": 76,
+        "first": "adapters/node-test/resolve-command.ts:193-198",
+        "second": "adapters/node-test/resolve-command.ts:105-110"
+      },
+      {
+        "lines": 9,
+        "tokens": 82,
+        "first": "adapters/node-test/list-package-files.ts:14-22",
+        "second": "adapters/shared/list-tsconfig-files.ts:17-25"
+      },
+      {
+        "lines": 9,
+        "tokens": 99,
+        "first": "core/mutators/shared/get-owner-constant.ts:60-68",
+        "second": "core/mutators/shared/get-toward-mutant.ts:78-86"
+      },
+      {
+        "lines": 7,
+        "tokens": 72,
+        "first": "core/syntax/is-caught-in-loop.ts:29-35",
+        "second": "core/syntax/is-inside-try-block.ts:32-38"
+      },
+      {
+        "lines": 9,
+        "tokens": 85,
+        "first": "core/syntax/get-checked-name.ts:28-36",
+        "second": "core/syntax/is-joined-array.ts:29-37"
+      },
+      {
+        "lines": 10,
+        "tokens": 82,
+        "first": "core/mutators/number-literal.ts:97-106",
+        "second": "core/mutators/string-literal.ts:155-164"
+      },
+      {
+        "lines": 9,
+        "tokens": 77,
+        "first": "core/mutators/arithmetic-operator.ts:49-57",
+        "second": "core/mutators/bitwise-operator.ts:36-44"
+      },
+      {
+        "lines": 6,
+        "tokens": 56,
+        "first": "core/hints/infer-operator-type.ts:157-162",
+        "second": "core/hints/infer-operator-type.ts:126-131"
+      },
+      {
+        "lines": 7,
+        "tokens": 75,
+        "first": "core/cache/apply-cached-batch.ts:29-35",
+        "second": "core/cache/apply-cached-units.ts:18-25"
+      }
+    ]
+  }
+}

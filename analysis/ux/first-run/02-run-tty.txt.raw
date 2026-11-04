@@ -1,0 +1,283 @@
+[1G[0K\[1G[0K[?25l[1G[92m-[39m preparing  [90m0.0s[39m[?25l[1G[2K[1G[92m\[39m preparing 79 mutants  [90m0.1s[39m[?25l[1G[2K[1G[92m|[39m preparing 79 mutants  [90m0.2s[39m[?25l[1G[2K[1G[92m/[39m preparing 79 mutants  [90m1.0s[39m[?25l[1G[2K[1G[92m-[39m preparing 79 mutants  [90m1.2s[39m[?25l[1G[2K[1G[92m\[39m dry run  [90m0.0s[39m[?25l[1G[2K[1G[92m|[39m dry run  [90m0.1s[39m[?25l[1G[2K[1G[92m/[39m dry run  [90m0.2s[39m[?25l[1G[2K[1G[92m-[39m dry run  [90m0.3s[39m[?25l[1G[2K[1G[92m\[39m dry run  [90m0.4s[39m[?25l[1G[2K[1G[92m|[39m dry run  [90m0.5s[39m[?25l[1G[2K[1G[92m/[39m dry run  [90m0.6s[39m[?25l[1G[2K[1G[92m-[39m dry run  [90m0.7s[39m[?25l[1G[2K[1G[92m\[39m dry run  [90m0.7s[39m[?25l[1G[2K[1G[92m|[39m dry run  [90m0.8s[39m[?25l[1G[2K[1G[92m/[39m dry run  [90m0.9s[39m[?25l[1G[2K[1G[92m-[39m dry run  [90m1.0s[39m[?25l[1G[2K[1G[92m\[39m dry run  [90m1.1s[39m[?25l[1G[2K[1G[92m|[39m dry run  [90m3 test files[39m · [90m1.1s[39m[?25l[1G[2K[1G[92m/[39m dry run  [90m3 test files[39m · [90m1.2s[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.0s[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.1s[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.2s[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.3s[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.4s[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.5s[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.6s[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.7s[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.8s[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.8s[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.9s[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m0/67 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m1.0s[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m2/67 test runs[39m · [90mkilled 1[39m · [90msurvived[39m [92m1[39m · [90m1.1s[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m2/67 test runs[39m · [90mkilled 1[39m · [90msurvived[39m [92m1[39m · [90m1.2s[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m2/67 test runs[39m · [90mkilled 1[39m · [90msurvived[39m [92m1[39m · [90m1.3s[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m2/67 test runs[39m · [90mkilled 1[39m · [90msurvived[39m [92m1[39m · [90m1.4s[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m2/67 test runs[39m · [90mkilled 1[39m · [90msurvived[39m [92m1[39m · [90m1.5s[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m2/67 test runs[39m · [90mkilled 1[39m · [90msurvived[39m [92m1[39m · [90m1.6s[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m2/67 test runs[39m · [90mkilled 1[39m · [90msurvived[39m [92m1[39m · [90m1.6s[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m2/67 test runs[39m · [90mkilled 1[39m · [90msurvived[39m [92m1[39m · [90m1.7s[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m3/67 test runs[39m · [90mkilled 2[39m · [90msurvived[39m [92m1[39m · [90m1.8s[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m3/67 test runs[39m · [90mkilled 2[39m · [90msurvived[39m [92m1[39m · [90m1.9s[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m3/67 test runs[39m · [90mkilled 2[39m · [90msurvived[39m [92m1[39m · [90m2.0s[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m4/67 test runs[39m · [90mkilled 2[39m · [90msurvived[39m [92m2[39m · [90m2.1s[39m · [90m~30s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m4/67 test runs[39m · [90mkilled 2[39m · [90msurvived[39m [92m2[39m · [90m2.2s[39m · [90m~30s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m4/67 test runs[39m · [90mkilled 2[39m · [90msurvived[39m [92m2[39m · [90m2.2s[39m · [90m~30s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m4/67 test runs[39m · [90mkilled 2[39m · [90msurvived[39m [92m2[39m · [90m2.3s[39m · [90m~30s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m4/67 test runs[39m · [90mkilled 2[39m · [90msurvived[39m [92m2[39m · [90m2.4s[39m · [90m~30s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m4/67 test runs[39m · [90mkilled 2[39m · [90msurvived[39m [92m2[39m · [90m2.5s[39m · [90m~30s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m5/67 test runs[39m · [90mkilled 3[39m · [90msurvived[39m [92m2[39m · [90m2.6s[39m · [90m~30s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m5/67 test runs[39m · [90mkilled 3[39m · [90msurvived[39m [92m2[39m · [90m2.7s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m5/67 test runs[39m · [90mkilled 3[39m · [90msurvived[39m [92m2[39m · [90m2.8s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m7/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m3[39m · [90m2.9s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m7/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m3[39m · [90m3.0s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m7/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m3[39m · [90m3.1s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m7/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m3[39m · [90m3.2s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m8/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m4[39m · [90m3.3s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m8/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m4[39m · [90m3.4s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m8/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m4[39m · [90m3.4s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m9/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m5[39m · [90m3.5s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m9/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m5[39m · [90m3.6s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m10/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m6[39m · [90m3.7s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m10/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m6[39m · [90m3.8s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m12/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m8[39m · [90m3.9s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m12/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m8[39m · [90m4.0s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m12/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m8[39m · [90m4.1s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m12/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m8[39m · [90m4.2s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m12/67 test runs[39m · [90mkilled 4[39m · [90msurvived[39m [92m8[39m · [90m4.3s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m13/67 test runs[39m · [90mkilled 5[39m · [90msurvived[39m [92m8[39m · [90m4.3s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m13/67 test runs[39m · [90mkilled 5[39m · [90msurvived[39m [92m8[39m · [90m4.4s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m13/67 test runs[39m · [90mkilled 5[39m · [90msurvived[39m [92m8[39m · [90m4.5s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m14/67 test runs[39m · [90mkilled 5[39m · [90msurvived[39m [92m9[39m · [90m4.6s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m14/67 test runs[39m · [90mkilled 5[39m · [90msurvived[39m [92m9[39m · [90m4.7s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m15/67 test runs[39m · [90mkilled 6[39m · [90msurvived[39m [92m9[39m · [90m4.8s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m15/67 test runs[39m · [90mkilled 6[39m · [90msurvived[39m [92m9[39m · [90m4.9s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m17/67 test runs[39m · [90mkilled 8[39m · [90msurvived[39m [92m9[39m · [90m5.2s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m17/67 test runs[39m · [90mkilled 8[39m · [90msurvived[39m [92m9[39m · [90m5.3s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m17/67 test runs[39m · [90mkilled 8[39m · [90msurvived[39m [92m9[39m · [90m5.4s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m17/67 test runs[39m · [90mkilled 8[39m · [90msurvived[39m [92m9[39m · [90m5.5s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m17/67 test runs[39m · [90mkilled 8[39m · [90msurvived[39m [92m9[39m · [90m5.7s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m19/67 test runs[39m · [90mkilled 9[39m · [90msurvived[39m [92m10[39m · [90m5.8s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m19/67 test runs[39m · [90mkilled 9[39m · [90msurvived[39m [92m10[39m · [90m5.9s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m21/67 test runs[39m · [90mkilled 10[39m · [90msurvived[39m [92m11[39m · [90m6.0s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m21/67 test runs[39m · [90mkilled 10[39m · [90msurvived[39m [92m11[39m · [90m6.1s[39m · [90m~25s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m21/67 test runs[39m · [90mkilled 10[39m · [90msurvived[39m [92m11[39m · [90m6.1s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m21/67 test runs[39m · [90mkilled 10[39m · [90msurvived[39m [92m11[39m · [90m6.2s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m21/67 test runs[39m · [90mkilled 10[39m · [90msurvived[39m [92m11[39m · [90m6.3s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m22/67 test runs[39m · [90mkilled 10[39m · [90msurvived[39m [92m12[39m · [90m6.4s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m22/67 test runs[39m · [90mkilled 10[39m · [90msurvived[39m [92m12[39m · [90m6.5s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m23/67 test runs[39m · [90mkilled 10[39m · [90msurvived[39m [92m13[39m · [90m6.6s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m23/67 test runs[39m · [90mkilled 10[39m · [90msurvived[39m [92m13[39m · [90m6.6s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m23/67 test runs[39m · [90mkilled 10[39m · [90msurvived[39m [92m13[39m · [90m6.7s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m24/67 test runs[39m · [90mkilled 11[39m · [90msurvived[39m [92m13[39m · [90m6.8s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m24/67 test runs[39m · [90mkilled 11[39m · [90msurvived[39m [92m13[39m · [90m6.9s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m24/67 test runs[39m · [90mkilled 11[39m · [90msurvived[39m [92m13[39m · [90m7.0s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m24/67 test runs[39m · [90mkilled 11[39m · [90msurvived[39m [92m13[39m · [90m7.1s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m25/67 test runs[39m · [90mkilled 12[39m · [90msurvived[39m [92m13[39m · [90m7.2s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m25/67 test runs[39m · [90mkilled 12[39m · [90msurvived[39m [92m13[39m · [90m7.3s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m26/67 test runs[39m · [90mkilled 12[39m · [90msurvived[39m [92m14[39m · [90m7.4s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m26/67 test runs[39m · [90mkilled 12[39m · [90msurvived[39m [92m14[39m · [90m7.5s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m26/67 test runs[39m · [90mkilled 12[39m · [90msurvived[39m [92m14[39m · [90m7.6s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m26/67 test runs[39m · [90mkilled 12[39m · [90msurvived[39m [92m14[39m · [90m7.7s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m26/67 test runs[39m · [90mkilled 12[39m · [90msurvived[39m [92m14[39m · [90m7.8s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m28/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m14[39m · [90m7.8s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m28/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m14[39m · [90m7.9s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m28/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m14[39m · [90m8.0s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m28/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m14[39m · [90m8.1s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m28/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m14[39m · [90m8.2s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m28/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m14[39m · [90m8.3s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m28/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m14[39m · [90m8.4s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m28/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m14[39m · [90m8.4s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m28/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m14[39m · [90m8.5s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m29/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m15[39m · [90m8.6s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m29/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m15[39m · [90m8.7s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m29/67 test runs[39m · [90mkilled 14[39m · [90msurvived[39m [92m15[39m · [90m8.8s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m31/67 test runs[39m · [90mkilled 15[39m · [90msurvived[39m [92m16[39m · [90m8.9s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m31/67 test runs[39m · [90mkilled 15[39m · [90msurvived[39m [92m16[39m · [90m8.9s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m31/67 test runs[39m · [90mkilled 15[39m · [90msurvived[39m [92m16[39m · [90m9.0s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m31/67 test runs[39m · [90mkilled 15[39m · [90msurvived[39m [92m16[39m · [90m9.1s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m31/67 test runs[39m · [90mkilled 15[39m · [90msurvived[39m [92m16[39m · [90m9.2s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m32/67 test runs[39m · [90mkilled 15[39m · [90msurvived[39m [92m17[39m · [90m9.3s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m32/67 test runs[39m · [90mkilled 15[39m · [90msurvived[39m [92m17[39m · [90m9.3s[39m · [90m~20s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m34/67 test runs[39m · [90mkilled 16[39m · [90msurvived[39m [92m18[39m · [90m9.4s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m34/67 test runs[39m · [90mkilled 16[39m · [90msurvived[39m [92m18[39m · [90m9.5s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m34/67 test runs[39m · [90mkilled 16[39m · [90msurvived[39m [92m18[39m · [90m9.6s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m34/67 test runs[39m · [90mkilled 16[39m · [90msurvived[39m [92m18[39m · [90m9.7s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m34/67 test runs[39m · [90mkilled 16[39m · [90msurvived[39m [92m18[39m · [90m9.8s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m34/67 test runs[39m · [90mkilled 16[39m · [90msurvived[39m [92m18[39m · [90m9.9s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m34/67 test runs[39m · [90mkilled 16[39m · [90msurvived[39m [92m18[39m · [90m10.0s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m36/67 test runs[39m · [90mkilled 16[39m · [90msurvived[39m [92m20[39m · [90m10.1s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m36/67 test runs[39m · [90mkilled 16[39m · [90msurvived[39m [92m20[39m · [90m10.2s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m37/67 test runs[39m · [90mkilled 17[39m · [90msurvived[39m [92m20[39m · [90m10.3s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m37/67 test runs[39m · [90mkilled 17[39m · [90msurvived[39m [92m20[39m · [90m10.4s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m37/67 test runs[39m · [90mkilled 17[39m · [90msurvived[39m [92m20[39m · [90m10.5s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m37/67 test runs[39m · [90mkilled 17[39m · [90msurvived[39m [92m20[39m · [90m10.6s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m37/67 test runs[39m · [90mkilled 17[39m · [90msurvived[39m [92m20[39m · [90m10.7s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m37/67 test runs[39m · [90mkilled 17[39m · [90msurvived[39m [92m20[39m · [90m10.8s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m37/67 test runs[39m · [90mkilled 17[39m · [90msurvived[39m [92m20[39m · [90m10.9s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m40/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m21[39m · [90m11.0s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m40/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m21[39m · [90m11.1s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m40/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m21[39m · [90m11.2s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m40/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m21[39m · [90m11.2s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m40/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m21[39m · [90m11.3s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m40/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m21[39m · [90m11.5s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m40/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m21[39m · [90m11.5s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m41/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m22[39m · [90m11.7s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m41/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m22[39m · [90m11.8s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m41/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m22[39m · [90m11.9s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m41/67 test runs[39m · [90mkilled 19[39m · [90msurvived[39m [92m22[39m · [90m12.0s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m43/67 test runs[39m · [90mkilled 20[39m · [90msurvived[39m [92m23[39m · [90m12.1s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m43/67 test runs[39m · [90mkilled 20[39m · [90msurvived[39m [92m23[39m · [90m12.2s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m43/67 test runs[39m · [90mkilled 20[39m · [90msurvived[39m [92m23[39m · [90m12.3s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m43/67 test runs[39m · [90mkilled 20[39m · [90msurvived[39m [92m23[39m · [90m12.4s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m44/67 test runs[39m · [90mkilled 20[39m · [90msurvived[39m [92m24[39m · [90m12.4s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m44/67 test runs[39m · [90mkilled 20[39m · [90msurvived[39m [92m24[39m · [90m12.5s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m44/67 test runs[39m · [90mkilled 20[39m · [90msurvived[39m [92m24[39m · [90m12.6s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m44/67 test runs[39m · [90mkilled 20[39m · [90msurvived[39m [92m24[39m · [90m12.7s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m44/67 test runs[39m · [90mkilled 20[39m · [90msurvived[39m [92m24[39m · [90m12.8s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m46/67 test runs[39m · [90mkilled 21[39m · [90msurvived[39m [92m25[39m · [90m12.9s[39m · [90m~15s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m46/67 test runs[39m · [90mkilled 21[39m · [90msurvived[39m [92m25[39m · [90m13.0s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m46/67 test runs[39m · [90mkilled 21[39m · [90msurvived[39m [92m25[39m · [90m13.1s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m47/67 test runs[39m · [90mkilled 21[39m · [90msurvived[39m [92m26[39m · [90m13.2s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m47/67 test runs[39m · [90mkilled 21[39m · [90msurvived[39m [92m26[39m · [90m13.3s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m47/67 test runs[39m · [90mkilled 21[39m · [90msurvived[39m [92m26[39m · [90m13.4s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m47/67 test runs[39m · [90mkilled 21[39m · [90msurvived[39m [92m26[39m · [90m13.5s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m47/67 test runs[39m · [90mkilled 21[39m · [90msurvived[39m [92m26[39m · [90m13.5s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m47/67 test runs[39m · [90mkilled 21[39m · [90msurvived[39m [92m26[39m · [90m13.6s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m47/67 test runs[39m · [90mkilled 21[39m · [90msurvived[39m [92m26[39m · [90m13.7s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m48/67 test runs[39m · [90mkilled 22[39m · [90msurvived[39m [92m26[39m · [90m13.8s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m48/67 test runs[39m · [90mkilled 22[39m · [90msurvived[39m [92m26[39m · [90m13.9s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m48/67 test runs[39m · [90mkilled 22[39m · [90msurvived[39m [92m26[39m · [90m14.0s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m50/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m27[39m · [90m14.1s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m50/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m27[39m · [90m14.1s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m50/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m27[39m · [90m14.2s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m50/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m27[39m · [90m14.3s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m51/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m28[39m · [90m14.4s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m51/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m28[39m · [90m14.5s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m51/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m28[39m · [90m14.7s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m53/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m30[39m · [90m14.7s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m53/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m30[39m · [90m14.8s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m55/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m32[39m · [90m14.9s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m55/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m32[39m · [90m15.0s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m55/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m32[39m · [90m15.1s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m55/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m32[39m · [90m15.2s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m55/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m32[39m · [90m15.2s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m57/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m34[39m · [90m15.3s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m57/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m34[39m · [90m15.5s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m57/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m34[39m · [90m15.6s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m57/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m34[39m · [90m15.7s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m57/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m34[39m · [90m15.8s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m57/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m34[39m · [90m15.9s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m57/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m34[39m · [90m16.0s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m57/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m34[39m · [90m16.2s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m58/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m35[39m · [90m16.3s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m58/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m35[39m · [90m16.6s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m59/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m36[39m · [90m16.7s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m59/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m36[39m · [90m16.8s[39m · [90m~10s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m59/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m36[39m · [90m16.9s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m59/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m36[39m · [90m17.0s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m59/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m36[39m · [90m17.1s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m59/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m36[39m · [90m17.2s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m59/67 test runs[39m · [90mkilled 23[39m · [90msurvived[39m [92m36[39m · [90m17.2s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m17.3s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m17.4s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m17.5s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m17.6s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m17.7s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m17.8s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m17.9s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m18.0s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m18.1s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m18.5s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m18.5s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m61/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m36[39m · [90m18.7s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m62/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m37[39m · [90m18.9s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m62/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m37[39m · [90m19.0s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m62/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m37[39m · [90m19.0s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m62/67 test runs[39m · [90mkilled 25[39m · [90msurvived[39m [92m37[39m · [90m19.1s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m64/67 test runs[39m · [90mkilled 26[39m · [90msurvived[39m [92m38[39m · [90m19.2s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m64/67 test runs[39m · [90mkilled 26[39m · [90msurvived[39m [92m38[39m · [90m19.3s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m64/67 test runs[39m · [90mkilled 26[39m · [90msurvived[39m [92m38[39m · [90m19.4s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m64/67 test runs[39m · [90mkilled 26[39m · [90msurvived[39m [92m38[39m · [90m19.5s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m65/67 test runs[39m · [90mkilled 27[39m · [90msurvived[39m [92m38[39m · [90m19.6s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m65/67 test runs[39m · [90mkilled 27[39m · [90msurvived[39m [92m38[39m · [90m19.7s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m65/67 test runs[39m · [90mkilled 27[39m · [90msurvived[39m [92m38[39m · [90m19.7s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m66/67 test runs[39m · [90mkilled 27[39m · [90msurvived[39m [92m39[39m · [90m19.8s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m|[39m testing 67 mutants  [90m66/67 test runs[39m · [90mkilled 27[39m · [90msurvived[39m [92m39[39m · [90m19.9s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m/[39m testing 67 mutants  [90m66/67 test runs[39m · [90mkilled 27[39m · [90msurvived[39m [92m39[39m · [90m20.0s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m-[39m testing 67 mutants  [90m66/67 test runs[39m · [90mkilled 27[39m · [90msurvived[39m [92m39[39m · [90m20.1s[39m · [90m~5s left in round[39m[?25l[1G[2K[1G[92m\[39m testing 67 mutants  [90m67/67 test runs[39m · [90mkilled 28[39m · [90msurvived[39m [92m39[39m · [90m20.2s[39m[1G[2K[1G[?25h[33m![39m src/format.ts: No test loaded src/format.ts through the test runner's transform: no test imports it, or tests import a built copy, an external or a pre-bundled dependency. [90m[never-served][39m
+
+[92m*[39m [1mmootant run src[22m                                               [90mvitest 5.1.0[39m
+
+[90mdry run         [39m12 tests in 1.3s
+[90mmutants         [39m79 in 5 files
+[90mtime            [39m22.7s (start 1.2s, dry run 1.3s, isolated 20.2s)
+
+[90mkilled          [39m28
+[90msurvived        [39m[92m39[39m
+[90mtimeout         [39m0
+[90mno coverage     [39m12
+[90mscore           [39m[1m35.44%[22m [90m(covered 41.79%)[39m
+
+[1mfiles[22m 5 below 100%
+  src/format.ts       0%  [33m8 no coverage[39m
+  src/retry.ts    14.29%  [92m4 survived[39m, [33m2 no coverage[39m
+  src/user.ts     23.81%  [92m15 survived[39m, [33m1 no coverage[39m
+  src/slug.ts        30%  [92m14 survived[39m
+  src/price.ts    69.57%  [92m6 survived[39m, [33m1 no coverage[39m
+
+[1m[92msurvived[39m[22m 39
+
+[1msrc/price.ts[22m
+  [90m10:7 [39m  [90mcomparison-operator[39m  69kd
+    [31m-[39m if (total [31m>=[39m 100) {
+    [32m+[39m if (total [32m>[39m 100) {
+    [90mtest: test/price.test.ts[39m
+
+  [90m10:7 [39m  [90mcomparison-operator[39m  x223
+    [31m-[39m if (total >= [31m100[39m) {
+    [32m+[39m if (total >= [32m99[39m) {
+    [90mtest: test/price.test.ts[39m
+
+  [90m19:14[39m  [90marithmetic-operator[39m  pf5t
+    [31m-[39m total += item.price [31m*[39m item.quantity
+    [32m+[39m total += item.price [32m/[39m item.quantity
+    [90mtest: test/price.test.ts[39m
+
+  [90m25:7 [39m  [90mcomparison-operator[39m  8yjn
+    [31m-[39m if (percent [31m<=[39m 0) {
+    [32m+[39m if (percent [32m<[39m 0) {
+    [90mtest: test/price.test.ts[39m
+
+  [90m25:7 [39m  [90mcomparison-operator[39m  qra1
+    [31m-[39m if (percent [31m<=[39m 0) {
+    [32m+[39m if (percent [32m==[39m 0) {
+    [90mtest: test/price.test.ts[39m
+
+  [90m25:7 [39m  [90mcomparison-operator[39m  m37n
+    [31m-[39m if (percent <= [31m0[39m) {
+    [32m+[39m if (percent <= [32m1[39m) {
+    [90mtest: test/price.test.ts[39m
+
+[1msrc/retry.ts[22m
+  [90m3:14[39m  [90mnumber-literal     [39m  wddk
+    [31m-[39m attempts = [31m3[39m,
+    [32m+[39m attempts = [32m4[39m,
+    [90mtest: test/retry.test.ts[39m
+
+  [90m6:22[39m  [90mnumber-literal     [39m  079b
+    [31m-[39m for (let attempt = [31m1[39m; attempt <= attempts; attempt++) {
+    [32m+[39m for (let attempt = [32m2[39m; attempt <= attempts; attempt++) {
+    [90mtest: test/retry.test.ts[39m
+
+  [90m6:25[39m  [90mcomparison-operator[39m  ggxa
+    [31m-[39m for (let attempt = 1; attempt [31m<=[39m attempts; attempt++) {
+    [32m+[39m for (let attempt = 1; attempt [32m<[39m attempts; attempt++) {
+    [90mtest: test/retry.test.ts[39m
+
+  [90m8:14[39m  [90mmissing-await      [39m  wjh2
+    [31m-[39m return [31mawait [39mtask()
+    [32m+[39m return task()
+    [90mtest: test/retry.test.ts[39m
+
+[1msrc/slug.ts[22m
+  [90m5:10 [39m  [90mmethod-call        [39m  zy0x
+    [31m-[39m return title
+    [31m-[39m [31m  .trim()[39m
+    [32m+[39m return title
+    [90mtest: test/slug.test.ts[39m
+
+  [90m8:26 [39m  [90mregex-flag         [39m  eemk
+    [31m-[39m .replace(/[^a-z0-9]+/[31mg[39m, '-')
+    [32m+[39m .replace(/[^a-z0-9]+/, '-')
+    [90mtest: test/slug.test.ts[39m
+
+  [90m9:15 [39m  [90mregex-pattern      [39m  0r1g
+    [31m-[39m .replace(/[31m^-+|[39m-+$/g, '')
+    [32m+[39m .replace(/-+$/g, '')
+    [90mtest: test/slug.test.ts[39m
+
+  [90m9:18 [39m  [90mregex-pattern      [39m  3bjx
+    [31m-[39m .replace(/^-+[31m|-+$[39m/g, '')
+    [32m+[39m .replace(/^-+/g, '')
+    [90mtest: test/slug.test.ts[39m
+
+  [90m9:23 [39m  [90mregex-flag         [39m  qhb8
+    [31m-[39m .replace(/^-+|-+$/[31mg[39m, '')
+    [32m+[39m .replace(/^-+|-+$/, '')
+    [90mtest: test/slug.test.ts[39m
+
+  [90m9:26 [39m  [90mstring-literal     [39m  2grx
+    [31m-[39m .replace(/^-+|-+$/g, '')
+    [32m+[39m .replace(/^-+|-+$/g, '[32mmootant[39m')
+    [90mtest: test/slug.test.ts[39m
+
+  [90m13:10[39m  [90mlogical-operator   [39m  t9v9
+    [31m-[39m return [31m/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && [39mslug.length <= 64
+    [32m+[39m return slug.length <= 64
+    [90mtest: test/slug.test.ts[39m
+
+  [90m13:11[39m  [90mregex-pattern      [39m  aths
+    [31m-[39m return /[31m^[39m[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    [32m+[39m return /[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    [90mtest: test/slug.test.ts[39m
+
+  [90m13:12[39m  [90mregex-pattern      [39m  h3dy
+    [31m-[39m return /^[31m[a-z0-9][39m+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    [32m+[39m return /^[32m[^][39m+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 64
+    [90mtest: test/slug.test.ts[39m
+
+  [90m13:25[39m  [90mregex-pattern      [39m  mra1
+    [31m-[39m return /^[a-z0-9]+(?:-[31m[a-z0-9][39m+)*$/.test(slug) && slug.length <= 64
+    [32m+[39m return /^[a-z0-9]+(?:-[32m[^][39m+)*$/.test(slug) && slug.length <= 64
+    [90mtest: test/slug.test.ts[39m
+
+  [90m13:35[39m  [90mregex-pattern      [39m  cpjd
+    [31m-[39m return /^[a-z0-9]+(?:-[a-z0-9]+)[31m*[39m$/.test(slug) && slug.length <= 64
+    [32m+[39m return /^[a-z0-9]+(?:-[a-z0-9]+)[32m+[39m$/.test(slug) && slug.length <= 64
+    [90mtest: test/slug.test.ts[39m
+
+  [90m13:36[39m  [90mregex-pattern      [39m  bw7y
+    [31m-[39m return /^[a-z0-9]+(?:-[a-z0-9]+)*[31m$[39m/.test(slug) && slug.length <= 64
+    [32m+[39m return /^[a-z0-9]+(?:-[a-z0-9]+)*/.test(slug) && slug.length <= 64
+    [90mtest: test/slug.test.ts[39m
+
+  [90m13:53[39m  [90mcomparison-operator[39m  adp6
+    [31m-[39m return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length [31m<=[39m 64
+    [32m+[39m return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length [32m<[39m 64
+    [90mtest: test/slug.test.ts[39m
+
+  [90m13:53[39m  [90mcomparison-operator[39m  pj0x
+    [31m-[39m return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= [31m64[39m
+    [32m+[39m return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= [32m65[39m
+    [90mtest: test/slug.test.ts[39m
+
+[1msrc/user.ts[22m
+  [90m9:7  [39m  [90mcomparison-operator[39m  b54d
+    [31m-[39m if ([31muser.name.trim() === ''[39m) {
+    [32m+[39m if ([32mfalse[39m) {
+    [90mtest: test/user.test.ts[39m
+
+  [90m9:7  [39m  [90mmethod-call        [39m  24vz
+    [31m-[39m if (user.name[31m.trim()[39m === '') {
+    [32m+[39m if (user.name === '') {
+    [90mtest: test/user.test.ts[39m
+
+  [90m10:17[39m  [90mstring-literal     [39m  zspa
+    [31m-[39m errors.push('[31mname is required[39m')
+    [32m+[39m errors.push('')
+    [90mtest: test/user.test.ts[39m
+
+  [90m12:7 [39m  [90mlogical-operator   [39m  yr3r
+    [31m-[39m if ([31muser.email !== undefined && [39m!user.email.includes('@')) {
+    [32m+[39m if (!user.email.includes('@')) {
+    [90mtest: test/user.test.ts[39m
+
+  [90m12:7 [39m  [90mlogical-operator   [39m  4a2n
+    [31m-[39m if ([31muser.email !== undefined && !user.email.includes('@')[39m) {
+    [32m+[39m if ([32mfalse[39m) {
+    [90mtest: test/user.test.ts[39m
+
+  [90m13:17[39m  [90mstring-literal     [39m  xrj1
+    [31m-[39m errors.push('[31memail is invalid[39m')
+    [32m+[39m errors.push('')
+    [90mtest: test/user.test.ts[39m
+
+  [90m15:7 [39m  [90mlogical-operator   [39m  3nwe
+    [31m-[39m if ([31muser.age !== undefined && [39m(user.age < 0 || user.age > 150)) {
+    [32m+[39m if ((user.age < 0 || user.age > 150)) {
+    [90mtest: test/user.test.ts[39m
+
+  [90m15:34[39m  [90mcomparison-operator[39m  7arf
+    [31m-[39m if (user.age !== undefined && (user.age [31m<[39m 0 || user.age > 150)) {
+    [32m+[39m if (user.age !== undefined && (user.age [32m<=[39m 0 || user.age > 150)) {
+    [90mtest: test/user.test.ts[39m
+
+  [90m15:34[39m  [90mcomparison-operator[39m  kadg
+    [31m-[39m if (user.age !== undefined && (user.age < [31m0[39m || user.age > 150)) {
+    [32m+[39m if (user.age !== undefined && (user.age < [32m-1[39m || user.age > 150)) {
+    [90mtest: test/user.test.ts[39m
+
+  [90m15:50[39m  [90mcomparison-operator[39m  xsb6
+    [31m-[39m if (user.age !== undefined && (user.age < 0 || user.age [31m>[39m 150)) {
+    [32m+[39m if (user.age !== undefined && (user.age < 0 || user.age [32m>=[39m 150)) {
+    [90mtest: test/user.test.ts[39m
+
+  [90m15:50[39m  [90mcomparison-operator[39m  4pyg
+    [31m-[39m if (user.age !== undefined && (user.age < 0 || user.age > [31m150[39m)) {
+    [32m+[39m if (user.age !== undefined && (user.age < 0 || user.age > [32m151[39m)) {
+    [90mtest: test/user.test.ts[39m
+
+  [90m16:17[39m  [90mstring-literal     [39m  arae
+    [31m-[39m errors.push('[31mage is out of range[39m')
+    [32m+[39m errors.push('')
+    [90mtest: test/user.test.ts[39m
+
+  [90m23:10[39m  [90mlogical-operator   [39m  phjc
+    [31m-[39m return user.name || user.email[31m || 'Anonymous'[39m
+    [32m+[39m return user.name || user.email
+    [90mtest: test/user.test.ts[39m
+
+  [90m23:10[39m  [90mlogical-operator   [39m  0wct
+    [31m-[39m return [31muser.name || [39muser.email || 'Anonymous'
+    [32m+[39m return user.email || 'Anonymous'
+    [90mtest: test/user.test.ts[39m
+
+  [90m23:10[39m  [90mlogical-operator   [39m  pcxz
+    [31m-[39m return user.name[31m || user.email[39m || 'Anonymous'
+    [32m+[39m return user.name || 'Anonymous'
+    [90mtest: test/user.test.ts[39m
+
+[1m[33mno coverage[39m[22m 12
+
+[1msrc/format.ts[22m
+  [90m1:55[39m  [90mstring-literal     [39m  0hqs
+    [31m-[39m export function formatPrice(value: number, currency = '[31mUSD[39m'): string {
+    [32m+[39m export function formatPrice(value: number, currency = ''): string {
+
+  [90m2:10[39m  [90mstring-literal     [39m  yef5
+    [31m-[39m return `${value.toFixed(2)}[31m [39m${currency}`
+    [32m+[39m return `${value.toFixed(2)}${currency}`
+
+  [90m2:27[39m  [90mnumber-literal     [39m  kgza
+    [31m-[39m return `${value.toFixed([31m2[39m)} ${currency}`
+    [32m+[39m return `${value.toFixed([32m3[39m)} ${currency}`
+
+  [90m6:10[39m  [90mcomparison-operator[39m  6d3m
+    [31m-[39m return count [31m===[39m 1 ? `${count} ${word}` : `${count} ${word}s`
+    [32m+[39m return count [32m<=[39m 1 ? `${count} ${word}` : `${count} ${word}s`
+
+  [90m6:10[39m  [90mcomparison-operator[39m  wn30
+    [31m-[39m return count [31m===[39m 1 ? `${count} ${word}` : `${count} ${word}s`
+    [32m+[39m return count [32m>=[39m 1 ? `${count} ${word}` : `${count} ${word}s`
+
+  [90m6:10[39m  [90mcomparison-operator[39m  g4g0
+    [31m-[39m return [31mcount === 1[39m ? `${count} ${word}` : `${count} ${word}s`
+    [32m+[39m return [32mfalse[39m ? `${count} ${word}` : `${count} ${word}s`
+
+  [90m6:24[39m  [90mstring-literal     [39m  v3v7
+    [31m-[39m return count === 1 ? [31m`${count} ${word}`[39m : `${count} ${word}s`
+    [32m+[39m return count === 1 ? [32m''[39m : `${count} ${word}s`
+
+  [90m6:45[39m  [90mstring-literal     [39m  w76j
+    [31m-[39m return count === 1 ? `${count} ${word}` : [31m`${count} ${word}s`[39m
+    [32m+[39m return count === 1 ? `${count} ${word}` : [32m''[39m
+
+[1msrc/price.ts[22m
+  [90m26:12[39m  [90mreturn-value[39m  nekb
+    [31m-[39m return [31mtotal[39m
+    [32m+[39m return [32m0[39m
+    [90mtest: test/price.test.ts[39m
+
+[1msrc/retry.ts[22m
+  [90m10:7[39m  [90mstatement-removal[39m  vjfx
+    [31m-[39m [31mlastError = error[39m
+    [32m+[39m [32m;[39m
+    [90mtest: test/retry.test.ts[39m
+
+  [90m13:3[39m  [90mstatement-removal[39m  t0d7
+    [31m-[39m [31mthrow lastError[39m
+    [32m+[39m [32m;[39m
+    [90mtest: test/retry.test.ts[39m
+
+[1msrc/user.ts[22m
+  [90m23:37[39m  [90mstring-literal[39m  jkbj
+    [31m-[39m return user.name || user.email || '[31mAnonymous[39m'
+    [32m+[39m return user.name || user.email || ''
+    [90mtest: test/user.test.ts[39m
+
+[90mre-check one:[39m mootant run src --mutant 69kd
+[1G[0K\[1G[0K

@@ -1,0 +1,158 @@
+flowchart LR
+  subgraph cli
+    cli__root_["(root) (7)"]
+    cli_diff["diff (8)"]
+    cli_html["html (61)"]
+    cli_report["report (21)"]
+    cli_terminal["terminal (16)"]
+  end
+  subgraph adapters
+    adapters_node_test["node-test (49)"]
+    adapters_node_test_preload["node-test/preload (17)"]
+    adapters_node_test_types["node-test/types (12)"]
+    adapters_shared["shared (10)"]
+    adapters_shared_types["shared/types (2)"]
+    adapters_vitest["vitest (37)"]
+    adapters_vitest_types["vitest/types (4)"]
+    adapters_vitest_worker["vitest/worker (18)"]
+  end
+  subgraph core
+    core__root_["(root) (4)"]
+    core_cache["cache (19)"]
+    core_config["config (7)"]
+    core_files["files (4)"]
+    core_generate["generate (11)"]
+    core_git["git (7)"]
+    core_hints["hints (18)"]
+    core_identity["identity (5)"]
+    core_ignore["ignore (3)"]
+    core_instrument["instrument (11)"]
+    core_mutators["mutators (20)"]
+    core_mutators_shared["mutators/shared (84)"]
+    core_parser["parser (20)"]
+    core_plugins["plugins (9)"]
+    core_presets["presets (3)"]
+    core_regex["regex (30)"]
+    core_run["run (45)"]
+    core_runtime["runtime (7)"]
+    core_skips["skips (1)"]
+    core_syntax["syntax (76)"]
+    core_text["text (16)"]
+    core_tree["tree (10)"]
+  end
+  subgraph types
+    types_adapter["adapter (19)"]
+    types_cache["cache (5)"]
+    types_cli["cli (2)"]
+    types_config["config (6)"]
+    types_git["git (2)"]
+    types_hints["hints (5)"]
+    types_html["html (11)"]
+    types_mutant["mutant (16)"]
+    types_mutator["mutator (11)"]
+    types_regex["regex (3)"]
+    types_report["report (15)"]
+    types_run["run (19)"]
+    types_source["source (16)"]
+    types_syntax["syntax (21)"]
+  end
+  adapters_node_test -->|1| core_cache
+  adapters_node_test -->|3| core__root_
+  adapters_node_test -->|6| adapters_shared
+  adapters_shared -->|1| core_cache
+  adapters_shared -->|1| core__root_
+  adapters_node_test_preload -->|4| adapters_shared
+  adapters_node_test_preload -->|1| core_instrument
+  adapters_node_test_preload -->|1| core_runtime
+  adapters_vitest -->|21| adapters_vitest_worker
+  adapters_vitest -->|2| core__root_
+  adapters_vitest -->|8| adapters_shared
+  adapters_vitest -->|1| core_instrument
+  adapters_vitest -->|2| core_runtime
+  adapters_vitest -->|1| core_run
+  core_run -->|8| core__root_
+  adapters_vitest_worker -->|2| adapters_shared
+  cli__root_ -->|2| adapters_node_test
+  cli__root_ -->|2| adapters_vitest
+  cli__root_ -->|1| core_text
+  cli__root_ -->|12| cli_report
+  cli__root_ -->|10| cli_terminal
+  cli_diff -->|11| cli_terminal
+  cli_diff -->|2| core_text
+  cli_html -->|3| core_run
+  cli_html -->|2| cli_report
+  cli_report -->|5| core_run
+  cli_report -->|1| core__root_
+  cli_report -->|4| core_text
+  cli_report -->|3| cli_diff
+  cli_html -->|13| core_text
+  cli_html -->|2| cli_diff
+  cli__root_ -->|2| core__root_
+  core__root_ -->|4| core_config
+  core__root_ -->|4| core_files
+  core__root_ -->|2| core_git
+  core_config -->|1| core__root_
+  core_config -->|7| core_plugins
+  core_config -->|2| core_text
+  core_plugins -->|20| core_mutators
+  core_plugins -->|2| core_presets
+  core_mutators -->|73| core_mutators_shared
+  core_mutators_shared -->|30| core_tree
+  core_mutators -->|2| core_tree
+  core_mutators_shared -->|2| core_hints
+  core_mutators_shared -->|8| core_syntax
+  core_syntax -->|81| core_tree
+  core_mutators -->|1| core_skips
+  core_mutators -->|5| core_syntax
+  core_mutators -->|14| core_regex
+  core_plugins -->|2| core__root_
+  core_plugins -->|2| core_text
+  core_files -->|1| core_generate
+  core_files -->|1| core_identity
+  core_files -->|6| core_parser
+  core_generate -->|3| core_hints
+  core_generate -->|2| core_identity
+  core_generate -->|4| core_ignore
+  core_generate -->|6| core_parser
+  core_generate -->|1| core_skips
+  core_generate -->|6| core_syntax
+  core_generate -->|8| core_text
+  core_generate -->|2| core_tree
+  core_hints -->|11| core_tree
+  core_hints -->|1| core__root_
+  core_hints -->|4| core_syntax
+  core_ignore -->|1| core_parser
+  core_ignore -->|1| core__root_
+  core_ignore -->|1| core_plugins
+  core_ignore -->|2| core_text
+  core_parser -->|10| core_text
+  core_parser -->|4| core_tree
+  core_syntax -->|6| core_regex
+  core_syntax -->|1| core_generate
+  core_text -->|2| core_tree
+  core_tree -->|3| core_syntax
+  core_identity -->|2| core_tree
+  core_syntax -->|1| core_parser
+  core_generate -->|1| core_cache
+  core_identity -->|2| core_text
+  core_files -->|1| core__root_
+  core_files -->|1| core_text
+  cli_report -->|20| cli_terminal
+  cli__root_ -->|4| cli_html
+  core__root_ -->|6| core_cache
+  core__root_ -->|1| core_identity
+  core__root_ -->|2| core_instrument
+  core__root_ -->|3| core_parser
+  core__root_ -->|19| core_run
+  core_cache -->|5| core__root_
+  core_cache -->|8| core_run
+  core_cache -->|1| core_instrument
+  core_cache -->|1| core_runtime
+  core_cache -->|1| core_plugins
+  core_instrument -->|9| core_parser
+  core_instrument -->|1| core_syntax
+  core_instrument -->|1| core_tree
+  core_instrument -->|2| core_runtime
+  core_run -->|2| core_parser
+  core_run -->|2| core_plugins
+  core_run -->|1| core_text

@@ -1,0 +1,14 @@
+=== shallow_clone (04:22:55)
+  EXPECT: a hint that the clone is shallow
+  [head1] --since HEAD~1 exit=1
+    (not JSON) 
+    stderr: Error: --since: unknown git revision "HEAD~1".
+  [originmain] --since origin/main exit=0
+    (no mutants selected)
+  EXPECT: an error with the 'git fetch --deepen' hint
+  [pr-depth1] --since origin/main exit=1
+    (not JSON) 
+    stderr: Error: --since: origin/main and HEAD have no common commit; a shallow clone may need "git fetch --deepen".
+  after deepening (both sides reach the branch point). EXPECT: line 5 only
+  [pr-deepened] --since origin/main exit=0
+    "src/lines.ts": lines 5

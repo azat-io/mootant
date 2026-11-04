@@ -1,0 +1,201 @@
+{
+ "summary": {
+  "files": 14,
+  "mutants": 812,
+  "aDiffs": 0,
+  "bDiffs": 9,
+  "bLooseOnly": 2,
+  "rawUnparsable": 0
+ },
+ "results": [
+  {
+   "file": "src/traps/t01-hoist.cjs",
+   "mutants": 59,
+   "original": "{\"g1\":[\"undefined\",\"inner1\",\"function\",0,10,3],\"g0\":[\"undefined\",\"undefined\",0,10,3],\"h\":[\"ReferenceError\",4,\"ReferenceError\",\"function\"],\"completion\":[{\"$undefined\":true},2,4,7,{\"$undefined\":true}]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t02-strict.cjs",
+   "mutants": 34,
+   "original": "{\"s\":[2,\"undefined\"],\"t\":\"ReferenceError\",\"u\":[1,2,10]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t03-sloppy.cjs",
+   "mutants": 52,
+   "original": "{\"s\":[0,\"object\"],\"u\":[10,2,10],\"w\":[2,\"undefined\",6],\"ev\":[6,\"undefined\",3]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t04-callee.js",
+   "mutants": 73,
+   "original": "{\"r\":[7,8,9,10,6,[15,6],true,false,\"no-this\",\"TypeError\",[true,\"a|b\\\\n|\",[2,2]],\"x\\\\n2y\"]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t05-chain.js",
+   "mutants": 51,
+   "original": "{\"out\":[\"TypeError\",\"TypeError\",\"TypeError\",\"TypeError\",[3,2,1,3,3,3],[3,3,3,3,3,3]]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t06-delete-typeof.js",
+   "mutants": 33,
+   "original": "{\"del\":[true,true,true,[\"z\"]],\"ty\":[true,\"undefined\",\"undefined\",\"str\"],\"ty2\":[true,\"undefined\",\"undefined\",\"other\"]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t07-names.js",
+   "mutants": 59,
+   "original": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}",
+   "a": [],
+   "b": [
+    {
+     "id": "xq0twwdhdpvz",
+     "mutator": "logical-operator",
+     "kind": "expression",
+     "original": "flag || function () { return 2 }",
+     "replacement": "function () { return 2 }",
+     "line": 3,
+     "physical": "{\"a\":[\"f\",\"g\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",\"g\",\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}",
+     "switched": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",\"\",\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}"
+    },
+    {
+     "id": "ef2t843hbx03",
+     "mutator": "logical-operator",
+     "kind": "expression",
+     "original": "opts.fn ?? (() => 3)",
+     "replacement": "(() => 3)",
+     "line": 4,
+     "physical": "{\"a\":[\"f\",\"\",\"h\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"h\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}",
+     "switched": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}"
+    },
+    {
+     "id": "kpg78crta04v",
+     "mutator": "logical-operator",
+     "kind": "expression",
+     "original": "flag && (() => 4)",
+     "replacement": "(() => 4)",
+     "line": 5,
+     "physical": "{\"a\":[\"f\",\"\",\"\",\"i\",\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"i\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}",
+     "switched": "{\"a\":[\"f\",\"\",\"\",\"\",\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}"
+    },
+    {
+     "id": "2ww9x2v666t0",
+     "mutator": "logical-operator",
+     "kind": "expression",
+     "original": "opts.cls || class {}",
+     "replacement": "class {}",
+     "line": 7,
+     "physical": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"D\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"D\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}",
+     "switched": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}"
+    },
+    {
+     "id": "fn7pad36ej9g",
+     "mutator": "logical-operator",
+     "kind": "expression",
+     "original": "flag || function () {}",
+     "replacement": "function () {}",
+     "line": 8,
+     "physical": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"q\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",\"q\",\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}",
+     "switched": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",\"\",\"named\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}"
+    },
+    {
+     "id": "8yrxfe6czct7",
+     "mutator": "logical-operator",
+     "kind": "expression",
+     "original": "opts.fn || function () {}",
+     "replacement": "function () {}",
+     "line": 10,
+     "physical": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"j\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"j\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}",
+     "switched": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"\",\"k\",\"named\",{\"$undefined\":true},\"named\"]}"
+    },
+    {
+     "id": "r152hddmc0xt",
+     "mutator": "logical-operator",
+     "kind": "expression",
+     "original": "opts.fn || (() => 7)",
+     "replacement": "(() => 7)",
+     "line": 12,
+     "physical": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"cb\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"cb\",{\"$undefined\":true},\"named\"]}",
+     "switched": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"\",{\"$undefined\":true},\"named\"]}"
+    },
+    {
+     "id": "fj25xm38hvnx",
+     "mutator": "logical-operator",
+     "kind": "expression",
+     "original": "flag || (() => 8)",
+     "replacement": "(() => 8)",
+     "line": 13,
+     "physical": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"s\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",\"s\",\"named\"]}",
+     "switched": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",\"\",\"named\"]}"
+    },
+    {
+     "id": "certbk048qpg",
+     "mutator": "logical-operator",
+     "kind": "expression",
+     "original": "opts.fn ?? (() => 9)",
+     "replacement": "(() => 9)",
+     "line": 13,
+     "physical": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"m\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"m\"]}",
+     "switched": "{\"a\":[\"f\",\"\",\"\",false,\"\",\"\",\"p\",\"\",\"\",\"k\",\"\",\"\",\"\"],\"b\":[\"f\",{\"$undefined\":true},\"named\",\"\",\"\",\"\",\"p\",{\"$undefined\":true},\"named\",\"k\",\"named\",{\"$undefined\":true},\"\"]}"
+    }
+   ]
+  },
+  {
+   "file": "src/traps/t08-classes.js",
+   "mutants": 58,
+   "original": "{\"$load\":\"SyntaxError: Unexpected identifier 'acc'\"}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t09-gen-async.js",
+   "mutants": 63,
+   "original": "{\"seq\":[[3,false],[10,false],[1,false],[5,true]],\"asy\":[7,5],\"out\":[4,6],\"log\":[]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t10-asi.js",
+   "mutants": 52,
+   "original": "{\"log\":[2,4,0,\"t\",\"2\",3,\"neg\",3,\"re1\"],\"c\":1,\"e\":\"x\"}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t11-destructure.js",
+   "mutants": 110,
+   "original": "{\"a\":[1,2,4,3,5,{\"f\":6},7,9],\"b\":[10,11,3,2,5,{\"f\":6},7,9],\"c\":[0,\"or1\",\"nullish1\",\"f1\",\"and-assign1\"],\"d\":[\"and1\",1,2,\"t1\",\"and-assign1\"],\"e\":\"TypeError\",\"log\":[1,2,4,3,6,5,7,11,2,6,5,7,\"or1\",\"nullish1\",\"f1\",\"assign1\",\"and-assign1\",\"and1\",\"t1\",\"and-assign1\",\"k1\",\"v1\",\"k2\",\"v2\",1,2,3,\"f\",\"arg\"]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t12-labels.js",
+   "mutants": 77,
+   "original": "{\"l\":[12,2,2],\"s\":[[\"a\",\"b\"],[\"b\"],[6],[\"z\"]]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t13-ts.ts",
+   "mutants": 33,
+   "original": "{\"r\":[18,6,\"shape1:18\",2,2,\"Green\"]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t14-misc.js",
+   "mutants": 58,
+   "original": "{\"calls\":[\"get\",\"set3\"],\"n\":6,\"big\":\"101\",\"tmpl\":\"a2bc\",\"ex\":[1,false,8],\"url\":\"string\",\"$src\":true}",
+   "a": [],
+   "b": []
+  }
+ ]
+}

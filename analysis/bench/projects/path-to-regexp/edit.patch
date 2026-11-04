@@ -1,0 +1,14 @@
+diff --git a/src/index.ts b/src/index.ts
+index 5f0674a..723ba7e 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -663,7 +663,8 @@ export function stringify(data: TokenData): string {
+  * a `parse` -> `stringify` -> `parse` round trip.
+  */
+ function quoteName(name: string): string {
+-  return `"${name.replace(/["\\]/g, "\\$&")}"`;
++  const escaped = name.replace(/["\\]/g, "\\$&");
++  return `"${escaped}"`;
+ }
+ 
+ /**

@@ -1,0 +1,11 @@
+## before signal (t=4s): mootant pid=3537 leader=3535
+ 3535  3527  3535 Ss         4 script -qfec node /home/user/projects/cli/vt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache /dev/null
+ 3537  3535  3537 Ssl+       4 node /home/user/projects/cli/vt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache
+ 3692  3537  3537 Rl+        2 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/projects/cli/vt-hang-long/node_modules/vitest/suppre
+## after: leader exit=130
+<no processes left>
+## work dirs left in TMPDIR: 2 8RF6lMyAsQ9grt3Z23jji mootant-bYvUhp 
+## files in them: 11
+## cache dir: 
+## tail of output:
+ved[39m [90m0[39m · [90m1.7s[39m[?25l[1G[2K[1G[92m-[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m1.8s[39m[?25l[1G[2K[1G[92m\[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m1.9s[39m[?25l[1G[2K[1G[92m|[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m2.0s[39m[?25l[1G[2K[1G[92m/[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m2.1s[39m[1G[2K[1G[?25h+ dry run  1 test in 0.4s

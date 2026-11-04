@@ -1,0 +1,15 @@
+--- entry.js 
+import { usedHelper } from "./helpers.js";
+// ../../../../../home/user/mootant/analysis/architecture/experiments/treeshake/src/entry.js
+function run(x) {
+	return usedHelper(x);
+}
+export { run };
+
+--- helpers.js 
+// ../../../../../home/user/mootant/analysis/architecture/experiments/treeshake/src/helpers.js
+function usedHelper(x) {
+	return x + 1;
+}
+export { usedHelper };
+

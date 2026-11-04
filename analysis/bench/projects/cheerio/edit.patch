@@ -1,0 +1,15 @@
+diff --git a/src/api/attributes.ts b/src/api/attributes.ts
+index 49dfcf91..2a57281a 100644
+--- a/src/api/attributes.ts
++++ b/src/api/attributes.ts
+@@ -616,8 +616,8 @@ function parseDataValue(value: string): unknown {
+   if (value === 'null') return null;
+   if (value === 'true') return true;
+   if (value === 'false') return false;
+-  const num = Number(value);
+-  if (value === String(num)) return num;
++  const asNumber = Number(value);
++  if (String(asNumber) === value) return asNumber;
+   if (rbrace.test(value)) {
+     try {
+       return JSON.parse(value);

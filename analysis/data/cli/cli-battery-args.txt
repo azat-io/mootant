@@ -1,0 +1,191 @@
+=== [noargs] env='' args=''
+exit=0 stdout=2962B json=no ansi(stdout lines)=0 stderr=0B ansi(stderr lines)=0
+--- stdout (head):
+Usage:
+  $ mootant <command> [options]
+
+Commands:
+  list <paths...>      List the mutants of files and directories
+  run [paths...]       Run the tests against the mutants of files and
+                       directories (default: run.paths of the configuration)
+
+--- stderr (head):
+=== [help] env='' args='--help'
+exit=0 stdout=2962B json=no ansi(stdout lines)=0 stderr=0B ansi(stderr lines)=0
+--- stdout (head):
+Usage:
+  $ mootant <command> [options]
+
+Commands:
+  list <paths...>      List the mutants of files and directories
+  run [paths...]       Run the tests against the mutants of files and
+                       directories (default: run.paths of the configuration)
+
+--- stderr (head):
+=== [help-short] env='' args='-h'
+exit=0 stdout=2962B json=no ansi(stdout lines)=0 stderr=0B ansi(stderr lines)=0
+--- stdout (head):
+Usage:
+  $ mootant <command> [options]
+
+Commands:
+  list <paths...>      List the mutants of files and directories
+  run [paths...]       Run the tests against the mutants of files and
+                       directories (default: run.paths of the configuration)
+
+--- stderr (head):
+=== [version] env='' args='--version'
+exit=0 stdout=38B json=no ansi(stdout lines)=0 stderr=0B ansi(stderr lines)=0
+--- stdout (head):
+mootant/0.1.0 linux-x64 node-v22.23.4
+--- stderr (head):
+=== [version-short] env='' args='-v'
+exit=0 stdout=38B json=no ansi(stdout lines)=0 stderr=0B ansi(stderr lines)=0
+--- stdout (head):
+mootant/0.1.0 linux-x64 node-v22.23.4
+--- stderr (head):
+=== [run-help] env='' args='run --help'
+exit=0 stdout=2962B json=no ansi(stdout lines)=0 stderr=0B ansi(stderr lines)=0
+--- stdout (head):
+Usage:
+  $ mootant <command> [options]
+
+Commands:
+  list <paths...>      List the mutants of files and directories
+  run [paths...]       Run the tests against the mutants of files and
+                       directories (default: run.paths of the configuration)
+
+--- stderr (head):
+=== [unknown-cmd] env='' args='foo'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=62B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Unknown command 'foo'. Run 'mootant --help' for usage.
+=== [unknown-flag] env='' args='run src --bogus'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=154B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Unknown option '--bogus'. To specify a positional argument starting with a '-', place it at the end of the command after '--', as in '-- "--bogus"
+=== [unknown-short] env='' args='run src -x'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=144B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Unknown option '-x'. To specify a positional argument starting with a '-', place it at the end of the command after '--', as in '-- "-x"
+=== [list-nopath] env='' args='list'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=83B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: The list command expects at least one path, for example 'mootant list src'.
+=== [thr-101] env='' args='run src --threshold 101'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=51B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --threshold expects a number from 0 to 100.
+=== [thr-abc] env='' args='run src --threshold abc'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=51B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --threshold expects a number from 0 to 100.
+=== [thr-empty] env='' args='run src --threshold '''
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=51B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --threshold expects a number from 0 to 100.
+=== [thr-hex] env='' args='list src --threshold 0x10'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=52B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --threshold applies to the run command only.
+=== [thr-hex-run-noexec] env='' args='run --threshold 0x10 --all'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=58B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --all applies to the JSON report only; add --json.
+=== [thr-missing-value] env='' args='run src --threshold'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=53B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Option '--threshold <value>' argument missing
+=== [conc-0] env='' args='run src --concurrency 0'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=49B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --concurrency expects a positive integer.
+=== [conc-frac] env='' args='run src --concurrency 1.5'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=49B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --concurrency expects a positive integer.
+=== [all-nojson] env='' args='run src --all'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=58B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --all applies to the JSON report only; add --json.
+=== [incr-nocache] env='' args='run src --incremental --no-cache'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=62B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --incremental reuses cached verdicts; drop --no-cache.
+=== [list-runonly] env='' args='list src --threshold 50'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=52B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --threshold applies to the run command only.
+=== [list-nocache] env='' args='list src --no-cache'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=48B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --cache applies to the run command only.
+=== [run-skipped] env='' args='run src --skipped'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=51B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --skipped applies to the list command only.
+=== [run-noskipped] env='' args='run src --no-skipped'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=51B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --skipped applies to the list command only.
+=== [list-verbose-nojson] env='' args='list src --verbose'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --verbose applies to the JSON report of list only; add --json.
+=== [since-empty] env='' args='run src --since '''
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=61B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --since expects a git revision, such as --since main.
+=== [since-dash] env='' args='run src --since --json'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=179B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Option '--since' argument is ambiguous.
+Did you forget to specify the option argument for '--since'?
+To specify an option argument starting with a dash use '--since=-XYZ'.
+=== [neg-string] env='' args='run src --no-config'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=162B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Unknown option '--no-config'. To specify a positional argument starting with a '-', place it at the end of the command after '--', as in '-- "--no-config"
+=== [neg-mutant] env='' args='run src --no-mutant'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=162B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Unknown option '--no-mutant'. To specify a positional argument starting with a '-', place it at the end of the command after '--', as in '-- "--no-mutant"
+=== [neg-json] env='' args='list src --no-json'
+exit=0 stdout=634B json=no ansi(stdout lines)=0 stderr=0B ansi(stderr lines)=0
+--- stdout (head):
+* mootant list src                        preset recommended
+
+mutants         9 in 1 file
+
+src/math.js
+  2:10   arithmetic-operator  a + b -> a              y1rm
+  6:10   comparison-operator  age >= 18 -> age > 18   kkdj
+  6:10   comparison-operator  age >= 18 -> age == 18  wmgd
+--- stderr (head):
+=== [cmd-after-flags] env='' args='--json list src'
+exit=0 stdout=1898B json=valid ansi(stdout lines)=0 stderr=0B ansi(stderr lines)=0
+--- stdout (head):
+{"schemaVersion":3,"diagnostics":[],"command":"list","summary":{"totalWarnings":0,"totalIgnored":0,"totalFiles":1,"totalMutants":9,"totalPending":9,"totalErrors":0},"preset":"recommended","mutants":[{"scope":"add","mutator":"arithmetic-operator","column":10,"status":"Pending","before":["  return a + b"],"after":["  return a"],"file":"src/math.js","line":2,"id":"y1rmnxcp1zgc"},{"scope":"isAdult","mutator":"comparison-operator","column":10,"status":"Pending","before":["  return age >= 18"],"after":["  return age > 18"],"file":"src/math.js","line":6,"id":"kkdjmf7aa2n0"},{"scope":"isAdult","mutato--- stderr (head):

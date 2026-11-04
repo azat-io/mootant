@@ -1,0 +1,17 @@
+core/hints/non-nullish-kinds.ts
+core/hints/object-kinds.ts
+core/mutators/shared/get-default-option-skip.ts
+core/presets/default-loggers.ts
+core/presets/recommended.ts
+core/presets/strict.ts
+core/run/get-test-file-key.ts
+core/run/read-isolated-unit.ts
+adapters/node-test/check-todo-bail.ts
+adapters/node-test/live-process-groups.ts
+adapters/node-test/preload/loaded-key.ts
+adapters/node-test/preload/reported-key.ts
+adapters/node-test/preload/served-key.ts
+adapters/vitest/build-isolated-facts.ts
+cli/html/client/get-table-layout.ts
+cli/html/client/get-test-groups.ts
+cli/html/client/measure-column.ts

@@ -1,0 +1,9 @@
+# Strongly connected components with more than one file
+## value imports only
+- (11) core/mutators/shared/get-branch-copy-skip.ts, core/mutators/shared/get-condition-constants.ts, core/mutators/shared/get-group-constant.ts, core/mutators/shared/get-literal-flip.ts, core/mutators/shared/get-literal-skip.ts, core/mutators/shared/get-logical-drops.ts, core/mutators/shared/get-nullish-directions.ts, core/mutators/shared/get-or-default-skip.ts, core/mutators/shared/get-owner-constant.ts, core/mutators/shared/get-toward-mutant.ts, core/mutators/shared/has-polar-mutant.ts
+- (5) core/hints/infer-annotation-type.ts, core/hints/infer-binding-type.ts, core/hints/infer-call-type.ts, core/hints/infer-expression-type.ts, core/hints/infer-member-type.ts
+## value and type-only imports
+- (11) core/mutators/shared/get-branch-copy-skip.ts, core/mutators/shared/get-condition-constants.ts, core/mutators/shared/get-group-constant.ts, core/mutators/shared/get-literal-flip.ts, core/mutators/shared/get-literal-skip.ts, core/mutators/shared/get-logical-drops.ts, core/mutators/shared/get-nullish-directions.ts, core/mutators/shared/get-or-default-skip.ts, core/mutators/shared/get-owner-constant.ts, core/mutators/shared/get-toward-mutant.ts, core/mutators/shared/has-polar-mutant.ts
+- (5) core/hints/infer-annotation-type.ts, core/hints/infer-binding-type.ts, core/hints/infer-call-type.ts, core/hints/infer-expression-type.ts, core/hints/infer-member-type.ts
+- (2) types/run/isolated-evidence.d.ts, types/run/mutant-state.d.ts
+- (2) types/run/live-verdicts.d.ts, types/run/run-state.d.ts

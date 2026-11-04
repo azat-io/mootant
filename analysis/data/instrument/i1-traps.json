@@ -1,0 +1,148 @@
+{
+ "summary": {
+  "root": "/home/user/projects/instrument/traps",
+  "paths": [
+   "src/traps",
+   "src/t"
+  ],
+  "preset": "strict",
+  "listMs": 348,
+  "totalMs": 627,
+  "mootant": "/home/user/wt/instrument",
+  "diagnostics": 0,
+  "files": 20,
+  "skippedFiles": 0,
+  "mutants": 973,
+  "switchedParseErrors": 0,
+  "transformErrors": 0,
+  "compileErrors": 0,
+  "siteMismatch": 0,
+  "rawParseErrors": 0,
+  "audit": {
+   "named-evaluation-replacement": 9,
+   "shadowed-globalThis": 2
+  },
+  "blockTypes": {
+   "ExpressionStatement": 89,
+   "ReturnStatement": 3,
+   "BreakStatement": 3
+  },
+  "expressionTypes": {
+   "Literal": 292,
+   "BinaryExpression": 185,
+   "AssignmentExpression": 10,
+   "LogicalExpression": 43,
+   "UpdateExpression": 4,
+   "ArrayExpression": 196,
+   "ObjectExpression": 92,
+   "Identifier": 19,
+   "CallExpression": 5,
+   "ChainExpression": 17,
+   "AwaitExpression": 4,
+   "MemberExpression": 2,
+   "ConditionalExpression": 1,
+   "TemplateLiteral": 3,
+   "UnaryExpression": 3,
+   "TSTypeAssertion": 1,
+   "TSNonNullExpression": 1
+  },
+  "replacementNewlines": 9,
+  "maxLineShift": 16,
+  "filesWithLineShift": 2,
+  "switchedBytes": 74023,
+  "sourceBytes": 11637
+ },
+ "findings": [
+  {
+   "kind": "named-evaluation-replacement",
+   "file": "src/traps/t07-names.js",
+   "id": "xq0twwdhdpvz",
+   "mutator": "logical-operator",
+   "original": "flag || function () { return 2 }",
+   "replacement": "function () { return 2 }",
+   "line": 3
+  },
+  {
+   "kind": "named-evaluation-replacement",
+   "file": "src/traps/t07-names.js",
+   "id": "ef2t843hbx03",
+   "mutator": "logical-operator",
+   "original": "opts.fn ?? (() => 3)",
+   "replacement": "(() => 3)",
+   "line": 4
+  },
+  {
+   "kind": "named-evaluation-replacement",
+   "file": "src/traps/t07-names.js",
+   "id": "kpg78crta04v",
+   "mutator": "logical-operator",
+   "original": "flag && (() => 4)",
+   "replacement": "(() => 4)",
+   "line": 5
+  },
+  {
+   "kind": "named-evaluation-replacement",
+   "file": "src/traps/t07-names.js",
+   "id": "2ww9x2v666t0",
+   "mutator": "logical-operator",
+   "original": "opts.cls || class {}",
+   "replacement": "class {}",
+   "line": 7
+  },
+  {
+   "kind": "named-evaluation-replacement",
+   "file": "src/traps/t07-names.js",
+   "id": "fn7pad36ej9g",
+   "mutator": "logical-operator",
+   "original": "flag || function () {}",
+   "replacement": "function () {}",
+   "line": 8
+  },
+  {
+   "kind": "named-evaluation-replacement",
+   "file": "src/traps/t07-names.js",
+   "id": "8yrxfe6czct7",
+   "mutator": "logical-operator",
+   "original": "opts.fn || function () {}",
+   "replacement": "function () {}",
+   "line": 10
+  },
+  {
+   "kind": "named-evaluation-replacement",
+   "file": "src/traps/t07-names.js",
+   "id": "r152hddmc0xt",
+   "mutator": "logical-operator",
+   "original": "opts.fn || (() => 7)",
+   "replacement": "(() => 7)",
+   "line": 12
+  },
+  {
+   "kind": "named-evaluation-replacement",
+   "file": "src/traps/t07-names.js",
+   "id": "fj25xm38hvnx",
+   "mutator": "logical-operator",
+   "original": "flag || (() => 8)",
+   "replacement": "(() => 8)",
+   "line": 13
+  },
+  {
+   "kind": "named-evaluation-replacement",
+   "file": "src/traps/t07-names.js",
+   "id": "certbk048qpg",
+   "mutator": "logical-operator",
+   "original": "opts.fn ?? (() => 9)",
+   "replacement": "(() => 9)",
+   "line": 13
+  },
+  {
+   "kind": "shadowed-globalThis",
+   "file": "src/traps/t15-shadow-param.js",
+   "line": 2
+  },
+  {
+   "kind": "shadowed-globalThis",
+   "file": "src/traps/t16-shadow-tdz.js",
+   "line": 2
+  }
+ ]
+}

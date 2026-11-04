@@ -1,0 +1,14 @@
+{
+  "name": "fx1",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest --run"
+  },
+  "devDependencies": {
+    "mootant": "file:../../../artifacts/mootant-0.1.0-170ec52.tgz",
+    "vitest": "5.0.5",
+    "vite": "8.3.5"
+  }
+}

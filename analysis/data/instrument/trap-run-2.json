@@ -1,0 +1,26 @@
+{
+ "summary": {
+  "files": 2,
+  "mutants": 170,
+  "aDiffs": 0,
+  "bDiffs": 0,
+  "bLooseOnly": 0,
+  "rawUnparsable": 0
+ },
+ "results": [
+  {
+   "file": "src/traps/t08-classes.js",
+   "mutants": 58,
+   "original": "{\"c\":[3,\"Child\",6,\"base0\",\"base3!\",10,2,true,\"static1?\",3]}",
+   "a": [],
+   "b": []
+  },
+  {
+   "file": "src/traps/t11-destructure.js",
+   "mutants": 112,
+   "original": "{\"a\":[1,2,4,3,5,{\"f\":6},7,9],\"b\":[10,11,3,2,5,{\"f\":6},7,9],\"c\":[0,\"or1\",\"nullish1\",\"f1\",\"and-assign1\"],\"d\":[\"and1\",1,2,\"t1\",\"and-assign1\"],\"e\":[7,3,{\"k1\":\"v1\",\"k2\":\"v2\"}],\"log\":[1,2,4,3,6,5,7,11,2,6,5,7,\"or1\",\"nullish1\",\"f1\",\"assign1\",\"and-assign1\",\"and1\",\"t1\",\"and-assign1\",\"k1\",\"v1\",\"k2\",\"v2\",1,2,3,{\"$function\":\"\"},2]}",
+   "a": [],
+   "b": []
+  }
+ ]
+}

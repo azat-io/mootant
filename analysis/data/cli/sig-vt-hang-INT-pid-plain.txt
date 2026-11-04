@@ -1,0 +1,10 @@
+## before signal (t=4s): mootant pid=1644 leader=1644
+ 1644  1638  1644 Ssl        4 node /home/user/projects/cli/vt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache
+ 1792  1644  1644 Rl         2 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/projects/cli/vt-hang-long/node_modules/vitest/suppre
+## after: leader exit=130
+ 1792     1  1644 Rl         5 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/projects/cli/vt-hang-long/node_modules/vitest/suppre
+## work dirs left in TMPDIR: 2 mootant-bMd6r8 zQmSR7nQoHk0dTqU-pC8J 
+## files in them: 11
+## cache dir: 
+## tail of output:
++ dry run  1 test in 0.4s

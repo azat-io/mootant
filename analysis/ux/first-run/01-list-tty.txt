@@ -1,0 +1,93 @@
+\* mootant list src                                                                preset recommended
+
+mutants         79 in 5 files
+
+src/format.ts
+  1:55  string-literal       'USD' -> ''                0hqs
+  2:10  string-literal       ....toFixed(2)} ${currency}` -> ....toFixed(2)}${currency}`  yef5
+  2:27  number-literal       2 -> 3                     kgza
+  6:10  comparison-operator  count === 1 -> count <= 1  6d3m
+  6:10  comparison-operator  count === 1 -> count >= 1  wn30
+  6:10  comparison-operator  count === 1 -> false       g4g0
+  6:24  string-literal       `${count} ${word}` -> ''   v3v7
+  6:45  string-literal       `${count} ${word}s` -> ''  w76j
+
+src/price.ts
+  10:7   comparison-operator  total >= 100 -> total > 100         69kd
+  10:7   comparison-operator  total >= 100 -> total == 100        6r5y
+  10:7   comparison-operator  total >= 100 -> total >= 99         x223
+  11:12  number-literal       10 -> 11                            yjj1
+  13:10  condition            isMember -> true                    1nm0
+  13:10  condition            isMember -> false                   j1sb
+  13:21  number-literal       5 -> 6                              wjsw
+  13:25  number-literal       0 -> 1                              f6hg
+  17:15  number-literal       0 -> 1                              sx6s
+  19:5   assignment-operator  total += item.price * item.... -> total -= item.price * item....  9wb2
+  19:14  arithmetic-operator  item.price * item.quantity -> item.price / item.quantity  pf5t
+  21:10  arithmetic-operator  Math.round(total * 100) / 100 -> Math.round(total * 100) * 100  x72b
+  21:21  arithmetic-operator  total * 100 -> total / 100          f472
+  21:29  number-literal       100 -> 101                          9ghe
+  21:36  number-literal       100 -> 101                          tam5
+  25:7   comparison-operator  percent <= 0 -> percent < 0         8yjn
+  25:7   comparison-operator  percent <= 0 -> percent == 0        qra1
+  25:7   comparison-operator  percent <= 0 -> percent <= 1        m37n
+  26:12  return-value         total -> 0                          nekb
+  28:10  arithmetic-operator  total - (total * percent) /... -> total + (total * percent) /...  x8bh
+  28:18  arithmetic-operator  (total * percent) / 100 -> (total * percent) * 100  prv2
+  28:19  arithmetic-operator  total * percent -> total / percent  15vz
+  28:38  number-literal       100 -> 101                          tq1v
+
+src/retry.ts
+  3:14  number-literal       3 -> 4                                      wddk
+  6:22  number-literal       1 -> 2                                      079b
+  6:25  comparison-operator  attempt <= attempts -> attempt < attempts   ggxa
+  6:25  comparison-operator  attempt <= attempts -> attempt == attempts  k193
+  8:14  missing-await        await task() -> task()                      wjh2
+  10:7  statement-removal    lastError = error -> ;                      vjfx
+  13:3  statement-removal    throw lastError -> ;                        t0d7
+
+src/slug.ts
+  5:10   method-call          title .trim() .toLowerCase() -> title .trim() .toUpperCase()  yeb8
+  5:10   method-call          title .trim() -> title                  zy0x
+  8:15   regex-pattern        [^a-z0-9] -> [^]                        vhc2
+  8:26   regex-flag           g -> (empty)                            eemk
+  8:29   string-literal       '-' -> ''                               39x5
+  9:15   regex-pattern        ^-+| -> (empty)                         0r1g
+  9:15   regex-pattern        ^ -> (empty)                            axk3
+  9:18   regex-pattern        |-+$ -> (empty)                         3bjx
+  9:21   regex-pattern        $ -> (empty)                            7xh4
+  9:23   regex-flag           g -> (empty)                            qhb8
+  9:26   string-literal       '' -> 'mootant'                         2grx
+  13:10  logical-operator     /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.... -> slug....  t9v9
+  13:11  regex-pattern        ^ -> (empty)                            aths
+  13:12  regex-pattern        [a-z0-9] -> [^]                         h3dy
+  13:25  regex-pattern        [a-z0-9] -> [^]                         mra1
+  13:35  regex-pattern        * -> +                                  cpjd
+  13:36  regex-pattern        $ -> (empty)                            bw7y
+  13:53  comparison-operator  slug.length <= 64 -> slug.length < 64   adp6
+  13:53  comparison-operator  slug.length <= 64 -> slug.length == 64  das5
+  13:53  comparison-operator  slug.length <= 64 -> slug.length <= 65  pj0x
+
+src/user.ts
+  8:26   array-element        [] -> [undefined]                      ydz3
+  9:7    comparison-operator  user.name.trim() === '' -> true        nhvz
+  9:7    comparison-operator  user.name.trim() === '' -> false       b54d
+  9:7    method-call          user.name.trim() -> user.name          24vz
+  10:17  string-literal       'name is required' -> ''               zspa
+  12:7   logical-operator     user.email !== undefined && !user.email.... -> !user.email....  yr3r
+  12:7   logical-operator     ... undefined && !user.email.includes('@') -> ... undefined  r31q
+  12:7   logical-operator     user.email !== undefined && !user.email.includes('@') -> false  4a2n
+  13:17  string-literal       'email is invalid' -> ''               xrj1
+  15:7   logical-operator     user.age !== undefined && (user.age < 0 ... -> (user.age < 0 ...  3nwe
+  15:34  comparison-operator  user.age < 0 -> user.age <= 0          7arf
+  15:34  comparison-operator  user.age < 0 -> user.age != 0          gk79
+  15:34  comparison-operator  user.age < 0 -> user.age < -1          kadg
+  15:50  comparison-operator  user.age > 150 -> user.age >= 150      xsb6
+  15:50  comparison-operator  user.age > 150 -> user.age != 150      n3t3
+  15:50  comparison-operator  user.age > 150 -> user.age > 151       4pyg
+  16:17  string-literal       'age is out of range' -> ''            arae
+  23:10  logical-operator     ....name || user.email || 'Anonymous' -> ....name || user.email  phjc
+  23:10  logical-operator     user.name || user.email -> user.email  0wct
+  23:10  logical-operator     user.name || user.email -> user.name   pcxz
+  23:37  string-literal       'Anonymous' -> ''                      jkbj
+\exit=0

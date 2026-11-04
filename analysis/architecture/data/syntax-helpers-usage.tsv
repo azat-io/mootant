@@ -1,0 +1,41 @@
+method	core_files_using	files
+getLowerBound	0	
+isLogicalOperand	0	
+isPropertyKey	0	
+getMatchResultUse	1	core/mutators/regex-flag.ts
+readTimerCall	1	core/mutators/shared/is-timer-wait.ts
+isRegexOnlyTested	1	core/mutators/regex-pattern.ts
+isGlobalTypeName	1	core/mutators/shared/get-return-value-kind.ts
+getNamedGroupsFact	1	core/mutators/optional-chaining.ts
+isLoggingCall	1	core/mutators/return-value.ts
+getValueBound	1	core/mutators/shared/get-comparison-plan.ts
+getNeverFalsyFact	1	core/mutators/shared/get-nullish-swap-skip.ts
+getTruthOnlyName	1	core/mutators/shared/get-nullish-plan.ts
+isInsideTryBlock	1	core/mutators/missing-await.ts
+isForEachResult	1	core/mutators/update-operator.ts
+isPresenceTest	1	core/mutators/regex-pattern.ts
+isCaughtInLoop	1	core/mutators/optional-chaining.ts
+isNonThenable	1	core/mutators/return-value.ts
+isJoinedArray	1	core/mutators/array-element.ts
+isLogMessage	1	core/mutators/shared/create-run-context.ts
+getExitedLoops	2	core/mutators/shared/get-leave-now-value.ts core/mutators/shared/get-running-value.ts
+getLogicalChain	2	core/mutators/shared/get-owned-constants.ts core/mutators/shared/is-constant-eligible-group.ts
+getChainRoot	2	core/mutators/shared/get-call-target.ts core/mutators/shared/get-call-top.ts
+getStatementList	2	core/mutators/missing-await.ts core/mutators/shared/get-branch-pair.ts
+isConditionTest	2	core/mutators/condition.ts core/mutators/shared/get-condition-constants.ts
+isErrorMessage	2	core/mutators/arithmetic-operator.ts core/mutators/shared/get-literal-skip.ts
+isResultUnused	2	core/mutators/shared/is-timer-wait.ts core/mutators/update-operator.ts
+isTimerDelay	2	core/generate/collect-candidates.ts core/mutators/arithmetic-operator.ts
+isLoopTest	2	core/mutators/condition.ts core/mutators/shared/get-condition-constants.ts
+readsRegexStatics	2	core/mutators/regex-flag.ts core/mutators/regex-pattern.ts
+getMemberPath	3	core/mutators/shared/get-default-option-skip.ts core/mutators/shared/is-typed-by-method-name.ts core/mutators/string-literal.ts
+isLoopAdvanceValue	3	core/generate/collect-candidates.ts core/mutators/missing-await.ts core/mutators/optional-chaining.ts
+isGlobalName	3	core/mutators/array-element.ts core/mutators/shared/get-default-option-skip.ts core/mutators/shared/get-return-value-kind.ts
+advancesLoop	3	core/mutators/assignment-operator.ts core/mutators/statement-removal.ts core/mutators/update-operator.ts
+isValuePosition	4	core/mutators/method-call.ts core/mutators/number-literal.ts core/mutators/optional-chaining.ts core/mutators/shared/get-call-target.ts
+isRuntimeNode	4	core/generate/collect-candidates.ts core/mutators/missing-await.ts core/mutators/return-value.ts core/mutators/shared/has-other-exit.ts
+unwrapParentheses	6	core/mutators/condition.ts core/mutators/method-call.ts core/mutators/number-literal.ts core/mutators/return-value.ts core/mutators/statement-removal.ts core/mutators/unary-operator.ts
+getEnclosingFunction	8	core/mutators/missing-await.ts core/mutators/return-value.ts core/mutators/shared/get-callback-result.ts core/mutators/shared/get-return-value-kind.ts core/mutators/shared/is-boolean-result-source.ts core/mutators/shared/is-comparator-result.ts core/mutators/shared/is-expected-boolean.ts core/mutators/shared/is-no-op-callback-literal.ts
+isBooleanContext	11	core/mutators/method-call.ts core/mutators/number-literal.ts core/mutators/regex-flag.ts core/mutators/shared/get-branch-copy-skip.ts core/mutators/shared/get-group-constant.ts core/mutators/shared/get-logical-drops.ts core/mutators/shared/get-nullish-directions.ts core/mutators/shared/get-nullish-plan.ts core/mutators/shared/get-return-value-kind.ts core/mutators/shared/is-boolean-mode.ts core/mutators/shared/is-lookup-position.ts
+unwrapExpression	11	core/mutators/arithmetic-operator.ts core/mutators/optional-chaining.ts core/mutators/return-value.ts core/mutators/shared/get-call-top.ts core/mutators/shared/get-default-option-skip.ts core/mutators/shared/is-timer-wait.ts core/mutators/statement-removal.ts core/mutators/string-literal.ts core/regex/find-string-match-call.ts core/regex/get-regex-usage.ts core/regex/read-regex-call.ts
+getContextSlot	32	core/mutators/array-element.ts core/mutators/method-call.ts core/mutators/missing-await.ts core/mutators/number-literal.ts core/mutators/regex-flag.ts core/mutators/shared/get-branch-copy-skip.ts core/mutators/shared/get-branch-pair.ts core/mutators/shared/get-callback-owner.ts core/mutators/shared/get-callback-result.ts core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-default-option-skip.ts core/mutators/shared/get-group-constant.ts core/mutators/shared/get-leave-now-value.ts core/mutators/shared/get-literal-skip.ts core/mutators/shared/get-negation-top.ts core/mutators/shared/get-or-default-skip.ts core/mutators/shared/get-owned-constants.ts core/mutators/shared/get-return-value-kind.ts core/mutators/shared/get-running-value.ts core/mutators/shared/has-other-exit.ts core/mutators/shared/is-boolean-mode-operand.ts core/mutators/shared/is-boolean-mode.ts core/mutators/shared/is-boolean-result-source.ts core/mutators/shared/is-comparator-result.ts core/mutators/shared/is-comparison-operand.ts core/mutators/shared/is-constant-eligible-group.ts core/mutators/shared/is-expected-boolean.ts core/mutators/shared/is-void-operand.ts core/mutators/string-literal.ts core/regex/find-string-match-call.ts core/regex/get-regex-usage.ts

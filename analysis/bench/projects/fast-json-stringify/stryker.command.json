@@ -1,0 +1,4 @@
+{
+  "testRunner": "command",
+  "commandRunner": { "command": "node --test" }
+}

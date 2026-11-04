@@ -1,0 +1,263 @@
+=== [run-text] env='' args='run src'
+exit=0 stdout=1029B json=no ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+* mootant run src                                 vitest 5.0.5
+
+dry run         3 tests in 0.2s
+mutants         9 in 1 file, 8 cached
+time            0.6s (start 0.4s, dry run 0.2s, isolated 0.0s)
+
+killed          3
+survived        5
+--- stderr (head):
++ dry run  3 tests in 0.2s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-json] env='' args='run src --json'
+exit=0 stdout=2466B json=valid ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+{"summary":{"coveredScore":37.5,"score":33.33,"totalErrorMutants":0,"duration":{"total":480},"totalNoCoverage":1,"totalSurvived":5,"totalWarnings":0,"totalIgnored":0,"totalTimeout":0,"totalMutants":9,"totalKilled":3,"totalErrors":0,"totalTests":3,"totalFiles":1,"passed":true},"schemaVersion":3,"diagnostics":[],"command":"run","listed":"actionable","runner":"vitest","preset":"recommended","mode":"isolated","mutants":[{"scope":"isAdult","mutator":"comparison-operator","column":10,"status":"Survived","before":["  return age >= 18"],"after":["  return age > 18"],"file":"src/math.js","line":6,"id":--- stderr (head):
++ dry run  3 tests in 0.2s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-json-all] env='' args='run src --json --all'
+exit=0 stdout=2890B json=valid ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+{"summary":{"coveredScore":37.5,"score":33.33,"totalErrorMutants":0,"duration":{"total":574},"totalNoCoverage":1,"totalSurvived":5,"totalWarnings":0,"totalIgnored":0,"totalTimeout":0,"totalMutants":9,"totalKilled":3,"totalErrors":0,"totalTests":3,"totalFiles":1,"passed":true},"schemaVersion":3,"diagnostics":[],"command":"run","listed":"all","runner":"vitest","preset":"recommended","mode":"isolated","mutants":[{"killedIn":"test/math.test.js","mutator":"arithmetic-operator","column":10,"file":"src/math.js","line":2,"id":"y1rmnxcp1zgc","status":"Killed"},{"scope":"isAdult","mutator":"comparison-o--- stderr (head):
++ dry run  3 tests in 0.3s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-thr-pass] env='' args='run src --threshold 30'
+exit=0 stdout=1046B json=no ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+* mootant run src --threshold 30                  vitest 5.0.5
+
+dry run         3 tests in 0.3s
+mutants         9 in 1 file, 8 cached
+time            0.7s (start 0.3s, dry run 0.3s, isolated 0.0s)
+
+killed          3
+survived        5
+--- stderr (head):
++ dry run  3 tests in 0.3s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-thr-fail] env='' args='run src --threshold 50'
+exit=1 stdout=1052B json=no ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+* mootant run src --threshold 50                  vitest 5.0.5
+
+dry run         3 tests in 0.3s
+mutants         9 in 1 file, 8 cached
+time            0.7s (start 0.4s, dry run 0.3s, isolated 0.0s)
+
+killed          3
+survived        5
+--- stderr (head):
++ dry run  3 tests in 0.3s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-thr-fail-json] env='' args='run src --threshold 50 --json'
+exit=1 stdout=2482B json=valid ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+{"summary":{"coveredScore":37.5,"threshold":50,"score":33.33,"totalErrorMutants":0,"duration":{"total":481},"totalNoCoverage":1,"totalSurvived":5,"totalWarnings":0,"totalIgnored":0,"totalTimeout":0,"totalMutants":9,"totalKilled":3,"totalErrors":0,"totalTests":3,"totalFiles":1,"passed":false},"schemaVersion":3,"diagnostics":[],"command":"run","listed":"actionable","runner":"vitest","preset":"recommended","mode":"isolated","mutants":[{"scope":"isAdult","mutator":"comparison-operator","column":10,"status":"Survived","before":["  return age >= 18"],"after":["  return age > 18"],"file":"src/math.js--- stderr (head):
++ dry run  3 tests in 0.2s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-thr-hex] env='' args='run src --threshold 0x10 --json'
+exit=0 stdout=2481B json=valid ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+{"summary":{"coveredScore":37.5,"threshold":16,"score":33.33,"totalErrorMutants":0,"duration":{"total":554},"totalNoCoverage":1,"totalSurvived":5,"totalWarnings":0,"totalIgnored":0,"totalTimeout":0,"totalMutants":9,"totalKilled":3,"totalErrors":0,"totalTests":3,"totalFiles":1,"passed":true},"schemaVersion":3,"diagnostics":[],"command":"run","listed":"actionable","runner":"vitest","preset":"recommended","mode":"isolated","mutants":[{"scope":"isAdult","mutator":"comparison-operator","column":10,"status":"Survived","before":["  return age >= 18"],"after":["  return age > 18"],"file":"src/math.js"--- stderr (head):
++ dry run  3 tests in 0.2s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-thr-exp] env='' args='run src --threshold 1e1 --json'
+exit=0 stdout=2481B json=valid ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+{"summary":{"coveredScore":37.5,"threshold":10,"score":33.33,"totalErrorMutants":0,"duration":{"total":689},"totalNoCoverage":1,"totalSurvived":5,"totalWarnings":0,"totalIgnored":0,"totalTimeout":0,"totalMutants":9,"totalKilled":3,"totalErrors":0,"totalTests":3,"totalFiles":1,"passed":true},"schemaVersion":3,"diagnostics":[],"command":"run","listed":"actionable","runner":"vitest","preset":"recommended","mode":"isolated","mutants":[{"scope":"isAdult","mutator":"comparison-operator","column":10,"status":"Survived","before":["  return age >= 18"],"after":["  return age > 18"],"file":"src/math.js"--- stderr (head):
++ dry run  3 tests in 0.3s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-thr-repeat] env='' args='run src --threshold 10 --threshold 90'
+exit=1 stdout=1052B json=no ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+* mootant run src --threshold 90                  vitest 5.0.5
+
+dry run         3 tests in 0.4s
+mutants         9 in 1 file, 8 cached
+time            0.8s (start 0.4s, dry run 0.4s, isolated 0.0s)
+
+killed          3
+survived        5
+--- stderr (head):
++ dry run  3 tests in 0.4s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-missing-path] env='' args='run nope'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=29B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Path not found: nope.
+=== [run-missing-path-json] env='' args='run nope --json'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=29B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Path not found: nope.
+=== [list-missing-path] env='' args='list nope'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=29B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Path not found: nope.
+=== [list-missing-path-json] env='' args='list nope --json'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=29B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Path not found: nope.
+=== [run-empty-dir] env='' args='run emptydir'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=60B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: No JavaScript or TypeScript files found in emptydir.
+=== [run-empty-dir-json] env='' args='run emptydir --json'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=60B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: No JavaScript or TypeScript files found in emptydir.
+=== [list-empty-dir] env='' args='list emptydir --json'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=60B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: No JavaScript or TypeScript files found in emptydir.
+=== [run-space] env='' args='run 'dir with space' --json'
+exit=0 stdout=3125B json=valid ansi(stdout lines)=0 stderr=27B ansi(stderr lines)=0
+--- stdout (head):
+{"summary":{"score":0,"totalErrorMutants":0,"duration":{"total":338},"totalNoCoverage":9,"totalSurvived":0,"totalWarnings":1,"totalIgnored":0,"totalTimeout":0,"totalMutants":9,"totalKilled":0,"totalErrors":0,"totalTests":0,"totalFiles":1,"passed":true},"schemaVersion":3,"diagnostics":[{"severity":"warning","column":null,"line":null,"message":"No test loaded dir with space/m.js through the test runner's transform: no test imports it, or tests import a built copy, an external or a pre-bundled dependency.","file":"dir with space/m.js","code":"never-served"}],"command":"run","listed":"actionable",--- stderr (head):
++ dry run  0 tests in 0.0s
+=== [run-test-file] env='' args='run test/math.test.js'
+exit=0 stdout=304B json=no ansi(stdout lines)=0 stderr=145B ansi(stderr lines)=0
+--- stdout (head):
+* mootant run test/math.test.js                   vitest 5.0.5
+
+dry run         0 tests in 0.0s
+mutants         0 in 0 files
+time            0.4s (start 0.4s, dry run 0.0s, isolated 0.0s)
+
+killed          0
+survived        0
+--- stderr (head):
++ dry run  0 tests in 0.0s
+! test/math.test.js: test/math.test.js is a test or setup file; mootant run does not mutate it. [test-file-excluded]
+
+=== [run-mutant-unknown] env='' args='run src --mutant zzzzzz'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=35B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Unknown mutant id "zzzzzz".
+=== [run-mutant-short] env='' args='run src --mutant kkd'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=65B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Mutant id "kkd" is too short: give at least 4 characters.
+=== [run-mutant-ok] env='' args='run src --mutant kkdj --json'
+exit=0 stdout=775B json=valid ansi(stdout lines)=0 stderr=71B ansi(stderr lines)=0
+--- stdout (head):
+{"summary":{"coveredScore":0,"score":0,"totalErrorMutants":0,"duration":{"total":531},"totalNoCoverage":0,"totalSurvived":1,"totalWarnings":0,"totalIgnored":0,"totalTimeout":0,"totalMutants":1,"totalKilled":0,"totalErrors":0,"totalTests":3,"totalFiles":1,"passed":true},"schemaVersion":3,"diagnostics":[],"command":"run","listed":"actionable","runner":"vitest","preset":"recommended","mode":"isolated","mutants":[{"scope":"isAdult","mutator":"comparison-operator","column":10,"status":"Survived","before":["  return age >= 18"],"after":["  return age > 18"],"file":"src/math.js","line":6,"id":"kkdjmf--- stderr (head):
++ dry run  3 tests in 0.2s
+Reused a cached verdict for 1 of 1 mutants.
+=== [run-since-norepo] env='' args='run src --since main'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=95B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --since needs a git repository, and /home/user/projects/cli/vt-basic is not inside one.
+=== [run-since-norepo-json] env='' args='run src --since main --json'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=95B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: --since needs a git repository, and /home/user/projects/cli/vt-basic is not inside one.
+=== [run-config-missing] env='' args='run src --config nope.js'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=51B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Cannot find the configuration file nope.js.
+=== [run-config-missing-json] env='' args='run src --config nope.js --json'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=51B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Cannot find the configuration file nope.js.
+=== [run-preset-bad] env='' args='run src --preset nope'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Unknown preset "nope". Available presets: recommended, strict.
+=== [run-preset-bad-json] env='' args='list src --preset nope --json'
+exit=1 stdout=0B json=empty ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+--- stderr (head):
+Error: Unknown preset "nope". Available presets: recommended, strict.
+=== [run-nocolor-flag-ci] env='CI=true' args='run src --no-color'
+exit=0 stdout=1029B json=no ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+* mootant run src                                 vitest 5.0.5
+
+dry run         3 tests in 0.3s
+mutants         9 in 1 file, 8 cached
+time            0.5s (start 0.2s, dry run 0.3s, isolated 0.0s)
+
+killed          3
+survived        5
+--- stderr (head):
++ dry run  3 tests in 0.2s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-color-ci-pipe] env='CI=true' args='run src'
+exit=0 stdout=1643B json=no ansi(stdout lines)=38 stderr=100B ansi(stderr lines)=2
+--- stdout (head):
+^[[92m*^[[39m ^[[1mmootant run src^[[22m                                 ^[[90mvitest 5.0.5^[[39m
+
+^[[90mdry run         ^[[39m3 tests in 0.2s
+^[[90mmutants         ^[[39m9 in 1 file, 8 cached
+^[[90mtime            ^[[39m0.5s (start 0.3s, dry run 0.2s, isolated 0.0s)
+
+^[[90mkilled          ^[[39m3
+^[[90msurvived        ^[[39m^[[92m5^[[39m
+--- stderr (head):
+^[[32m+^[[39m dry run  ^[[90m3 tests in 0.2s^[[39m
+^[[90mReused cached verdicts for 8 of 9 mutants.^[[39m
+=== [run-nocolor-env-ci] env='CI=true NO_COLOR=1' args='run src'
+exit=0 stdout=1029B json=no ansi(stdout lines)=0 stderr=70B ansi(stderr lines)=0
+--- stdout (head):
+* mootant run src                                 vitest 5.0.5
+
+dry run         3 tests in 0.2s
+mutants         9 in 1 file, 8 cached
+time            0.5s (start 0.3s, dry run 0.2s, isolated 0.0s)
+
+killed          3
+survived        5
+--- stderr (head):
++ dry run  3 tests in 0.2s
+Reused cached verdicts for 8 of 9 mutants.
+=== [run-force-color-0] env='FORCE_COLOR=0' args='run src'
+exit=0 stdout=1643B json=no ansi(stdout lines)=38 stderr=100B ansi(stderr lines)=2
+--- stdout (head):
+^[[92m*^[[39m ^[[1mmootant run src^[[22m                                 ^[[90mvitest 5.0.5^[[39m
+
+^[[90mdry run         ^[[39m3 tests in 0.2s
+^[[90mmutants         ^[[39m9 in 1 file, 8 cached
+^[[90mtime            ^[[39m0.5s (start 0.3s, dry run 0.2s, isolated 0.0s)
+
+^[[90mkilled          ^[[39m3
+^[[90msurvived        ^[[39m^[[92m5^[[39m
+--- stderr (head):
+^[[32m+^[[39m dry run  ^[[90m3 tests in 0.2s^[[39m
+^[[90mReused cached verdicts for 8 of 9 mutants.^[[39m
+=== [run-color-flag] env='' args='run src --color'
+exit=0 stdout=1643B json=no ansi(stdout lines)=38 stderr=100B ansi(stderr lines)=2
+--- stdout (head):
+^[[92m*^[[39m ^[[1mmootant run src^[[22m                                 ^[[90mvitest 5.0.5^[[39m
+
+^[[90mdry run         ^[[39m3 tests in 0.2s
+^[[90mmutants         ^[[39m9 in 1 file, 8 cached
+^[[90mtime            ^[[39m0.5s (start 0.3s, dry run 0.2s, isolated 0.0s)
+
+^[[90mkilled          ^[[39m3
+^[[90msurvived        ^[[39m^[[92m5^[[39m
+--- stderr (head):
+^[[32m+^[[39m dry run  ^[[90m3 tests in 0.2s^[[39m
+^[[90mReused cached verdicts for 8 of 9 mutants.^[[39m
+=== [run-json-ci] env='CI=true' args='run src --json'
+exit=0 stdout=2466B json=valid ansi(stdout lines)=0 stderr=100B ansi(stderr lines)=2
+--- stdout (head):
+{"summary":{"coveredScore":37.5,"score":33.33,"totalErrorMutants":0,"duration":{"total":661},"totalNoCoverage":1,"totalSurvived":5,"totalWarnings":0,"totalIgnored":0,"totalTimeout":0,"totalMutants":9,"totalKilled":3,"totalErrors":0,"totalTests":3,"totalFiles":1,"passed":true},"schemaVersion":3,"diagnostics":[],"command":"run","listed":"actionable","runner":"vitest","preset":"recommended","mode":"isolated","mutants":[{"scope":"isAdult","mutator":"comparison-operator","column":10,"status":"Survived","before":["  return age >= 18"],"after":["  return age > 18"],"file":"src/math.js","line":6,"id":--- stderr (head):
+^[[32m+^[[39m dry run  ^[[90m3 tests in 0.3s^[[39m
+^[[90mReused cached verdicts for 8 of 9 mutants.^[[39m

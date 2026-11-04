@@ -1,0 +1,5 @@
+{
+  "name": "repro-skip",
+  "type": "module",
+  "private": true
+}

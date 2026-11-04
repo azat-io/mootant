@@ -1,0 +1,150 @@
+{
+  "g1Limit": 40,
+  "sourceFilesBefore": 653,
+  "sourceFilesAfter": 535,
+  "mergedByG1": 67,
+  "mergedByGroups": 64,
+  "testFilesBefore": 636,
+  "testFilesAfter": 522,
+  "localImportEdgesBefore": 1571,
+  "localImportEdgesAfter": 1409,
+  "biggestMergedModules": [
+    "core/mutators/plans/logical.ts code=504",
+    "core/regex/collect-pattern-changes.ts code=318",
+    "core/generate/collect-candidates.ts code=303",
+    "core/syntax/logging.ts code=294",
+    "core/syntax/loops.ts code=252",
+    "core/mutators/plans/condition.ts code=245",
+    "core/mutators/plans/literal.ts code=239",
+    "adapters/node-test/preload/create-try-tracker.ts code=227",
+    "adapters/vitest/run-dry.ts code=219",
+    "core/cache/prepare-run-cache.ts code=215",
+    "cli/html/build-html-report.ts code=193",
+    "core/files/expand-paths.ts code=190",
+    "core/mutators/plans/ownership.ts code=162",
+    "core/syntax/read-timer-call.ts code=157",
+    "core/git/read-changed-lines.ts code=155"
+  ],
+  "mutatorClosures": {
+    "arithmetic-operator": {
+      "files": 5,
+      "modules": 4,
+      "filesWithFacade": 19,
+      "modulesWithFacade": 17
+    },
+    "array-element": {
+      "files": 3,
+      "modules": 3,
+      "filesWithFacade": 12,
+      "modulesWithFacade": 12
+    },
+    "assignment-operator": {
+      "files": 17,
+      "modules": 8,
+      "filesWithFacade": 27,
+      "modulesWithFacade": 16
+    },
+    "bitwise-operator": {
+      "files": 2,
+      "modules": 2,
+      "filesWithFacade": 2,
+      "modulesWithFacade": 2
+    },
+    "boolean-literal": {
+      "files": 84,
+      "modules": 58,
+      "filesWithFacade": 119,
+      "modulesWithFacade": 90
+    },
+    "comparison-operator": {
+      "files": 49,
+      "modules": 42,
+      "filesWithFacade": 67,
+      "modulesWithFacade": 59
+    },
+    "condition": {
+      "files": 84,
+      "modules": 58,
+      "filesWithFacade": 119,
+      "modulesWithFacade": 90
+    },
+    "logical-operator": {
+      "files": 84,
+      "modules": 58,
+      "filesWithFacade": 119,
+      "modulesWithFacade": 90
+    },
+    "method-call": {
+      "files": 26,
+      "modules": 25,
+      "filesWithFacade": 38,
+      "modulesWithFacade": 37
+    },
+    "missing-await": {
+      "files": 21,
+      "modules": 20,
+      "filesWithFacade": 46,
+      "modulesWithFacade": 40
+    },
+    "number-literal": {
+      "files": 86,
+      "modules": 60,
+      "filesWithFacade": 125,
+      "modulesWithFacade": 95
+    },
+    "object-property": {
+      "files": 3,
+      "modules": 3,
+      "filesWithFacade": 9,
+      "modulesWithFacade": 9
+    },
+    "optional-chaining": {
+      "files": 5,
+      "modules": 4,
+      "filesWithFacade": 36,
+      "modulesWithFacade": 28
+    },
+    "regex-flag": {
+      "files": 22,
+      "modules": 18,
+      "filesWithFacade": 43,
+      "modulesWithFacade": 38
+    },
+    "regex-pattern": {
+      "files": 25,
+      "modules": 18,
+      "filesWithFacade": 39,
+      "modulesWithFacade": 32
+    },
+    "return-value": {
+      "files": 86,
+      "modules": 59,
+      "filesWithFacade": 125,
+      "modulesWithFacade": 92
+    },
+    "statement-removal": {
+      "files": 88,
+      "modules": 62,
+      "filesWithFacade": 128,
+      "modulesWithFacade": 97
+    },
+    "string-literal": {
+      "files": 95,
+      "modules": 67,
+      "filesWithFacade": 129,
+      "modulesWithFacade": 97
+    },
+    "unary-operator": {
+      "files": 6,
+      "modules": 6,
+      "filesWithFacade": 12,
+      "modulesWithFacade": 12
+    },
+    "update-operator": {
+      "files": 0,
+      "modules": 0,
+      "filesWithFacade": 16,
+      "modulesWithFacade": 14
+    }
+  }
+}

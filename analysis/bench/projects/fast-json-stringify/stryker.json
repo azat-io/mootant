@@ -1,0 +1,7 @@
+{
+  "testRunner": "tap",
+  "plugins": ["@stryker-mutator/tap-runner"],
+  "tap": {
+    "testFiles": ["test/**/*.test.js"]
+  }
+}

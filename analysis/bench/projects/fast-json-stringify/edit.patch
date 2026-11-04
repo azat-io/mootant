@@ -1,0 +1,24 @@
+diff --git a/lib/serializer.js b/lib/serializer.js
+index 0cb7f0e..9c7cfa2 100644
+--- a/lib/serializer.js
++++ b/lib/serializer.js
+@@ -78,15 +78,15 @@ module.exports = class Serializer {
+ 
+   asNumber (i) {
+     // fast cast to number
+-    const num = Number(i)
++    const value = Number(i)
+     // check if number is NaN
+     // eslint-disable-next-line no-self-compare
+-    if (num !== num) {
++    if (value !== value) {
+       throw new Error(`The value "${i}" cannot be converted to a number.`)
+-    } else if (num === Infinity || num === -Infinity) {
++    } else if (value === Infinity || value === -Infinity) {
+       return 'null'
+     } else {
+-      return '' + num
++      return '' + value
+     }
+   }
+ 

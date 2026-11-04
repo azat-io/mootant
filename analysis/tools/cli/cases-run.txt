@@ -1,0 +1,33 @@
+run-text|-|run src
+run-json|-|run src --json
+run-json-all|-|run src --json --all
+run-thr-pass|-|run src --threshold 30
+run-thr-fail|-|run src --threshold 50
+run-thr-fail-json|-|run src --threshold 50 --json
+run-thr-hex|-|run src --threshold 0x10 --json
+run-thr-exp|-|run src --threshold 1e1 --json
+run-thr-repeat|-|run src --threshold 10 --threshold 90
+run-missing-path|-|run nope
+run-missing-path-json|-|run nope --json
+list-missing-path|-|list nope
+list-missing-path-json|-|list nope --json
+run-empty-dir|-|run emptydir
+run-empty-dir-json|-|run emptydir --json
+list-empty-dir|-|list emptydir --json
+run-space|-|run 'dir with space' --json
+run-test-file|-|run test/math.test.js
+run-mutant-unknown|-|run src --mutant zzzzzz
+run-mutant-short|-|run src --mutant kkd
+run-mutant-ok|-|run src --mutant kkdj --json
+run-since-norepo|-|run src --since main
+run-since-norepo-json|-|run src --since main --json
+run-config-missing|-|run src --config nope.js
+run-config-missing-json|-|run src --config nope.js --json
+run-preset-bad|-|run src --preset nope
+run-preset-bad-json|-|list src --preset nope --json
+run-nocolor-flag-ci|CI=true|run src --no-color
+run-color-ci-pipe|CI=true|run src
+run-nocolor-env-ci|CI=true NO_COLOR=1|run src
+run-force-color-0|FORCE_COLOR=0|run src
+run-color-flag|-|run src --color
+run-json-ci|CI=true|run src --json

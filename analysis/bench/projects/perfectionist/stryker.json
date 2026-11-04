@@ -1,0 +1,5 @@
+{
+  "testRunner": "vitest",
+  "packageManager": "pnpm",
+  "plugins": ["@stryker-mutator/vitest-runner"]
+}

@@ -1,0 +1,41 @@
+=== detached_and_worktree (04:16:21)
+  EXPECT: lines 2 and 5
+  [detached] --since main exit=0
+    "src/lines.ts": lines 5
+  EXPECT (worktree): line 6
+  [worktree] --since HEAD exit=0
+    "src/lines.ts": lines 6
+=== merge_conflict (04:16:23)
+  state: UU src/lines.ts 
+  EXPECT: line 3 (resolved, not yet added)
+  [unmerged] --since main exit=0
+    "src/lines.ts": lines 3
+  [resolved] --since main exit=0
+    "src/lines.ts": lines 3
+=== symlinks (04:16:24)
+  EXPECT: target.ts line 5
+  [target] --since HEAD exit=0
+    "src/target.ts": lines 5
+  link retargeted to lines.ts, lines.ts line 4 changed. EXPECT: lines.ts line 4 (and maybe the whole of lines.ts through the link)
+  [retarget] --since HEAD exit=0
+    "src/lines.ts": lines 1
+=== user_config (04:16:25)
+  EXPECT: line 2 under every git configuration
+  [cfg-diff.noprefix] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-diff.mnemonicPrefix] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-diff.algorithm] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-color.diff] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-diff.relative] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-diff.external] --since HEAD exit=0
+    "src/lines.ts": lines 2
+  [cfg-core.quotePath] --since HEAD exit=0
+    "src/lines.ts": lines 2
+=== submodule (04:16:29)
+  EXPECT: ? (submodules are ignored by design)
+  [sub] --since HEAD exit=0
+    (no mutants selected)

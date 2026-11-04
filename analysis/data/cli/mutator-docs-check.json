@@ -1,0 +1,1921 @@
+[
+ {
+  "mutator": "arithmetic-operator",
+  "file": "doccases/arithmetic-operator/case00.ts",
+  "before": "subtotal + shipping",
+  "after": "subtotal - shipping",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "arithmetic-operator",
+    "before": "subtotal + shipping",
+    "after": "subtotal"
+   },
+   {
+    "preset": "strict",
+    "mutator": "arithmetic-operator",
+    "before": "subtotal + shipping",
+    "after": "subtotal"
+   }
+  ]
+ },
+ {
+  "mutator": "arithmetic-operator",
+  "file": "doccases/arithmetic-operator/case01.ts",
+  "before": "paid - total",
+  "after": "paid + total",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "arithmetic-operator",
+  "file": "doccases/arithmetic-operator/case02.ts",
+  "before": "price * quantity",
+  "after": "price / quantity",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "arithmetic-operator",
+  "file": "doccases/arithmetic-operator/case03.ts",
+  "before": "total / count",
+  "after": "total * count",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "arithmetic-operator",
+  "file": "doccases/arithmetic-operator/case04.ts",
+  "before": "items % perBox",
+  "after": "items * perBox",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "arithmetic-operator",
+  "file": "doccases/arithmetic-operator/case05.ts",
+  "before": "side ** 2",
+  "after": "side * 2",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "array-element",
+  "file": "doccases/array-element/case00.ts",
+  "before": "[subtotal, shipping, tax]",
+  "after": "[subtotal, tax]",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "array-element",
+  "file": "doccases/array-element/case01.ts",
+  "before": "[...items, gift]",
+  "after": "[gift]",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "array-element",
+  "file": "doccases/array-element/case02.ts",
+  "before": "[...items, gift]",
+  "after": "[...items]",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "array-element",
+  "file": "doccases/array-element/case03.ts",
+  "before": "[item]",
+  "after": "[]",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "array-element",
+  "file": "doccases/array-element/case04.ts",
+  "before": "let coupons: string[] = []",
+  "after": "let coupons: string[] = [undefined]",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "array-element",
+  "file": "doccases/array-element/case05.ts",
+  "before": "setItems([])",
+  "after": "setItems([undefined])",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case00.ts",
+  "before": "total += shipping",
+  "after": "total -= shipping",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "statement-removal",
+    "before": "total += shipping",
+    "after": ";"
+   },
+   {
+    "preset": "strict",
+    "mutator": "statement-removal",
+    "before": "total += shipping",
+    "after": ";"
+   }
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case01.ts",
+  "before": "total -= discount",
+  "after": "total += discount",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case02.ts",
+  "before": "price *= quantity",
+  "after": "price /= quantity",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case03.ts",
+  "before": "amount /= 100",
+  "after": "amount *= 100",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case04.ts",
+  "before": "cents %= 100",
+  "after": "cents *= 100",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case05.ts",
+  "before": "rate **= years",
+  "after": "rate *= years",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case06.ts",
+  "before": "bits <<= 2",
+  "after": "bits >>= 2",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case07.ts",
+  "before": "bits >>= 2",
+  "after": "bits <<= 2",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case08.ts",
+  "before": "hash >>>= 0",
+  "after": "hash >>= 0",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case09.ts",
+  "before": "options &= allowed",
+  "after": "options |= allowed",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case10.ts",
+  "before": "options |= GIFT_WRAP",
+  "after": "options &= GIFT_WRAP",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "assignment-operator",
+  "file": "doccases/assignment-operator/case11.ts",
+  "before": "options ^= EXPRESS",
+  "after": "options |= EXPRESS",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "bitwise-operator",
+  "file": "doccases/bitwise-operator/case00.ts",
+  "before": "options & EXPRESS",
+  "after": "options | EXPRESS",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "bitwise-operator",
+  "file": "doccases/bitwise-operator/case01.ts",
+  "before": "options | EXPRESS",
+  "after": "options & EXPRESS",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "bitwise-operator",
+  "file": "doccases/bitwise-operator/case02.ts",
+  "before": "options ^ GIFT_WRAP",
+  "after": "options | GIFT_WRAP",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "bitwise-operator",
+  "file": "doccases/bitwise-operator/case03.ts",
+  "before": "1 << level",
+  "after": "1 >> level",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "bitwise-operator",
+  "file": "doccases/bitwise-operator/case04.ts",
+  "before": "cents >> 1",
+  "after": "cents << 1",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "bitwise-operator",
+  "file": "doccases/bitwise-operator/case05.ts",
+  "before": "hash >>> 0",
+  "after": "hash >> 0",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "boolean-literal",
+  "file": "doccases/boolean-literal/case00.ts",
+  "before": "let freeShipping = false",
+  "after": "let freeShipping = true",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "boolean-literal",
+  "file": "doccases/boolean-literal/case01.ts",
+  "before": "let options = { giftWrap: true }",
+  "after": "let options = { giftWrap: false }",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "boolean-literal",
+  "file": "doccases/boolean-literal/case02.ts",
+  "before": "applyCoupon(cart, true)",
+  "after": "applyCoupon(cart, false)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "boolean-literal",
+  "file": "doccases/boolean-literal/case03.ts",
+  "before": "function quote(express = false) {",
+  "after": "function quote(express = true) {",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "boolean-literal",
+  "file": "doccases/boolean-literal/case04.ts",
+  "before": "while (true)",
+  "after": "while (false)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case00.ts",
+  "before": "price < budget",
+  "after": "price <= budget`, `price != budget`, `false",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price < budget",
+    "after": "price <= budget"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price < budget",
+    "after": "price != budget"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price < budget",
+    "after": "false"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price < budget",
+    "after": "price <= budget"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price < budget",
+    "after": "price != budget"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price < budget",
+    "after": "false"
+   }
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case01.ts",
+  "before": "price <= budget",
+  "after": "price < budget`, `price == budget`, `true",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price <= budget",
+    "after": "price < budget"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price <= budget",
+    "after": "price == budget"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price <= budget",
+    "after": "true"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price <= budget",
+    "after": "price < budget"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price <= budget",
+    "after": "price == budget"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price <= budget",
+    "after": "true"
+   }
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case02.ts",
+  "before": "price > budget",
+  "after": "price >= budget`, `price != budget`, `false",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price > budget",
+    "after": "price >= budget"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price > budget",
+    "after": "price != budget"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price > budget",
+    "after": "false"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price > budget",
+    "after": "price >= budget"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price > budget",
+    "after": "price != budget"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price > budget",
+    "after": "false"
+   }
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case03.ts",
+  "before": "price >= budget",
+  "after": "price > budget`, `price == budget`, `true",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price >= budget",
+    "after": "price > budget"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price >= budget",
+    "after": "price == budget"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price >= budget",
+    "after": "true"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price >= budget",
+    "after": "price > budget"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price >= budget",
+    "after": "price == budget"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price >= budget",
+    "after": "true"
+   }
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case04.ts",
+  "before": "price === oldPrice",
+  "after": "price <= oldPrice`, `price >= oldPrice`, `false",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price === oldPrice",
+    "after": "true"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price === oldPrice",
+    "after": "false"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price === oldPrice",
+    "after": "true"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price === oldPrice",
+    "after": "false"
+   }
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case05.ts",
+  "before": "price !== oldPrice",
+  "after": "price < oldPrice`, `price > oldPrice`, `true",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price !== oldPrice",
+    "after": "true"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "price !== oldPrice",
+    "after": "false"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price !== oldPrice",
+    "after": "true"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "price !== oldPrice",
+    "after": "false"
+   }
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case06.ts",
+  "before": "tier === 'gold'",
+  "after": "true`, `false",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "tier === 'gold'",
+    "after": "true"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "tier === 'gold'",
+    "after": "false"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "tier === 'gold'",
+    "after": "true"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "tier === 'gold'",
+    "after": "false"
+   }
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case07.ts",
+  "before": "code in coupons",
+  "after": "true`, `false",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "code in coupons",
+    "after": "true"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "code in coupons",
+    "after": "false"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "code in coupons",
+    "after": "true"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "code in coupons",
+    "after": "false"
+   }
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case08.ts",
+  "before": "value instanceof Date",
+  "after": "true`, `false",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "value instanceof Date",
+    "after": "true"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "comparison-operator",
+    "before": "value instanceof Date",
+    "after": "false"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "value instanceof Date",
+    "after": "true"
+   },
+   {
+    "preset": "strict",
+    "mutator": "comparison-operator",
+    "before": "value instanceof Date",
+    "after": "false"
+   }
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case09.ts",
+  "before": "price < 5",
+  "after": "price < 4",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case10.ts",
+  "before": "weight <= 20",
+  "after": "weight <= 21",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case11.ts",
+  "before": "quantity > 10",
+  "after": "quantity > 11",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case12.ts",
+  "before": "total >= 50",
+  "after": "total >= 49",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "comparison-operator",
+  "file": "doccases/comparison-operator/case13.ts",
+  "before": "skus.indexOf(sku) > -1",
+  "after": "skus.indexOf(sku) > 0",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "condition",
+  "file": "doccases/condition/case00.ts",
+  "before": "if (cart.coupon)",
+  "after": "if (true)` and `if (false)",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "condition",
+    "before": "if (cart.coupon) {}",
+    "after": "if (true) {}"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "condition",
+    "before": "if (cart.coupon) {}",
+    "after": "if (false) {}"
+   },
+   {
+    "preset": "strict",
+    "mutator": "condition",
+    "before": "if (cart.coupon) {}",
+    "after": "if (true) {}"
+   },
+   {
+    "preset": "strict",
+    "mutator": "condition",
+    "before": "if (cart.coupon) {}",
+    "after": "if (false) {}"
+   }
+  ]
+ },
+ {
+  "mutator": "condition",
+  "file": "doccases/condition/case01.ts",
+  "before": "cart.express ? 15 : 5",
+  "after": "true ? 15 : 5` and `false ? 15 : 5",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "condition",
+    "before": "cart.express ? 15 : 5",
+    "after": "true ? 15 : 5"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "condition",
+    "before": "cart.express ? 15 : 5",
+    "after": "false ? 15 : 5"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "number-literal",
+    "before": "cart.express ? 15 : 5",
+    "after": "cart.express ? 16 : 5"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "number-literal",
+    "before": "cart.express ? 15 : 5",
+    "after": "cart.express ? 15 : 6"
+   },
+   {
+    "preset": "strict",
+    "mutator": "condition",
+    "before": "cart.express ? 15 : 5",
+    "after": "true ? 15 : 5"
+   },
+   {
+    "preset": "strict",
+    "mutator": "condition",
+    "before": "cart.express ? 15 : 5",
+    "after": "false ? 15 : 5"
+   },
+   {
+    "preset": "strict",
+    "mutator": "number-literal",
+    "before": "cart.express ? 15 : 5",
+    "after": "cart.express ? 16 : 5"
+   },
+   {
+    "preset": "strict",
+    "mutator": "number-literal",
+    "before": "cart.express ? 15 : 5",
+    "after": "cart.express ? 15 : 6"
+   }
+  ]
+ },
+ {
+  "mutator": "condition",
+  "file": "doccases/condition/case02.ts",
+  "before": "while (page.length)",
+  "after": "while (false)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "condition",
+  "file": "doccases/condition/case03.ts",
+  "before": "!product.inStock",
+  "after": "true` and `false",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "condition",
+    "before": "!product.inStock",
+    "after": "true"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "condition",
+    "before": "!product.inStock",
+    "after": "false"
+   },
+   {
+    "preset": "strict",
+    "mutator": "condition",
+    "before": "!product.inStock",
+    "after": "true"
+   },
+   {
+    "preset": "strict",
+    "mutator": "condition",
+    "before": "!product.inStock",
+    "after": "false"
+   }
+  ]
+ },
+ {
+  "mutator": "condition",
+  "file": "doccases/condition/case04.ts",
+  "before": "for (;;)",
+  "after": "for (;false;)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case00.ts",
+  "before": "inStock && hasAddress",
+  "after": "hasAddress",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case01.ts",
+  "before": "inStock && hasAddress",
+  "after": "inStock",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case02.ts",
+  "before": "title || 'Untitled'",
+  "after": "'Untitled'",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case03.ts",
+  "before": "title || 'Untitled'",
+  "after": "title",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case04.ts",
+  "before": "discount ?? 0",
+  "after": "0",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case05.ts",
+  "before": "discount ?? 0",
+  "after": "discount",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case06.ts",
+  "before": "name || 'Guest'",
+  "after": "name ?? 'Guest'",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case07.ts",
+  "before": "quantity ?? 1",
+  "after": "quantity || 1",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case08.ts",
+  "before": "number",
+  "after": "0",
+  "ok": false,
+  "presets": [],
+  "produced": []
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case09.ts",
+  "before": "string`, `bigint` or `boolean",
+  "after": "''`, `0n` or `false",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "diagnostic": "Expected a semicolon or an implicit semicolon after a statement, but found none"
+   },
+   {
+    "preset": "strict",
+    "diagnostic": "Expected a semicolon or an implicit semicolon after a statement, but found none"
+   }
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case10.ts",
+  "before": "isSignedIn && hasItems && isPaid",
+  "after": "false",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "logical-operator",
+    "before": "isSignedIn && hasItems && isPaid",
+    "after": "isSignedIn && hasItems"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "logical-operator",
+    "before": "isSignedIn && hasItems && isPaid",
+    "after": "hasItems && isPaid"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "logical-operator",
+    "before": "isSignedIn && hasItems && isPaid",
+    "after": "isSignedIn && isPaid"
+   },
+   {
+    "preset": "strict",
+    "mutator": "logical-operator",
+    "before": "isSignedIn && hasItems && isPaid",
+    "after": "isSignedIn && hasItems"
+   },
+   {
+    "preset": "strict",
+    "mutator": "logical-operator",
+    "before": "isSignedIn && hasItems && isPaid",
+    "after": "hasItems && isPaid"
+   },
+   {
+    "preset": "strict",
+    "mutator": "logical-operator",
+    "before": "isSignedIn && hasItems && isPaid",
+    "after": "isSignedIn && isPaid"
+   }
+  ]
+ },
+ {
+  "mutator": "logical-operator",
+  "file": "doccases/logical-operator/case11.ts",
+  "before": "isMember || hasCoupon",
+  "after": "true",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "logical-operator",
+    "before": "isMember || hasCoupon",
+    "after": "hasCoupon"
+   },
+   {
+    "preset": "recommended",
+    "mutator": "logical-operator",
+    "before": "isMember || hasCoupon",
+    "after": "isMember"
+   },
+   {
+    "preset": "strict",
+    "mutator": "logical-operator",
+    "before": "isMember || hasCoupon",
+    "after": "hasCoupon"
+   },
+   {
+    "preset": "strict",
+    "mutator": "logical-operator",
+    "before": "isMember || hasCoupon",
+    "after": "isMember ?? hasCoupon"
+   }
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case00.ts",
+  "before": "code.startsWith('SHIP')",
+  "after": "code.endsWith('SHIP')",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case01.ts",
+  "before": "label.toLowerCase()",
+  "after": "label.toUpperCase()",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case02.ts",
+  "before": "label.toLocaleLowerCase()",
+  "after": "label.toLocaleUpperCase()",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case03.ts",
+  "before": "name.trimStart()",
+  "after": "name.trimEnd()",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case04.ts",
+  "before": "sku.padStart(6, '0')",
+  "after": "sku.padEnd(6, '0')",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case05.ts",
+  "before": "items.every(isInStock)",
+  "after": "items.some(isInStock)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case06.ts",
+  "before": "Math.max(total, 0)",
+  "after": "Math.min(total, 0)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case07.ts",
+  "before": "Math.floor(price)",
+  "after": "Math.ceil(price)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case08.ts",
+  "before": "input.trim()",
+  "after": "input",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case09.ts",
+  "before": "name.charAt(0)",
+  "after": "name",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case10.ts",
+  "before": "title.substring(0, 20)",
+  "after": "title",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case11.ts",
+  "before": "code.substr(2)",
+  "after": "code",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case12.ts",
+  "before": "card.slice(-4)",
+  "after": "card",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case13.ts",
+  "before": "items.slice(0, 3)",
+  "after": "items",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case14.ts",
+  "before": "items.filter(isInStock)",
+  "after": "items",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case15.ts",
+  "before": "items.sort(byPrice)",
+  "after": "items",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case16.ts",
+  "before": "items.toSorted(byPrice)",
+  "after": "items",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case17.ts",
+  "before": "orders.reverse()",
+  "after": "orders",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "method-call",
+  "file": "doccases/method-call/case18.ts",
+  "before": "orders.toReversed()",
+  "after": "orders",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "number-literal",
+  "file": "doccases/number-literal/case00.ts",
+  "before": "FREE_SHIPPING_FROM = 50",
+  "after": "FREE_SHIPPING_FROM = 51",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "number-literal",
+  "file": "doccases/number-literal/case01.ts",
+  "before": "TAX_RATE = 0.2",
+  "after": "TAX_RATE = 1.2",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "number-literal",
+  "file": "doccases/number-literal/case02.ts",
+  "before": "REFUND = -5",
+  "after": "REFUND = -4",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "number-literal",
+  "file": "doccases/number-literal/case03.ts",
+  "before": "items[items.length - 1]",
+  "after": "items[items.length - 2]",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "number-literal",
+  "file": "doccases/number-literal/case04.ts",
+  "before": "Math.min(stock, 10)",
+  "after": "Math.min(stock, 11)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "number-literal",
+  "file": "doccases/number-literal/case05.ts",
+  "before": "price.toFixed(2)",
+  "after": "price.toFixed(3)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "number-literal",
+  "file": "doccases/number-literal/case06.ts",
+  "before": "PRICE_CENTS = 1999n",
+  "after": "PRICE_CENTS = 2000n",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "object-property",
+  "file": "doccases/object-property/case00.ts",
+  "before": "{ name, price }",
+  "after": "{ price }",
+  "ok": false,
+  "presets": [],
+  "produced": []
+ },
+ {
+  "mutator": "object-property",
+  "file": "doccases/object-property/case01.ts",
+  "before": "{ id: product.id, quantity }",
+  "after": "{ quantity }",
+  "ok": false,
+  "presets": [],
+  "produced": []
+ },
+ {
+  "mutator": "object-property",
+  "file": "doccases/object-property/case02.ts",
+  "before": "{ ...cart, coupon }",
+  "after": "{ coupon }",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "diagnostic": "Unexpected token"
+   },
+   {
+    "preset": "strict",
+    "diagnostic": "Unexpected token"
+   }
+  ]
+ },
+ {
+  "mutator": "object-property",
+  "file": "doccases/object-property/case03.ts",
+  "before": "{ ...cart, coupon }",
+  "after": "{ ...cart }",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "diagnostic": "Unexpected token"
+   },
+   {
+    "preset": "strict",
+    "diagnostic": "Unexpected token"
+   }
+  ]
+ },
+ {
+  "mutator": "optional-chaining",
+  "file": "doccases/optional-chaining/case00.ts",
+  "before": "coupon?.code",
+  "after": "coupon.code",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "optional-chaining",
+  "file": "doccases/optional-chaining/case01.ts",
+  "before": "product?.['sku']",
+  "after": "product['sku']",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "optional-chaining",
+  "file": "doccases/optional-chaining/case02.ts",
+  "before": "onChange?.(0)",
+  "after": "onChange(0)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "regex-flag",
+  "file": "doccases/regex-flag/case00.ts",
+  "before": "/^save\\d+$/i",
+  "after": "/^save\\d+$/",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "regex-flag",
+  "file": "doccases/regex-flag/case01.ts",
+  "before": "/^SKU-\\d+$/m",
+  "after": "/^SKU-\\d+$/",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "regex-flag",
+  "file": "doccases/regex-flag/case02.ts",
+  "before": "/<note>.*<\\/note>/s",
+  "after": "/<note>.*<\\/note>/",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "regex-flag",
+  "file": "doccases/regex-flag/case03.ts",
+  "before": "name.replace(/\\s+/g, '-')",
+  "after": "name.replace(/\\s+/, '-')",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "regex-flag",
+  "file": "doccases/regex-flag/case04.ts",
+  "before": "text.match(/#\\w+/g)",
+  "after": "text.match(/#\\w+/)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "return-value",
+  "file": "doccases/return-value/case00.ts",
+  "before": "product.name",
+  "after": "''",
+  "ok": false,
+  "presets": [],
+  "produced": []
+ },
+ {
+  "mutator": "return-value",
+  "file": "doccases/return-value/case01.ts",
+  "before": "cart.items.length",
+  "after": "0",
+  "ok": false,
+  "presets": [],
+  "produced": []
+ },
+ {
+  "mutator": "return-value",
+  "file": "doccases/return-value/case02.ts",
+  "before": "order.cents",
+  "after": "0n",
+  "ok": false,
+  "presets": [],
+  "produced": []
+ },
+ {
+  "mutator": "return-value",
+  "file": "doccases/return-value/case03.ts",
+  "before": "cart.items",
+  "after": "[]",
+  "ok": false,
+  "presets": [],
+  "produced": []
+ },
+ {
+  "mutator": "return-value",
+  "file": "doccases/return-value/case04.ts",
+  "before": "hasCoupon(cart)",
+  "after": "true` and `false",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "statement-removal",
+    "before": "hasCoupon(cart)",
+    "after": ";"
+   },
+   {
+    "preset": "strict",
+    "mutator": "statement-removal",
+    "before": "hasCoupon(cart)",
+    "after": ";"
+   }
+  ]
+ },
+ {
+  "mutator": "return-value",
+  "file": "doccases/return-value/case05.ts",
+  "before": "lookup(sku)",
+  "after": "undefined",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "statement-removal",
+    "before": "lookup(sku)",
+    "after": ";"
+   },
+   {
+    "preset": "strict",
+    "mutator": "statement-removal",
+    "before": "lookup(sku)",
+    "after": ";"
+   }
+  ]
+ },
+ {
+  "mutator": "return-value",
+  "file": "doccases/return-value/case06.ts",
+  "before": "fetchStock(sku)",
+  "after": "Promise.resolve(0)",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "statement-removal",
+    "before": "fetchStock(sku)",
+    "after": ";"
+   },
+   {
+    "preset": "strict",
+    "mutator": "statement-removal",
+    "before": "fetchStock(sku)",
+    "after": ";"
+   }
+  ]
+ },
+ {
+  "mutator": "return-value",
+  "file": "doccases/return-value/case07.ts",
+  "before": "fetchProduct(id)",
+  "after": "Promise.resolve(null)",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "statement-removal",
+    "before": "fetchProduct(id)",
+    "after": ";"
+   },
+   {
+    "preset": "strict",
+    "mutator": "statement-removal",
+    "before": "fetchProduct(id)",
+    "after": ";"
+   }
+  ]
+ },
+ {
+  "mutator": "return-value",
+  "file": "doccases/return-value/case08.ts",
+  "before": "loadCart(id)",
+  "after": "Promise.resolve(void 0)",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "mutator": "statement-removal",
+    "before": "loadCart(id)",
+    "after": ";"
+   },
+   {
+    "preset": "strict",
+    "mutator": "statement-removal",
+    "before": "loadCart(id)",
+    "after": ";"
+   }
+  ]
+ },
+ {
+  "mutator": "statement-removal",
+  "file": "doccases/statement-removal/case00.ts",
+  "before": "await`, `new` or `delete",
+  "after": "delete reserved[sku]",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "diagnostic": "Expected a semicolon or an implicit semicolon after a statement, but found none"
+   },
+   {
+    "preset": "strict",
+    "diagnostic": "Expected a semicolon or an implicit semicolon after a statement, but found none"
+   }
+  ]
+ },
+ {
+  "mutator": "statement-removal",
+  "file": "doccases/statement-removal/case01.ts",
+  "before": "void` before a call, `new` or `await",
+  "after": "void sendReceipt(order)",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "diagnostic": "Expected a semicolon or an implicit semicolon after a statement, but found none"
+   },
+   {
+    "preset": "strict",
+    "diagnostic": "Expected a semicolon or an implicit semicolon after a statement, but found none"
+   }
+  ]
+ },
+ {
+  "mutator": "statement-removal",
+  "file": "doccases/statement-removal/case02.ts",
+  "before": "throw",
+  "after": "throw new Error('Unknown country')",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "diagnostic": "Illegal newline after throw"
+   },
+   {
+    "preset": "recommended",
+    "diagnostic": "Unexpected token"
+   },
+   {
+    "preset": "strict",
+    "diagnostic": "Illegal newline after throw"
+   },
+   {
+    "preset": "strict",
+    "diagnostic": "Unexpected token"
+   }
+  ]
+ },
+ {
+  "mutator": "unary-operator",
+  "file": "doccases/unary-operator/case00.ts",
+  "before": "-total",
+  "after": "total",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "unary-operator",
+  "file": "doccases/unary-operator/case01.ts",
+  "before": "-1",
+  "after": "1",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "unary-operator",
+  "file": "doccases/unary-operator/case02.ts",
+  "before": "+input",
+  "after": "input",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "unary-operator",
+  "file": "doccases/unary-operator/case03.ts",
+  "before": "~GIFT_WRAP",
+  "after": "GIFT_WRAP",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "unary-operator",
+  "file": "doccases/unary-operator/case04.ts",
+  "before": "~~(quantity / perBox)",
+  "after": "(quantity / perBox)",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "update-operator",
+  "file": "doccases/update-operator/case00.ts",
+  "before": "count++",
+  "after": "count--",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "update-operator",
+  "file": "doccases/update-operator/case01.ts",
+  "before": "cart.quantity--",
+  "after": "cart.quantity++",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "update-operator",
+  "file": "doccases/update-operator/case02.ts",
+  "before": "++lastOrderNumber",
+  "after": "--lastOrderNumber",
+  "ok": true,
+  "presets": [
+   "recommended",
+   "strict"
+  ]
+ },
+ {
+  "mutator": "update-operator",
+  "file": "doccases/update-operator/case03.ts",
+  "before": "nextLineId++` in `let id = nextLineId++",
+  "after": "++nextLineId",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "diagnostic": "Expected a semicolon or an implicit semicolon after a statement, but found none"
+   },
+   {
+    "preset": "strict",
+    "diagnostic": "Expected a semicolon or an implicit semicolon after a statement, but found none"
+   }
+  ]
+ },
+ {
+  "mutator": "update-operator",
+  "file": "doccases/update-operator/case04.ts",
+  "before": "++lastOrderNumber` in `return ++lastOrderNumber",
+  "after": "lastOrderNumber++",
+  "ok": false,
+  "presets": [],
+  "produced": [
+   {
+    "preset": "recommended",
+    "diagnostic": "Cannot assign to this expression"
+   },
+   {
+    "preset": "strict",
+    "diagnostic": "Cannot assign to this expression"
+   }
+  ]
+ }
+]

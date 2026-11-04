@@ -1,0 +1,16 @@
+diff --git a/rules/sort-switch-case.ts b/rules/sort-switch-case.ts
+index c22442b..0474842 100644
+--- a/rules/sort-switch-case.ts
++++ b/rules/sort-switch-case.ts
+@@ -377,8 +377,9 @@ function caseHasBreakOrReturn(caseNode: TSESTree.SwitchCase): boolean {
+ function statementIsBreakOrReturn(
+   statement: TSESTree.Statement,
+ ): statement is TSESTree.ReturnStatement | TSESTree.BreakStatement {
++  let { type } = statement
+   return (
+-    statement.type === AST_NODE_TYPES.BreakStatement ||
+-    statement.type === AST_NODE_TYPES.ReturnStatement
++    type === AST_NODE_TYPES.BreakStatement ||
++    type === AST_NODE_TYPES.ReturnStatement
+   )
+ }

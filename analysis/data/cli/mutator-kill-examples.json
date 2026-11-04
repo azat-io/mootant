@@ -1,0 +1,191 @@
+[
+ {
+  "mutator": "arithmetic-operator",
+  "claim": {
+   "before": "price * quantity",
+   "after": "price / quantity"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "array-element",
+  "claim": {
+   "before": "[...items, gift]",
+   "after": "[gift]"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "assignment-operator",
+  "claim": {
+   "before": "note ||= 'Enjoy your gift!'",
+   "after": "note ??= 'Enjoy your gift!'"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "bitwise-operator",
+  "claim": {
+   "before": "options & EXPRESS",
+   "after": "options | EXPRESS"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "boolean-literal",
+  "claim": {
+   "before": "express = false",
+   "after": "express = true"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "comparison-operator",
+  "claim": {
+   "before": "total >= 50",
+   "after": "total > 50"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "condition",
+  "claim": {
+   "before": "if (coupon)",
+   "after": "if (true)"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "logical-operator",
+  "claim": {
+   "before": "inStock && hasAddress",
+   "after": "hasAddress"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "method-call",
+  "claim": {
+   "before": "items.filter(item => item.inStock)",
+   "after": "items"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "missing-await",
+  "claim": {
+   "before": "await save(id)",
+   "after": "save(id)"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "number-literal",
+  "claim": {
+   "before": "0.1",
+   "after": "1.1"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "number-literal",
+  "claim": {
+   "before": "20",
+   "after": "21"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "object-property",
+  "claim": {
+   "before": "{ ...cart, coupon }",
+   "after": "{ coupon }"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "optional-chaining",
+  "claim": {
+   "before": "cart.coupon?.percent",
+   "after": "cart.coupon.percent"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "regex-flag",
+  "claim": {
+   "before": "/^save\\d+$/i",
+   "after": "/^save\\d+$/"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "regex-pattern",
+  "claim": {
+   "before": "/^\\d{5}$/",
+   "after": "/\\d{5}$/"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "return-value",
+  "claim": {
+   "before": "cart.items.length",
+   "after": "0"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "statement-removal",
+  "claim": {
+   "before": "coupon.used = true",
+   "after": ";"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "string-literal",
+  "claim": {
+   "before": "', '",
+   "after": "''"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "unary-operator",
+  "claim": {
+   "before": "-1",
+   "after": "1"
+  },
+  "recommended": true,
+  "strict": true
+ },
+ {
+  "mutator": "update-operator",
+  "claim": {
+   "before": "count++",
+   "after": "count--"
+  },
+  "recommended": true,
+  "strict": true
+ }
+]

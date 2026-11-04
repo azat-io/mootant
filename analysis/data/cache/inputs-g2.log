@@ -1,0 +1,86 @@
+=== node_modules_patch (04:30:39)
+[node-modules-patch/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[node-modules-patch/r2] exit=0 args=src
+  a073vwf4fehh Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=true src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=4 score=50
+[node-modules-patch/r3] exit=0 args=src --no-cache
+  a073vwf4fehh Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+  STALE a073vwf4fehh cached-run=Survived (cached=true) fresh-run=Killed src/math.ts:2
+  STALE wb20k1v8dpgd cached-run=Killed (cached=true) fresh-run=Survived src/math.ts:2
+  => 2 verdict(s) differ between the cached run and the fresh run
+=== env_config_setting (04:30:46)
+[env-config-setting/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=1 survived=3 cached=0 score=25
+[env-config-setting/r2] exit=0 args=src
+  a073vwf4fehh Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=true src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=1 survived=3 cached=4 score=25
+[env-config-setting/r3] exit=0 args=src --no-cache
+  a073vwf4fehh Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+  STALE a073vwf4fehh cached-run=Survived (cached=true) fresh-run=Killed src/math.ts:2
+  => 1 verdict(s) differ between the cached run and the fresh run
+=== future_mtime (04:30:54)
+[future-mtime/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+[future-mtime/r2] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+  cache file:
+    ls: cannot access '/home/user/projects/cache/future-mtime/node_modules/.cache/mootant/': No such file or directory
+=== future_mtime_dependency (04:31:01)
+[future-mtime-dependency/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+[future-mtime-dependency/r2] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+    ls: cannot access '/home/user/projects/cache/future-mtime-dependency/node_modules/.cache/mootant/': No such file or directory
+=== write_back_package_json (04:31:07)
+[write-back-package-json/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+[write-back-package-json/r2] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+    ls: cannot access '/home/user/projects/cache/write-back-package-json/node_modules/.cache/mootant/': No such file or directory

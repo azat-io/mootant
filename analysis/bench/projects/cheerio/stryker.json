@@ -1,0 +1,4 @@
+{
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"]
+}

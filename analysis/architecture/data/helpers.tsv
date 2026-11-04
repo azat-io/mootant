@@ -1,0 +1,487 @@
+folder	file	lines	code_lines	jsdoc_lines	src_importers	test_importers	importers
+adapters/node-test	adapters/node-test/build-dry-file.ts	136	74	44	1	1	adapters/node-test/run-dry.ts
+adapters/node-test	adapters/node-test/build-isolated-facts.ts	98	65	25	1	1	adapters/node-test/run-isolated.ts
+adapters/node-test	adapters/node-test/check-node-support.ts	13	6	7	1	1	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/check-todo-bail.ts	16	6	8	1	0	adapters/node-test/run-isolated.ts
+adapters/node-test	adapters/node-test/check-typescript.ts	96	54	33	1	1	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/collect-node-dependencies.ts	74	39	26	2	1	adapters/node-test/run-dry.ts adapters/node-test/run-isolated.ts
+adapters/node-test	adapters/node-test/create-glob-pattern.ts	49	39	10	1	1	adapters/node-test/list-node-test-files.ts
+adapters/node-test	adapters/node-test/describe-exit.ts	18	10	6	1	1	adapters/node-test/build-dry-file.ts
+adapters/node-test	adapters/node-test/describe-hook-failure.ts	20	8	10	2	1	adapters/node-test/build-dry-file.ts adapters/node-test/build-isolated-facts.ts
+adapters/node-test	adapters/node-test/drop-todo-errors.ts	23	13	8	2	1	adapters/node-test/build-dry-file.ts adapters/node-test/build-isolated-facts.ts
+adapters/node-test	adapters/node-test/filter-exec-argv.ts	106	69	31	1	1	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/find-test-command.ts	37	20	11	1	1	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/get-default-patterns.ts	37	20	14	2	1	adapters/node-test/start-node-test-session.ts adapters/node-test/score-node-test.ts
+adapters/node-test	adapters/node-test/get-dry-deadline.ts	28	12	12	1	1	adapters/node-test/run-dry.ts
+adapters/node-test	adapters/node-test/get-node-cache-inputs.ts	77	42	25	1	1	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/get-preload-path.ts	20	8	9	1	3	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/get-test-id.ts	25	8	13	2	3	adapters/node-test/build-dry-file.ts adapters/node-test/read-tries.ts
+adapters/node-test	adapters/node-test/get-unit-deadline.ts	25	7	15	1	1	adapters/node-test/run-isolated.ts
+adapters/node-test	adapters/node-test/hash-environment.ts	24	12	8	1	2	adapters/node-test/get-node-cache-inputs.ts
+adapters/node-test	adapters/node-test/includes-tsx.ts	16	4	11	2	1	adapters/node-test/check-typescript.ts adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/index.ts	27	10	9	1	1	cli/built-in-adapters.ts
+adapters/node-test	adapters/node-test/list-file-errors.ts	30	15	13	2	1	adapters/node-test/build-dry-file.ts adapters/node-test/build-isolated-facts.ts
+adapters/node-test	adapters/node-test/list-flag-values.ts	26	17	9	3	1	adapters/node-test/get-node-cache-inputs.ts adapters/node-test/start-node-test-session.ts adapters/node-test/list-setup-files.ts
+adapters/node-test	adapters/node-test/list-loaded-files.ts	24	15	7	2	1	adapters/node-test/collect-node-dependencies.ts adapters/node-test/run-dry.ts
+adapters/node-test	adapters/node-test/list-node-test-files.ts	99	64	27	2	1	adapters/node-test/start-node-test-session.ts adapters/node-test/score-node-test.ts
+adapters/node-test	adapters/node-test/list-package-files.ts	30	17	10	2	1	adapters/node-test/check-typescript.ts adapters/node-test/collect-node-dependencies.ts
+adapters/node-test	adapters/node-test/list-running-tries.ts	27	14	10	2	1	adapters/node-test/build-dry-file.ts adapters/node-test/get-dry-deadline.ts
+adapters/node-test	adapters/node-test/list-setup-files.ts	38	18	13	1	1	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/live-process-groups.ts	5	1	4	2	2	adapters/node-test/track-process-group.ts adapters/node-test/stop-live-process-groups.ts
+adapters/node-test	adapters/node-test/loader-flags.ts	10	7	3	2	2	adapters/node-test/start-node-test-session.ts adapters/node-test/list-setup-files.ts
+adapters/node-test	adapters/node-test/parse-command.ts	72	54	18	2	2	adapters/node-test/find-test-command.ts adapters/node-test/score-node-test.ts
+adapters/node-test	adapters/node-test/place-preload.ts	57	30	22	1	1	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/preload/create-bail-error.ts	24	8	15	1	1	adapters/node-test/preload/create-try-tracker.ts
+adapters/node-test	adapters/node-test/preload/create-file-recorder.ts	22	12	8	2	1	adapters/node-test/preload/hooks.ts adapters/node-test/preload/preload.ts
+adapters/node-test	adapters/node-test/preload/create-load-hook.ts	62	33	22	2	1	adapters/node-test/preload/hooks.ts adapters/node-test/preload/install-module-hooks.ts
+adapters/node-test	adapters/node-test/preload/create-record-writer.ts	24	9	11	2	1	adapters/node-test/preload/hooks.ts adapters/node-test/preload/preload.ts
+adapters/node-test	adapters/node-test/preload/create-report-reader.ts	78	43	27	1	1	adapters/node-test/preload/reporter.ts
+adapters/node-test	adapters/node-test/preload/create-source-switcher.ts	69	36	21	2	1	adapters/node-test/preload/hooks.ts adapters/node-test/preload/preload.ts
+adapters/node-test	adapters/node-test/preload/create-try-tracker.ts	352	219	104	1	1	adapters/node-test/preload/preload.ts
+adapters/node-test	adapters/node-test/preload/hooks.ts	45	16	18	0	1	
+adapters/node-test	adapters/node-test/preload/install-marker-receivers.ts	50	19	22	1	1	adapters/node-test/preload/preload.ts
+adapters/node-test	adapters/node-test/preload/install-module-hooks.ts	86	27	44	1	2	adapters/node-test/preload/preload.ts
+adapters/node-test	adapters/node-test/preload/loaded-key.ts	5	1	4	2	0	adapters/node-test/preload/create-source-switcher.ts adapters/node-test/preload/install-marker-receivers.ts
+adapters/node-test	adapters/node-test/preload/patch-module-compile.ts	42	19	21	1	1	adapters/node-test/preload/install-module-hooks.ts
+adapters/node-test	adapters/node-test/preload/preload.ts	89	54	15	0	1	
+adapters/node-test	adapters/node-test/preload/read-unit.ts	24	11	11	1	1	adapters/node-test/preload/preload.ts
+adapters/node-test	adapters/node-test/preload/reported-key.ts	5	1	4	2	0	adapters/node-test/preload/install-marker-receivers.ts adapters/node-test/preload/reporter.ts
+adapters/node-test	adapters/node-test/preload/reporter.ts	33	13	10	0	1	
+adapters/node-test	adapters/node-test/preload/served-key.ts	5	1	4	2	0	adapters/node-test/preload/create-source-switcher.ts adapters/node-test/preload/install-marker-receivers.ts
+adapters/node-test	adapters/node-test/read-node-runtime.ts	33	18	12	1	2	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/read-test-timeout.ts	20	13	7	1	1	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/read-tries.ts	89	48	32	2	1	adapters/node-test/build-dry-file.ts adapters/node-test/build-isolated-facts.ts
+adapters/node-test	adapters/node-test/resolve-command.ts	216	159	47	2	1	adapters/node-test/find-test-command.ts adapters/node-test/score-node-test.ts
+adapters/node-test	adapters/node-test/resolve-tsx.ts	24	9	10	1	1	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/run-dry.ts	227	141	67	1	2	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/run-in-pool.ts	82	46	33	2	1	adapters/node-test/run-dry.ts adapters/node-test/run-isolated.ts
+adapters/node-test	adapters/node-test/run-isolated.ts	101	59	24	1	2	adapters/node-test/start-node-test-session.ts
+adapters/node-test	adapters/node-test/run-test-file.ts	58	34	14	2	3	adapters/node-test/run-dry.ts adapters/node-test/run-isolated.ts
+adapters/node-test	adapters/node-test/run-test-process.ts	179	98	60	1	2	adapters/node-test/run-test-file.ts
+adapters/node-test	adapters/node-test/score-node-test.ts	93	48	30	1	2	cli/built-in-adapters.ts
+adapters/node-test	adapters/node-test/split-node-arguments.ts	81	66	14	1	1	adapters/node-test/resolve-command.ts
+adapters/node-test	adapters/node-test/start-node-test-session.ts	220	152	37	1	2	adapters/node-test/index.ts
+adapters/node-test	adapters/node-test/stop-live-process-groups.ts	13	6	4	2	1	adapters/node-test/start-node-test-session.ts adapters/node-test/track-process-group.ts
+adapters/node-test	adapters/node-test/stop-process-group.ts	19	11	8	2	1	adapters/node-test/run-test-process.ts adapters/node-test/stop-live-process-groups.ts
+adapters/node-test	adapters/node-test/track-process-group.ts	56	29	21	1	1	adapters/node-test/run-test-process.ts
+adapters/node-test	adapters/node-test/write-switch-plan.ts	31	16	9	2	1	adapters/node-test/run-dry.ts adapters/node-test/run-isolated.ts
+adapters/shared	adapters/shared/capture-clock.ts	29	18	9	2	3	adapters/node-test/preload/preload.ts adapters/vitest/runner.ts
+adapters/shared	adapters/shared/get-error-message.ts	28	16	11	6	1	adapters/node-test/preload/create-report-reader.ts adapters/node-test/preload/create-try-tracker.ts adapters/vitest/run-specifications.ts adapters/vitest/runner.ts adapters/vitest/worker/find-hook-error.ts adapters/vitest/worker/read-try-facts.ts
+adapters/shared	adapters/shared/index-environment-hashes.ts	44	23	17	2	1	adapters/node-test/hash-environment.ts adapters/vitest/get-cache-inputs.ts
+adapters/shared	adapters/shared/list-tsconfig-files.ts	42	26	11	3	1	adapters/node-test/collect-node-dependencies.ts adapters/node-test/get-node-cache-inputs.ts adapters/vitest/collect-dependencies.ts
+adapters/shared	adapters/shared/read-test-scripts.ts	133	80	44	3	1	adapters/node-test/find-test-command.ts adapters/node-test/score-node-test.ts adapters/vitest/score-vitest.ts
+adapters/shared	adapters/shared/read-tsconfig-extends.ts	110	70	30	1	1	adapters/shared/list-tsconfig-files.ts
+adapters/shared	adapters/shared/track-environment.ts	255	127	110	1	3	adapters/shared/track-inputs.ts
+adapters/shared	adapters/shared/track-file-reads.ts	586	335	216	1	2	adapters/shared/track-inputs.ts
+adapters/shared	adapters/shared/track-inputs.ts	61	41	13	2	2	adapters/node-test/preload/preload.ts adapters/vitest/runner.ts
+adapters/shared	adapters/shared/verdict-variable-pattern.ts	6	1	5	2	1	adapters/node-test/get-node-cache-inputs.ts adapters/vitest/get-cache-inputs.ts
+adapters/vitest	adapters/vitest/build-isolated-facts.ts	60	39	15	1	0	adapters/vitest/run-isolated.ts
+adapters/vitest	adapters/vitest/check-project-config.ts	29	17	8	1	1	adapters/vitest/configure-project.ts
+adapters/vitest	adapters/vitest/check-vitest-copy.ts	43	20	18	1	2	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/collect-dependencies.ts	155	78	62	2	2	adapters/vitest/read-unit-inputs.ts adapters/vitest/run-dry.ts
+adapters/vitest	adapters/vitest/configure-project.ts	79	49	22	1	2	adapters/vitest/create-mootant-plugin.ts
+adapters/vitest	adapters/vitest/create-forks-pool.ts	120	69	40	1	1	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/create-interleaved-sequencer.ts	76	35	32	1	1	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/create-mootant-plugin.ts	59	33	14	1	1	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/create-output-reporter.ts	38	19	16	1	1	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/create-output-stream.ts	31	19	9	1	1	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/detect-vitest.ts	49	21	21	2	4	adapters/vitest/start-vitest-session.ts adapters/vitest/score-vitest.ts
+adapters/vitest	adapters/vitest/get-cache-inputs.ts	162	99	47	1	2	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/get-file-key.ts	24	12	9	2	1	adapters/vitest/create-mootant-plugin.ts adapters/vitest/index-switched-files.ts
+adapters/vitest	adapters/vitest/get-module-file.ts	20	5	12	2	1	adapters/vitest/collect-dependencies.ts adapters/vitest/get-cache-inputs.ts
+adapters/vitest	adapters/vitest/get-project-label.ts	13	5	6	2	1	adapters/vitest/check-project-config.ts adapters/vitest/configure-project.ts
+adapters/vitest	adapters/vitest/get-runner-path.ts	15	4	8	1	2	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/get-switchable-path.ts	25	14	11	1	1	adapters/vitest/create-mootant-plugin.ts
+adapters/vitest	adapters/vitest/index-switched-files.ts	20	8	7	2	1	adapters/vitest/create-mootant-plugin.ts adapters/vitest/run-dry.ts
+adapters/vitest	adapters/vitest/index.ts	23	8	7	1	1	cli/built-in-adapters.ts
+adapters/vitest	adapters/vitest/read-environment-hashes.ts	28	17	8	1	1	adapters/vitest/run-dry.ts
+adapters/vitest	adapters/vitest/read-out-file.ts	22	11	7	2	1	adapters/vitest/run-plan.ts adapters/vitest/read-out-files.ts
+adapters/vitest	adapters/vitest/read-out-files.ts	27	13	7	2	1	adapters/vitest/run-plan.ts adapters/vitest/run-dry.ts
+adapters/vitest	adapters/vitest/read-unit-inputs.ts	41	19	17	2	3	adapters/vitest/run-batch.ts adapters/vitest/run-isolated.ts
+adapters/vitest	adapters/vitest/reset-run-directory.ts	23	8	11	2	1	adapters/vitest/run-plan.ts adapters/vitest/run-dry.ts
+adapters/vitest	adapters/vitest/run-batch.ts	105	85	12	1	2	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/run-dry.ts	285	202	57	1	2	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/run-isolated.ts	60	31	14	1	2	adapters/vitest/start-vitest-session.ts
+adapters/vitest	adapters/vitest/run-plan.ts	144	100	25	2	3	adapters/vitest/run-batch.ts adapters/vitest/run-isolated.ts
+adapters/vitest	adapters/vitest/run-specifications.ts	48	21	19	2	1	adapters/vitest/run-plan.ts adapters/vitest/run-dry.ts
+adapters/vitest	adapters/vitest/runner.ts	1285	655	495	0	1	
+adapters/vitest	adapters/vitest/score-vitest.ts	28	8	14	1	1	cli/built-in-adapters.ts
+adapters/vitest	adapters/vitest/start-vitest-session.ts	186	129	26	1	2	adapters/vitest/index.ts
+adapters/vitest	adapters/vitest/stop-hung-worker.ts	48	29	16	3	3	adapters/vitest/run-plan.ts adapters/vitest/wait-for-workers.ts adapters/vitest/run-dry.ts
+adapters/vitest	adapters/vitest/wait-for-workers.ts	114	58	44	1	2	adapters/vitest/run-specifications.ts
+adapters/vitest	adapters/vitest/watch-heartbeats.ts	72	45	20	2	3	adapters/vitest/run-plan.ts adapters/vitest/run-dry.ts
+adapters/vitest	adapters/vitest/watch-unit-ends.ts	57	29	23	2	1	adapters/vitest/run-plan.ts adapters/vitest/run-dry.ts
+adapters/vitest	adapters/vitest/worker/claim-unit.ts	42	24	15	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/find-hook-error.ts	38	20	13	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/get-file-hash.ts	18	6	10	3	5	adapters/vitest/write-plan-files.ts adapters/vitest/run-dry.ts adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/get-hook-budget.ts	116	62	44	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/install-try-hook.ts	47	18	24	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/is-process-alive.ts	19	11	8	2	1	adapters/vitest/wait-for-workers.ts adapters/vitest/worker/wait-for-turn.ts
+adapters/vitest	adapters/vitest/worker/is-timeout-message.ts	16	5	10	2	1	adapters/vitest/build-isolated-facts.ts adapters/vitest/worker/read-try-facts.ts
+adapters/vitest	adapters/vitest/worker/list-dependencies.ts	48	21	25	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/list-tests.ts	15	7	6	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/order-tests.ts	35	21	12	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/race-try-timeout.ts	46	30	14	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/read-try-facts.ts	68	31	27	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/read-worker-plan.ts	29	15	9	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/vitest-variables.ts	6	1	5	2	1	adapters/vitest/get-cache-inputs.ts adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/wait-for-turn.ts	49	19	22	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/watch-worker-close.ts	104	55	44	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/write-heartbeat.ts	25	9	12	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/worker/write-out-record.ts	18	6	8	1	1	adapters/vitest/runner.ts
+adapters/vitest	adapters/vitest/write-plan-files.ts	41	23	9	1	1	adapters/vitest/run-plan.ts
+cli/report	cli/report/build-list-report.ts	273	186	62	2	1	cli/report/build-run-report.ts cli/run-list.ts
+cli/report	cli/report/build-run-report.ts	249	169	57	2	4	cli/html/build-html-report.ts cli/run-mutation.ts
+cli/report	cli/report/format-command.ts	121	54	55	2	1	cli/run-list.ts cli/run-mutation.ts
+cli/report	cli/report/format-duration.ts	19	12	7	3	1	cli/create-run-progress.ts cli/html/client/format-time.ts cli/report/format-run-text-report.ts
+cli/report	cli/report/format-fields.ts	42	18	15	2	1	cli/report/format-text-report.ts cli/report/format-run-text-report.ts
+cli/report	cli/report/format-file-groups.ts	214	91	94	1	1	cli/report/format-text-report.ts
+cli/report	cli/report/format-header.ts	56	26	21	2	1	cli/report/format-text-report.ts cli/report/format-run-text-report.ts
+cli/report	cli/report/format-report.ts	39	16	15	2	1	cli/run-list.ts cli/report/format-run-report.ts
+cli/report	cli/report/format-run-report.ts	35	15	12	1	1	cli/run-mutation.ts
+cli/report	cli/report/format-run-text-report.ts	379	228	111	1	3	cli/report/format-run-report.ts
+cli/report	cli/report/format-text-report.ts	145	97	33	1	2	cli/report/format-report.ts
+cli/report	cli/report/format-time-left.ts	25	16	9	1	1	cli/create-run-progress.ts
+cli/report	cli/report/get-file-scores.ts	45	30	8	1	2	cli/run-mutation.ts
+cli/report	cli/report/get-short-id-length.ts	32	20	11	2	3	cli/report/format-text-report.ts cli/run-mutation.ts
+cli/report	cli/report/print-diagnostics.ts	37	24	8	2	1	cli/run-list.ts cli/run-mutation.ts
+cli/report	cli/report/slim-diff.ts	32	16	13	1	1	cli/report/slim-list-mutant.ts
+cli/report	cli/report/slim-focus.ts	18	8	7	2	1	cli/report/slim-list-report.ts cli/report/slim-list-mutant.ts
+cli/report	cli/report/slim-list-mutant.ts	33	17	10	2	2	cli/report/slim-list-report.ts cli/report/slim-run-report.ts
+cli/report	cli/report/slim-list-report.ts	36	19	11	1	3	cli/report/format-report.ts
+cli/report	cli/report/slim-run-report.ts	106	73	23	1	3	cli/report/format-run-report.ts
+cli/report	cli/report/sort-by-location.ts	35	24	9	2	1	cli/report/format-text-report.ts cli/report/format-run-text-report.ts
+cli/terminal	cli/terminal/colors.ts	128	59	58	5	4	types/cli/text-style.d.ts cli/terminal/create-spinner.ts cli/diff/format-diff.ts cli/report/format-file-groups.ts cli/terminal/get-text-style.ts
+cli/terminal	cli/terminal/count-terminal-rows.ts	27	9	15	1	1	cli/terminal/create-spinner.ts
+cli/terminal	cli/terminal/create-spinner.ts	189	90	76	1	2	cli/create-run-progress.ts
+cli/terminal	cli/terminal/cut-to-width.ts	43	25	12	8	1	cli/create-run-progress.ts cli/diff/format-change.ts cli/diff/format-diff-groups.ts cli/terminal/format-by-file.ts cli/report/format-fields.ts cli/report/format-file-groups.ts cli/report/format-header.ts cli/report/format-run-text-report.ts
+cli/terminal	cli/terminal/fit-parts.ts	32	18	10	1	1	cli/create-run-progress.ts
+cli/terminal	cli/terminal/format-by-file.ts	67	32	27	2	1	cli/diff/format-diff-groups.ts cli/report/format-file-groups.ts
+cli/terminal	cli/terminal/get-display-width.ts	63	21	34	15	8	cli/create-run-progress.ts cli/terminal/count-terminal-rows.ts cli/terminal/cut-to-width.ts cli/terminal/measure-parts.ts cli/diff/format-change.ts cli/diff/format-diff-groups.ts cli/terminal/get-max-display-width.ts cli/terminal/pad-to-width.ts cli/diff/format-diff.ts cli/diff/mark-diff.ts cli/report/format-fields.ts cli/report/format-file-groups.ts cli/report/format-header.ts cli/report/format-run-text-report.ts cli/terminal/wrap-text.ts
+cli/terminal	cli/terminal/get-max-display-width.ts	16	6	8	4	1	cli/diff/format-diff-groups.ts cli/report/format-file-groups.ts cli/report/format-header.ts cli/report/format-run-text-report.ts
+cli/terminal	cli/terminal/get-symbols.ts	61	27	28	9	1	cli/create-run-progress.ts cli/diff/format-diff-groups.ts cli/terminal/format-by-file.ts cli/diff/format-diff.ts cli/report/format-fields.ts cli/report/format-file-groups.ts cli/report/format-header.ts cli/report/print-diagnostics.ts cli/report/format-run-text-report.ts
+cli/terminal	cli/terminal/get-text-style.ts	37	18	13	3	1	cli/index.ts cli/run-list.ts cli/run-mutation.ts
+cli/terminal	cli/terminal/is-interactive-terminal.ts	16	3	11	2	3	cli/create-run-progress.ts cli/terminal/create-spinner.ts
+cli/terminal	cli/terminal/is-unicode-supported.ts	23	14	9	2	2	cli/terminal/create-spinner.ts cli/terminal/get-text-style.ts
+cli/terminal	cli/terminal/measure-parts.ts	22	10	8	2	1	cli/create-run-progress.ts cli/terminal/fit-parts.ts
+cli/terminal	cli/terminal/pad-to-width.ts	13	3	8	2	1	cli/diff/format-diff-groups.ts cli/report/format-file-groups.ts
+cli/terminal	cli/terminal/strip-ansi.ts	36	28	6	2	1	cli/terminal/get-display-width.ts cli/report/format-fields.ts
+cli/terminal	cli/terminal/wrap-text.ts	25	15	8	1	1	cli/report/format-run-text-report.ts
+core/cache	core/cache/apply-cached-batch.ts	139	76	51	1	1	core/run-mutants.ts
+core/cache	core/cache/apply-cached-units.ts	50	33	13	1	1	core/run-mutants.ts
+core/cache	core/cache/cache-version.ts	6	1	5	4	3	core/cache/get-cache-path.ts core/cache/get-environment-key.ts core/cache/read-run-cache.ts core/cache/write-run-cache.ts
+core/cache	core/cache/create-digest.ts	11	3	6	7	6	adapters/node-test/get-test-id.ts adapters/shared/index-environment-hashes.ts core/generate/get-mutant-regions.ts core/cache/create-run-cache.ts core/cache/get-environment-key.ts core/cache/get-test-file-keys.ts core/cache/save-run-cache.ts
+core/cache	core/cache/create-run-cache.ts	409	229	136	1	1	core/cache/prepare-run-cache.ts
+core/cache	core/cache/find-changed-files.ts	33	15	13	2	1	core/cache/prepare-run-cache.ts core/cache/save-run-cache.ts
+core/cache	core/cache/find-lockfile.ts	38	24	10	1	1	core/cache/prepare-run-cache.ts
+core/cache	core/cache/get-cache-path.ts	21	9	8	1	4	core/run-mutants.ts
+core/cache	core/cache/get-environment-key.ts	88	29	42	1	1	core/cache/prepare-run-cache.ts
+core/cache	core/cache/get-portable-path.ts	15	3	10	4	1	core/cache/create-run-cache.ts core/cache/list-file-hashes.ts core/cache/get-test-file-keys.ts core/cache/save-run-cache.ts
+core/cache	core/cache/get-test-file-keys.ts	69	39	22	1	1	core/cache/prepare-run-cache.ts
+core/cache	core/cache/hash-files.ts	63	33	22	2	1	core/cache/prepare-run-cache.ts core/cache/save-run-cache.ts
+core/cache	core/cache/list-file-hashes.ts	27	12	12	2	1	core/cache/get-environment-key.ts core/cache/get-test-file-keys.ts
+core/cache	core/cache/prepare-run-cache.ts	220	123	63	1	1	core/run-mutants.ts
+core/cache	core/cache/prune-cache-entries.ts	32	14	14	1	1	core/cache/write-run-cache.ts
+core/cache	core/cache/read-run-cache.ts	126	72	39	2	1	core/run-mutants.ts core/cache/write-run-cache.ts
+core/cache	core/cache/run-in-chunks.ts	23	14	9	2	1	core/cache/find-changed-files.ts core/cache/hash-files.ts
+core/cache	core/cache/save-run-cache.ts	126	85	30	1	1	core/run-mutants.ts
+core/cache	core/cache/write-run-cache.ts	61	34	16	1	1	core/cache/save-run-cache.ts
+core/hints	core/hints/analyze-scopes.ts	893	522	302	1	4	core/generate/generate-file-mutants.ts
+core/hints	core/hints/create-inferred-type.ts	26	12	9	10	12	core/hints/create-syntactic-type-provider.ts core/hints/infer-annotation-type.ts core/hints/infer-binding-type.ts core/hints/union-inferred-types.ts core/hints/infer-expression-type.ts core/hints/infer-call-type.ts core/hints/infer-member-type.ts core/hints/infer-operator-type.ts core/hints/infer-this-type.ts core/hints/remove-nullish.ts
+core/hints	core/hints/create-syntactic-type-provider.ts	151	92	40	1	3	core/generate/generate-file-mutants.ts
+core/hints	core/hints/create-type-hints.ts	35	21	8	1	2	core/generate/generate-file-mutants.ts
+core/hints	core/hints/find-this-class.ts	73	40	26	2	1	core/hints/infer-call-type.ts core/hints/infer-member-type.ts
+core/hints	core/hints/get-asserted-type.ts	21	12	7	2	1	core/hints/infer-binding-type.ts core/hints/infer-expression-type.ts
+core/hints	core/hints/infer-annotation-type.ts	488	317	133	5	1	core/hints/create-syntactic-type-provider.ts core/hints/infer-binding-type.ts core/hints/infer-expression-type.ts core/hints/infer-call-type.ts core/hints/infer-member-type.ts
+core/hints	core/hints/infer-binding-type.ts	284	180	75	3	1	core/hints/infer-annotation-type.ts core/hints/infer-expression-type.ts core/hints/infer-member-type.ts
+core/hints	core/hints/infer-call-type.ts	345	216	93	1	1	core/hints/infer-expression-type.ts
+core/hints	core/hints/infer-expression-type.ts	228	152	50	2	2	core/hints/create-syntactic-type-provider.ts core/hints/infer-annotation-type.ts
+core/hints	core/hints/infer-member-type.ts	352	209	112	1	1	core/hints/infer-expression-type.ts
+core/hints	core/hints/infer-operator-type.ts	320	192	97	1	1	core/hints/infer-expression-type.ts
+core/hints	core/hints/infer-this-type.ts	59	40	12	1	1	core/hints/infer-expression-type.ts
+core/hints	core/hints/non-nullish-kinds.ts	16	11	3	2	0	core/hints/infer-annotation-type.ts core/hints/infer-binding-type.ts
+core/hints	core/hints/object-kinds.ts	12	6	4	2	0	core/mutators/shared/get-type-view.ts core/hints/infer-annotation-type.ts
+core/hints	core/hints/remove-nullish.ts	16	5	7	2	1	core/hints/infer-annotation-type.ts core/hints/infer-expression-type.ts
+core/hints	core/hints/union-inferred-types.ts	32	19	8	6	1	core/hints/infer-annotation-type.ts core/hints/infer-binding-type.ts core/hints/infer-expression-type.ts core/hints/infer-call-type.ts core/hints/infer-member-type.ts core/hints/infer-operator-type.ts
+core/hints	core/hints/well-known-calls.ts	109	100	7	2	1	core/mutators/shared/is-typed-by-method-name.ts core/hints/infer-call-type.ts
+core/mutators/shared	core/mutators/shared/create-run-context.ts	59	20	32	20	11	core/mutators/boolean-literal.ts core/mutators/shared/get-literal-skip.ts core/mutators/shared/get-branch-copy-skip.ts core/mutators/shared/get-owner-constant.ts core/mutators/shared/create-static-run-context.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-nullish-directions.ts core/mutators/shared/get-literal-flip.ts core/mutators/shared/get-group-constant.ts core/mutators/shared/has-polar-mutant.ts core/mutators/shared/get-logical-drops.ts core/mutators/shared/get-toward-mutant.ts core/mutators/shared/get-or-default-skip.ts core/mutators/condition.ts core/mutators/logical-operator.ts core/mutators/missing-await.ts core/mutators/number-literal.ts core/mutators/return-value.ts core/mutators/statement-removal.ts core/mutators/string-literal.ts
+core/mutators/shared	core/mutators/shared/create-static-run-context.ts	20	8	9	1	1	core/mutators/shared/get-owner-constant.ts
+core/mutators/shared	core/mutators/shared/distinguishes-nullish-swap.ts	68	34	24	2	1	core/mutators/assignment-operator.ts core/mutators/shared/get-nullish-swap-skip.ts
+core/mutators/shared	core/mutators/shared/empties-callback.ts	22	7	13	3	1	core/mutators/shared/is-no-op-callback-constant.ts core/mutators/shared/is-no-op-callback-literal.ts core/mutators/return-value.ts
+core/mutators/shared	core/mutators/shared/get-branch-copy-skip.ts	92	58	19	1	1	core/mutators/shared/get-literal-skip.ts
+core/mutators/shared	core/mutators/shared/get-branch-pair.ts	109	66	32	1	1	core/mutators/shared/get-branch-copy-skip.ts
+core/mutators/shared	core/mutators/shared/get-call-target.ts	23	9	10	2	1	core/mutators/method-call.ts core/mutators/number-literal.ts
+core/mutators/shared	core/mutators/shared/get-call-top.ts	22	9	9	2	1	core/mutators/method-call.ts core/mutators/shared/is-lookup-position.ts
+core/mutators/shared	core/mutators/shared/get-callback-owner.ts	52	30	15	4	2	core/mutators/shared/empties-callback.ts core/mutators/shared/get-callback-result.ts core/mutators/shared/is-no-op-callback-literal.ts core/mutators/shared/is-comparator-result.ts
+core/mutators/shared	core/mutators/shared/get-callback-result.ts	72	32	26	2	1	core/mutators/shared/is-no-op-callback-constant.ts core/mutators/return-value.ts
+core/mutators/shared	core/mutators/shared/get-canonical-falsy.ts	24	9	11	2	1	core/mutators/shared/is-canonical-falsy.ts core/mutators/shared/get-or-default-skip.ts
+core/mutators/shared	core/mutators/shared/get-comparison-plan.ts	1083	617	375	6	1	core/mutators/shared/get-owner-constant.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/has-polar-mutant.ts core/mutators/shared/get-toward-mutant.ts core/mutators/comparison-operator.ts core/mutators/return-value.ts
+core/mutators/shared	core/mutators/shared/get-condition-constants.ts	321	191	91	3	1	core/mutators/shared/get-owner-constant.ts core/mutators/shared/get-toward-mutant.ts core/mutators/condition.ts
+core/mutators/shared	core/mutators/shared/get-default-option-skip.ts	183	124	45	1	0	core/mutators/object-property.ts
+core/mutators/shared	core/mutators/shared/get-fixed-truth.ts	66	34	19	2	1	core/mutators/shared/get-group-constant.ts core/mutators/shared/get-logical-drops.ts
+core/mutators/shared	core/mutators/shared/get-function-returns.ts	32	15	8	2	1	core/mutators/shared/get-return-switch.ts core/mutators/shared/is-boolean-result-source.ts
+core/mutators/shared	core/mutators/shared/get-group-constant.ts	97	52	24	3	1	core/mutators/shared/get-owner-constant.ts core/mutators/shared/get-toward-mutant.ts core/mutators/logical-operator.ts
+core/mutators/shared	core/mutators/shared/get-innermost.ts	36	13	16	7	1	core/mutators/shared/get-owner-constant.ts core/mutators/shared/is-constant-eligible-group.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-fixed-truth.ts core/mutators/shared/has-polar-mutant.ts core/mutators/shared/get-toward-mutant.ts core/mutators/return-value.ts
+core/mutators/shared	core/mutators/shared/get-leave-now-value.ts	81	46	22	3	1	core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-group-constant.ts
+core/mutators/shared	core/mutators/shared/get-literal-flip.ts	47	24	15	3	1	core/mutators/shared/get-owner-constant.ts core/mutators/shared/get-nullish-directions.ts core/mutators/shared/get-toward-mutant.ts
+core/mutators/shared	core/mutators/shared/get-literal-mutator.ts	31	19	8	8	1	core/mutators/shared/get-literal-skip.ts core/mutators/shared/get-branch-copy-skip.ts core/mutators/shared/get-owner-constant.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-nullish-directions.ts core/mutators/shared/get-nullish-plan.ts core/mutators/shared/get-toward-mutant.ts core/mutators/shared/get-or-default-skip.ts
+core/mutators/shared	core/mutators/shared/get-literal-skip.ts	172	99	51	5	1	core/mutators/boolean-literal.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-literal-flip.ts core/mutators/number-literal.ts core/mutators/string-literal.ts
+core/mutators/shared	core/mutators/shared/get-literal-truth.ts	29	13	9	3	1	core/mutators/shared/get-owner-constant.ts core/mutators/shared/get-fixed-truth.ts core/mutators/shared/get-toward-mutant.ts
+core/mutators/shared	core/mutators/shared/get-literal-value.ts	58	33	19	29	4	core/mutators/arithmetic-operator.ts core/mutators/assignment-operator.ts core/mutators/shared/is-canonical-falsy.ts core/mutators/shared/get-canonical-falsy.ts core/mutators/bitwise-operator.ts types/syntax/literal-change.d.ts core/mutators/shared/get-branch-copy-skip.ts core/mutators/shared/get-literal-mutator.ts core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-number-text.ts core/mutators/shared/is-constant-eligible-group.ts core/mutators/shared/is-number-literal.ts core/mutators/shared/is-no-op-callback-constant.ts core/mutators/shared/get-return-switch.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-next-literal-value.ts core/mutators/shared/get-literal-flip.ts core/mutators/shared/get-nullish-plan.ts core/mutators/shared/is-falsy-constant.ts core/mutators/shared/is-truth-flipping-literal.ts core/mutators/shared/get-literal-truth.ts core/mutators/shared/get-or-default-skip.ts core/mutators/shared/is-no-op-callback-literal.ts core/mutators/method-call.ts core/mutators/number-literal.ts core/mutators/shared/get-default-option-skip.ts core/mutators/return-value.ts core/mutators/shared/is-plain-return-value.ts core/mutators/unary-operator.ts
+core/mutators/shared	core/mutators/shared/get-logical-drops.ts	260	168	62	4	1	core/mutators/shared/has-polar-mutant.ts core/mutators/shared/get-toward-mutant.ts core/mutators/shared/get-or-default-skip.ts core/mutators/logical-operator.ts
+core/mutators/shared	core/mutators/shared/get-loop-running-skip.ts	15	6	7	3	1	core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-group-constant.ts
+core/mutators/shared	core/mutators/shared/get-negation-top.ts	44	18	18	10	1	core/mutators/shared/get-literal-skip.ts core/mutators/shared/get-leave-now-value.ts core/mutators/shared/get-owned-constants.ts core/mutators/shared/is-boolean-mode.ts core/mutators/shared/get-callback-result.ts core/mutators/shared/is-boolean-mode-operand.ts core/mutators/shared/get-group-constant.ts core/mutators/shared/is-comparison-operand.ts core/mutators/shared/is-void-operand.ts core/mutators/missing-await.ts
+core/mutators/shared	core/mutators/shared/get-next-literal-value.ts	21	12	7	2	1	core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-literal-flip.ts
+core/mutators/shared	core/mutators/shared/get-nullish-directions.ts	74	37	25	3	1	core/mutators/shared/get-condition-constants.ts core/mutators/shared/has-polar-mutant.ts core/mutators/shared/get-toward-mutant.ts
+core/mutators/shared	core/mutators/shared/get-nullish-plan.ts	261	158	75	2	1	core/mutators/shared/get-nullish-directions.ts core/mutators/logical-operator.ts
+core/mutators/shared	core/mutators/shared/get-nullish-swap-skip.ts	40	21	12	2	1	core/mutators/shared/get-nullish-plan.ts core/mutators/shared/get-logical-drops.ts
+core/mutators/shared	core/mutators/shared/get-number-text.ts	58	31	20	2	1	core/mutators/shared/get-comparison-plan.ts core/mutators/number-literal.ts
+core/mutators/shared	core/mutators/shared/get-or-default-skip.ts	65	39	13	1	1	core/mutators/shared/get-literal-skip.ts
+core/mutators/shared	core/mutators/shared/get-owned-constants.ts	78	54	13	2	1	core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-condition-constants.ts
+core/mutators/shared	core/mutators/shared/get-owner-constant.ts	97	53	25	3	1	core/mutators/shared/get-branch-copy-skip.ts core/mutators/return-value.ts core/mutators/statement-removal.ts
+core/mutators/shared	core/mutators/shared/get-proven-comparison-value.ts	68	40	18	2	1	core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-fixed-truth.ts
+core/mutators/shared	core/mutators/shared/get-return-switch.ts	78	37	25	2	1	core/mutators/shared/get-callback-result.ts core/mutators/shared/is-no-op-callback-literal.ts
+core/mutators/shared	core/mutators/shared/get-return-value-kind.ts	186	111	57	2	1	core/mutators/shared/is-boolean-result.ts core/mutators/return-value.ts
+core/mutators/shared	core/mutators/shared/get-returned-value.ts	24	12	8	2	1	core/mutators/shared/get-branch-pair.ts core/mutators/shared/get-return-switch.ts
+core/mutators/shared	core/mutators/shared/get-running-value.ts	67	27	24	5	2	core/mutators/shared/get-literal-skip.ts core/mutators/shared/get-comparison-plan.ts core/mutators/shared/has-other-exit.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-group-constant.ts
+core/mutators/shared	core/mutators/shared/get-shifted-literal.ts	52	22	22	2	1	core/mutators/shared/get-literal-skip.ts core/mutators/shared/get-comparison-plan.ts
+core/mutators/shared	core/mutators/shared/get-toward-mutant.ts	178	101	52	3	1	core/mutators/shared/get-branch-copy-skip.ts core/mutators/return-value.ts core/mutators/statement-removal.ts
+core/mutators/shared	core/mutators/shared/get-type-view.ts	75	41	26	20	3	core/mutators/assignment-operator.ts core/mutators/shared/distinguishes-nullish-swap.ts core/mutators/shared/has-defined-falsy-value.ts core/mutators/shared/is-canonical-falsy.ts core/mutators/shared/get-canonical-falsy.ts core/mutators/shared/is-always-nullish.ts core/mutators/shared/is-always-truthy.ts core/mutators/shared/is-non-nullable.ts core/mutators/shared/get-comparison-plan.ts core/mutators/shared/is-boolean-valued.ts core/mutators/shared/may-be-boolean.ts core/mutators/shared/get-callback-owner.ts core/mutators/shared/get-logical-drops.ts core/mutators/shared/get-return-value-kind.ts core/mutators/shared/get-or-default-skip.ts core/mutators/method-call.ts core/mutators/missing-await.ts core/mutators/shared/is-typed-by-method-name.ts core/mutators/number-literal.ts core/mutators/unary-operator.ts
+core/mutators/shared	core/mutators/shared/get-typeof-name.ts	38	23	11	1	1	core/mutators/shared/get-proven-comparison-value.ts
+core/mutators/shared	core/mutators/shared/has-defined-falsy-value.ts	17	5	8	2	1	core/mutators/shared/distinguishes-nullish-swap.ts core/mutators/shared/get-logical-drops.ts
+core/mutators/shared	core/mutators/shared/has-other-exit.ts	203	118	67	1	1	core/mutators/shared/get-comparison-plan.ts
+core/mutators/shared	core/mutators/shared/has-polar-mutant.ts	133	65	48	3	1	core/mutators/shared/get-group-constant.ts core/mutators/shared/get-logical-drops.ts core/mutators/shared/get-toward-mutant.ts
+core/mutators/shared	core/mutators/shared/is-always-nullish.ts	14	3	7	5	1	core/mutators/assignment-operator.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-nullish-plan.ts core/mutators/shared/get-fixed-truth.ts core/mutators/shared/get-logical-drops.ts
+core/mutators/shared	core/mutators/shared/is-always-truthy.ts	18	7	7	4	1	core/mutators/assignment-operator.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-fixed-truth.ts core/mutators/shared/get-logical-drops.ts
+core/mutators/shared	core/mutators/shared/is-and-or.ts	17	8	7	13	1	core/mutators/shared/get-owner-constant.ts core/mutators/shared/get-owned-constants.ts core/mutators/shared/is-boolean-mode.ts core/mutators/shared/is-boolean-valued.ts core/mutators/shared/is-constant-eligible-group.ts core/mutators/shared/get-running-value.ts core/mutators/shared/has-other-exit.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/is-boolean-mode-operand.ts core/mutators/shared/get-group-constant.ts core/mutators/shared/get-fixed-truth.ts core/mutators/shared/has-polar-mutant.ts core/mutators/shared/get-toward-mutant.ts
+core/mutators/shared	core/mutators/shared/is-boolean-mode-operand.ts	26	9	9	5	1	core/mutators/shared/get-literal-skip.ts core/mutators/shared/get-nullish-directions.ts core/mutators/shared/get-nullish-plan.ts core/mutators/shared/is-lookup-position.ts core/mutators/missing-await.ts
+core/mutators/shared	core/mutators/shared/is-boolean-mode.ts	32	13	10	9	1	core/mutators/shared/get-owned-constants.ts core/mutators/shared/is-constant-eligible-group.ts core/mutators/shared/get-running-value.ts core/mutators/shared/is-boolean-mode-operand.ts core/mutators/shared/get-group-constant.ts core/mutators/shared/has-polar-mutant.ts core/mutators/shared/get-logical-drops.ts core/mutators/shared/get-toward-mutant.ts core/mutators/shared/get-or-default-skip.ts
+core/mutators/shared	core/mutators/shared/is-boolean-result-source.ts	51	33	10	1	1	core/mutators/shared/is-lookup-position.ts
+core/mutators/shared	core/mutators/shared/is-boolean-result.ts	19	3	10	3	1	core/mutators/shared/get-branch-copy-skip.ts core/mutators/shared/is-lookup-position.ts core/mutators/shared/is-boolean-result-source.ts
+core/mutators/shared	core/mutators/shared/is-boolean-valued.ts	58	27	19	5	1	core/mutators/shared/get-branch-copy-skip.ts core/mutators/shared/get-owned-constants.ts core/mutators/shared/is-boolean-mode.ts core/mutators/shared/get-group-constant.ts core/mutators/shared/get-logical-drops.ts
+core/mutators/shared	core/mutators/shared/is-canonical-falsy.ts	22	4	10	3	1	core/mutators/assignment-operator.ts core/mutators/shared/distinguishes-nullish-swap.ts core/mutators/shared/get-logical-drops.ts
+core/mutators/shared	core/mutators/shared/is-comparator-result.ts	34	18	10	2	1	core/mutators/number-literal.ts core/mutators/unary-operator.ts
+core/mutators/shared	core/mutators/shared/is-comparison-operand.ts	26	9	10	2	1	core/mutators/shared/get-literal-skip.ts core/mutators/shared/is-lookup-position.ts
+core/mutators/shared	core/mutators/shared/is-comparison.ts	23	9	8	10	1	core/mutators/shared/get-owner-constant.ts core/mutators/shared/is-boolean-valued.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-fixed-truth.ts core/mutators/shared/has-polar-mutant.ts core/mutators/shared/get-toward-mutant.ts core/mutators/shared/is-comparison-operand.ts core/mutators/comparison-operator.ts core/mutators/missing-await.ts core/mutators/return-value.ts
+core/mutators/shared	core/mutators/shared/is-constant-eligible-group.ts	57	26	20	2	1	core/mutators/shared/get-owned-constants.ts core/mutators/shared/get-group-constant.ts
+core/mutators/shared	core/mutators/shared/is-expected-boolean.ts	83	49	24	2	1	core/mutators/shared/get-branch-copy-skip.ts core/mutators/shared/is-boolean-mode.ts
+core/mutators/shared	core/mutators/shared/is-falsy-constant.ts	30	11	10	1	1	core/mutators/shared/get-nullish-plan.ts
+core/mutators/shared	core/mutators/shared/is-global-identifier.ts	26	11	11	6	1	core/mutators/shared/is-boolean-valued.ts core/mutators/shared/is-nullish-constant.ts core/mutators/shared/is-falsy-constant.ts core/mutators/method-call.ts core/mutators/number-literal.ts core/mutators/return-value.ts
+core/mutators/shared	core/mutators/shared/is-lookup-position.ts	34	13	11	2	1	core/mutators/method-call.ts core/mutators/string-literal.ts
+core/mutators/shared	core/mutators/shared/is-negation.ts	13	5	6	7	1	core/mutators/shared/get-negation-top.ts core/mutators/shared/is-boolean-valued.ts core/mutators/shared/get-innermost.ts core/mutators/shared/get-running-value.ts core/mutators/shared/has-other-exit.ts core/mutators/shared/get-condition-constants.ts core/mutators/condition.ts
+core/mutators/shared	core/mutators/shared/is-no-op-callback-constant.ts	39	19	12	3	1	core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-group-constant.ts
+core/mutators/shared	core/mutators/shared/is-no-op-callback-literal.ts	53	31	12	1	1	core/mutators/shared/get-literal-skip.ts
+core/mutators/shared	core/mutators/shared/is-non-nullable.ts	15	3	8	3	1	core/mutators/shared/may-be-nullish.ts core/mutators/shared/get-proven-comparison-value.ts core/mutators/optional-chaining.ts
+core/mutators/shared	core/mutators/shared/is-non-number-type.ts	15	6	7	1	1	core/mutators/shared/is-numeric-pair.ts
+core/mutators/shared	core/mutators/shared/is-nullish-constant.ts	32	16	9	5	1	core/mutators/shared/get-proven-comparison-value.ts core/mutators/shared/get-nullish-plan.ts core/mutators/shared/is-falsy-constant.ts core/mutators/shared/get-literal-truth.ts core/mutators/shared/is-plain-return-value.ts
+core/mutators/shared	core/mutators/shared/is-number-literal.ts	15	4	7	2	1	core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-shifted-literal.ts
+core/mutators/shared	core/mutators/shared/is-number-type.ts	25	15	8	4	1	core/mutators/arithmetic-operator.ts core/mutators/shared/is-numeric-pair.ts core/mutators/assignment-operator.ts core/mutators/missing-await.ts
+core/mutators/shared	core/mutators/shared/is-numeric-pair.ts	24	10	9	3	1	core/mutators/arithmetic-operator.ts core/mutators/assignment-operator.ts core/mutators/shared/get-comparison-plan.ts
+core/mutators/shared	core/mutators/shared/is-plain-return-value.ts	37	19	11	2	1	core/mutators/return-value.ts core/mutators/statement-removal.ts
+core/mutators/shared	core/mutators/shared/is-tail-position.ts	75	45	23	1	1	core/mutators/statement-removal.ts
+core/mutators/shared	core/mutators/shared/is-timer-wait.ts	28	12	12	2	1	core/mutators/missing-await.ts core/mutators/statement-removal.ts
+core/mutators/shared	core/mutators/shared/is-truth-flipping-literal.ts	26	13	9	1	1	core/mutators/shared/get-nullish-plan.ts
+core/mutators/shared	core/mutators/shared/is-typed-by-method-name.ts	77	45	22	1	1	core/mutators/missing-await.ts
+core/mutators/shared	core/mutators/shared/is-void-operand.ts	21	6	9	1	1	core/mutators/shared/get-literal-skip.ts
+core/mutators/shared	core/mutators/shared/is-whole-body.ts	31	14	10	2	1	core/mutators/shared/get-callback-result.ts core/mutators/shared/is-no-op-callback-literal.ts
+core/mutators/shared	core/mutators/shared/leave-now-skip.ts	11	5	4	3	1	core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-group-constant.ts
+core/mutators/shared	core/mutators/shared/may-be-boolean.ts	15	4	7	2	1	core/mutators/shared/is-constant-eligible-group.ts core/mutators/shared/get-logical-drops.ts
+core/mutators/shared	core/mutators/shared/may-be-nullish.ts	14	3	7	4	1	core/mutators/assignment-operator.ts core/mutators/shared/get-nullish-plan.ts core/mutators/shared/get-logical-drops.ts core/mutators/shared/get-or-default-skip.ts
+core/mutators/shared	core/mutators/shared/no-op-callback-skip.ts	11	5	4	5	1	core/mutators/shared/get-literal-skip.ts core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-group-constant.ts core/mutators/return-value.ts
+core/parser	core/parser/collect-svelte-expressions.ts	244	162	66	1	1	core/parser/parse-svelte-template.ts
+core/parser	core/parser/collect-vue-expressions.ts	187	97	64	1	1	core/parser/parse-vue-template.ts
+core/parser	core/parser/create-comment-program.ts	45	25	10	1	1	core/parser/read-template-program.ts
+core/parser	core/parser/create-template-failure.ts	38	21	11	3	1	core/parser/parse-svelte-template.ts core/parser/read-template-program.ts core/parser/parse-vue-template.ts
+core/parser	core/parser/find-vue-template.ts	33	17	13	2	1	core/parser/collect-vue-expressions.ts core/instrument/check-vue-compile.ts
+core/parser	core/parser/get-component-framework.ts	20	7	10	13	1	core/files/list-file-mutants.ts core/generate/generate-file-mutants.ts core/ignore/create-ignore-rules.ts core/parser/get-shared-scopes.ts core/parser/get-source-blocks.ts core/parser/parse-component-template.ts core/syntax/find-compiler-pins.ts core/files/is-source-file.ts core/run-mutants.ts core/instrument/create-switched-files.ts core/instrument/instrument-file.ts core/instrument/find-statement-starts.ts core/run/select-run-files.ts
+core/parser	core/parser/get-parser-options.ts	41	19	15	4	1	core/parser/get-source-blocks.ts core/parser/parse-file.ts core/files/is-source-file.ts core/run/read-test-imports.ts
+core/parser	core/parser/get-shared-scopes.ts	44	17	21	1	3	core/generate/generate-file-mutants.ts
+core/parser	core/parser/get-source-blocks.ts	37	19	11	2	7	core/generate/generate-file-mutants.ts core/instrument/find-statement-starts.ts
+core/parser	core/parser/get-template-language.ts	17	6	8	2	1	core/generate/generate-file-mutants.ts core/instrument/find-statement-starts.ts
+core/parser	core/parser/is-declaration-file.ts	15	4	10	2	1	core/parser/get-parser-options.ts core/files/expand-paths.ts
+core/parser	core/parser/load-svelte-compiler.ts	34	13	17	2	2	core/files/list-file-mutants.ts core/run-mutants.ts
+core/parser	core/parser/load-vue-compiler.ts	41	19	18	2	2	core/files/list-file-mutants.ts core/run-mutants.ts
+core/parser	core/parser/parse-component-template.ts	31	13	10	2	4	core/generate/generate-file-mutants.ts core/instrument/find-statement-starts.ts
+core/parser	core/parser/parse-file.ts	179	107	50	2	8	core/generate/generate-file-mutants.ts core/instrument/find-statement-starts.ts
+core/parser	core/parser/parse-svelte-template.ts	59	22	26	1	1	core/parser/parse-component-template.ts
+core/parser	core/parser/parse-template-expressions.ts	438	238	154	1	1	core/parser/read-template-program.ts
+core/parser	core/parser/parse-vue-template.ts	60	24	25	1	1	core/parser/parse-component-template.ts
+core/parser	core/parser/read-template-program.ts	80	46	25	2	1	core/parser/parse-svelte-template.ts core/parser/parse-vue-template.ts
+core/parser	core/parser/scan-script-blocks.ts	728	442	244	2	1	core/parser/get-source-blocks.ts core/instrument/instrument-file.ts
+core/regex	core/regex/can-match-empty.ts	43	29	12	3	1	core/mutators/regex-flag.ts core/regex/create-regex-replacement.ts core/syntax/get-never-falsy-fact.ts
+core/regex	core/regex/collect-pattern-changes.ts	382	246	106	1	1	core/mutators/regex-pattern.ts
+core/regex	core/regex/compiles-regex.ts	15	7	8	3	1	core/regex/create-regex-replacement.ts core/regex/is-valid-regex-literal.ts core/regex/read-regex-argument.ts
+core/regex	core/regex/create-regex-replacement.ts	139	73	46	2	1	core/mutators/regex-flag.ts core/mutators/regex-pattern.ts
+core/regex	core/regex/create-regex-visitors.ts	48	19	16	2	1	core/mutators/regex-flag.ts core/mutators/regex-pattern.ts
+core/regex	core/regex/encode-pattern-text.ts	104	65	33	1	1	core/regex/print-pattern-edit.ts
+core/regex	core/regex/find-open-repeat-scope.ts	65	32	30	1	1	core/regex/collect-pattern-changes.ts
+core/regex	core/regex/find-string-match-call.ts	43	21	16	2	1	core/mutators/regex-flag.ts core/mutators/regex-pattern.ts
+core/regex	core/regex/get-regex-usage.ts	40	19	16	1	1	core/mutators/regex-flag.ts
+core/regex	core/regex/has-backreference.ts	21	9	8	1	1	core/regex/collect-pattern-changes.ts
+core/regex	core/regex/has-capturing-group.ts	22	9	9	2	1	core/mutators/regex-flag.ts core/regex/collect-pattern-changes.ts
+core/regex	core/regex/has-cased-character.ts	94	41	42	1	1	core/mutators/regex-flag.ts
+core/regex	core/regex/has-named-group.ts	21	9	8	1	1	core/syntax/get-named-groups-fact.ts
+core/regex	core/regex/is-edge-wildcard.ts	53	31	18	1	1	core/regex/collect-pattern-changes.ts
+core/regex	core/regex/is-mandatory-group.ts	34	18	14	1	1	core/syntax/get-named-groups-fact.ts
+core/regex	core/regex/is-raw-template-text.ts	34	23	11	1	1	core/regex/create-regex-replacement.ts
+core/regex	core/regex/is-valid-regex-literal.ts	47	28	16	1	1	core/regex/create-regex-replacement.ts
+core/regex	core/regex/keeps-neighbor-tokens.ts	88	46	31	2	1	core/regex/create-regex-replacement.ts core/regex/collect-pattern-changes.ts
+core/regex	core/regex/load-regexpp.ts	28	8	14	8	3	core/mutators/regex-flag.ts core/regex/keeps-neighbor-tokens.ts core/regex/parse-regex-pattern.ts core/regex/has-capturing-group.ts core/regex/has-cased-character.ts core/regex/collect-pattern-changes.ts core/regex/has-backreference.ts core/regex/has-named-group.ts
+core/regex	core/regex/map-pattern-offsets.ts	24	14	10	2	1	core/regex/read-regex-argument.ts core/regex/read-regex-literal.ts
+core/regex	core/regex/map-string-units.ts	161	86	64	1	2	core/regex/read-regex-argument.ts
+core/regex	core/regex/matches-any-character.ts	55	34	18	2	1	core/regex/collect-pattern-changes.ts core/regex/is-edge-wildcard.ts
+core/regex	core/regex/parse-regex-pattern.ts	36	18	13	6	13	core/regex/create-regex-replacement.ts core/regex/keeps-neighbor-tokens.ts core/regex/read-regex-argument.ts core/regex/read-regex-literal.ts core/syntax/get-named-groups-fact.ts core/syntax/get-never-falsy-fact.ts
+core/regex	core/regex/print-flags-edit.ts	71	40	23	1	1	core/regex/create-regex-replacement.ts
+core/regex	core/regex/print-pattern-edit.ts	158	79	64	1	1	core/regex/create-regex-replacement.ts
+core/regex	core/regex/print-regex-literal.ts	11	3	8	1	1	core/regex/print-pattern-edit.ts
+core/regex	core/regex/read-regex-argument.ts	129	73	41	2	2	core/regex/create-regex-visitors.ts core/mutators/string-literal.ts
+core/regex	core/regex/read-regex-call.ts	110	65	37	2	3	core/regex/create-regex-visitors.ts core/mutators/string-literal.ts
+core/regex	core/regex/read-regex-literal.ts	42	25	10	1	2	core/regex/create-regex-visitors.ts
+core/regex	core/regex/reads-regex-statics.ts	22	4	17	1	2	core/syntax/create-syntax-helpers.ts
+core/run	core/run/apply-batch-result.ts	358	208	121	1	1	core/run/run-batch-phases.ts
+core/run	core/run/apply-isolated-result.ts	147	88	43	1	1	core/run/run-isolated-rounds.ts
+core/run	core/run/classify-mutants.ts	117	71	36	1	1	core/run/create-run-state.ts
+core/run	core/run/classify-try.ts	45	25	16	3	2	core/run/read-isolated-unit.ts core/run/apply-batch-result.ts core/index.ts
+core/run	core/run/compare-dry-entries.ts	24	9	13	2	1	adapters/vitest/run-dry.ts core/run/run-dry-phase.ts
+core/run	core/run/compute-score.ts	30	11	15	3	1	cli/report/build-run-report.ts cli/html/client/index-report.ts cli/report/get-file-scores.ts
+core/run	core/run/compute-static-cost.ts	40	27	8	1	1	core/run-mutants.ts
+core/run	core/run/count-run.ts	43	24	14	2	1	core/run/run-batch-phases.ts core/run/run-isolated-rounds.ts
+core/run	core/run/count-statuses.ts	25	16	6	3	4	cli/report/build-run-report.ts cli/html/client/index-report.ts cli/report/get-file-scores.ts
+core/run	core/run/count-verdicts.ts	70	46	16	5	1	core/run-mutants.ts core/run/preview-isolated-unit.ts core/run/run-batch-phases.ts core/run/count-run.ts core/run/run-isolated-rounds.ts
+core/run	core/run/create-run-state.ts	143	75	48	1	2	core/run-mutants.ts
+core/run	core/run/create-work-directory.ts	32	11	15	1	3	core/run-mutants.ts
+core/run	core/run/decide-evidence.ts	35	19	14	4	1	core/cache/apply-cached-batch.ts core/cache/apply-cached-units.ts core/run/get-final-status.ts core/run/apply-isolated-result.ts
+core/run	core/run/decide-results.ts	75	51	15	1	1	core/run-mutants.ts
+core/run	core/run/get-batch-unit-cost.ts	39	21	13	1	1	core/run/run-batch-phases.ts
+core/run	core/run/get-display-path.ts	13	3	8	8	1	cli/html/build-html-report.ts cli/report/build-run-report.ts core/run-mutants.ts core/cache/save-run-cache.ts core/run/run-batch-phases.ts core/run/apply-batch-result.ts core/run/run-dry-phase.ts core/run/apply-isolated-result.ts
+core/run	core/run/get-file-cost.ts	23	11	10	1	1	core/run/run-isolated-rounds.ts
+core/run	core/run/get-final-status.ts	37	21	11	1	1	core/run/count-verdicts.ts
+core/run	core/run/get-html-path.ts	37	15	19	1	1	core/run-mutants.ts
+core/run	core/run/get-package-directory.ts	24	13	8	1	1	core/run-mutants.ts
+core/run	core/run/get-test-file-key.ts	17	6	11	12	0	core/run-mutants.ts core/cache/apply-cached-batch.ts core/run/rank-mutant-files.ts core/cache/prepare-run-cache.ts core/cache/create-run-cache.ts core/cache/get-test-file-keys.ts core/run/order-covering-tests.ts core/run/rank-module-files.ts core/run/read-dry-run.ts core/run/get-batch-unit-cost.ts core/run/plan-batch.ts core/run/run-dry-phase.ts
+core/run	core/run/get-try-limits.ts	28	13	12	2	1	core/run/plan-batch.ts core/run/plan-isolated.ts
+core/run	core/run/get-unit-evidence.ts	30	16	10	2	1	core/run/preview-isolated-unit.ts core/run/apply-isolated-result.ts
+core/run	core/run/index-module-tests.ts	34	19	12	1	1	core/run/create-run-state.ts
+core/run	core/run/mark-outside-mutants.ts	52	36	12	1	1	core/run-mutants.ts
+core/run	core/run/number-chains.ts	15	8	7	1	1	core/run/run-isolated-rounds.ts
+core/run	core/run/order-covering-tests.ts	43	25	13	1	1	core/run/decide-results.ts
+core/run	core/run/plan-batch.ts	110	63	33	1	3	core/run/run-batch-phases.ts
+core/run	core/run/plan-isolated.ts	45	30	10	1	2	core/run/run-isolated-rounds.ts
+core/run	core/run/preview-isolated-unit.ts	41	23	11	1	2	core/run-mutants.ts
+core/run	core/run/rank-module-files.ts	52	24	19	1	1	core/run/decide-results.ts
+core/run	core/run/rank-mutant-files.ts	59	32	18	3	1	core/cache/apply-cached-batch.ts core/run/route-isolated.ts core/run/decide-results.ts
+core/run	core/run/rank-test-file.ts	177	78	87	2	1	core/run/rank-mutant-files.ts core/run/rank-module-files.ts
+core/run	core/run/read-dry-run.ts	118	88	24	1	2	core/run-mutants.ts
+core/run	core/run/read-isolated-unit.ts	107	86	14	2	0	core/run/preview-isolated-unit.ts core/run/apply-isolated-result.ts
+core/run	core/run/read-test-imports.ts	73	47	18	1	1	core/run-mutants.ts
+core/run	core/run/resolve-adapter.ts	75	42	26	1	1	core/run-mutants.ts
+core/run	core/run/route-isolated.ts	33	17	11	3	1	core/run/create-run-state.ts core/run/run-batch-phases.ts core/run/apply-batch-result.ts
+core/run	core/run/run-batch-phases.ts	207	132	55	1	1	core/run-mutants.ts
+core/run	core/run/run-dry-phase.ts	620	343	234	1	1	core/run-mutants.ts
+core/run	core/run/run-isolated-rounds.ts	129	73	44	1	2	core/run-mutants.ts
+core/run	core/run/select-run-files.ts	84	50	24	1	1	core/run-mutants.ts
+core/run	core/run/sort-test-files.ts	28	15	11	2	1	core/run/rank-mutant-files.ts core/run/rank-module-files.ts
+core/run	core/run/sort-tests.ts	23	11	8	1	1	core/run/classify-mutants.ts
+core/run	core/run/validate-adapter.ts	49	27	16	1	1	core/run/resolve-adapter.ts
+core/syntax	core/syntax/advances-loop.ts	233	127	76	2	1	core/syntax/create-syntax-helpers.ts core/syntax/is-loop-advance-value.ts
+core/syntax	core/syntax/create-syntax-helpers.ts	179	80	42	1	2	core/generate/generate-file-mutants.ts
+core/syntax	core/syntax/find-compiler-pins.ts	204	122	60	1	1	core/generate/collect-candidates.ts
+core/syntax	core/syntax/find-logging-calls.ts	195	119	57	1	3	core/generate/generate-file-mutants.ts
+core/syntax	core/syntax/find-message-texts.ts	33	16	10	1	1	core/syntax/find-logging-calls.ts
+core/syntax	core/syntax/get-binding-closure.ts	113	50	54	3	1	core/syntax/get-closed-initializer.ts core/syntax/get-fixed-initializer.ts core/syntax/solve-value-bounds.ts
+core/syntax	core/syntax/get-chain-end.ts	19	4	9	3	1	core/syntax/is-presence-test.ts core/syntax/is-written-member.ts core/syntax/get-named-groups-fact.ts
+core/syntax	core/syntax/get-chain-root.ts	54	26	20	2	1	core/syntax/create-syntax-helpers.ts core/syntax/is-value-position.ts
+core/syntax	core/syntax/get-checked-name.ts	45	22	15	3	1	core/syntax/get-match-result-use.ts core/syntax/get-truth-only-name.ts core/syntax/is-regex-only-tested.ts
+core/syntax	core/syntax/get-closed-initializer.ts	58	28	20	3	1	core/syntax/resolve-closed-expression.ts core/syntax/get-checked-name.ts core/syntax/is-joined-array.ts
+core/syntax	core/syntax/get-collection-class.ts	111	56	41	2	1	core/syntax/get-value-bound.ts core/syntax/get-count-map.ts
+core/syntax	core/syntax/get-count-map.ts	105	59	31	1	1	core/syntax/solve-value-bounds.ts
+core/syntax	core/syntax/get-enclosing-function.ts	30	10	9	4	1	core/syntax/create-syntax-helpers.ts core/syntax/is-boolean-context.ts core/syntax/find-compiler-pins.ts core/syntax/is-rune-call.ts
+core/syntax	core/syntax/get-exited-loops.ts	118	62	37	2	1	core/syntax/create-syntax-helpers.ts core/syntax/advances-loop.ts
+core/syntax	core/syntax/get-fixed-initializer.ts	34	15	12	4	2	core/syntax/get-value-bound.ts core/syntax/get-closed-initializer.ts core/syntax/is-loop-advance-value.ts core/syntax/get-count-map.ts
+core/syntax	core/syntax/get-guard-bound.ts	273	148	93	1	1	core/syntax/solve-value-bounds.ts
+core/syntax	core/syntax/get-logical-chain.ts	33	18	11	2	1	core/syntax/create-syntax-helpers.ts core/syntax/get-guard-bound.ts
+core/syntax	core/syntax/get-lower-bound.ts	19	4	9	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/get-match-regex.ts	153	81	57	2	1	core/syntax/get-named-groups-fact.ts core/syntax/get-never-falsy-fact.ts
+core/syntax	core/syntax/get-match-result-use.ts	156	70	69	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/get-member-path.ts	83	50	26	12	1	core/mutators/shared/get-comparison-plan.ts core/hints/infer-expression-type.ts core/hints/infer-call-type.ts core/syntax/create-syntax-helpers.ts core/syntax/is-error-message.ts core/syntax/is-logging-call.ts core/syntax/find-logging-calls.ts core/syntax/is-logger-factory-call.ts core/syntax/is-logger-label.ts core/syntax/is-module-call.ts core/syntax/find-compiler-pins.ts core/syntax/is-rune-call.ts
+core/syntax	core/syntax/get-member-root.ts	26	12	10	3	1	core/mutators/return-value.ts core/hints/infer-call-type.ts core/syntax/find-logging-calls.ts
+core/syntax	core/syntax/get-named-groups-fact.ts	167	76	70	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/get-never-falsy-fact.ts	112	53	44	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/get-result-slot.ts	27	10	10	2	1	core/syntax/is-result-unused.ts core/syntax/is-for-each-result.ts
+core/syntax	core/syntax/get-root-name.ts	34	22	8	2	1	core/mutators/shared/get-comparison-plan.ts core/syntax/advances-loop.ts
+core/syntax	core/syntax/get-statement-list.ts	31	14	11	2	1	core/syntax/create-syntax-helpers.ts core/instrument/find-statement-starts.ts
+core/syntax	core/syntax/get-truth-only-name.ts	26	6	13	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/get-value-bound.ts	555	303	205	4	2	core/syntax/create-syntax-helpers.ts core/syntax/get-lower-bound.ts core/syntax/get-never-falsy-fact.ts core/syntax/solve-value-bounds.ts
+core/syntax	core/syntax/is-boolean-context.ts	105	64	28	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-caught-in-loop.ts	42	18	15	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-comparison-operator.ts	34	19	13	2	1	core/mutators/shared/is-comparison.ts core/hints/infer-operator-type.ts
+core/syntax	core/syntax/is-condition-test.ts	24	5	12	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-console-path.ts	23	9	13	2	1	core/syntax/is-logging-call.ts core/syntax/find-logging-calls.ts
+core/syntax	core/syntax/is-effect-free.ts	45	27	13	1	1	core/mutators/statement-removal.ts
+core/syntax	core/syntax/is-error-message.ts	88	44	29	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-for-each-result.ts	44	21	15	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-format-free.ts	27	11	12	1	1	core/syntax/find-logging-calls.ts
+core/syntax	core/syntax/is-function.ts	28	10	11	11	1	core/mutators/shared/get-comparison-plan.ts core/mutators/shared/has-other-exit.ts core/mutators/shared/get-function-returns.ts core/mutators/missing-await.ts core/mutators/optional-chaining.ts core/mutators/shared/is-tail-position.ts core/syntax/advances-loop.ts core/syntax/get-exited-loops.ts core/syntax/get-enclosing-function.ts core/syntax/is-caught-in-loop.ts core/syntax/is-error-message.ts
+core/syntax	core/syntax/is-global-name.ts	45	17	22	2	1	core/syntax/create-syntax-helpers.ts core/syntax/get-collection-class.ts
+core/syntax	core/syntax/is-global-type-name.ts	60	30	25	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-inside-try-block.ts	43	21	15	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-joined-array.ts	116	60	43	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-log-message.ts	40	14	22	2	1	core/generate/generate-file-mutants.ts core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-logger-factory-call.ts	52	30	14	1	1	core/tree/index-tree.ts
+core/syntax	core/syntax/is-logger-label.ts	50	25	19	1	1	core/tree/index-tree.ts
+core/syntax	core/syntax/is-logger-name.ts	22	12	10	2	1	core/syntax/is-logging-call.ts core/syntax/is-logger-factory-call.ts
+core/syntax	core/syntax/is-logging-call.ts	65	39	16	2	1	core/syntax/create-syntax-helpers.ts core/syntax/find-logging-calls.ts
+core/syntax	core/syntax/is-logical-operand.ts	18	3	9	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-loop-advance-value.ts	67	31	26	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-loop-test.ts	20	4	9	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-module-call.ts	40	16	18	1	1	core/tree/index-tree.ts
+core/syntax	core/syntax/is-non-thenable.ts	58	30	20	2	1	core/syntax/create-syntax-helpers.ts core/syntax/read-timer-call.ts
+core/syntax	core/syntax/is-plain-message.ts	34	19	11	2	1	core/syntax/find-logging-calls.ts core/syntax/find-message-texts.ts
+core/syntax	core/syntax/is-presence-test.ts	55	21	23	3	1	core/syntax/create-syntax-helpers.ts core/syntax/get-match-result-use.ts core/syntax/is-regex-only-tested.ts
+core/syntax	core/syntax/is-property-key.ts	30	10	13	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-read-chain.ts	46	24	17	1	1	core/mutators/string-literal.ts
+core/syntax	core/syntax/is-regex-only-tested.ts	76	36	30	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-result-unused.ts	42	20	16	3	1	core/syntax/create-syntax-helpers.ts core/syntax/get-collection-class.ts core/syntax/is-joined-array.ts
+core/syntax	core/syntax/is-rune-call.ts	88	47	28	1	1	core/syntax/find-compiler-pins.ts
+core/syntax	core/syntax/is-statement.ts	17	4	10	2	1	core/syntax/advances-loop.ts core/syntax/is-error-message.ts
+core/syntax	core/syntax/is-tested-loop.ts	28	10	10	4	1	core/mutators/shared/get-running-value.ts core/syntax/advances-loop.ts core/syntax/is-caught-in-loop.ts core/syntax/is-loop-test.ts
+core/syntax	core/syntax/is-timer-delay.ts	83	51	23	1	1	core/syntax/create-syntax-helpers.ts
+core/syntax	core/syntax/is-truth-test.ts	40	19	14	3	1	core/syntax/is-presence-test.ts core/syntax/get-named-groups-fact.ts core/syntax/get-truth-only-name.ts
+core/syntax	core/syntax/is-value-position.ts	203	120	64	2	1	core/syntax/create-syntax-helpers.ts core/generate/validate-replacement.ts
+core/syntax	core/syntax/is-vue-macro-call.ts	31	16	12	1	1	core/syntax/find-compiler-pins.ts
+core/syntax	core/syntax/is-write-target.ts	45	26	14	2	1	core/syntax/is-written-member.ts core/syntax/is-value-position.ts
+core/syntax	core/syntax/is-written-member.ts	26	8	10	2	1	core/syntax/get-match-result-use.ts core/syntax/get-named-groups-fact.ts
+core/syntax	core/syntax/never-empty-methods.ts	15	7	8	1	1	core/syntax/get-never-falsy-fact.ts
+core/syntax	core/syntax/passes-truthiness.ts	27	15	8	2	1	core/syntax/is-truth-test.ts core/syntax/is-boolean-context.ts
+core/syntax	core/syntax/read-import.ts	50	31	14	1	1	core/syntax/read-timer-call.ts
+core/syntax	core/syntax/read-literal-type.ts	56	39	13	1	1	core/generate/collect-candidates.ts
+core/syntax	core/syntax/read-number-literal.ts	26	15	7	5	1	core/syntax/get-value-bound.ts core/syntax/get-match-result-use.ts core/syntax/get-never-falsy-fact.ts core/syntax/solve-value-bounds.ts core/syntax/get-guard-bound.ts
+core/syntax	core/syntax/read-timer-call.ts	231	126	85	2	1	core/syntax/create-syntax-helpers.ts core/syntax/is-timer-delay.ts
+core/syntax	core/syntax/resolve-closed-expression.ts	36	14	14	3	1	core/syntax/get-collection-class.ts core/syntax/get-named-groups-fact.ts core/syntax/get-match-regex.ts
+core/syntax	core/syntax/solve-value-bounds.ts	567	319	199	1	5	core/syntax/create-syntax-helpers.ts
+core/text	core/text/blank-outside.ts	39	16	19	3	1	core/parser/get-source-blocks.ts core/parser/create-comment-program.ts core/parser/parse-template-expressions.ts
+core/text	core/text/create-source-code.ts	60	34	11	1	2	core/generate/generate-file-mutants.ts
+core/text	core/text/edit-text.ts	50	29	13	1	1	core/text/create-source-code.ts
+core/text	core/text/find-closest-name.ts	54	34	19	5	1	core/config/prepare-run.ts core/plugins/resolve-preset.ts core/plugins/get-settings-problem.ts core/config/validate-config.ts core/ignore/parse-ignore-directives.ts
+core/text	core/text/find-last-start.ts	27	17	10	3	1	core/text/get-source-position.ts core/parser/parse-template-expressions.ts core/generate/get-mutant-regions.ts
+core/text	core/text/find-token-start.ts	38	19	16	3	1	core/text/create-source-code.ts core/text/get-operator-range.ts core/text/remove-list-element.ts
+core/text	core/text/get-line-starts.ts	19	8	10	8	6	cli/report/build-list-report.ts cli/html/client/index-report.ts cli/html/client/unpack-run-report.ts core/parser/create-template-failure.ts core/parser/create-comment-program.ts core/parser/parse-template-expressions.ts core/parser/parse-file.ts core/identity/assert-unique-ids.ts
+core/text	core/text/get-operator-range.ts	38	20	11	2	1	core/text/create-source-code.ts core/text/replace-operator.ts
+core/text	core/text/get-source-position.ts	23	10	9	13	4	cli/diff/get-diff-lines.ts cli/report/build-list-report.ts cli/html/client/index-report.ts cli/html/client/render-diff.ts cli/html/client/unpack-run-report.ts core/generate/generate-file-mutants.ts core/ignore/parse-ignore-directives.ts core/parser/create-template-failure.ts core/parser/parse-file.ts core/text/create-source-code.ts core/generate/collect-candidates.ts core/identity/assert-unique-ids.ts core/files/select-changed-mutants.ts
+core/text	core/text/needs-grouping.ts	161	104	46	2	1	core/text/replace-operator.ts core/generate/group-replacement.ts
+core/text	core/text/needs-separator.ts	50	18	28	3	1	cli/diff/separate-replacement.ts core/text/edit-text.ts core/text/replace-operator.ts
+core/text	core/text/parse-expression.ts	70	36	22	2	1	core/generate/collect-candidates.ts core/generate/group-replacement.ts
+core/text	core/text/pluralize.ts	10	3	7	12	1	cli/create-run-progress.ts cli/html/client/render-attention.ts cli/html/client/render-files-view.ts cli/html/client/render-file-panel.ts cli/html/client/render-mutant-panel.ts cli/html/client/render-tree.ts cli/html/client/render-mutators-view.ts cli/html/client/render-count-cells.ts cli/html/client/render-overview.ts cli/report/format-text-report.ts core/run/run-dry-phase.ts cli/report/format-run-text-report.ts
+core/text	core/text/remove-list-element.ts	121	68	39	1	1	core/text/create-source-code.ts
+core/text	core/text/replace-operator.ts	152	102	34	1	1	core/text/create-source-code.ts
+core/text	core/text/swap-string-quotes.ts	59	39	15	1	1	core/generate/fit-template-text.ts
+core/tree	core/tree/get-callee-name.ts	21	9	8	2	1	core/mutators/array-element.ts core/syntax/is-error-message.ts
+core/tree	core/tree/get-context-slot.ts	25	7	10	27	3	core/hints/infer-member-type.ts core/syntax/create-syntax-helpers.ts core/syntax/get-collection-class.ts core/syntax/get-result-slot.ts core/syntax/get-match-result-use.ts core/syntax/get-checked-name.ts core/syntax/is-presence-test.ts core/syntax/get-chain-end.ts core/syntax/is-truth-test.ts core/syntax/is-written-member.ts core/syntax/get-named-groups-fact.ts core/syntax/get-match-regex.ts core/syntax/is-boolean-context.ts core/syntax/is-condition-test.ts core/syntax/is-for-each-result.ts core/syntax/is-joined-array.ts core/syntax/is-logical-operand.ts core/syntax/is-loop-advance-value.ts core/syntax/is-loop-test.ts core/syntax/is-property-key.ts core/syntax/is-regex-only-tested.ts core/syntax/is-timer-delay.ts core/syntax/is-value-position.ts core/syntax/get-count-map.ts core/syntax/get-guard-bound.ts core/syntax/find-compiler-pins.ts core/syntax/is-rune-call.ts
+core/tree	core/tree/get-raw-slot.ts	21	7	9	5	1	core/tree/get-context-slot.ts core/tree/get-slot.ts core/syntax/get-chain-root.ts core/syntax/get-guard-bound.ts core/syntax/find-compiler-pins.ts
+core/tree	core/tree/get-slot.ts	24	7	10	12	1	core/syntax/advances-loop.ts core/syntax/get-exited-loops.ts core/syntax/get-enclosing-function.ts core/syntax/get-statement-list.ts core/syntax/is-caught-in-loop.ts core/syntax/is-error-message.ts core/syntax/is-inside-try-block.ts core/syntax/is-value-position.ts core/text/create-source-code.ts core/generate/collect-candidates.ts core/syntax/find-compiler-pins.ts core/syntax/is-rune-call.ts
+core/tree	core/tree/index-tree.ts	136	79	42	2	3	core/generate/generate-file-mutants.ts core/instrument/find-statement-starts.ts
+core/tree	core/tree/is-expression-wrapper.ts	45	18	15	4	1	core/tree/unwrap-expression.ts core/tree/get-context-slot.ts core/parser/parse-template-expressions.ts core/syntax/is-error-message.ts
+core/tree	core/tree/is-name-position.ts	31	21	8	3	1	core/hints/analyze-scopes.ts core/syntax/advances-loop.ts core/tree/index-tree.ts
+core/tree	core/tree/unwrap-expression.ts	18	7	7	51	2	core/tree/get-callee-name.ts core/mutators/shared/is-canonical-falsy.ts core/mutators/shared/get-owner-constant.ts core/mutators/shared/get-comparison-plan.ts core/syntax/get-member-path.ts core/syntax/get-root-name.ts core/mutators/shared/get-leave-now-value.ts core/mutators/shared/is-boolean-valued.ts core/mutators/shared/get-innermost.ts core/mutators/shared/has-polar-mutant.ts core/mutators/shared/get-toward-mutant.ts core/mutators/shared/get-return-value-kind.ts core/mutators/shared/is-boolean-result-source.ts core/mutators/shared/is-typed-by-method-name.ts core/syntax/get-member-root.ts core/syntax/is-read-chain.ts core/hints/analyze-scopes.ts core/hints/infer-expression-type.ts core/hints/infer-call-type.ts core/parser/parse-template-expressions.ts core/syntax/create-syntax-helpers.ts core/syntax/advances-loop.ts core/syntax/get-exited-loops.ts core/syntax/get-value-bound.ts core/syntax/get-collection-class.ts core/syntax/resolve-closed-expression.ts core/syntax/read-number-literal.ts core/syntax/is-presence-test.ts core/syntax/get-named-groups-fact.ts core/syntax/get-match-regex.ts core/syntax/get-never-falsy-fact.ts core/syntax/is-boolean-context.ts core/syntax/is-error-message.ts core/syntax/is-for-each-result.ts core/syntax/is-joined-array.ts core/syntax/is-non-thenable.ts core/syntax/read-timer-call.ts core/syntax/is-value-position.ts core/syntax/solve-value-bounds.ts core/syntax/get-count-map.ts core/syntax/get-guard-bound.ts core/syntax/find-logging-calls.ts core/syntax/find-message-texts.ts core/syntax/is-plain-message.ts core/syntax/is-format-free.ts core/syntax/is-logger-factory-call.ts core/syntax/is-logger-label.ts core/identity/get-scope-path.ts core/syntax/find-compiler-pins.ts core/syntax/is-rune-call.ts core/syntax/read-literal-type.ts
+core/tree	core/tree/unwrap-parentheses.ts	16	7	7	23	2	core/mutators/shared/get-literal-value.ts core/mutators/shared/get-branch-pair.ts core/mutators/shared/get-returned-value.ts core/mutators/shared/get-owner-constant.ts core/mutators/shared/get-comparison-plan.ts core/mutators/shared/get-number-text.ts core/mutators/shared/get-proven-comparison-value.ts core/mutators/shared/is-nullish-constant.ts core/mutators/shared/get-shifted-literal.ts core/mutators/shared/get-return-switch.ts core/mutators/shared/get-condition-constants.ts core/mutators/shared/get-nullish-directions.ts core/mutators/shared/get-nullish-plan.ts core/mutators/shared/is-falsy-constant.ts core/mutators/shared/get-logical-drops.ts core/mutators/shared/get-toward-mutant.ts core/hints/infer-binding-type.ts core/hints/infer-call-type.ts core/hints/infer-member-type.ts core/syntax/create-syntax-helpers.ts core/syntax/get-logical-chain.ts core/syntax/is-logging-call.ts core/identity/get-scope-path.ts
+core/tree	core/tree/walk-tree.ts	81	48	24	13	14	core/mutators/shared/get-comparison-plan.ts core/mutators/shared/has-other-exit.ts core/mutators/shared/get-function-returns.ts core/mutators/optional-chaining.ts core/syntax/is-effect-free.ts core/hints/analyze-scopes.ts core/hints/infer-binding-type.ts core/hints/infer-member-type.ts core/parser/parse-template-expressions.ts core/parser/parse-file.ts core/syntax/advances-loop.ts core/tree/index-tree.ts core/text/swap-string-quotes.ts

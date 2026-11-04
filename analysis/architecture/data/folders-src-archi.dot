@@ -1,0 +1,159 @@
+strict digraph "dependency-cruiser output"{
+    rankdir="LR" splines="true" overlap="false" nodesep="0.16" ranksep="0.18" fontname="Helvetica-bold" fontsize="9" style="rounded,bold,filled" fillcolor="#ffffff" compound="true"
+    node [shape="box" style="rounded, filled" height="0.2" color="black" fillcolor="#ffffcc" fontcolor="black" fontname="Helvetica" fontsize="9"]
+    edge [arrowhead="normal" arrowsize="0.6" penwidth="2.0" color="#00000033" fontname="Helvetica" fontsize="9"]
+
+    subgraph "cluster_adapters" {label="adapters" "adapters/node-test" [label=<node-test> tooltip="node-test" URL="adapters/node-test" shape="box3d"] }
+    "adapters/node-test" -> "core/cache"
+    "adapters/node-test" -> "core/compare-code-units.ts"
+    "adapters/node-test" -> "adapters/shared"
+    "adapters/node-test" -> "core/instrument"
+    "adapters/node-test" -> "core/runtime"
+    subgraph "cluster_adapters" {label="adapters" "adapters/shared" [label=<shared> tooltip="shared" URL="adapters/shared" shape="box3d"] }
+    "adapters/shared" -> "core/cache"
+    "adapters/shared" -> "core/compare-code-units.ts"
+    subgraph "cluster_adapters" {label="adapters" "adapters/vitest" [label=<vitest> tooltip="vitest" URL="adapters/vitest" shape="box3d"] }
+    "adapters/vitest" -> "core/compare-code-units.ts"
+    "adapters/vitest" -> "adapters/shared"
+    "adapters/vitest" -> "core/instrument"
+    "adapters/vitest" -> "core/runtime"
+    "adapters/vitest" -> "core/run"
+    subgraph "cluster_cli" {label="cli" "cli/built-in-adapters.ts" [label=<built-in-adapters.ts> tooltip="built-in-adapters.ts" URL="cli/built-in-adapters.ts" fillcolor="#ddfeff"] }
+    "cli/built-in-adapters.ts" -> "adapters/node-test" [style="dashed"]
+    "cli/built-in-adapters.ts" -> "adapters/vitest" [style="dashed"]
+    subgraph "cluster_cli" {label="cli" "cli/create-run-progress.ts" [label=<create-run-progress.ts> tooltip="create-run-progress.ts" URL="cli/create-run-progress.ts" fillcolor="#ddfeff"] }
+    "cli/create-run-progress.ts" -> "core/text"
+    "cli/create-run-progress.ts" -> "cli/create-time-estimator.ts"
+    "cli/create-run-progress.ts" -> "cli/report"
+    "cli/create-run-progress.ts" -> "cli/terminal"
+    subgraph "cluster_cli" {label="cli" "cli/create-time-estimator.ts" [label=<create-time-estimator.ts> tooltip="create-time-estimator.ts" URL="cli/create-time-estimator.ts" fillcolor="#ddfeff"] }
+    subgraph "cluster_cli" {label="cli" "cli/diff" [label=<diff> tooltip="diff" URL="cli/diff" shape="box3d"] }
+    "cli/diff" -> "cli/terminal"
+    "cli/diff" -> "core/text"
+    subgraph "cluster_cli" {label="cli" "cli/html" [label=<html> tooltip="html" URL="cli/html" shape="box3d"] }
+    "cli/html" -> "core/run"
+    "cli/html" -> "cli/report"
+    "cli/html" -> "core/text"
+    "cli/html" -> "cli/diff"
+    subgraph "cluster_cli" {label="cli" "cli/index.ts" [label=<index.ts> tooltip="index.ts" URL="cli/index.ts" fillcolor="#ddfeff"] }
+    "cli/index.ts" -> "cli/parse-arguments.ts"
+    "cli/index.ts" -> "cli/run-list.ts"
+    "cli/index.ts" -> "cli/run-mutation.ts"
+    "cli/index.ts" -> "cli/terminal"
+    subgraph "cluster_cli" {label="cli" "cli/parse-arguments.ts" [label=<parse-arguments.ts> tooltip="parse-arguments.ts" URL="cli/parse-arguments.ts" fillcolor="#ddfeff"] }
+    subgraph "cluster_cli" {label="cli" "cli/report" [label=<report> tooltip="report" URL="cli/report" shape="box3d"] }
+    "cli/report" -> "core/run"
+    "cli/report" -> "core/compare-code-units.ts"
+    "cli/report" -> "core/text"
+    "cli/report" -> "cli/diff"
+    "cli/report" -> "cli/terminal"
+    subgraph "cluster_cli" {label="cli" "cli/run-list.ts" [label=<run-list.ts> tooltip="run-list.ts" URL="cli/run-list.ts" fillcolor="#ddfeff"] }
+    "cli/run-list.ts" -> "core/list-mutants.ts"
+    "cli/run-list.ts" -> "cli/parse-arguments.ts" [arrowhead="onormal" penwidth="1.0"]
+    "cli/run-list.ts" -> "cli/report"
+    "cli/run-list.ts" -> "cli/terminal"
+    subgraph "cluster_cli" {label="cli" "cli/run-mutation.ts" [label=<run-mutation.ts> tooltip="run-mutation.ts" URL="cli/run-mutation.ts" fillcolor="#ddfeff"] }
+    "cli/run-mutation.ts" -> "core/run-mutants.ts"
+    "cli/run-mutation.ts" -> "cli/built-in-adapters.ts"
+    "cli/run-mutation.ts" -> "cli/create-run-progress.ts"
+    "cli/run-mutation.ts" -> "cli/html"
+    "cli/run-mutation.ts" -> "cli/parse-arguments.ts" [arrowhead="onormal" penwidth="1.0"]
+    "cli/run-mutation.ts" -> "cli/report"
+    "cli/run-mutation.ts" -> "cli/terminal"
+    subgraph "cluster_cli" {label="cli" "cli/terminal" [label=<terminal> tooltip="terminal" URL="cli/terminal" shape="box3d"] }
+    subgraph "cluster_core" {label="core" "core/cache" [label=<cache> tooltip="cache" URL="core/cache" shape="box3d"] }
+    "core/cache" -> "core/compare-code-units.ts"
+    "core/cache" -> "core/run"
+    "core/cache" -> "core/instrument"
+    "core/cache" -> "core/runtime"
+    "core/cache" -> "core/plugins"
+    subgraph "cluster_core" {label="core" "core/compare-code-units.ts" [label=<compare-code-units.ts> tooltip="compare-code-units.ts" URL="core/compare-code-units.ts" fillcolor="#ddfeff"] }
+    subgraph "cluster_core" {label="core" "core/config" [label=<config> tooltip="config" URL="core/config" shape="box3d"] }
+    "core/config" -> "core/compare-code-units.ts"
+    "core/config" -> "core/plugins"
+    "core/config" -> "core/text"
+    subgraph "cluster_core" {label="core" "core/files" [label=<files> tooltip="files" URL="core/files" shape="box3d"] }
+    "core/files" -> "core/generate"
+    "core/files" -> "core/identity"
+    "core/files" -> "core/parser"
+    "core/files" -> "core/compare-code-units.ts"
+    "core/files" -> "core/text"
+    subgraph "cluster_core" {label="core" "core/generate" [label=<generate> tooltip="generate" URL="core/generate" shape="box3d"] }
+    "core/generate" -> "core/hints"
+    "core/generate" -> "core/identity"
+    "core/generate" -> "core/ignore"
+    "core/generate" -> "core/parser"
+    "core/generate" -> "core/skips"
+    "core/generate" -> "core/syntax"
+    "core/generate" -> "core/text"
+    "core/generate" -> "core/tree"
+    "core/generate" -> "core/cache"
+    subgraph "cluster_core" {label="core" "core/git" [label=<git> tooltip="git" URL="core/git" shape="box3d"] }
+    subgraph "cluster_core" {label="core" "core/hints" [label=<hints> tooltip="hints" URL="core/hints" shape="box3d"] }
+    "core/hints" -> "core/tree"
+    "core/hints" -> "core/compare-code-units.ts"
+    "core/hints" -> "core/syntax"
+    subgraph "cluster_core" {label="core" "core/identity" [label=<identity> tooltip="identity" URL="core/identity" shape="box3d"] }
+    "core/identity" -> "core/tree"
+    "core/identity" -> "core/text"
+    subgraph "cluster_core" {label="core" "core/ignore" [label=<ignore> tooltip="ignore" URL="core/ignore" shape="box3d"] }
+    "core/ignore" -> "core/parser"
+    "core/ignore" -> "core/compare-code-units.ts"
+    "core/ignore" -> "core/plugins"
+    "core/ignore" -> "core/text"
+    subgraph "cluster_core" {label="core" "core/index.ts" [label=<index.ts> tooltip="index.ts" URL="core/index.ts" fillcolor="#ddfeff"] }
+    "core/index.ts" -> "core/config" [arrowhead="inv"]
+    "core/index.ts" -> "core/instrument" [arrowhead="inv"]
+    "core/index.ts" -> "core/run" [arrowhead="inv"]
+    subgraph "cluster_core" {label="core" "core/instrument" [label=<instrument> tooltip="instrument" URL="core/instrument" shape="box3d"] }
+    "core/instrument" -> "core/parser"
+    "core/instrument" -> "core/syntax"
+    "core/instrument" -> "core/tree"
+    "core/instrument" -> "core/runtime"
+    subgraph "cluster_core" {label="core" "core/list-mutants.ts" [label=<list-mutants.ts> tooltip="list-mutants.ts" URL="core/list-mutants.ts" fillcolor="#ddfeff"] }
+    "core/list-mutants.ts" -> "core/config"
+    "core/list-mutants.ts" -> "core/files"
+    "core/list-mutants.ts" -> "core/git"
+    subgraph "cluster_core" {label="core" "core/mutators" [label=<mutators> tooltip="mutators" URL="core/mutators" shape="box3d"] }
+    "core/mutators" -> "core/tree"
+    "core/mutators" -> "core/hints"
+    "core/mutators" -> "core/syntax"
+    "core/mutators" -> "core/skips"
+    "core/mutators" -> "core/regex"
+    subgraph "cluster_core" {label="core" "core/parser" [label=<parser> tooltip="parser" URL="core/parser" shape="box3d"] }
+    "core/parser" -> "core/text"
+    "core/parser" -> "core/tree"
+    subgraph "cluster_core" {label="core" "core/plugins" [label=<plugins> tooltip="plugins" URL="core/plugins" shape="box3d"] }
+    "core/plugins" -> "core/mutators"
+    "core/plugins" -> "core/presets"
+    "core/plugins" -> "core/compare-code-units.ts"
+    "core/plugins" -> "core/text"
+    subgraph "cluster_core" {label="core" "core/presets" [label=<presets> tooltip="presets" URL="core/presets" shape="box3d"] }
+    subgraph "cluster_core" {label="core" "core/regex" [label=<regex> tooltip="regex" URL="core/regex" shape="box3d"] }
+    subgraph "cluster_core" {label="core" "core/run" [label=<run> tooltip="run" URL="core/run" shape="box3d"] }
+    "core/run" -> "core/compare-code-units.ts"
+    "core/run" -> "core/parser"
+    "core/run" -> "core/plugins"
+    "core/run" -> "core/text"
+    subgraph "cluster_core" {label="core" "core/run-mutants.ts" [label=<run-mutants.ts> tooltip="run-mutants.ts" URL="core/run-mutants.ts" fillcolor="#ddfeff"] }
+    "core/run-mutants.ts" -> "core/cache"
+    "core/run-mutants.ts" -> "core/compare-code-units.ts"
+    "core/run-mutants.ts" -> "core/config"
+    "core/run-mutants.ts" -> "core/files"
+    "core/run-mutants.ts" -> "core/git"
+    "core/run-mutants.ts" -> "core/identity"
+    "core/run-mutants.ts" -> "core/instrument"
+    "core/run-mutants.ts" -> "core/parser"
+    "core/run-mutants.ts" -> "core/run"
+    subgraph "cluster_core" {label="core" "core/runtime" [label=<runtime> tooltip="runtime" URL="core/runtime" shape="box3d"] }
+    subgraph "cluster_core" {label="core" "core/skips" [label=<skips> tooltip="skips" URL="core/skips" shape="box3d"] }
+    subgraph "cluster_core" {label="core" "core/syntax" [label=<syntax> tooltip="syntax" URL="core/syntax" shape="box3d"] }
+    "core/syntax" -> "core/tree"
+    "core/syntax" -> "core/regex"
+    "core/syntax" -> "core/generate"
+    "core/syntax" -> "core/parser"
+    subgraph "cluster_core" {label="core" "core/text" [label=<text> tooltip="text" URL="core/text" shape="box3d"] }
+    "core/text" -> "core/tree"
+    subgraph "cluster_core" {label="core" "core/tree" [label=<tree> tooltip="tree" URL="core/tree" shape="box3d"] }
+    "core/tree" -> "core/syntax"
+}

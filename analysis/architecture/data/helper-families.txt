@@ -1,0 +1,200 @@
+# Helper folders: single-importer summary
+folder | files | 1 importer | 1 importer in same folder | 0 importers | code lines (median) | files < 15 code lines
+core/syntax | 76 | 37 | 28 | 0 | 22 | 21
+core/hints | 18 | 7 | 4 | 0 | 92 | 5
+core/regex | 30 | 17 | 11 | 0 | 28 | 8
+core/text | 16 | 5 | 3 | 0 | 29 | 3
+core/tree | 10 | 0 | 0 | 0 | 9 | 6
+core/mutators/shared | 84 | 15 | 12 | 0 | 19 | 36
+core/run | 45 | 29 | 14 | 0 | 25 | 10
+core/parser | 20 | 7 | 6 | 0 | 21 | 5
+core/cache | 19 | 11 | 6 | 0 | 29 | 7
+adapters/shared | 10 | 3 | 3 | 0 | 41 | 1
+adapters/vitest | 55 | 35 | 33 | 1 | 20 | 18
+adapters/node-test | 66 | 34 | 32 | 3 | 18 | 27
+cli/terminal | 16 | 4 | 1 | 0 | 18 | 6
+cli/report | 21 | 9 | 6 | 0 | 24 | 2
+
+# Name-stem families inside each helper folder (>= 3 files share a content word)
+## core/syntax
+- call (7 files, 393 code lines): find-logging-calls[1], is-logger-factory-call[1], is-logging-call[2], is-module-call[1], is-rune-call[1], is-vue-macro-call[1], read-timer-call[2]
+- loop (6 files, 252 code lines): advances-loop[2], get-exited-loops[2], is-caught-in-loop[1], is-loop-advance-value[1], is-loop-test[1], is-tested-loop[4]
+- log (6 files, 239 code lines): find-logging-calls[1], is-log-message[2], is-logger-factory-call[1], is-logger-label[1], is-logger-name[2], is-logging-call[2]
+- name (6 files, 109 code lines): get-checked-name[3], get-root-name[2], get-truth-only-name[1], is-global-name[2], is-global-type-name[1], is-logger-name[2]
+- message (4 files, 93 code lines): find-message-texts[1], is-error-message[1], is-log-message[2], is-plain-message[2]
+- chain (4 files, 72 code lines): get-chain-end[3], get-chain-root[2], get-logical-chain[2], is-read-chain[1]
+- bound (4 files, 774 code lines): get-guard-bound[1], get-lower-bound[1], get-value-bound[4], solve-value-bounds[1]
+- result (4 files, 121 code lines): get-match-result-use[1], get-result-slot[2], is-for-each-result[1], is-result-unused[3]
+- value (4 files, 773 code lines): get-value-bound[4], is-loop-advance-value[1], is-value-position[2], solve-value-bounds[1]
+- test (4 files, 49 code lines): is-condition-test[1], is-loop-test[1], is-presence-test[3], is-truth-test[3]
+- root (3 files, 60 code lines): get-chain-root[2], get-member-root[3], get-root-name[2]
+- memb (3 files, 70 code lines): get-member-path[12], get-member-root[3], is-written-member[2]
+## core/hints
+- inf (7 files, 1306 code lines): infer-annotation-type[5], infer-binding-type[3], infer-call-type[1], infer-expression-type[2], infer-member-type[1], infer-operator-type[1], infer-this-type[1]
+## core/regex
+- regex (11 files, 334 code lines): compiles-regex[3], create-regex-replacement[2], create-regex-visitors[2], get-regex-usage[1], is-valid-regex-literal[1], parse-regex-pattern[6], print-regex-literal[1], read-regex-argument[2], read-regex-call[2], read-regex-literal[1], reads-regex-statics[1]
+- pattern (5 files, 422 code lines): collect-pattern-changes[1], encode-pattern-text[1], map-pattern-offsets[2], parse-regex-pattern[6], print-pattern-edit[1]
+- group (3 files, 36 code lines): has-capturing-group[2], has-named-group[1], is-mandatory-group[1]
+- literal (3 files, 56 code lines): is-valid-regex-literal[1], print-regex-literal[1], read-regex-literal[1]
+- print (3 files, 122 code lines): print-flags-edit[1], print-pattern-edit[1], print-regex-literal[1]
+## core/tree
+- slot (3 files, 21 code lines): get-context-slot[27], get-raw-slot[5], get-slot[12]
+## core/mutators/shared
+- literal (10 files, 270 code lines): get-literal-flip[3], get-literal-mutator[8], get-literal-skip[5], get-literal-truth[3], get-literal-value[29], get-next-literal-value[2], get-shifted-literal[2], is-no-op-callback-literal[1], is-number-literal[2], is-truth-flipping-literal[1]
+- value (9 files, 305 code lines): get-leave-now-value[3], get-literal-value[29], get-next-literal-value[2], get-proven-comparison-value[2], get-return-value-kind[2], get-returned-value[2], get-running-value[5], has-defined-falsy-value[2], is-plain-return-value[2]
+- skip (8 files, 357 code lines): get-branch-copy-skip[1], get-default-option-skip[1], get-literal-skip[5], get-loop-running-skip[3], get-nullish-swap-skip[2], get-or-default-skip[1], leave-now-skip[3], no-op-callback-skip[5]
+- constant (8 files, 422 code lines): get-condition-constants[3], get-group-constant[3], get-owned-constants[2], get-owner-constant[3], is-constant-eligible-group[2], is-falsy-constant[1], is-no-op-callback-constant[3], is-nullish-constant[5]
+- nullish (7 files, 272 code lines): distinguishes-nullish-swap[2], get-nullish-directions[3], get-nullish-plan[2], get-nullish-swap-skip[2], is-always-nullish[5], is-nullish-constant[5], may-be-nullish[4]
+- boolean (7 files, 138 code lines): is-boolean-mode-operand[5], is-boolean-mode[9], is-boolean-result-source[1], is-boolean-result[3], is-boolean-valued[5], is-expected-boolean[2], may-be-boolean[2]
+- callback (6 files, 124 code lines): empties-callback[3], get-callback-owner[4], get-callback-result[2], is-no-op-callback-constant[3], is-no-op-callback-literal[1], no-op-callback-skip[5]
+- result (4 files, 86 code lines): get-callback-result[2], is-boolean-result-source[1], is-boolean-result[3], is-comparator-result[2]
+- falsy (4 files, 29 code lines): get-canonical-falsy[2], has-defined-falsy-value[2], is-canonical-falsy[3], is-falsy-constant[1]
+- comparison (4 files, 675 code lines): get-comparison-plan[6], get-proven-comparison-value[2], is-comparison-operand[2], is-comparison[10]
+- return (4 files, 182 code lines): get-function-returns[2], get-return-switch[2], get-return-value-kind[2], is-plain-return-value[2]
+- numb (4 files, 56 code lines): get-number-text[2], is-non-number-type[1], is-number-literal[2], is-number-type[4]
+- truth (3 files, 60 code lines): get-fixed-truth[2], get-literal-truth[3], is-truth-flipping-literal[1]
+- operand (3 files, 24 code lines): is-boolean-mode-operand[5], is-comparison-operand[2], is-void-operand[1]
+- no (3 files, 55 code lines): is-no-op-callback-constant[3], is-no-op-callback-literal[1], no-op-callback-skip[5]
+- op (3 files, 55 code lines): is-no-op-callback-constant[3], is-no-op-callback-literal[1], no-op-callback-skip[5]
+## core/run
+- file (7 files, 216 code lines): get-file-cost[1], get-test-file-key[12], rank-module-files[1], rank-mutant-files[3], rank-test-file[2], select-run-files[1], sort-test-files[2]
+- test (7 files, 201 code lines): get-test-file-key[12], index-module-tests[1], order-covering-tests[1], rank-test-file[2], read-test-imports[1], sort-test-files[2], sort-tests[1]
+- isolated (6 files, 317 code lines): apply-isolated-result[1], plan-isolated[1], preview-isolated-unit[1], read-isolated-unit[2], route-isolated[3], run-isolated-rounds[1]
+- batch (4 files, 424 code lines): apply-batch-result[1], get-batch-unit-cost[1], plan-batch[1], run-batch-phases[1]
+- unit (4 files, 146 code lines): get-batch-unit-cost[1], get-unit-evidence[2], preview-isolated-unit[1], read-isolated-unit[2]
+- result (3 files, 347 code lines): apply-batch-result[1], apply-isolated-result[1], decide-results[1]
+- mutant (3 files, 139 code lines): classify-mutants[1], mark-outside-mutants[1], rank-mutant-files[3]
+- dry (3 files, 440 code lines): compare-dry-entries[2], read-dry-run[1], run-dry-phase[1]
+- cost (3 files, 59 code lines): compute-static-cost[1], get-batch-unit-cost[1], get-file-cost[1]
+- rank (3 files, 134 code lines): rank-module-files[1], rank-mutant-files[3], rank-test-file[2]
+## core/parser
+- template (8 files, 387 code lines): create-template-failure[3], find-vue-template[2], get-template-language[2], parse-component-template[2], parse-svelte-template[1], parse-template-expressions[1], parse-vue-template[1], read-template-program[2]
+- vue (4 files, 157 code lines): collect-vue-expressions[1], find-vue-template[2], load-vue-compiler[2], parse-vue-template[1]
+- svelte (3 files, 197 code lines): collect-svelte-expressions[1], load-svelte-compiler[2], parse-svelte-template[1]
+- expression (3 files, 497 code lines): collect-svelte-expressions[1], collect-vue-expressions[1], parse-template-expressions[1]
+## core/cache
+- cache (8 files, 567 code lines): cache-version[4], create-run-cache[1], get-cache-path[1], prepare-run-cache[1], prune-cache-entries[1], read-run-cache[2], save-run-cache[1], write-run-cache[1]
+- file (4 files, 99 code lines): find-changed-files[2], get-test-file-keys[1], hash-files[2], list-file-hashes[2]
+## adapters/shared
+- track (3 files, 503 code lines): track-environment[1], track-file-reads[1], track-inputs[2]
+## adapters/vitest
+- file (7 files, 78 code lines): get-file-key[2], get-module-file[2], index-switched-files[2], read-out-file[2], read-out-files[2], get-file-hash[3], write-plan-files[1]
+- vitest (5 files, 179 code lines): check-vitest-copy[1], detect-vitest[2], score-vitest[1], start-vitest-session[1], vitest-variables[2]
+- work (4 files, 157 code lines): stop-hung-worker[3], wait-for-workers[1], read-worker-plan[1], watch-worker-close[1]
+- project (3 files, 71 code lines): check-project-config[1], configure-project[1], get-project-label[2]
+- out (3 files, 30 code lines): read-out-file[2], read-out-files[2], write-out-record[1]
+- unit (3 files, 72 code lines): read-unit-inputs[2], watch-unit-ends[2], claim-unit[1]
+- plan (3 files, 138 code lines): run-plan[2], read-worker-plan[1], write-plan-files[1]
+- watch (3 files, 129 code lines): watch-heartbeats[2], watch-unit-ends[2], watch-worker-close[1]
+- hook (3 files, 100 code lines): find-hook-error[1], get-hook-budget[1], install-try-hook[1]
+- try (3 files, 79 code lines): install-try-hook[1], race-try-timeout[1], read-try-facts[1]
+## adapters/node-test
+- file (8 files, 249 code lines): build-dry-file[1], list-file-errors[2], list-loaded-files[2], list-node-test-files[2], list-package-files[2], list-setup-files[1], create-file-recorder[2], run-test-file[2]
+- node (8 files, 435 code lines): check-node-support[1], collect-node-dependencies[2], get-node-cache-inputs[1], list-node-test-files[2], read-node-runtime[1], score-node-test[1], split-node-arguments[1], start-node-test-session[1]
+- test (8 files, 437 code lines): find-test-command[1], get-test-id[2], list-node-test-files[2], read-test-timeout[1], run-test-file[2], run-test-process[1], score-node-test[1], start-node-test-session[1]
+- proces (5 files, 145 code lines): live-process-groups[2], run-test-process[1], stop-live-process-groups[2], stop-process-group[2], track-process-group[1]
+- hook (4 files, 84 code lines): describe-hook-failure[2], create-load-hook[2], hooks[0], install-module-hooks[1]
+- group (4 files, 47 code lines): live-process-groups[2], stop-live-process-groups[2], stop-process-group[2], track-process-group[1]
+- dry (3 files, 227 code lines): build-dry-file[1], get-dry-deadline[1], run-dry[1]
+- error (3 files, 36 code lines): drop-todo-errors[2], list-file-errors[2], create-bail-error[1]
+- command (3 files, 233 code lines): find-test-command[1], parse-command[2], resolve-command[2]
+- preload (3 files, 92 code lines): get-preload-path[1], place-preload[1], preload[0]
+- key (3 files, 3 code lines): loaded-key[2], reported-key[2], served-key[2]
+## cli/terminal
+- width (4 files, 55 code lines): cut-to-width[8], get-display-width[15], get-max-display-width[4], pad-to-width[2]
+## cli/report
+- report (8 files, 803 code lines): build-list-report[2], build-run-report[2], format-report[2], format-run-report[1], format-run-text-report[1], format-text-report[1], slim-list-report[1], slim-run-report[1]
+- slim (5 files, 133 code lines): slim-diff[1], slim-focus[2], slim-list-mutant[2], slim-list-report[1], slim-run-report[1]
+
+# Private-helper chains: file -> its only importer (same folder), grouped by the root importer
+## core/syntax
+- create-syntax-helpers <- get-count-map, get-guard-bound, get-lower-bound, get-match-result-use, get-named-groups-fact, get-never-falsy-fact, get-truth-only-name, is-boolean-context, is-caught-in-loop, is-condition-test, is-error-message, is-for-each-result, is-global-type-name, is-inside-try-block, is-joined-array, is-logical-operand, is-loop-advance-value, is-loop-test, is-property-key, is-regex-only-tested, is-timer-delay, never-empty-methods, solve-value-bounds (24 files, 1220 code lines)
+- find-logging-calls <- find-message-texts, is-format-free (3 files, 146 code lines)
+- find-compiler-pins <- is-rune-call, is-vue-macro-call (3 files, 185 code lines)
+- read-timer-call <- read-import (2 files, 157 code lines)
+## core/hints
+- infer-expression-type <- infer-call-type, infer-member-type, infer-operator-type, infer-this-type (5 files, 809 code lines)
+## core/regex
+- create-regex-replacement <- encode-pattern-text, is-raw-template-text, is-valid-regex-literal, print-flags-edit, print-pattern-edit, print-regex-literal (7 files, 311 code lines)
+- collect-pattern-changes <- find-open-repeat-scope, has-backreference, is-edge-wildcard (4 files, 318 code lines)
+- read-regex-argument <- map-string-units (2 files, 159 code lines)
+- create-regex-visitors <- read-regex-literal (2 files, 44 code lines)
+## core/text
+- create-source-code <- edit-text, remove-list-element, replace-operator (4 files, 233 code lines)
+## core/mutators/shared
+- get-literal-skip <- get-branch-copy-skip, get-branch-pair, get-or-default-skip, is-no-op-callback-literal, is-void-operand (6 files, 299 code lines)
+- get-nullish-plan <- is-falsy-constant, is-truth-flipping-literal (3 files, 182 code lines)
+- get-owner-constant <- create-static-run-context (2 files, 61 code lines)
+- get-proven-comparison-value <- get-typeof-name (2 files, 63 code lines)
+- get-comparison-plan <- has-other-exit (2 files, 735 code lines)
+- is-lookup-position <- is-boolean-result-source (2 files, 46 code lines)
+- is-numeric-pair <- is-non-number-type (2 files, 16 code lines)
+## core/run
+- run-isolated-rounds <- apply-isolated-result, get-file-cost, number-chains, plan-isolated (5 files, 210 code lines)
+- run-batch-phases <- apply-batch-result, get-batch-unit-cost, plan-batch (4 files, 424 code lines)
+- create-run-state <- classify-mutants, index-module-tests, sort-tests (4 files, 176 code lines)
+- decide-results <- order-covering-tests, rank-module-files (3 files, 100 code lines)
+- count-verdicts <- get-final-status (2 files, 67 code lines)
+- resolve-adapter <- validate-adapter (2 files, 69 code lines)
+## core/parser
+- parse-component-template <- collect-svelte-expressions, collect-vue-expressions, parse-svelte-template, parse-vue-template (5 files, 318 code lines)
+- read-template-program <- create-comment-program, parse-template-expressions (3 files, 309 code lines)
+## core/cache
+- prepare-run-cache <- create-run-cache, find-lockfile, get-environment-key, get-test-file-keys (5 files, 444 code lines)
+- save-run-cache <- prune-cache-entries, write-run-cache (3 files, 133 code lines)
+## adapters/shared
+- track-inputs <- track-environment, track-file-reads (3 files, 503 code lines)
+- list-tsconfig-files <- read-tsconfig-extends (2 files, 96 code lines)
+## adapters/vitest
+- index <- build-isolated-facts, check-project-config, check-vitest-copy, configure-project, create-forks-pool, create-interleaved-sequencer, create-mootant-plugin, create-output-reporter, create-output-stream, get-cache-inputs, get-runner-path, get-switchable-path, read-environment-hashes, run-batch, run-dry, run-isolated, start-vitest-session (18 files, 889 code lines)
+- runner <- claim-unit, find-hook-error, get-hook-budget, install-try-hook, list-dependencies, list-tests, order-tests, race-try-timeout, read-try-facts, read-worker-plan, wait-for-turn, watch-worker-close, write-heartbeat, write-out-record (15 files, 993 code lines)
+- run-specifications <- wait-for-workers (2 files, 79 code lines)
+- run-plan <- write-plan-files (2 files, 123 code lines)
+## adapters/node-test
+- index <- build-dry-file, build-isolated-facts, check-node-support, check-todo-bail, check-typescript, describe-exit, filter-exec-argv, find-test-command, get-dry-deadline, get-node-cache-inputs, get-preload-path, get-unit-deadline, hash-environment, list-setup-files, place-preload, read-node-runtime, read-test-timeout, resolve-tsx, run-dry, run-isolated, start-node-test-session (22 files, 835 code lines)
+- preload <- create-bail-error, create-try-tracker, install-marker-receivers, install-module-hooks, patch-module-compile, read-unit (7 files, 357 code lines)
+- run-test-file <- run-test-process, track-process-group (3 files, 161 code lines)
+- list-node-test-files <- create-glob-pattern (2 files, 103 code lines)
+- reporter <- create-report-reader (2 files, 56 code lines)
+- resolve-command <- split-node-arguments (2 files, 225 code lines)
+## cli/terminal
+- create-spinner <- count-terminal-rows (2 files, 99 code lines)
+## cli/report
+- format-report <- format-file-groups, format-text-report, slim-list-report (4 files, 223 code lines)
+- format-run-report <- format-run-text-report, slim-run-report (3 files, 316 code lines)
+- slim-list-mutant <- slim-diff (2 files, 33 code lines)
+
+# Files always imported together (identical importer sets, >= 2 importers)
+## core/regex
+- create-regex-replacement, create-regex-visitors, find-string-match-call <= mutators/regex-flag.ts, mutators/regex-pattern.ts
+- read-regex-argument, read-regex-call <= mutators/string-literal.ts, regex/create-regex-visitors.ts
+## core/mutators/shared
+- get-leave-now-value, get-loop-running-skip, is-no-op-callback-constant, leave-now-skip <= mutators/shared/get-comparison-plan.ts, mutators/shared/get-condition-constants.ts, mutators/shared/get-group-constant.ts
+- get-owner-constant, get-toward-mutant <= mutators/return-value.ts, mutators/shared/get-branch-copy-skip.ts, mutators/statement-removal.ts
+- get-return-switch, is-whole-body <= mutators/shared/get-callback-result.ts, mutators/shared/is-no-op-callback-literal.ts
+## core/run
+- compute-score, count-statuses <= html/client/index-report.ts, report/build-run-report.ts, report/get-file-scores.ts
+- get-unit-evidence, read-isolated-unit <= run/apply-isolated-result.ts, run/preview-isolated-unit.ts
+- rank-test-file, sort-test-files <= run/rank-module-files.ts, run/rank-mutant-files.ts
+## core/parser
+- get-source-blocks, get-template-language, parse-component-template, parse-file <= generate/generate-file-mutants.ts, instrument/find-statement-starts.ts
+- load-svelte-compiler, load-vue-compiler <= files/list-file-mutants.ts, run-mutants.ts
+## core/cache
+- find-changed-files, hash-files <= cache/prepare-run-cache.ts, cache/save-run-cache.ts
+## adapters/shared
+- capture-clock, track-inputs <= node-test/preload/preload.ts, vitest/runner.ts
+## adapters/vitest
+- read-out-files, reset-run-directory, run-specifications, watch-heartbeats, watch-unit-ends <= vitest/run-dry.ts, vitest/run-plan.ts
+- read-unit-inputs, run-plan <= vitest/run-batch.ts, vitest/run-isolated.ts
+## adapters/node-test
+- collect-node-dependencies, run-in-pool, run-test-file, write-switch-plan <= node-test/run-dry.ts, node-test/run-isolated.ts
+- describe-hook-failure, drop-todo-errors, list-file-errors, read-tries <= node-test/build-dry-file.ts, node-test/build-isolated-facts.ts
+- get-default-patterns, list-node-test-files <= node-test/score-node-test.ts, node-test/start-node-test-session.ts
+- parse-command, resolve-command <= node-test/find-test-command.ts, node-test/score-node-test.ts
+- create-file-recorder, create-record-writer, create-source-switcher <= node-test/preload/hooks.ts, node-test/preload/preload.ts
+- loaded-key, served-key <= node-test/preload/create-source-switcher.ts, node-test/preload/install-marker-receivers.ts
+## cli/terminal
+- format-by-file, pad-to-width <= diff/format-diff-groups.ts, report/format-file-groups.ts
+## cli/report
+- format-command, print-diagnostics <= run-list.ts, run-mutation.ts
+- format-fields, format-header, sort-by-location <= report/format-run-text-report.ts, report/format-text-report.ts

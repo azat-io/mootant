@@ -1,0 +1,137 @@
+{
+ "summary": {
+  "files": 2,
+  "mutants": 19,
+  "aDiffs": 2,
+  "bDiffs": 10,
+  "bLooseOnly": 3,
+  "rawUnparsable": 0
+ },
+ "results": [
+  {
+   "file": "src/traps/t15-shadow-param.js",
+   "mutants": 10,
+   "original": "{\"r\":[7]}",
+   "a": [],
+   "b": [
+    {
+     "id": "drnhcw4gmpvp",
+     "mutator": "arithmetic-operator",
+     "kind": "expression",
+     "original": "globalThis.base * factor + 1",
+     "replacement": "globalThis.base * factor - 1",
+     "line": 3,
+     "physical": "{\"r\":[5]}",
+     "switched": "{\"r\":[7]}"
+    },
+    {
+     "id": "gswb4vhecw8m",
+     "mutator": "return-value",
+     "kind": "expression",
+     "original": "globalThis.base * factor + 1",
+     "replacement": "0",
+     "line": 3,
+     "physical": "{\"r\":[0]}",
+     "switched": "{\"r\":[7]}"
+    },
+    {
+     "id": "c0jfayffpfrr",
+     "mutator": "arithmetic-operator",
+     "kind": "expression",
+     "original": "globalThis.base * factor",
+     "replacement": "globalThis.base / factor",
+     "line": 3,
+     "physical": "{\"r\":[1.6666666666666665]}",
+     "switched": "{\"r\":[7]}"
+    },
+    {
+     "id": "me5a49n6trsn",
+     "mutator": "number-literal",
+     "kind": "expression",
+     "original": "1",
+     "replacement": "2",
+     "line": 3,
+     "physical": "{\"r\":[8]}",
+     "switched": "{\"r\":[7]}"
+    }
+   ]
+  },
+  {
+   "file": "src/traps/t16-shadow-tdz.js",
+   "mutants": 9,
+   "original": "{\"r\":[\"node1\"]}",
+   "a": [
+    {
+     "label": "no-runtime",
+     "observation": "{\"$load\":\"ReferenceError: Cannot access 'globalThis' before initialization\"}"
+    },
+    {
+     "label": "active-null",
+     "observation": "{\"$load\":\"ReferenceError: Cannot access 'globalThis' before initialization\"}"
+    }
+   ],
+   "b": [
+    {
+     "id": "v2g9xzwc774y",
+     "mutator": "comparison-operator",
+     "kind": "expression",
+     "original": "typeof window !== 'undefined'",
+     "replacement": "false",
+     "line": 2,
+     "physical": "{\"r\":[\"node1\"]}",
+     "switched": "{\"$load\":\"ReferenceError: Cannot access 'globalThis' before initialization\"}"
+    },
+    {
+     "id": "wk1yfy3vaw4m",
+     "mutator": "object-property",
+     "kind": "expression",
+     "original": "{ name: 'node' + 1 }",
+     "replacement": "{}",
+     "line": 2,
+     "physical": "{\"r\":[{\"$undefined\":true}]}",
+     "switched": "{\"$load\":\"ReferenceError: Cannot access 'globalThis' before initialization\"}"
+    },
+    {
+     "id": "c3mcmc9bcb50",
+     "mutator": "arithmetic-operator",
+     "kind": "expression",
+     "original": "'node' + 1",
+     "replacement": "'node'",
+     "line": 2,
+     "physical": "{\"r\":[\"node\"]}",
+     "switched": "{\"$load\":\"ReferenceError: Cannot access 'globalThis' before initialization\"}"
+    },
+    {
+     "id": "g3hqzwgxt5dy",
+     "mutator": "string-literal",
+     "kind": "expression",
+     "original": "'node'",
+     "replacement": "''",
+     "line": 2,
+     "physical": "{\"r\":[\"1\"]}",
+     "switched": "{\"$load\":\"ReferenceError: Cannot access 'globalThis' before initialization\"}"
+    },
+    {
+     "id": "a7dkkhte19tg",
+     "mutator": "number-literal",
+     "kind": "expression",
+     "original": "1",
+     "replacement": "2",
+     "line": 2,
+     "physical": "{\"r\":[\"node2\"]}",
+     "switched": "{\"$load\":\"ReferenceError: Cannot access 'globalThis' before initialization\"}"
+    },
+    {
+     "id": "wh913w728p0a",
+     "mutator": "array-element",
+     "kind": "expression",
+     "original": "[globalThis.name]",
+     "replacement": "[]",
+     "line": 4,
+     "physical": "{\"r\":[]}",
+     "switched": "{\"$load\":\"ReferenceError: Cannot access 'globalThis' before initialization\"}"
+    }
+   ]
+  }
+ ]
+}

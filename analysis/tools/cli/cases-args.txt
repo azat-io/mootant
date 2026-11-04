@@ -1,0 +1,31 @@
+noargs|-|
+help|-|--help
+help-short|-|-h
+version|-|--version
+version-short|-|-v
+run-help|-|run --help
+unknown-cmd|-|foo
+unknown-flag|-|run src --bogus
+unknown-short|-|run src -x
+list-nopath|-|list
+thr-101|-|run src --threshold 101
+thr-abc|-|run src --threshold abc
+thr-empty|-|run src --threshold ''
+thr-hex|-|list src --threshold 0x10
+thr-hex-run-noexec|-|run --threshold 0x10 --all
+thr-missing-value|-|run src --threshold
+conc-0|-|run src --concurrency 0
+conc-frac|-|run src --concurrency 1.5
+all-nojson|-|run src --all
+incr-nocache|-|run src --incremental --no-cache
+list-runonly|-|list src --threshold 50
+list-nocache|-|list src --no-cache
+run-skipped|-|run src --skipped
+run-noskipped|-|run src --no-skipped
+list-verbose-nojson|-|list src --verbose
+since-empty|-|run src --since ''
+since-dash|-|run src --since --json
+neg-string|-|run src --no-config
+neg-mutant|-|run src --no-mutant
+neg-json|-|list src --no-json
+cmd-after-flags|-|--json list src

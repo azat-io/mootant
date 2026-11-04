@@ -1,0 +1,240 @@
+{
+  "files": 823,
+  "byLayerFiles": {
+    "adapters": 149,
+    "cli": 113,
+    "core": 410,
+    "types": 151
+  },
+  "localEdges": 2740,
+  "valueEdges": 1545,
+  "singleImporterFiles": 337,
+  "singleImporterSameDir": 207,
+  "singleImporterNonDts": 322,
+  "noImporters": [
+    "adapters/node-test/preload/hooks.ts",
+    "adapters/node-test/preload/preload.ts",
+    "adapters/node-test/preload/reporter.ts",
+    "adapters/vitest/runner.ts",
+    "cli/index.ts",
+    "core/index.ts",
+    "core/runtime/index.ts",
+    "types/html/inline-script.d.ts"
+  ],
+  "sccValue": [11, 5],
+  "sccAll": [11, 5, 2, 2],
+  "topFanOut": [
+    "core/syntax/create-syntax-helpers.ts value=40 type=6 areas=3",
+    "core/run-mutants.ts value=35 type=13 areas=13",
+    "core/generate/generate-file-mutants.ts value=26 type=16 areas=13",
+    "cli/html/client/start-report.ts value=23 type=7 areas=3",
+    "core/plugins/core-plugin.ts value=22 type=1 areas=3",
+    "core/mutators/shared/get-comparison-plan.ts value=21 type=5 areas=5",
+    "adapters/vitest/runner.ts value=20 type=6 areas=6",
+    "core/mutators/shared/get-condition-constants.ts value=20 type=3 areas=3",
+    "adapters/node-test/start-node-test-session.ts value=19 type=4 areas=2",
+    "cli/run-mutation.ts value=14 type=3 areas=6",
+    "core/mutators/return-value.ts value=14 type=5 areas=5",
+    "core/mutators/shared/get-toward-mutant.ts value=14 type=2 areas=1",
+    "adapters/vitest/start-vitest-session.ts value=13 type=4 areas=3",
+    "cli/html/client/render-mutant-panel.ts value=13 type=3 areas=3",
+    "cli/html/client/render-overview.ts value=13 type=2 areas=3",
+    "core/mutators/shared/get-group-constant.ts value=13 type=2 areas=1",
+    "core/mutators/shared/get-logical-drops.ts value=13 type=3 areas=3",
+    "adapters/vitest/run-dry.ts value=12 type=6 areas=5",
+    "core/generate/collect-candidates.ts value=12 type=16 areas=11",
+    "core/hints/infer-expression-type.ts value=12 type=3 areas=3",
+    "core/mutators/shared/get-owner-constant.ts value=12 type=2 areas=2",
+    "cli/create-run-progress.ts value=11 type=3 areas=5",
+    "cli/report/format-run-text-report.ts value=11 type=5 areas=6",
+    "core/mutators/shared/get-literal-skip.ts value=11 type=3 areas=2",
+    "adapters/node-test/preload/preload.ts value=10 type=0 areas=2"
+  ],
+  "topFanInValue": [
+    "core/tree/unwrap-expression.ts in_value=51 in_type=0",
+    "core/compare-code-units.ts in_value=27 in_type=0",
+    "core/tree/get-context-slot.ts in_value=27 in_type=0",
+    "cli/html/client/html.ts in_value=25 in_type=0",
+    "core/mutators/shared/get-literal-value.ts in_value=25 in_type=4",
+    "cli/html/client/escape-html.ts in_value=24 in_type=0",
+    "core/tree/unwrap-parentheses.ts in_value=23 in_type=0",
+    "core/mutators/shared/get-type-view.ts in_value=18 in_type=2",
+    "cli/terminal/get-display-width.ts in_value=15 in_type=0",
+    "core/mutators/shared/is-and-or.ts in_value=13 in_type=0",
+    "core/parser/get-component-framework.ts in_value=13 in_type=0",
+    "core/text/get-source-position.ts in_value=13 in_type=0",
+    "core/tree/walk-tree.ts in_value=13 in_type=0",
+    "core/run/get-test-file-key.ts in_value=12 in_type=0",
+    "core/syntax/get-member-path.ts in_value=12 in_type=0",
+    "core/text/pluralize.ts in_value=12 in_type=0",
+    "core/tree/get-slot.ts in_value=12 in_type=0",
+    "cli/html/client/describe-status.ts in_value=11 in_type=0",
+    "core/syntax/is-function.ts in_value=11 in_type=0",
+    "core/hints/create-inferred-type.ts in_value=10 in_type=0",
+    "core/mutators/shared/get-negation-top.ts in_value=10 in_type=0",
+    "core/mutators/shared/is-comparison.ts in_value=10 in_type=0",
+    "cli/terminal/get-symbols.ts in_value=9 in_type=0",
+    "core/mutators/shared/is-boolean-mode.ts in_value=9 in_type=0",
+    "cli/terminal/cut-to-width.ts in_value=8 in_type=0"
+  ],
+  "topFanInType": [
+    "types/mutator/mutator-context.d.ts in_type=60",
+    "types/syntax/tree-index.d.ts in_type=55",
+    "types/mutant/skip-note.d.ts in_type=32",
+    "types/run/run-state.d.ts in_type=28",
+    "types/mutant/diagnostic.d.ts in_type=27",
+    "types/hints/inferred-type.d.ts in_type=26",
+    "types/run/run-status.d.ts in_type=25",
+    "types/mutator/mutator.d.ts in_type=23",
+    "types/mutator/replacement.d.ts in_type=23",
+    "types/html/report-index.d.ts in_type=20",
+    "types/syntax/scope-analysis.d.ts in_type=20",
+    "adapters/node-test/types/node-test-record.d.ts in_type=19",
+    "types/syntax/node-slot.d.ts in_type=19",
+    "types/source/source-range.d.ts in_type=17",
+    "types/source/text-edit.d.ts in_type=17"
+  ],
+  "topForeignAreas": [
+    "core/generate/generate-file-mutants.ts foreign_areas=13 out=42",
+    "core/run-mutants.ts foreign_areas=13 out=48",
+    "core/generate/collect-candidates.ts foreign_areas=11 out=28",
+    "core/files/list-file-mutants.ts foreign_areas=7 out=11",
+    "core/index.ts foreign_areas=7 out=31",
+    "adapters/vitest/runner.ts foreign_areas=6 out=26",
+    "cli/report/build-list-report.ts foreign_areas=6 out=13",
+    "cli/report/format-run-text-report.ts foreign_areas=6 out=16",
+    "cli/run-mutation.ts foreign_areas=6 out=17",
+    "core/cache/prepare-run-cache.ts foreign_areas=6 out=16",
+    "core/mutators/optional-chaining.ts foreign_areas=6 out=8",
+    "adapters/vitest/run-dry.ts foreign_areas=5 out=18",
+    "cli/create-run-progress.ts foreign_areas=5 out=14",
+    "cli/html/client/index-report.ts foreign_areas=5 out=11",
+    "core/config/prepare-run.ts foreign_areas=5 out=10"
+  ],
+  "reach": [
+    {
+      "entry": "core/index.ts",
+      "all": 55,
+      "value": 4,
+      "byLayer": {
+        "core": 4
+      }
+    },
+    {
+      "entry": "core/runtime/index.ts",
+      "all": 7,
+      "value": 6,
+      "byLayer": {
+        "core": 6
+      }
+    },
+    {
+      "entry": "core/run-mutants.ts",
+      "all": 520,
+      "value": 400,
+      "byLayer": {
+        "core": 400
+      }
+    },
+    {
+      "entry": "core/list-mutants.ts",
+      "all": 419,
+      "value": 323,
+      "byLayer": {
+        "core": 323
+      }
+    },
+    {
+      "entry": "cli/index.ts",
+      "all": 776,
+      "value": 614,
+      "byLayer": {
+        "cli": 113,
+        "core": 406,
+        "adapters": 95
+      }
+    },
+    {
+      "entry": "cli/run-mutation.ts",
+      "all": 773,
+      "value": 605,
+      "byLayer": {
+        "cli": 105,
+        "core": 405,
+        "adapters": 95
+      }
+    },
+    {
+      "entry": "cli/run-list.ts",
+      "all": 462,
+      "value": 354,
+      "byLayer": {
+        "cli": 30,
+        "core": 324
+      }
+    },
+    {
+      "entry": "cli/built-in-adapters.ts",
+      "all": 136,
+      "value": 104,
+      "byLayer": {
+        "cli": 1,
+        "adapters": 95,
+        "core": 8
+      }
+    },
+    {
+      "entry": "adapters/vitest/index.ts",
+      "all": 75,
+      "value": 52,
+      "byLayer": {
+        "adapters": 44,
+        "core": 8
+      }
+    },
+    {
+      "entry": "adapters/vitest/runner.ts",
+      "all": 36,
+      "value": 28,
+      "byLayer": {
+        "adapters": 24,
+        "core": 4
+      }
+    },
+    {
+      "entry": "adapters/node-test/index.ts",
+      "all": 81,
+      "value": 55,
+      "byLayer": {
+        "adapters": 53,
+        "core": 2
+      }
+    },
+    {
+      "entry": "adapters/node-test/preload/preload.ts",
+      "all": 35,
+      "value": 24,
+      "byLayer": {
+        "adapters": 19,
+        "core": 5
+      }
+    },
+    {
+      "entry": "adapters/node-test/preload/hooks.ts",
+      "all": 13,
+      "value": 8,
+      "byLayer": {
+        "adapters": 7,
+        "core": 1
+      }
+    },
+    {
+      "entry": "adapters/node-test/preload/reporter.ts",
+      "all": 5,
+      "value": 4,
+      "byLayer": {
+        "adapters": 4
+      }
+    }
+  ]
+}

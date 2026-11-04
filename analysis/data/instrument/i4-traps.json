@@ -1,0 +1,36 @@
+{
+ "root": "/home/user/projects/instrument/traps",
+ "paths": [
+  "src/traps",
+  "src/t",
+  "src/probe.js"
+ ],
+ "sub": "src",
+ "mutants": 992,
+ "repeat": {
+  "name": "repeat",
+  "left": 992,
+  "right": 992,
+  "onlyLeft": [],
+  "onlyRight": [],
+  "equal": true
+ },
+ "repeatOrder": true,
+ "reversedPaths": {
+  "name": "reversed paths",
+  "left": 992,
+  "right": 992,
+  "onlyLeft": [],
+  "onlyRight": [],
+  "equal": true
+ },
+ "reversedOrderSame": true,
+ "fromSubdirectoryIds": {
+  "name": "ids from subdirectory",
+  "equal": false,
+  "left": 992,
+  "right": 992,
+  "sampleLeftFile": "src/probe.js",
+  "sampleRightFile": "probe.js"
+ }
+}
