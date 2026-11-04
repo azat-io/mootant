@@ -1,0 +1,9 @@
+## before signal (t=2s): mootant pid=15848 leader=15848
+15848 15842 15848 Ssl        2 node /home/user/projects/cli/vt-slow/node_modules/mootant/bin/mootant.js run src --no-cache
+16037 15848 15848 Sl         0 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/projects/cli/vt-slow/node_modules/vitest/suppress-wa
+## after: leader exit=143
+16037     1 15848 Sl         3 /opt/node22/bin/node --experimental-import-meta-resolve --require /home/user/projects/cli/vt-slow/node_modules/vitest/suppress-wa
+## work dirs left in TMPDIR: 2 -H-RZ3jlnMx7G5FoMzA6_ mootant-7QjdVI 
+## files in them: 6
+## cache dir: 
+## tail of output:

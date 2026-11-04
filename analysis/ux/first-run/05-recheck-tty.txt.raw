@@ -1,0 +1,12 @@
+[1G[0K\[1G[0K[?25l[1G[92m-[39m preparing  [90m0.0s[39m[?25l[1G[2K[1G[92m\[39m preparing  [90m0.1s[39m[?25l[1G[2K[1G[92m|[39m preparing 1 mutant  [90m0.2s[39m[?25l[1G[2K[1G[92m/[39m preparing 1 mutant  [90m1.2s[39m[?25l[1G[2K[1G[92m-[39m dry run  [90m0.0s[39m[?25l[1G[2K[1G[92m\[39m dry run  [90m0.1s[39m[?25l[1G[2K[1G[92m|[39m dry run  [90m0.2s[39m[?25l[1G[2K[1G[92m/[39m dry run  [90m0.3s[39m[?25l[1G[2K[1G[92m-[39m dry run  [90m0.4s[39m[?25l[1G[2K[1G[92m\[39m dry run  [90m0.5s[39m[?25l[1G[2K[1G[92m|[39m dry run  [90m0.6s[39m[?25l[1G[2K[1G[92m/[39m dry run  [90m0.6s[39m[?25l[1G[2K[1G[92m-[39m planning  [90m0.0s[39m[?25l[1G[2K[1G[92m\[39m testing 1 mutant  [90m0/1 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.1s[39m[?25l[1G[2K[1G[92m|[39m testing 1 mutant  [90m0/1 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.2s[39m[?25l[1G[2K[1G[92m/[39m testing 1 mutant  [90m0/1 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.2s[39m[?25l[1G[2K[1G[92m-[39m testing 1 mutant  [90m0/1 test runs[39m · [90mkilled 0[39m · [90msurvived[39m [90m0[39m · [90m0.3s[39m[?25l[1G[2K[1G[92m\[39m testing 1 mutant  [90m1/1 test runs[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m0.4s[39m[1G[2K[1G[?25h[92m*[39m [1mmootant run src --mutant 69kd[22m                   [90mvitest 5.1.0[39m
+
+[90mdry run         [39m7 tests in 0.7s
+[90mmutants         [39m1 in 1 file
+[90mtime            [39m2.3s (start 1.2s, dry run 0.7s, isolated 0.4s)
+
+[90mkilled          [39m1
+[90msurvived        [39m[92m0[39m
+[90mtimeout         [39m0
+[90mno coverage     [39m0
+[90mscore           [39m[1m100%[22m
+[1G[0K\[1G[0K

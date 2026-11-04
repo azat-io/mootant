@@ -1,0 +1,3 @@
+## before signal (t=2s): mootant pid=16545 leader=16543
+16543 16536 16543 Ss         2 script -qfec node /home/user/projects/cli/vt-slow/node_modules/mootant/bin/mootant.js run src --no-cache /dev/null
+16545 16543 16545 Rsl+       2 node /home/user/projects/cli/vt-slow/node_modules/mootant/bin/mootant.js run src --no-cache

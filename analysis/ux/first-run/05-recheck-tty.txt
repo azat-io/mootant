@@ -1,0 +1,12 @@
+\- preparing  0.0s\ preparing  0.1s| preparing 1 mutant  0.2s/ preparing 1 mutant  1.2s- dry run  0.0s\ dry run  0.1s| dry run  0.2s/ dry run  0.3s- dry run  0.4s\ dry run  0.5s| dry run  0.6s/ dry run  0.6s- planning  0.0s\ testing 1 mutant  0/1 test runs · killed 0 · survived 0 · 0.1s| testing 1 mutant  0/1 test runs · killed 0 · survived 0 · 0.2s/ testing 1 mutant  0/1 test runs · killed 0 · survived 0 · 0.2s- testing 1 mutant  0/1 test runs · killed 0 · survived 0 · 0.3s\ testing 1 mutant  1/1 test runs · killed 1 · survived 0 · 0.4s* mootant run src --mutant 69kd                   vitest 5.1.0
+
+dry run         7 tests in 0.7s
+mutants         1 in 1 file
+time            2.3s (start 1.2s, dry run 0.7s, isolated 0.4s)
+
+killed          1
+survived        0
+timeout         0
+no coverage     0
+score           100%
+\exit=0

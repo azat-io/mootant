@@ -1,0 +1,985 @@
+== light overview #/ title="Overview · first-run · mootant report"
+v0.1.0
+first-run
+mootant run src --html
+Search
+/
+Overview
+Files
+5
+Mutants
+79
+Mutators
+14
+Tests
+12
+MUTATION SCORE
+35.44%
+28 of 79 detected · covered 41.79%
+WEAKEST MUTATORS
+regex-flag
+0.00%
+missing-await
+0.00%
+79 mutants in 5 files
+56 more left out on purpose
+killed
+28
+timeout
+0
+survived
+39
+no coverage
+12
+error
+0
+ignored
+0
+RUNNER
+vitest 5.1.0
+TESTS
+12
+MODE
+isolated
+PRESET
+recommended
+CACHE
+on, 67 reused
+TIME
+1.2s
+RUN
+4 Nov 2026, 04:31
+
+start 387 ms · dry run 809 ms · isolated 3 ms
+
+Look at these first
+
+39 mutants survived: every test that reached them passed with the change in place. 12 mutants sit in code no test reaches.
+
+All
+51
+Survived
+39
+No coverage
+12
+src/format.ts
+8 without coverage · score 0.00%
+Open file ›
+1:55
+string-literal
+'USD'
+→
+''
+no test reaches line 1
+0hqs
+2:10
+string-literal
+`${value.toFixed(2)} ${currency}`
+→
+`${value.toFixed(2)}${currency}`
+no test reaches line 2
+yef5
+2:27
+number-literal
+2
+→
+3
+no test reaches line 2
+kgza
+6:10
+comparison-operator
+count === 1
+→
+count <= 1
+no test reaches line 6
+6d3m
+6:10
+comparison-operator
+count === 1
+→
+count >= 1
+no test reaches line 6
+wn30
+6:10
+comparison-operator
+count === 1
+→
+false
+no test reaches line 6
+g4g0
+2 more in this file ›
+src/retry.ts
+4 of 7 survived, 2 without coverage · score 14.29%
+Open file ›
+3:14
+number-literal
+3
+→
+4
+test/retry.test.ts
+wddk
+6:22
+number-literal
+1
+→
+2
+test/retry.test.ts
+079b
+6:25
+comparison-operator
+attempt <= attempts
+→
+attempt < attempts
+test/retry.test.ts
+ggxa
+8:14
+missing-await
+await task
+
+== light files #/files title="src/format.ts · first-run · mootant report"
+v0.1.0
+first-run
+mootant run src --html
+Search
+/
+Overview
+Files
+5
+Mutants
+79
+Mutators
+14
+Tests
+12
+src/
+format.ts
+8
+price.ts
+6
+1
+retry.ts
+4
+2
+slug.ts
+14
+user.ts
+15
+1
+
+Filled badge: survived. Ringed: no coverage.
+
+src/format.ts
+8 mutants · 0 killed · 8 no coverage · score 0.00%
+All
+8
+No coverage
+8
+Skipped
+5
+1
+1
+export function formatPrice(value: number, currency = 'USD'): string {
+2
+2
+  return `${value.toFixed(2)} ${currency}`
+3
+}
+4
+ 
+5
+export function pluralize(count: number, word: string): string {
+6
+5
+  return count === 1 ? `${count} ${word}` : `${count} ${word}s`
+7
+}
+8
+ 
+survived
+no coverage
+error
+skipped
+Killed mutants are counted in the gray badges; pick Killed to mark them.
+FILE
+
+8 mutants to look at. Press j for the first one.
+
+MUTATORS HERE
+string-literal
+4
+comparison-operator
+3
+number-literal
+1
+LEFT OUT HERE
+subsumed
+4
+owned
+1
+mootant 0.1.0 · first-run · 4 Nov 2026, 04:31 · one file, opens offline
+/ search
+jk next and previous to fix
+esc close
+Reading the report 
+
+== light mutants #/mutants title="Mutants · first-run · mootant report"
+v0.1.0
+first-run
+mootant run src --html
+Search
+/
+Overview
+Files
+5
+Mutants
+79
+Mutators
+14
+Tests
+12
+Mutants
+
+Every mutant of the run in file order. Filter by status, or type an id, a mutator, a file or a piece of code.
+
+All
+79
+Survived
+39
+No coverage
+12
+Killed
+28
+Location	Status	Mutator	Change	Tests	Time	Id
+src/format.ts:1:55	 no coverage	string-literal	
+'USD'
+→
+''
+	0	<1 ms	0hqs
+src/format.ts:2:10	 no coverage	string-literal	
+`${value.toFixed(2)} ${currency}`
+→
+`${value.toFixed(2)}${currency}`
+	0	<1 ms	yef5
+src/format.ts:2:27	 no coverage	number-literal	
+2
+→
+3
+	0	<1 ms	kgza
+src/format.ts:6:10	 no coverage	comparison-operator	
+count === 1
+→
+count <= 1
+	0	<1 ms	6d3m
+src/format.ts:6:10	 no coverage	comparison-operator	
+count === 1
+→
+count >= 1
+	0	<1 ms	wn30
+src/format.ts:6:10	 no coverage	comparison-operator	
+count === 1
+→
+false
+	0	<1 ms	g4g0
+src/format.ts:6:24	 no coverage	string-literal	
+`${count} ${word}`
+→
+''
+	0	<1 ms	v3v7
+src/format.ts:6:45	 no coverage	string-literal	
+`${count} ${word}s`
+→
+''
+	0	<1 ms	w76j
+src/price.ts:10:7	 survived	comparison-operator	
+total >= 100
+→
+total > 100
+	3	<1 ms	69kd
+src/price.ts:10:7	 killed	comparison-operator	
+total >= 100
+→
+total == 100
+	3	<1 ms	6r5y
+src/price.ts:10:7	 survived	comparison-operator	
+total >= 100
+→
+total >= 99
+	3	<1 ms	x223
+src/price.ts:11:12	 killed	number-literal	
+10
+→
+11
+	1	<1 ms	yjj1
+src/price.ts:13:10	 killed	condition	
+isMember
+→
+true
+	2	<1 ms	1nm0
+src/price.ts:13:10	 killed	condition	
+isMember
+→
+false
+	2	<1 ms	j1sb
+src/pr
+
+== light mutators #/mutators title="Mutators · first-run · mootant report"
+v0.1.0
+first-run
+mootant run src --html
+Search
+/
+Overview
+Files
+5
+Mutants
+79
+Mutators
+14
+Tests
+12
+Mutators
+
+Lowest score first. A mutator that keeps surviving is a blind spot of the suite: a boundary no test asserts, a value nobody compares. Skipped counts the changes it considered and left out.
+
+14 mutators · 79 mutants
+Mutator	Mutants	Score	Total	Killed	Survived	No cov.	Other	Skipped
+regex-flag
+Removes a flag of a regular expression (i, m, s, or g where it picks all matches).
+	
+	0.00%	2	–	2	–	–	–
+missing-await
+Removes an await, as if the promise was not awaited.
+	
+	0.00%	1	–	1	–	–	–
+return-value
+Replaces a returned value with an empty default ('', 0, false and true, [] or undefined), or a promise of one.
+	
+	0.00%	1	–	–	1	–	11
+statement-removal
+Removes one statement with an effect: a call, assignment, delete, throw, early return or case break.
+	
+	0.00%	2	–	–	2	–	6
+string-literal
+Empties a string or the static text of a template literal, or fills an empty one.
+	
+	10.00%	10	1	4	5	–	3
+logical-operator
+Drops one operand of &&, || or ??, swaps ?? and || where falsy values differ, or makes a whole condition constant.
+	
+	12.50%	8	1	7	–	–	7
+comparison-operator
+Moves a comparison's boundary or literal, flips its direction, or makes it constant: the minimal set that subsumes all other comparison mutants.
+	
+	27.27%	22	6	13	3	–	5
+regex-pattern
+Removes an anchor, assertion or alternative of a regular expression, makes an optional part required, or widens a class to any character.
+	
+	30.0
+
+== light tests #/tests title="Tests · first-run · mootant report"
+v0.1.0
+first-run
+mootant run src --html
+Search
+/
+Overview
+Files
+5
+Mutants
+79
+Mutators
+14
+Tests
+12
+Tests
+
+What each test of the dry run reaches. A test that reaches survivors runs the changed code and still passes: its assertions are the ones to sharpen.
+
+All
+12
+Reach survivors
+11
+Reach no mutant
+0
+Slowest
+12
+Test	File	Time	Reaches	Kills	Survivors
+reports errors	test/user.test.ts:5	12 ms	17	–	12
+accepts a valid user	test/user.test.ts:10	<1 ms	14	5	9
+accepts a valid slug	test/slug.test.ts:9	<1 ms	9	1	8
+slugifies a title	test/slug.test.ts:5	2 ms	11	5	6
+returns the result	test/retry.test.ts:5	3 ms	5	1	4
+applyDiscount › applies a percent	test/price.test.ts:30	<1 ms	7	4	3
+shows a name	test/user.test.ts:14	1 ms	3	–	3
+getDiscount › gives members 5% off	test/price.test.ts:10	<1 ms	6	2	2
+getDiscount › gives small orders nothing	test/price.test.ts:14	<1 ms	6	2	2
+getDiscount › gives large orders 10% off	test/price.test.ts:6	2 ms	4	2	2
+getTotal › sums items	test/price.test.ts:20	<1 ms	7	6	1
+getTotal › returns a number	test/price.test.ts:24	<1 ms	5	–	–
+
+A kill counts for the first test that failed: each mutant stops at its first failure, so other tests may catch it too.
+
+mootant 0.1.0 · first-run · 4 Nov 2026, 04:31 · one file, opens offline
+/ search
+jk next and previous to fix
+esc close
+Reading the report 
+
+== light file #/file/src%2Fprice.ts title="src/price.ts · first-run · mootant report"
+v0.1.0
+first-run
+mootant run src --html
+Search
+/
+Overview
+Files
+5
+Mutants
+79
+Mutators
+14
+Tests
+12
+src/
+format.ts
+8
+price.ts
+6
+1
+retry.ts
+4
+2
+slug.ts
+14
+user.ts
+15
+1
+
+Filled badge: survived. Ringed: no coverage.
+
+src/price.ts
+23 mutants · 16 killed · 6 survived · 1 no coverage · score 69.57%
+All
+23
+Survived
+6
+No coverage
+1
+Killed
+16
+Skipped
+11
+1
+export interface Item {
+2
+  price: number
+3
+  quantity: number
+4
+}
+5
+ 
+6
+/**
+7
+ * Discount in percent: 10% for orders of 100 or more, 5% for members.
+8
+ */
+9
+export function getDiscount(total: number, isMember: boolean): number {
+10
+2
+1
+  if (total >= 100) {
+11
+1
+    return 10
+12
+  }
+13
+4
+  return isMember ? 5 : 0
+14
+}
+15
+ 
+16
+export function getTotal(items: Item[]): number {
+17
+1
+  let total = 0
+18
+  for (let item of items) {
+19
+1
+1
+    total += item.price * item.quantity
+20
+  }
+21
+4
+  return Math.round(total * 100) / 100
+22
+}
+23
+ 
+24
+export function applyDiscount(total: number, percent: number): number {
+25
+3
+  if (percent <= 0) {
+26
+1
+    return total
+27
+  }
+28
+4
+  return total - (total * percent) / 100
+29
+}
+30
+ 
+survived
+no coverage
+error
+skipped
+Killed mutants are counted in the gray badges; pick Killed to mark them.
+FILE
+
+7 mutants to look at. Press j for the first one.
+
+MUTATORS HERE
+comparison-operator
+6
+5
+arithmetic-operator
+6
+1
+number-literal
+7
+condition
+2
+assignment-operator
+1
+return-value
+1
+LEFT OUT HERE
+subsumed
+10
+owned
+1
+mootant 0.1.0 · first-run · 4 Nov 2026, 04:31 · one file, opens offline
+/ search
+jk next and previous
+
+== light mutant #/mutant/69kd title="src/price.ts · first-run · mootant report"
+v0.1.0
+first-run
+mootant run src --html
+Search
+/
+Overview
+Files
+5
+Mutants
+79
+Mutators
+14
+Tests
+12
+src/
+format.ts
+8
+price.ts
+6
+1
+retry.ts
+4
+2
+slug.ts
+14
+user.ts
+15
+1
+
+Filled badge: survived. Ringed: no coverage.
+
+src/price.ts
+23 mutants · 16 killed · 6 survived · 1 no coverage · score 69.57%
+All
+23
+Survived
+6
+No coverage
+1
+Killed
+16
+Skipped
+11
+1
+export interface Item {
+2
+  price: number
+3
+  quantity: number
+4
+}
+5
+ 
+6
+/**
+7
+ * Discount in percent: 10% for orders of 100 or more, 5% for members.
+8
+ */
+9
+export function getDiscount(total: number, isMember: boolean): number {
+10
+2
+1
+  if (total >= 100) {
+11
+1
+    return 10
+12
+  }
+13
+4
+  return isMember ? 5 : 0
+14
+}
+15
+ 
+16
+export function getTotal(items: Item[]): number {
+17
+1
+  let total = 0
+18
+  for (let item of items) {
+19
+1
+1
+    total += item.price * item.quantity
+20
+  }
+21
+4
+  return Math.round(total * 100) / 100
+22
+}
+23
+ 
+24
+export function applyDiscount(total: number, percent: number): number {
+25
+3
+  if (percent <= 0) {
+26
+1
+    return total
+27
+  }
+28
+4
+  return total - (total * percent) / 100
+29
+}
+30
+ 
+survived
+no coverage
+error
+skipped
+Killed mutants are counted in the gray badges; pick Killed to mark them.
+MUTANT
+survived
+line 10:7 · 69kd
+MUTATOR
+comparison-operator
+Moves a comparison's boundary or literal, flips its direction, or makes it constant: the minimal set that subsumes all other comparison mutants.
+IN
+getDiscount
+TESTS
+3 tests reached it, all passed
+TIME
+<1 ms · cached verdict
+CHANGE
+- if (total >= 100) {
++ if
+
+mobile horizontal overflow px: 0
+== dark overview #/ title="Overview · first-run · mootant report"
+v0.1.0
+first-run
+mootant run src --html
+Search
+/
+Overview
+Files
+5
+Mutants
+79
+Mutators
+14
+Tests
+12
+MUTATION SCORE
+35.44%
+28 of 79 detected · covered 41.79%
+WEAKEST MUTATORS
+regex-flag
+0.00%
+missing-await
+0.00%
+79 mutants in 5 files
+56 more left out on purpose
+killed
+28
+timeout
+0
+survived
+39
+no coverage
+12
+error
+0
+ignored
+0
+RUNNER
+vitest 5.1.0
+TESTS
+12
+MODE
+isolated
+PRESET
+recommended
+CACHE
+on, 67 reused
+TIME
+1.2s
+RUN
+4 Nov 2026, 04:31
+
+start 387 ms · dry run 809 ms · isolated 3 ms
+
+Look at these first
+
+39 mutants survived: every test that reached them passed with the change in place. 12 mutants sit in code no test reaches.
+
+All
+51
+Survived
+39
+No coverage
+12
+src/format.ts
+8 without coverage · score 0.00%
+Open file ›
+1:55
+string-literal
+'USD'
+→
+''
+no test reaches line 1
+0hqs
+2:10
+string-literal
+`${value.toFixed(2)} ${currency}`
+→
+`${value.toFixed(2)}${currency}`
+no test reaches line 2
+yef5
+2:27
+number-literal
+2
+→
+3
+no test reaches line 2
+kgza
+6:10
+comparison-operator
+count === 1
+→
+count <= 1
+no test reaches line 6
+6d3m
+6:10
+comparison-operator
+count === 1
+→
+count >= 1
+no test reaches line 6
+wn30
+6:10
+comparison-operator
+count === 1
+→
+false
+no test reaches line 6
+g4g0
+2 more in this file ›
+src/retry.ts
+4 of 7 survived, 2 without coverage · score 14.29%
+Open file ›
+3:14
+number-literal
+3
+→
+4
+test/retry.test.ts
+wddk
+6:22
+number-literal
+1
+→
+2
+test/retry.test.ts
+079b
+6:25
+comparison-operator
+attempt <= attempts
+→
+attempt < attempts
+test/retry.test.ts
+ggxa
+8:14
+missing-await
+await task
+
+== dark mutant #/mutant/69kd title="src/price.ts · first-run · mootant report"
+v0.1.0
+first-run
+mootant run src --html
+Search
+/
+Overview
+Files
+5
+Mutants
+79
+Mutators
+14
+Tests
+12
+src/
+format.ts
+8
+price.ts
+6
+1
+retry.ts
+4
+2
+slug.ts
+14
+user.ts
+15
+1
+
+Filled badge: survived. Ringed: no coverage.
+
+src/price.ts
+23 mutants · 16 killed · 6 survived · 1 no coverage · score 69.57%
+All
+23
+Survived
+6
+No coverage
+1
+Killed
+16
+Skipped
+11
+1
+export interface Item {
+2
+  price: number
+3
+  quantity: number
+4
+}
+5
+ 
+6
+/**
+7
+ * Discount in percent: 10% for orders of 100 or more, 5% for members.
+8
+ */
+9
+export function getDiscount(total: number, isMember: boolean): number {
+10
+2
+1
+  if (total >= 100) {
+11
+1
+    return 10
+12
+  }
+13
+4
+  return isMember ? 5 : 0
+14
+}
+15
+ 
+16
+export function getTotal(items: Item[]): number {
+17
+1
+  let total = 0
+18
+  for (let item of items) {
+19
+1
+1
+    total += item.price * item.quantity
+20
+  }
+21
+4
+  return Math.round(total * 100) / 100
+22
+}
+23
+ 
+24
+export function applyDiscount(total: number, percent: number): number {
+25
+3
+  if (percent <= 0) {
+26
+1
+    return total
+27
+  }
+28
+4
+  return total - (total * percent) / 100
+29
+}
+30
+ 
+survived
+no coverage
+error
+skipped
+Killed mutants are counted in the gray badges; pick Killed to mark them.
+MUTANT
+survived
+line 10:7 · 69kd
+MUTATOR
+comparison-operator
+Moves a comparison's boundary or literal, flips its direction, or makes it constant: the minimal set that subsumes all other comparison mutants.
+IN
+getDiscount
+TESTS
+3 tests reached it, all passed
+TIME
+<1 ms · cached verdict
+CHANGE
+- if (total >= 100) {
++ if

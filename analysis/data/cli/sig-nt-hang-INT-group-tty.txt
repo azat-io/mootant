@@ -1,0 +1,11 @@
+## before signal (t=3s): mootant pid=11861 leader=11859
+11859 11854 11859 Ss         3 script -qfec node /home/user/projects/cli/nt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache /dev/null
+11861 11859 11861 Ssl+       3 node /home/user/projects/cli/nt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache
+12083 11861 12083 Rsl        1 /opt/node22/bin/node --import file:///home/user/projects/cli/nt-hang-long/node_modules/mootant/dist/adapters/node-test/preload/pr
+## after: leader exit=130
+<no processes left>
+## work dirs left in TMPDIR: 1 mootant-RIKu3t 
+## files in them: 3
+## cache dir: 
+## tail of output:
+ved[39m [90m0[39m · [90m1.8s[39m[?25l[1G[2K[1G[92m-[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m1.9s[39m[?25l[1G[2K[1G[92m\[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m2.0s[39m[?25l[1G[2K[1G[92m|[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m2.1s[39m[?25l[1G[2K[1G[92m/[39m testing 2 mutants  [90m1/2[39m · [90mkilled 1[39m · [90msurvived[39m [90m0[39m · [90m2.1s[39m[1G[2K[1G[?25h+ dry run  1 test in 0.3s

@@ -18,7 +18,9 @@ if [ "$MODE" = tty ]; then
 elif [ "$MODE" = tty-shell ]; then
   # a shell leads the pty session, as in a real terminal, so mootant exiting
   # does not hang up the terminal's foreground group
-  setsid script -qfec "bash -c '$BIN; true'" /dev/null >out.txt 2>&1 </dev/null &
+  # the shell stays 20 s after mootant ends, as an open terminal would
+  rm -f rc.txt
+  setsid script -qfec "bash -c '$BIN; echo \$? > rc.txt; sleep 20'" /dev/null >out.txt 2>&1 </dev/null &
 else
   setsid $BIN >out.txt 2>err.txt </dev/null &
 fi
@@ -39,9 +41,15 @@ if [ "$SIG" != none ]; then
   PG=$(ps -o pgid= -p "$MPID" | tr -d ' ')
   if [ "$TARGET" = group ]; then kill -s "$SIG" -- "-$PG"; else kill -s "$SIG" "$MPID"; fi
 fi
-for i in $(seq 1 60); do kill -0 "$LEADER" 2>/dev/null || break; sleep 0.5; done
-wait "$LEADER" 2>/dev/null; CODE=$?
-kill -0 "$LEADER" 2>/dev/null && CODE="still-running"
+if [ "$MODE" = tty-shell ]; then
+  for i in $(seq 1 60); do kill -0 "$MPID" 2>/dev/null || break; sleep 0.5; done
+  sleep 0.5; CODE="mootant:$(cat rc.txt 2>/dev/null)"
+  kill -0 "$MPID" 2>/dev/null && CODE="still-running"
+else
+  for i in $(seq 1 60); do kill -0 "$LEADER" 2>/dev/null || break; sleep 0.5; done
+  wait "$LEADER" 2>/dev/null; CODE=$?
+  kill -0 "$LEADER" 2>/dev/null && CODE="still-running"
+fi
 sleep 2
 echo "## after: leader exit=$CODE"
 LEFT=$(procs)
@@ -53,4 +61,5 @@ echo "## tail of output:"; tail -c 600 out.txt | tr -d '\r' | tail -6; [ -f err.
 # clean up whatever is left, the machine is shared
 for p in $(echo "$LEFT" | awk '{print $1}'); do kill -KILL "$p" 2>/dev/null; done
 pkill -KILL -f "sleep 41[78]" 2>/dev/null
+[ "$MODE" = tty-shell ] && kill -TERM "$LEADER" 2>/dev/null
 true

@@ -317,6 +317,13 @@ Vitest, в граф они не входят.
 |      2 | `types/run/isolated-evidence.d.ts` ↔ `mutant-state.d.ts`                                                                                                                                                                                                | только типы | Безвреден                                                                                                               |
 |      2 | `types/run/live-verdicts.d.ts` ↔ `run-state.d.ts`                                                                                                                                                                                                       | только типы | Безвреден                                                                                                               |
 
+Независимая перепроверка madge 8
+([`madge-circular.txt`](architecture/data/madge-circular.txt)) находит 9
+элементарных циклов в тех же трёх местах: 8 из 11 файлов компоненты
+`mutators/shared`, все 5 файлов `hints/infer-*` и обе пары `types/run`. madge
+перечисляет отдельные циклы, а не компоненты связности, поэтому файлов в его
+списке меньше.
+
 Циклы на уровне папок (импорты значений):
 
 - `core/syntax ↔ core/tree`: `core/tree/index-tree.ts:6-8` импортирует

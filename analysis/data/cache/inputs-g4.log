@@ -1,0 +1,78 @@
+=== spawn_star (04:32:09)
+[spawn-star/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[spawn-star/r2-same] exit=0 args=src
+  a073vwf4fehh Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=true src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=true src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=4 score=50
+[spawn-star/r3-other-run-id] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[spawn-star/r4-before-npm-run] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[spawn-star/r5-npm-run] via npm run
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+=== glob_new_file (04:32:35)
+[glob-new-file/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[glob-new-file/r2] exit=0 args=src
+  a073vwf4fehh Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=3 survived=1 cached=0 score=75
+[glob-new-file/r3] exit=0 args=src --no-cache
+  a073vwf4fehh Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=3 survived=1 cached=null score=75
+  => 0 verdict(s) differ between the cached run and the fresh run
+=== monorepo_workspace (04:32:48)
+[monorepo-workspace/r1] exit=0 args=packages/lib/src
+  5dtdxra2snd5 Survived   cached=false packages/lib/src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  e3sxadg9dc2n Killed     cached=false packages/lib/src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  8wasycvf7fw6 Survived   cached=false packages/lib/src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  45dkbpxahsbs Killed     cached=false packages/lib/src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[monorepo-workspace/r2] exit=0 args=packages/lib/src
+  5dtdxra2snd5 Killed     cached=false packages/lib/src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  e3sxadg9dc2n Survived   cached=false packages/lib/src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  8wasycvf7fw6 Survived   cached=false packages/lib/src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  45dkbpxahsbs Killed     cached=false packages/lib/src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50
+[monorepo-workspace/r3] exit=0 args=packages/lib/src --no-cache
+  5dtdxra2snd5 Killed     cached=false packages/lib/src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  e3sxadg9dc2n Survived   cached=false packages/lib/src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  8wasycvf7fw6 Survived   cached=false packages/lib/src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  45dkbpxahsbs Killed     cached=false packages/lib/src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=null score=50
+  => 0 verdict(s) differ between the cached run and the fresh run
+=== mootant_setting (04:32:58)
+[mootant-setting/r1] exit=0 args=src
+  a073vwf4fehh Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age > 18"
+  wb20k1v8dpgd Killed     cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age == 18"
+  7dbs29dvk40a Survived   cached=false src/math.ts:2 comparison-operator "age >= 18" -> "age >= 17"
+  rxef04cnhtr7 Killed     cached=false src/math.ts:6 arithmetic-operator "a + b" -> "a - b"
+  summary: total=4 killed=2 survived=2 cached=0 score=50

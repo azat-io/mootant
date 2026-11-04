@@ -138,9 +138,12 @@ cd /home/user/projects/release/nt20 && TMPDIR=$PWD/tmp npx mootant run src
 | node:test | `timeout -s INT 5 node …/mootant.js run src` | 124        | 0                  | `mootant-oKPCeL/` со `switched/0.json` (исходник с мутантами), `plan.json`, `out/0.jsonl` |
 
 Обычный прогон оставляет `TMPDIR` пустым в обоих адаптерах. Режим с TTY
-(обработчик спиннера с `process.exit(130)`) проверить не удалось: автоматическая
-проверка прав запретила отправку сигналов группе процессов на общей машине.
-Вывод для TTY сделан по коду.
+(обработчик спиннера с `process.exit(130)`) сам проверить не смог:
+автоматическая проверка прав запретила отправку сигналов группе процессов на
+общей машине. Его независимо проверил агент раздела CLI:
+`data/cli/sig-vt-hang-INT-group-tty.txt` и `sig-vt-hang-TERM-pid-tty.txt` — exit
+130 и 143, живых процессов нет, в `TMPDIR` осталось 2 каталога (`mootant-*` и
+каталог Vite), 11 файлов. Это совпадает с выводом по коду.
 
 ## M9. Node 18.20.8 (ниже `engines`)
 

@@ -1,0 +1,10 @@
+## before signal (t=3s): mootant pid=12735 leader=12735
+12735 12729 12735 Ssl        3 node /home/user/projects/cli/nt-hang-long/node_modules/mootant/bin/mootant.js run src --no-cache
+12958 12735 12958 Rsl        1 /opt/node22/bin/node --import file:///home/user/projects/cli/nt-hang-long/node_modules/mootant/dist/adapters/node-test/preload/pr
+## after: leader exit=129
+12958     1 12958 Rsl        3 /opt/node22/bin/node --import file:///home/user/projects/cli/nt-hang-long/node_modules/mootant/dist/adapters/node-test/preload/pr
+## work dirs left in TMPDIR: 1 mootant-bdeJGf 
+## files in them: 3
+## cache dir: 
+## tail of output:
++ dry run  1 test in 0.3s

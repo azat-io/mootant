@@ -33,6 +33,10 @@ node $A/scripts/simulate-grouping.mjs "$D" > /dev/null
 node $A/scripts/extra-metrics.mjs "$D" > /dev/null
 node $A/scripts/facade-closures.mjs "$D" > /dev/null
 
+# 2a. Independent cross-check of the cycles with madge.
+"$TOOLS/madge" --circular --extensions ts --ts-config $A/scripts/madge-tsconfig.json \
+  --no-spinner --no-color core adapters cli types > "$D/madge-circular.txt" 2>&1 || true
+
 # 3. Folder graphs as SVG (dot rendered by Graphviz compiled to wasm).
 "$TOOLS/depcruise" --config $A/scripts/depcruise.config.cjs --output-type archi \
   --collapse '^(core|adapters|cli|types)/[^/]+' core adapters cli types \
