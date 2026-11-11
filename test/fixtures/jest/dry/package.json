@@ -1,0 +1,7 @@
+{
+  "name": "jest-dry",
+  "private": true,
+  "scripts": {
+    "test": "jest --maxWorkers=2"
+  }
+}

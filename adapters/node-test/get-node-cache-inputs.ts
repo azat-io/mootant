@@ -4,7 +4,7 @@ import type { CacheInputs } from '../../types/adapter/cache-inputs'
 
 import { VERDICT_VARIABLE_PATTERN } from '../shared/verdict-variable-pattern'
 import { listTsconfigFiles } from '../shared/list-tsconfig-files'
-import { hashEnvironment } from './hash-environment'
+import { hashEnvironment } from '../shared/hash-environment'
 import { listFlagValues } from './list-flag-values'
 
 /**

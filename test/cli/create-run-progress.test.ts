@@ -58,6 +58,9 @@ describe('createRunProgress', () => {
       costs: Array.from({ length: units }, () => 1000),
       kind: 'run-start',
       run: 'isolated',
+      confirming: 0,
+      survivors: 0,
+      retrying: 0,
       mutants: 12,
       workers: 1,
       round: 1,
@@ -147,23 +150,28 @@ describe('createRunProgress', () => {
       Extract<RunEvent, { kind: 'run-start' }>['run'],
       number,
       number,
+      Partial<Extract<RunEvent, { kind: 'run-start' }>>?,
     ][] = [
       ['batch', 1, 4],
       ['batch', 2, 1],
       ['recovery', 1, 2],
       ['confirmation', 1, 1],
       ['isolated', 1, 1],
-      ['isolated', 2, 3],
-      ['isolated', 3, 2],
+      ['isolated', 2, 3, { survivors: 3 }],
+      ['isolated', 3, 2, { survivors: 2 }],
+      ['isolated', 2, 3, { confirming: 3 }],
+      ['isolated', 2, 1, { retrying: 1 }],
+      ['isolated', 3, 4, { confirming: 1, survivors: 2, retrying: 1 }],
+      ['isolated', 2, 2, { confirming: 1, retrying: 1 }],
     ]
-    let texts = runs.map(([run, round, mutants]) => {
-      progress.handle(startRun({ units: 9, mutants, round, run }))
+    let texts = runs.map(([run, round, mutants, held]) => {
+      progress.handle(startRun({ units: 9, mutants, round, run, ...held }))
       return getText()
     })
     vi.mocked(createSpinner).mockClear()
     let narrow = createRunProgress(createTextStyle({ width: 40 }), false)
-    let shorts = runs.map(([run, round, mutants]) => {
-      narrow.handle(startRun({ units: 9, mutants, round, run }))
+    let shorts = runs.map(([run, round, mutants, held]) => {
+      narrow.handle(startRun({ units: 9, mutants, round, run, ...held }))
       return getText()
     })
 
@@ -175,6 +183,10 @@ describe('createRunProgress', () => {
       'testing 1 mutant  0/9 test runs · 0.0s',
       'testing 3 survivors with more test files  0/9 test runs · 0.0s',
       'testing 2 survivors with more test files  0/9 test runs · 0.0s',
+      'confirming 3 timeouts  0/9 test runs · 0.0s',
+      'retrying 1 mutant  0/9 test runs · 0.0s',
+      'testing 2 survivors with more test files, confirming 1 timeout, retrying 1 mutant  0/9 test runs · 0.0s',
+      'confirming 1 timeout, retrying 1 mutant  0/9 test runs · 0.0s',
     ])
     expect(shorts).toStrictEqual([
       'batch 4 mutants  0/9',
@@ -184,6 +196,10 @@ describe('createRunProgress', () => {
       '1 mutant  0/9',
       'round 2: 3 survivors  0/9',
       'round 3: 2 survivors  0/9',
+      'confirming 3  0/9',
+      'retrying 1  0/9',
+      'round 3: 4 mutants  0/9',
+      'round 2: 2 mutants  0/9',
     ])
   })
 
@@ -226,7 +242,7 @@ describe('createRunProgress', () => {
           0,
           { kind: 'verdicts', survived: 14, killed: 120, timeout: 2, error: 1 },
         ],
-        [0, startRun({ round: 2 })],
+        [0, startRun({ survivors: 12, round: 2 })],
         [1000, endUnit(0)],
         [1000, endUnit(1)],
         [1000, endUnit(2)],

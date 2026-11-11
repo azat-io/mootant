@@ -16,11 +16,20 @@ import { countVerdicts } from './count-verdicts'
  * @param work.costs - Expected milliseconds of each unit in plan order.
  * @param work.chains - Serial chain of each unit in plan order.
  * @param work.workers - Units the run may execute at once.
+ * @param work.survivors - Of the mutants of an isolated round, those that run
+ *   with more test files; 0 when omitted.
+ * @param work.confirming - Of the mutants of an isolated round, those that
+ *   confirm a timeout; 0 when omitted.
+ * @param work.retrying - Of the mutants of an isolated round, those that run
+ *   again after a lost result; 0 when omitted.
  */
 export function countRun(
   state: RunState,
   kind: Exclude<RunKind, 'dry'>,
   work: {
+    confirming?: number
+    survivors?: number
+    retrying?: number
     chains: number[]
     workers: number
     costs: number[]
@@ -31,6 +40,9 @@ export function countRun(
   let round = (state.runs[kind] ?? 0) + 1
   state.runs[kind] = round
   state.report({
+    confirming: work.confirming ?? 0,
+    survivors: work.survivors ?? 0,
+    retrying: work.retrying ?? 0,
     units: work.costs.length,
     mutants: work.mutants,
     workers: work.workers,

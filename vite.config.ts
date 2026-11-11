@@ -1,5 +1,6 @@
 import type { StringLiteral } from 'oxc-parser'
-import type { Plugin } from 'vite'
+import type { Plugin } from 'vitest/config'
+import type { BuildOptions } from 'vite'
 
 import { parseSync, Visitor } from 'oxc-parser'
 import { defineConfig, build } from 'vite'
@@ -67,30 +68,44 @@ function external(id: string): boolean {
 }
 
 /**
- * Query that turns an import of a browser module into its bundled code.
+ * Build options of each query that turns an import of a module into its bundled
+ * code; the imported module becomes the entry of `lib`. `?inline-cjs` keeps
+ * `node:` modules external, because the build otherwise stubs them silently.
  */
-const INLINE_SCRIPT_QUERY = '?inline-script'
+const INLINE_BUNDLES: Record<string, BuildOptions> = {
+  '?inline-cjs': {
+    rolldownOptions: { external: /^node:/u },
+    lib: { formats: ['cjs'] },
+    minify: false,
+  },
+  '?inline-script': {
+    lib: { name: 'mootantReport', formats: ['iife'] },
+    minify: true,
+  },
+}
 
 /**
- * Bundles a browser module and its imports into one script and exports the code
- * as a string, for an import that ends with `?inline-script`. The HTML report
- * embeds its client this way, so the package needs no separate asset.
+ * Bundles a module and its imports into one file and exports the code as a
+ * string, for an import that ends with a query of the table. The HTML report
+ * embeds its browser client with `?inline-script`, so the package needs no
+ * separate asset. The Jest adapter gets the CommonJS code of its child modules
+ * with `?inline-cjs`, to write them to disk for Jest and its workers to load.
  *
  * @returns Vite plugin.
  */
-function inlineScript(): Plugin {
+function inlineBundle(): Plugin {
   return {
     async load(id) {
-      if (!id.endsWith(INLINE_SCRIPT_QUERY)) {
+      let bundle = Object.entries(INLINE_BUNDLES).find(([query]) =>
+        id.endsWith(query),
+      )
+      if (!bundle) {
         return null
       }
-      let entry = id.slice(0, -INLINE_SCRIPT_QUERY.length)
+      let [query, options] = bundle
+      let entry = id.slice(0, -query.length)
       let result = await build({
-        build: {
-          lib: { name: 'mootantReport', formats: ['iife'], entry },
-          write: false,
-          minify: true,
-        },
+        build: { ...options, lib: { ...options.lib, entry }, write: false },
         logLevel: 'silent',
         configFile: false,
       })
@@ -103,7 +118,19 @@ function inlineScript(): Plugin {
       }
       return `export default ${JSON.stringify(chunk.code)}`
     },
-    name: 'mootant:inline-script',
+    configureVitest({ defineCacheKeyGenerator }) {
+      /**
+       * The key of the on-disk module cache holds the text of the entry alone,
+       * so it would go on serving a bundle after a change in what the entry
+       * imports.
+       */
+      defineCacheKeyGenerator(({ id }) =>
+        Object.keys(INLINE_BUNDLES).some(query => id.endsWith(query)) ?
+          false
+        : undefined,
+      )
+    },
+    name: 'mootant:inline-bundle',
   }
 }
 
@@ -120,6 +147,7 @@ export default defineConfig({
         'adapters/node-test/index.ts',
         'adapters/vitest/index.ts',
         'adapters/vitest/runner.ts',
+        'adapters/jest/index.ts',
         'core/runtime/index.ts',
         'cli/index.ts',
         'core/index.ts',
@@ -142,7 +170,7 @@ export default defineConfig({
     minify: true,
   },
   plugins: [
-    inlineScript(),
+    inlineBundle(),
     dts({
       include: ['adapters', 'cli', 'core', 'types'],
       copyDtsFiles: true,

@@ -9,7 +9,7 @@ export interface NodeTestHooksData {
   main: string
 
   /**
-   * Absolute path of the switch plan (`NodeTestPlan`).
+   * Absolute path of the switch plan (`SwitchPlan`).
    */
   plan: string
 

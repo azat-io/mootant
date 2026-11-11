@@ -33,6 +33,13 @@ export interface AdapterSession {
   runBatch(plan: BatchPlan): Promise<BatchResult>
 
   /**
+   * Stops the test runner and frees its resources. Safe to call twice. It may
+   * give diagnostics of what failed as the test runner stopped, such as a
+   * global teardown, which join the result of a run that went through.
+   */
+  close(): Promise<Diagnostic[]> | Promise<void>
+
+  /**
    * What every verdict of the session depends on beyond the dependencies of
    * each test file, for the cache. Called once after the last dry run.
    * Optional; without it no verdict is cached.
@@ -50,11 +57,6 @@ export interface AdapterSession {
    * global setup). They are never mutated.
    */
   listTestFiles(): Promise<string[]>
-
-  /**
-   * Stops the test runner and frees its resources. Safe to call twice.
-   */
-  close(): Promise<void>
 
   /**
    * Version of the test runner, such as `5.0.4`. Optional; shown in reports.

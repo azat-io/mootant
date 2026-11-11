@@ -1,0 +1,7 @@
+{
+  "name": "jest-logging",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

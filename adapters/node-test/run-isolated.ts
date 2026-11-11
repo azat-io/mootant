@@ -9,12 +9,12 @@ import type { IsolatedPlan } from '../../types/adapter/isolated-plan'
 import type { NodeTestHandle } from './types/node-test-handle'
 
 import { collectNodeDependencies } from './collect-node-dependencies'
+import { writeSwitchPlan } from '../shared/write-switch-plan'
 import { buildIsolatedFacts } from './build-isolated-facts'
-import { writeSwitchPlan } from './write-switch-plan'
 import { getUnitDeadline } from './get-unit-deadline'
 import { checkTodoBail } from './check-todo-bail'
+import { runInPool } from '../shared/run-in-pool'
 import { runTestFile } from './run-test-file'
-import { runInPool } from './run-in-pool'
 
 /**
  * Executes isolated units, each in a test process of its own with its mutant

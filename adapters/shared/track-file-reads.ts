@@ -79,6 +79,27 @@ const WRITE_BITS =
 const SLOT = Symbol.for('mootant.file-reads')
 
 /**
+ * `path.resolve` as this module loads: code it watches may replace it, as a
+ * test's `jest.spyOn(path, ...)` does, and must not see the calls made here.
+ */
+let resolvePath = path.resolve
+
+/**
+ * `path.dirname` as this module loads.
+ */
+let getDirectory = path.dirname
+
+/**
+ * `path.join` as this module loads.
+ */
+let joinPaths = path.join
+
+/**
+ * `fileURLToPath` as this module loads.
+ */
+let readFileUrl = fileURLToPath
+
+/**
  * Receiver of the paths a test process reads and writes.
  */
 export interface FileAccessReceiver {
@@ -228,13 +249,17 @@ function wrap(
     }
     let current = slot.receiver
     if (current !== null) {
-      let access = getAccess(base, parameters, slot)
-      for (let file of access.read) {
-        current.read(file)
-      }
-      for (let file of access.written) {
-        current.write(file)
-      }
+      // Reporting never reaches the code it watches: a relative path has no
+      // absolute form once its working directory is gone, and the call decides.
+      try {
+        let access = getAccess(base, parameters, slot)
+        for (let file of access.read) {
+          current.read(file)
+        }
+        for (let file of access.written) {
+          current.write(file)
+        }
+      } catch {}
     }
     slot.inside = true
     try {
@@ -283,7 +308,7 @@ function walkDirectories(
       entries = slot.original.readdirSync(directory, { withFileTypes: true })
     } catch {}
     for (let entry of entries) {
-      let child = path.join(directory, entry.name)
+      let child = joinPaths(directory, entry.name)
       let walked = entry.isDirectory()
       if (follow && entry.isSymbolicLink()) {
         try {
@@ -331,7 +356,7 @@ function walk(file: string, slot: FileSlot, read: string[]): void {
     } catch {}
     for (let entry of entries) {
       if (!SKIPPED.has(entry.name)) {
-        let child = path.join(directory, entry.name)
+        let child = joinPaths(directory, entry.name)
         read.push(child)
         if (entry.isDirectory()) {
           directories.push(child)
@@ -405,7 +430,7 @@ function listSourceReads(
     return [
       link === null || typeof parameters[0] !== 'string' ?
         first
-      : path.resolve(path.dirname(link), parameters[0]),
+      : resolvePath(getDirectory(link), parameters[0]),
     ]
   }
   if (base === 'cp') {
@@ -471,7 +496,7 @@ function listWrites(
     if (base === 'mkdir') {
       while (!slot.original.existsSync(file)) {
         written.push(file)
-        file = path.dirname(file)
+        file = getDirectory(file)
       }
     } else {
       written.push(file)
@@ -515,12 +540,12 @@ function getGlobBase(pattern: string, cwd: string): string {
   let segments = pattern.split('/')
   let magic = segments.findIndex(segment => GLOB_MAGIC.test(segment))
   if (magic === -1) {
-    return path.resolve(cwd, pattern)
+    return resolvePath(cwd, pattern)
   }
-  let base = path.resolve(cwd, segments.slice(0, magic).join('/'))
+  let base = resolvePath(cwd, segments.slice(0, magic).join('/'))
   for (let segment of segments.slice(magic)) {
     if (segment === '..') {
-      base = path.dirname(base)
+      base = getDirectory(base)
     }
   }
   return base
@@ -563,12 +588,34 @@ function toPath(value: unknown): string | null {
   let file: string | null = null
   if (typeof value === 'string') {
     file = value
-  } else if (value instanceof URL) {
-    file = value.protocol === 'file:' ? fileURLToPath(value) : null
-  } else if (Buffer.isBuffer(value)) {
+  } else if (isUrl(value)) {
+    file = value.protocol === 'file:' ? readFileUrl(value) : null
+  } else if (value instanceof Buffer) {
     file = value.toString()
   }
-  return file === null ? null : path.resolve(file)
+  return file === null ? null : resolvePath(file)
+}
+
+/**
+ * Tells whether `node:fs` takes a value as a URL. It checks the shape, not the
+ * class, as Node does, so the `URL` of another realm counts too, such as
+ * jsdom's in the tests of a Jest project.
+ *
+ * @param value - Argument of a call.
+ * @returns Whether it has a `href` and a `protocol`, and neither `auth` nor
+ *   `path`, which a result of the legacy `url.parse` has.
+ */
+function isUrl(value: unknown): value is URL {
+  let url = value as
+    | Partial<Record<'protocol' | 'auth' | 'href' | 'path', unknown>>
+    | undefined
+    | null
+  return (
+    Boolean(url?.href) &&
+    Boolean(url?.protocol) &&
+    url?.auth === undefined &&
+    url?.path === undefined
+  )
 }
 
 /**

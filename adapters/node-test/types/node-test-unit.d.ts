@@ -34,7 +34,7 @@ export interface NodeTestUnit {
   bail: boolean
 
   /**
-   * Absolute path of the switch plan (`NodeTestPlan`).
+   * Absolute path of the switch plan (`SwitchPlan`).
    */
   plan: string
 

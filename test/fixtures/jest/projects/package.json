@@ -1,0 +1,7 @@
+{
+  "name": "jest-projects",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

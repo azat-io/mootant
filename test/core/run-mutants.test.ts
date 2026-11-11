@@ -192,6 +192,66 @@ describe('runMutants', () => {
     expect(result.unrepeatable).toBeNull()
   })
 
+  it('adds what the adapter tells as it closes to the diagnostics of a run that went through', async () => {
+    let [add] = ids['src/math.ts']!
+    let teardown: Diagnostic = {
+      message: "Jest's global teardown failed.",
+      code: 'teardown-failed',
+      severity: 'error',
+      column: null,
+      file: null,
+      line: null,
+    }
+    let { result, fake } = await run({
+      tests: [
+        {
+          file: path.join(root, 'test/math.test.ts'),
+          kills: { [add!]: 'expected 3 to be -1' },
+          covers: [add!],
+          id: 'math',
+        },
+      ],
+      closeDiagnostics: [teardown],
+    })
+
+    expect(fake.closed).toBe(1)
+    expect(result.diagnostics.at(-1)).toStrictEqual(teardown)
+  })
+
+  it('closes the adapter of a run that fails and lets the failure through, whatever the close tells', async () => {
+    let [add] = ids['src/math.ts']!
+    let fake = createFakeAdapter({
+      closeDiagnostics: [
+        {
+          message: "Jest's global teardown failed.",
+          code: 'teardown-failed',
+          severity: 'error',
+          column: null,
+          file: null,
+          line: null,
+        },
+      ],
+      tests: [
+        {
+          file: path.join(root, 'test/math.test.ts'),
+          covers: [add!],
+          dry: 'failing',
+          id: 'math',
+        },
+      ],
+    })
+    vi.mocked(loadConfig).mockResolvedValue(null)
+
+    await expect(
+      runMutants({
+        builtIns: createBuiltIns('fake', fake.adapter),
+        paths: ['src'],
+        cwd: root,
+      }),
+    ).rejects.toThrow('Tests fail without mutants')
+    expect(fake.closed).toBe(1)
+  })
+
   it('notes a tie between detected test runners', async () => {
     let [add] = ids['src/math.ts']!
     let fake = createFakeAdapter({
@@ -692,6 +752,9 @@ describe('runMutants', () => {
         run: 'isolated',
         chains: [0, 0],
         costs: [2, 2],
+        confirming: 0,
+        survivors: 0,
+        retrying: 0,
         workers: 2,
         mutants: 2,
         round: 1,

@@ -7,7 +7,7 @@ import type { AdapterSession } from '../../types/adapter/adapter-session'
 import type { AdapterContext } from '../../types/adapter/adapter-context'
 import type { NodeTestHandle } from './types/node-test-handle'
 
-import { stopLiveProcessGroups } from './stop-live-process-groups'
+import { stopProcessGroup } from '../shared/stop-process-group'
 import { getNodeCacheInputs } from './get-node-cache-inputs'
 import { getDefaultPatterns } from './get-default-patterns'
 import { listNodeTestFiles } from './list-node-test-files'
@@ -195,6 +195,7 @@ export async function startNodeTestSession(
     workers: Math.max(1, context.concurrency ?? availableParallelism() - 1),
     testTimeout: readTestTimeout(execArgv),
     checkTypeScript: check,
+    groups: new Set(),
     env: environment,
     preload,
     context,
@@ -203,12 +204,15 @@ export async function startNodeTestSession(
     tsx,
   }
   return {
-    runBatch: () =>
-      Promise.reject(new Error('The node-test adapter has no batch mode.')),
     close: () => {
-      stopLiveProcessGroups()
+      for (let pid of handle.groups) {
+        stopProcessGroup(pid)
+      }
+      handle.groups.clear()
       return Promise.resolve()
     },
+    runBatch: () =>
+      Promise.reject(new Error('The node-test adapter has no batch mode.')),
     listTestFiles: () => Promise.resolve([...files, ...setup]),
     runIsolated: plan => runIsolated(handle, plan),
     cacheInputs: () => Promise.resolve(inputs),

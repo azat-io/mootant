@@ -422,7 +422,7 @@ async function checkRealFailures(
 
 /**
  * Builds the message of a fatal dry-run failure: a count, up to ten lines of
- * test or file and message, and a hint when a snapshot assertion failed.
+ * test or file and message, and a hint when a line names snapshots.
  *
  * @param heading - Sentence that names what the tests do.
  * @param failures - Failing tests and test files that failed to load.
@@ -457,7 +457,7 @@ function formatFailures(
   }
   if (lines.some(line => /snapshot/iu.test(line))) {
     message +=
-      '\nSnapshots may be missing: mootant never writes them, so write them with the test runner first.'
+      '\nSnapshots may be missing or obsolete: mootant never writes or removes them, so update them with the test runner first.'
   }
   return message
 }

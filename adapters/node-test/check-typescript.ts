@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
-import { listPackageFiles } from './list-package-files'
+import { listPackageFiles } from '../shared/list-package-files'
 import { includesTsx } from './includes-tsx'
 
 /**

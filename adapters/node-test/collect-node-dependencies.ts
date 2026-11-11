@@ -4,7 +4,7 @@ import type { NodeTestRecord } from './types/node-test-record'
 
 import { listTsconfigFiles } from '../shared/list-tsconfig-files'
 import { compareCodeUnits } from '../../core/compare-code-units'
-import { listPackageFiles } from './list-package-files'
+import { listPackageFiles } from '../shared/list-package-files'
 import { listLoadedFiles } from './list-loaded-files'
 
 /**

@@ -1,7 +1,7 @@
 import type { NodeTestRecord } from './types/node-test-record'
 import type { TryFacts } from '../../types/adapter/try-facts'
 
-import { getTestId } from './get-test-id'
+import { getTestId } from '../shared/get-test-id'
 
 /**
  * Try of a test process with the name it was recorded under.

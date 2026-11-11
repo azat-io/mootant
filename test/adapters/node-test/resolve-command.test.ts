@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { resolveCommand } from '../../../adapters/node-test/resolve-command'
-import { parseCommand } from '../../../adapters/node-test/parse-command'
+import { parseCommand } from '../../../adapters/shared/parse-command'
 
 /**
  * Resolves the first simple command of a command line.

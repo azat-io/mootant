@@ -4,7 +4,7 @@ import { createTestProcessOutcome } from '../../helpers/create-test-process-outc
 import { buildDryFile } from '../../../adapters/node-test/build-dry-file'
 import { createNodeTestEnd } from '../../helpers/create-node-test-end'
 import { createNodeTestTry } from '../../helpers/create-node-test-try'
-import { getTestId } from '../../../adapters/node-test/get-test-id'
+import { getTestId } from '../../../adapters/shared/get-test-id'
 
 /**
  * Input of the test file.

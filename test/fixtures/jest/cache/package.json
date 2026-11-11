@@ -1,0 +1,7 @@
+{
+  "name": "jest-cache",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

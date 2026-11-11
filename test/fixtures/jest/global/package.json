@@ -1,0 +1,7 @@
+{
+  "name": "jest-global",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

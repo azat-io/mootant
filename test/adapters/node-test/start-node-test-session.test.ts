@@ -1,4 +1,5 @@
 import { writeFile, mkdtemp, mkdir, rm } from 'node:fs/promises'
+import { type ChildProcess, spawn } from 'node:child_process'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { availableParallelism, tmpdir } from 'node:os'
 import { pathToFileURL } from 'node:url'
@@ -9,7 +10,9 @@ import type { NodeTestHandle } from '../../../adapters/node-test/types/node-test
 import type { AdapterContext } from '../../../types/adapter/adapter-context'
 
 import { startNodeTestSession } from '../../../adapters/node-test/start-node-test-session'
+import { trackProcessGroup } from '../../../adapters/shared/track-process-group'
 import { readNodeRuntime } from '../../../adapters/node-test/read-node-runtime'
+import { stopProcessGroup } from '../../../adapters/shared/stop-process-group'
 import { getPreloadPath } from '../../../adapters/node-test/get-preload-path'
 import { runIsolated } from '../../../adapters/node-test/run-isolated'
 import { runDry } from '../../../adapters/node-test/run-dry'
@@ -30,6 +33,11 @@ vi.mock(import('../../../adapters/node-test/run-isolated'), () => ({
  * Temporary project of the current test.
  */
 let root = ''
+
+/**
+ * Processes the current test started with `startSleeper`.
+ */
+let sleepers: ChildProcess[] = []
 
 /**
  * Environment variables of the process before a test changes them.
@@ -106,6 +114,28 @@ async function readHandle(
 }
 
 /**
+ * Starts a Node process that sleeps as the leader of a process group.
+ *
+ * @returns The process and a promise of the signal that ends it.
+ */
+function startSleeper(): {
+  ended: Promise<NodeJS.Signals | null>
+  child: ChildProcess
+} {
+  let child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)'], {
+    stdio: 'ignore',
+    detached: true,
+  })
+  sleepers.push(child)
+  let ended = new Promise<NodeJS.Signals | null>(resolve => {
+    child.on('exit', (_code, signal) => {
+      resolve(signal)
+    })
+  })
+  return { child, ended }
+}
+
+/**
  * Makes the Node binary report a version.
  *
  * @param version - Version, such as `v26.0.0`.
@@ -120,6 +150,9 @@ describe('startNodeTestSession', () => {
     vi.mocked(readNodeRuntime).mockReset()
     vi.mocked(runDry).mockReset()
     vi.mocked(runIsolated).mockReset()
+    for (let child of sleepers.splice(0)) {
+      stopProcessGroup(child.pid!)
+    }
     process.env = { ...SAVED }
     await rm(root, { recursive: true, force: true })
   })
@@ -189,6 +222,30 @@ describe('startNodeTestSession', () => {
       workers: 2,
       tsx: false,
     })
+  })
+
+  it('stops the groups of its own test processes when it closes, and leaves those of another session', async () => {
+    let context = await createProject({}, ['a.test.js'])
+    mockRuntime('v22.12.0')
+    let own = startSleeper()
+    let other = startSleeper()
+    let untrack = trackProcessGroup(other.child.pid!)
+    let session = await startNodeTestSession(context, {})
+    await session.dryRun({
+      timeouts: { file: 1, test: 1 },
+      instrumented: true,
+      repeat: false,
+      files: null,
+      related: [],
+    })
+    let [handle] = vi.mocked(runDry).mock.calls.at(-1)!
+    handle.groups.add(own.child.pid!)
+    await session.close()
+    untrack()
+
+    await expect(own.ended).resolves.toBe('SIGKILL')
+    expect(handle.groups.size).toBe(0)
+    expect(() => process.kill(other.child.pid!, 0)).not.toThrow()
   })
 
   it('applies the options', async () => {

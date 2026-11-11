@@ -239,7 +239,7 @@ describe('runDryPhase', () => {
         '  t/a.test.ts > t7: expected true to be false',
         '  t/a.test.ts > t8: expected true to be false',
         '  and 2 more',
-        'Snapshots may be missing: mootant never writes them, so write them with the test runner first.',
+        'Snapshots may be missing or obsolete: mootant never writes or removes them, so update them with the test runner first.',
       ].join('\n'),
     )
     expect(progress.at(-1)).toBe(

@@ -18,7 +18,8 @@ import fs, {
 } from 'node:fs'
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { readFile, readdir, mkdtemp, rm } from 'node:fs/promises'
-import { pathToFileURL } from 'node:url'
+import { syncBuiltinESMExports } from 'node:module'
+import url, { pathToFileURL } from 'node:url'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -208,6 +209,20 @@ describe('trackFileReads', () => {
     ])
   })
 
+  it('reports a file read through a URL of another realm, which Node takes by its shape', () => {
+    let paths = record()
+    writeFileSync(path.join(directory, 'realm.json'), '{}')
+    let { pathname, protocol, hostname, href } = pathToFileURL(
+      path.join(directory, 'realm.json'),
+    )
+
+    expect(
+      readFileSync({ pathname, protocol, hostname, href } as never, 'utf8'),
+    ).toBe('{}')
+
+    expect(paths.read).toStrictEqual(['realm.json'])
+  })
+
   it('stops reporting without a receiver and ignores descriptors', () => {
     let paths = record()
     let descriptor = openSync(path.join(directory, 'a.json'), 'r')
@@ -279,6 +294,72 @@ describe('trackFileReads', () => {
     expect(paths.read).toStrictEqual(
       ['', 'sub', 'sub/back'].map(file => path.join('loop', file)),
     )
+  })
+
+  it('calls no function code replaced after this module loaded', () => {
+    let tree = createTree('replaced')
+    let link = path.join(tree, 'new-link')
+    let made = path.join(tree, 'made/inner')
+    let fromUrl = pathToFileURL(path.join(tree, 'from-url'))
+    let fromBuffer = Buffer.from(path.join(tree, 'from-buffer'))
+    let read: string[] = []
+    let written: string[] = []
+    trackFileReads({
+      write: file => {
+        written.push(file)
+      },
+      read: file => {
+        read.push(file)
+      },
+    })
+    let spies = [
+      vi.spyOn(url, 'fileURLToPath'),
+      vi.spyOn(Buffer, 'isBuffer'),
+      vi.spyOn(path, 'resolve'),
+      vi.spyOn(path, 'dirname'),
+    ]
+    syncBuiltinESMExports()
+    existsSync(fromUrl)
+    existsSync(fromBuffer)
+    mkdirSync(made, { recursive: true })
+    symlinkSync('a.txt', link)
+    let calls = spies.map(spy => spy.mock.calls.length)
+    vi.restoreAllMocks()
+    syncBuiltinESMExports()
+    // Apart, as `fs.realpathSync`, which this listing needs, reads `path.resolve`.
+    let join = vi.spyOn(path, 'join')
+    fs.opendirSync(tree, { recursive: true }).closeSync()
+    calls.push(join.mock.calls.length)
+    vi.restoreAllMocks()
+    trackFileReads(null)
+
+    expect(calls).toStrictEqual([0, 0, 0, 0, 0])
+    expect(read.slice(0, 4)).toStrictEqual([
+      path.join(tree, 'from-url'),
+      path.join(tree, 'from-buffer'),
+      path.join(tree, 'a.txt'),
+      tree,
+    ])
+    expect(read).toContain(path.join(tree, 'sub/deep'))
+    expect(written).toStrictEqual([made, path.dirname(made), link])
+  })
+
+  it('reports nothing for a relative path once the working directory is gone, and the call goes on', () => {
+    let gone = path.join(directory, 'gone')
+    let cwd = process.cwd()
+    mkdirSync(gone)
+    process.chdir(gone)
+    try {
+      rmdirSync(gone)
+      let paths = record()
+      let found = existsSync('missing.json')
+      trackFileReads(null)
+
+      expect(found).toBe(false)
+      expect(paths.read).toStrictEqual([])
+    } finally {
+      process.chdir(cwd)
+    }
   })
 
   it.runIf(typeof Reflect.get(fs, 'globSync') === 'function')(

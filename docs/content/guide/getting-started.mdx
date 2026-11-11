@@ -8,6 +8,7 @@ keywords:
   - getting started
   - installation
   - vitest
+  - jest
   - node test runner
   - test quality
 ---
@@ -27,6 +28,7 @@ import IconHexagon from '../../icons/hexagon.svg'
 import IconNodejs from '../../icons/nodejs.svg'
 import IconVitest from '../../icons/vitest.svg'
 import Card from '../../components/Card.astro'
+import IconJest from '../../icons/jest.svg'
 import IconDna from '../../icons/dna.svg'
 
 Mootant makes small changes to your code, called mutants, and runs the tests
@@ -35,9 +37,10 @@ missing or too weak.**
 
 ## Requirements
 
-Mootant needs Node.js and tests on [Vitest](https://vitest.dev) or the
-[Node.js test runner](https://nodejs.org/api/test.html). The tests have to pass
-as they are: Mootant runs them without mutants first.
+Mootant needs Node.js and tests on [Vitest](https://vitest.dev),
+[Jest](https://jestjs.io) or [Node Test](https://nodejs.org/api/test.html), the
+test runner built into Node.js. The tests have to pass as they are: Mootant runs
+them without mutants first.
 
 <div class="badges">
   <Badge
@@ -51,9 +54,14 @@ as they are: Mootant runs them without mutants first.
     text="Version 5"
   />
   <Badge
+    icon={IconJest}
+    title="Jest"
+    text="Version 29.7+"
+  />
+  <Badge
     icon={IconNodejs}
-    title="Node.js test runner"
-    text="Built into Node.js"
+    title="Node Test"
+    text="Built-in"
   />
 </div>
 
@@ -76,9 +84,9 @@ Point Mootant at your source code:
 npx mootant run src
 ```
 
-Mootant finds Vitest or `node:test` and uses your existing configuration. The
-mutants are compiled into your code in memory, so your files stay untouched, and
-each mutant runs only the test files that reach it.
+Mootant finds Vitest, Jest or Node Test and uses your existing configuration.
+The mutants are compiled into your code in memory, so your files stay untouched,
+and each mutant runs only the test files that reach it.
 
 <Terminal output={heroOutput} />
 

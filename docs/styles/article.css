@@ -150,7 +150,7 @@ article {
     margin-block: var(--space-m) 0;
 
     @container (inline-size >= 600px) {
-      grid-template-columns: repeat(2, [badge] minmax(0, 1fr));
+      grid-template-columns: repeat(3, [badge] minmax(0, 1fr));
 
       & > :first-child {
         grid-column: 1 / -1;

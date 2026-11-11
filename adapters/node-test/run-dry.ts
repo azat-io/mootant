@@ -7,12 +7,12 @@ import type { NodeTestRecord } from './types/node-test-record'
 
 import { collectNodeDependencies } from './collect-node-dependencies'
 import { compareCodeUnits } from '../../core/compare-code-units'
+import { writeSwitchPlan } from '../shared/write-switch-plan'
 import { listLoadedFiles } from './list-loaded-files'
-import { writeSwitchPlan } from './write-switch-plan'
 import { getDryDeadline } from './get-dry-deadline'
+import { runInPool } from '../shared/run-in-pool'
 import { buildDryFile } from './build-dry-file'
 import { runTestFile } from './run-test-file'
-import { runInPool } from './run-in-pool'
 
 /**
  * How a switched file in Node's `require` cache was never served, on Node

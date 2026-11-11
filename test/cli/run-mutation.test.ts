@@ -120,6 +120,7 @@ describe('runMutation', () => {
     )
     expect(Object.keys(getBuiltInAdapters())).toStrictEqual([
       'vitest',
+      'jest',
       'node-test',
     ])
   })

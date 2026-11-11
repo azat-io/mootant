@@ -1,0 +1,7 @@
+{
+  "name": "jest-start",
+  "private": true,
+  "scripts": {
+    "test": "jest --maxWorkers=3"
+  }
+}

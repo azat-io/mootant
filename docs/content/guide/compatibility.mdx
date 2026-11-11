@@ -2,26 +2,37 @@
 title: Compatibility
 description:
   Supported Node.js versions, test runners and source files, with the limits of
-  Vitest, node:test, Vue, Svelte and Astro support.
+  Vitest, Jest, Node Test, Vue, Svelte and Astro support.
 keywords:
   - mutation testing
   - compatibility
   - node
   - vitest
+  - jest
   - vue
   - svelte
   - astro
 ---
 
-Mootant runs with **Vitest 5 or the Node.js test runner (`node:test`)**. It uses
-your existing tests and configuration, and checks that the tests pass without
-mutants before testing any changes.
+Mootant runs with **Vitest 5, Jest 29.7 or later, or Node Test**, the test
+runner built into Node.js. It uses your existing tests and configuration, and
+checks that the tests pass without mutants before testing any changes.
+
+Tests run in the project's own directory. A mutant in code that writes or
+deletes project files, such as a build script that a test runs, changes those
+files for the tests after it, and the change stays. Keep such code out with an
+[ignore comment](/mutators#ignore-mutants).
+
+A test whose path depends on timing, such as a timer that races the test's own
+waits, can reach a mutant in one run and miss it in the next. Such a mutant may
+read as not covered, or as killed in one run and not in another.
 
 ## Node.js
 
 Mootant supports Node.js 20 from 20.19.0, and Node.js 22.12.0 or later:
 `^20.19.0 || >=22.12.0`. Vitest 5 itself needs Node.js
-`^22.12.0 || ^24.0.0 || >=26.0.0`, so Node.js 20 works only with `node:test`.
+`^22.12.0 || ^24.0.0 || >=26.0.0`, so Node.js 20 works only with Jest and Node
+Test.
 
 TypeScript configuration files need Node.js 22.18 or later, or the
 [`jiti`](https://github.com/unjs/jiti) package. See
@@ -58,14 +69,57 @@ selected. Child processes and workers started by a test run the original code.
 For a custom Vitest configuration path, use
 [`vitestAdapter`](/guide/configuration#runner).
 
-## node:test
+## Jest
 
-Mootant detects the Node.js test runner when test scripts use `node --test`,
-`tsx --test`, `bnt` or `borp`, or test files import `node:test`. If both runners
-are equally likely, such as tests that import `node:test` in a project with
-Vitest installed, Mootant uses Vitest and prints a note; set
-[`run.runner`](/guide/configuration#runner) to choose. Each mutant runs a test
-file in its own process. `--fast` has no effect with this runner.
+Mootant detects Jest when test scripts call it, or when the project depends on
+Jest, has a `jest.config.*` file in its root or a `jest` key in `package.json`.
+It uses the project's installation of **Jest 29.7 or later** and its
+configuration: one project or several `projects`, transformers such as Babel,
+`@swc/jest` and ts-jest, the jsdom and node test environments, and ES modules
+under `--experimental-vm-modules`. Tests run with jest-circus, Jest's default
+test runner. Mootant does not support:
+
+- jest-jasmine2
+- A custom `runner`, such as jest-runner-eslint
+- A custom `testRunner` that is not plain JavaScript
+- Vue and Svelte components
+
+A project on jest-jasmine2 or a custom `runner` is skipped with a warning, and a
+run with no other project stops with an error.
+
+Each mutant runs a test file in a long-lived Jest worker, so a test file runs
+many times against one global setup. One that fails when it runs again without
+mutants stops the run with an error that names it. A test that leaves its
+process changed, such as a property of `http.globalAgent`, can change the
+verdicts of later mutants on that worker, which `freshWorkers` avoids. A worker
+takes about 600 MB on a large module graph, and `--concurrency` lowers the
+number of workers. `--fast` has no effect with this runner.
+
+Child processes and workers started by a test run the original code. Mutants in
+code that only global setup runs, or in a source file that
+`transformIgnorePatterns` keeps out of the transform, stay uncovered. Those in
+code that a custom test environment runs end with `Error`.
+
+The type check of ts-jest is off, so a test file's own type error passes, and a
+mutant that only breaks types survives. After a change to a file or variable
+that only global setup reads, or to a variable that only a transformer's
+configuration, a test environment or a resolver reads, delete the
+[cache](/guide/configuration#cache) directory.
+
+A test script that reaches Jest through another script loses the variables it
+sets on the way, and Jest runs from the root of the project even after a `cd` in
+the test command. Use [`jestAdapter`](/guide/configuration#runner) to set the
+test command and environment variables, or `freshWorkers` for a new worker on
+every run of a test file, which is slower.
+
+## Node Test
+
+Mootant detects Node Test when test scripts use `node --test`, `tsx --test`,
+`bnt` or `borp`, or test files import `node:test`. If runners are equally
+likely, such as tests that import `node:test` in a project with Vitest
+installed, Mootant uses the first of Vitest, Jest and Node Test and prints a
+note; set [`run.runner`](/guide/configuration#runner) to choose. Each mutant
+runs a test file in its own process. `--fast` has no effect with this runner.
 
 TypeScript needs Node.js type stripping or tsx. Other loaders, such as ts-node,
 and tsx with `.cts` files or with `.ts` files whose nearest `package.json` lacks
@@ -87,10 +141,11 @@ template expressions when the project has:
 - Svelte 5 or later for Svelte templates
 - `@vue/compiler-dom` 3.5 or later for Vue templates
 
-Running the mutants of a component requires the framework's Vite plugin in the
-project's Vitest configuration. Under `node:test`, these mutants stay in the run
-as uncovered. Calls the compiler needs as written, such as Vue's `defineProps()`
-or a Svelte rune, stay in place; code inside them can still be mutated.
+Running the mutants of a component is supported only with Vitest, and requires
+the framework's Vite plugin in the project's Vitest configuration. Under Node
+Test, these mutants stay in the run as uncovered. Calls the compiler needs as
+written, such as Vue's `defineProps()` or a Svelte rune, stay in place; code
+inside them can still be mutated.
 
 A Svelte component or Vue template that does not compile with its mutants gives
 them an `Error` verdict with the compiler's message. Vue templates reach mutants

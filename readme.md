@@ -50,9 +50,9 @@ missing test.
 
 ## Why Mootant
 
-- **Use your existing tests.** Mootant works with Vitest 5 and `node:test`,
-  using your project's test configuration. With Vitest, it also tests Vue and
-  Svelte components.
+- **Use your existing tests.** Mootant works with Vitest 5, Jest 29.7+ and Node
+  Test, using your project's test configuration. With Vitest, it also tests Vue
+  and Svelte components.
 - **Find hidden gaps.** Mootant mutates numbers, return values, `await`s and
   regular expressions, not just operators.
 - **Filter out noise.** Mootant skips duplicate and likely equivalent mutants,
@@ -67,8 +67,8 @@ missing test.
 
 > **Early development.** Expect breaking changes.
 
-You need passing tests on **Vitest 5** (Node.js 22.12+, no browser mode) or
-**`node:test`** (Node.js 20.19+ or 22.12+). See
+You need passing tests on **Vitest 5** (Node.js 22.12+, no browser mode), **Jest
+29.7+** or **Node Test** (Node.js 20.19+ or 22.12+). See
 [compatibility](https://mootant.org/guide/compatibility) for other limits.
 
 Install Mootant and point it at your source code:

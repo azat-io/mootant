@@ -1,0 +1,7 @@
+{
+  "name": "jest-shared",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

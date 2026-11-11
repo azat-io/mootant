@@ -1,8 +1,8 @@
 import type { NodeTestCommand } from './types/node-test-command'
 
 import { readTestScripts } from '../shared/read-test-scripts'
+import { parseCommand } from '../shared/parse-command'
 import { resolveCommand } from './resolve-command'
-import { parseCommand } from './parse-command'
 
 /**
  * Finds the command a project runs node:test with: the given command, else the

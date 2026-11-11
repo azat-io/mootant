@@ -142,6 +142,72 @@ describe('runIsolatedRounds', () => {
     })
   })
 
+  it('tells at the start of each round how many of its mutants confirm a timeout, run again after a lost result or run with more test files', async () => {
+    let { session, state } = await createTestRun(
+      {
+        onIsolated: (result, plan) => ({
+          units: result.units
+            .filter(facts => plan.units[facts.unit]!.mutant !== 'lost')
+            .map(facts =>
+              plan.units[facts.unit]!.mutant === 'hung' ?
+                { ...facts, incomplete: 'hang' as const }
+              : facts,
+            ),
+        }),
+        tests: [
+          { covers: ['hung', 'lost', 'kept'], file: '/t/a.test.ts', id: 'a1' },
+          { file: '/t/b.test.ts', covers: ['kept'], id: 'b1' },
+        ],
+      },
+      { mutants: ['hung', 'lost', 'kept'], isolate: true },
+    )
+    let starts: unknown[] = []
+    state.report = event => {
+      if (event.kind === 'run-start') {
+        let { confirming, survivors, retrying, mutants, round } = event
+        starts.push({ confirming, survivors, retrying, mutants, round })
+      }
+    }
+
+    await runIsolatedRounds(session, state)
+
+    expect(starts).toStrictEqual([
+      { confirming: 0, survivors: 0, retrying: 0, mutants: 3, round: 1 },
+      { confirming: 1, survivors: 1, retrying: 1, mutants: 3, round: 2 },
+    ])
+  })
+
+  it('counts a mutant of a round once, as it runs again after a lost result rather than with more test files', async () => {
+    let calls = 0
+    let { session, state } = await createTestRun(
+      {
+        tests: [
+          { file: '/t/a.test.ts', covers: ['lost'], id: 'a1' },
+          { file: '/t/b.test.ts', covers: ['lost'], id: 'b1' },
+        ],
+        onIsolated: result => {
+          calls += 1
+          return calls === 1 ? { units: [] } : result
+        },
+      },
+      { mutants: ['lost'], isolate: true },
+    )
+    let starts: unknown[] = []
+    state.report = event => {
+      if (event.kind === 'run-start') {
+        let { confirming, survivors, retrying, mutants, round } = event
+        starts.push({ confirming, survivors, retrying, mutants, round })
+      }
+    }
+
+    await runIsolatedRounds(session, state)
+
+    expect(starts).toStrictEqual([
+      { confirming: 0, survivors: 0, retrying: 0, mutants: 1, round: 1 },
+      { confirming: 0, survivors: 0, retrying: 1, mutants: 1, round: 2 },
+    ])
+  })
+
   it('counts the verdicts of the last round without facts of its units', async () => {
     let { session, state, fake } = await createTestRun(
       {

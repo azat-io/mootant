@@ -15,7 +15,8 @@ import { rankModuleFiles } from './rank-module-files'
  * to kill it first (`rankMutantFiles`) and its covering tests in that order
  * (`orderCoveringTests`), never by durations; a `NoCoverage` mutant without
  * test files lists the test files of its module to add a test to
- * (`rankModuleFiles`).
+ * (`rankModuleFiles`), ranked once per module, as they depend on the module
+ * alone and a large project has thousands of such mutants.
  *
  * @param state - State of the run after the batch and isolated phases.
  * @param mutants - Every mutant of the run, pending and ignored, in file and
@@ -26,6 +27,23 @@ export function decideResults(
   state: RunState,
   mutants: readonly Mutant[],
 ): MutantResult[] {
+  let modules = new Map<string, string[]>()
+
+  /**
+   * Ranks the test files of a module, once.
+   *
+   * @param file - Path of the module, as `Mutant.file` gives it.
+   * @returns Keys of the test files in order (`rankModuleFiles`).
+   */
+  function rankModule(file: string): string[] {
+    let ranked = modules.get(file)
+    if (ranked === undefined) {
+      ranked = rankModuleFiles(state, file)
+      modules.set(file, ranked)
+    }
+    return ranked
+  }
+
   return mutants.map(mutant => {
     let found = state.mutants.get(mutant.id)
     if (found === undefined) {
@@ -51,7 +69,7 @@ export function decideResults(
     let ranked = rankMutantFiles(state, found)
     let files =
       status === 'NoCoverage' && ranked.length === 0 ?
-        rankModuleFiles(state, mutant.file)
+        rankModule(mutant.file)
       : ranked
     let testFiles = [
       ...new Set(files.map(key => state.analysis.testFiles.get(key)!.file)),

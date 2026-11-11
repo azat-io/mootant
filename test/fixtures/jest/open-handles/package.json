@@ -1,0 +1,7 @@
+{
+  "name": "jest-open-handles",
+  "private": true,
+  "scripts": {
+    "test": "jest --detectOpenHandles --maxWorkers=4"
+  }
+}

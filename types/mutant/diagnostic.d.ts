@@ -5,7 +5,10 @@ export interface Diagnostic {
   /**
    * Machine-readable kind of the problem. `parse-error`, `read-error`,
    * `mutator-error`, `instrument-error` and `instrumentation-break` have the
-   * severity `error`; the others are warnings.
+   * severity `error`, and `teardown-failed` has it when the test runner's
+   * global teardown failed or never ran rather than ran past its time, or when
+   * Jest found snapshot files whose test file is gone; the others are
+   * warnings.
    */
   code:
     | 'instrumentation-break'
@@ -21,6 +24,7 @@ export interface Diagnostic {
     | 'template-skipped'
     | 'instrument-error'
     | 'unsupported-file'
+    | 'teardown-failed'
     | 'outside-workers'
     | 'unknown-mutator'
     | 'cache-skipped'

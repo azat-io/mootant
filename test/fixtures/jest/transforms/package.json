@@ -1,0 +1,7 @@
+{
+  "name": "jest-transforms",
+  "private": true,
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+  }
+}

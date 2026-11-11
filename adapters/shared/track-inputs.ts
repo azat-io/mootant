@@ -3,7 +3,7 @@ import path from 'node:path'
 import type { InputTracking } from './types/input-tracking'
 
 import { trackEnvironment } from './track-environment'
-import { trackFileReads } from './track-file-reads'
+import { trackFileInputs } from './track-file-inputs'
 
 /**
  * Starts recording what the code of a test process or worker reads: the project
@@ -23,39 +23,25 @@ export function trackInputs(
   environment: Parameters<typeof trackEnvironment>[0],
 ): InputTracking {
   let variables = new Set<string>()
-  let written = new Set<string>()
-  let touched = new Set<string>()
-  let files = new Set<string>()
-  trackFileReads({
-    read: file => {
-      if (
-        (file === root || file.startsWith(root + path.sep)) &&
-        !file.includes(`${path.sep}node_modules${path.sep}`) &&
-        !written.has(file)
-      ) {
-        files.add(file)
-      }
-    },
-    write: file => {
-      written.add(file)
-      touched.add(file)
-      touched.add(path.dirname(file))
-    },
-  })
+  let tracking = trackFileInputs(
+    file =>
+      (file === root || file.startsWith(root + path.sep)) &&
+      !file.includes(`${path.sep}node_modules${path.sep}`),
+  )
   let real = trackEnvironment(environment, name => {
     variables.add(name)
   })
   return {
     stop: () => {
-      trackFileReads(null)
+      let { modified, files } = tracking.stop()
       trackEnvironment(environment, null)
       return {
-        modified: [...files].filter(file => touched.has(file)).toSorted(),
         environment: [...variables].toSorted(),
-        files: [...files].toSorted(),
+        modified,
+        files,
       }
     },
-    files,
+    files: tracking.files,
     real,
   }
 }

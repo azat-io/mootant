@@ -345,10 +345,10 @@ describe('applyBatchResult', () => {
     expect(
       state.diagnostics.map(diagnostic => diagnostic.message),
     ).toStrictEqual([
-      'The worker running t/a.test.ts stopped responding in "t1" with mutant m1 and was stopped.',
-      'The worker running t/b.test.ts stopped responding in "b1" without a mutant and was stopped.',
-      'The worker running t/c.test.ts stopped responding and was stopped.',
-      'The worker running t/d.test.ts stopped responding in "ghost" without a mutant and was stopped.',
+      'The test file t/a.test.ts ran past its time budget in "t1" with mutant m1 and was stopped.',
+      'The test file t/b.test.ts ran past its time budget in "b1" without a mutant and was stopped.',
+      'The test file t/c.test.ts ran past its time budget and was stopped.',
+      'The test file t/d.test.ts ran past its time budget in "ghost" without a mutant and was stopped.',
     ])
     expect(state.diagnostics[0]).toMatchObject({
       file: 't/a.test.ts',

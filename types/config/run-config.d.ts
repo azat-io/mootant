@@ -18,10 +18,11 @@ export interface RunConfig {
   hitLimit?: { factor?: number; floor?: number }
 
   /**
-   * Test runner: a built-in name (`vitest` or `node-test`, no options), or an
-   * adapter object that the configuration file imports, such as
-   * `vitestAdapter({ config: 'vitest.unit.config.ts' })` or `nodeTestAdapter({
-   * command: 'bnt' })`. Detected when omitted.
+   * Test runner: a built-in name (`vitest`, `jest` or `node-test`, no options),
+   * or an adapter object that the configuration file imports, such as
+   * `vitestAdapter({ config: 'vitest.unit.config.ts' })`, `jestAdapter({
+   * command: 'jest --config jest.unit.js' })` or `nodeTestAdapter({ command:
+   * 'bnt' })`. Detected when omitted.
    */
   runner?: TestAdapter | string
 

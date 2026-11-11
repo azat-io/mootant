@@ -57,6 +57,7 @@
   --font-size-4xl: clamp(2.49rem, 1.37vi + 2.15rem, 3.24rem);
   --font-size-5xl: clamp(2.99rem, 1.94vi + 2.5rem, 4.05rem);
   --font-size-code: clamp(0.88rem, 0.11vi + 0.85rem, 0.94rem);
+  --font-2xs: 400 var(--font-size-2xs) / 1.5 var(--font-family-base);
   --font-xs: 400 var(--font-size-xs) / 1.65 var(--font-family-base);
   --font-s: 400 var(--font-size-s) / 1.75 var(--font-family-base);
   --font-m: 400 var(--font-size-m) / 1.75 var(--font-family-base);

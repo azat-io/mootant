@@ -1,0 +1,7 @@
+{
+  "name": "jest-stuck",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

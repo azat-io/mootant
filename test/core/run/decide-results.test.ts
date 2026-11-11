@@ -1,8 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+import { rankModuleFiles } from '../../../core/run/rank-module-files'
 import { decideResults } from '../../../core/run/decide-results'
 import { createTestRun } from '../../helpers/create-test-run'
 import { createMutant } from '../../helpers/create-mutant'
+
+vi.mock(import('../../../core/run/rank-module-files'), async importOriginal => {
+  let actual = await importOriginal()
+  return { rankModuleFiles: vi.fn(actual.rankModuleFiles) }
+})
 
 describe('decideResults', () => {
   it('turns evidence into statuses in mutant order', async () => {
@@ -124,5 +130,26 @@ describe('decideResults', () => {
       coveredBy: ['a3', 'a2', 'a1', 'b1'],
       status: 'Survived',
     })
+  })
+
+  it('ranks the test files of a module once for all its mutants that no test file covers', async () => {
+    let { state } = await createTestRun(
+      { tests: [{ file: '/test/a.test.ts', id: 'a1' }] },
+      { mutants: ['m1', 'm2'] },
+    )
+    vi.mocked(rankModuleFiles).mockClear()
+
+    let results = decideResults(
+      state,
+      ['m1', 'm2'].map(id => state.mutants.get(id)!.mutant),
+    )
+
+    expect(
+      results.map(result => [result.status, result.testFiles]),
+    ).toStrictEqual([
+      ['NoCoverage', ['/test/a.test.ts']],
+      ['NoCoverage', ['/test/a.test.ts']],
+    ])
+    expect(rankModuleFiles).toHaveBeenCalledExactlyOnceWith(state, 'src/a.ts')
   })
 })

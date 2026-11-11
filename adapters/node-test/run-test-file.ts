@@ -47,6 +47,7 @@ export async function runTestFile(
       }),
       env: { ...handle.env, MOOTANT_UNIT: JSON.stringify(unit) },
       args: [...handle.args, file],
+      groups: handle.groups,
       node: handle.node,
       cwd: context.root,
       deadline,

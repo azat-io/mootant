@@ -8,7 +8,13 @@ import { classifyTry } from './classify-try'
 /**
  * Reads the outcome of one isolated unit. A test counts as having reached the
  * mutant once it or an earlier test of the unit reached it, or, for a static
- * mutant, once the unit reached it anywhere.
+ * mutant, once the unit reached it anywhere. A unit past its hit limit is a
+ * timeout of the failed test with the most hits, the first of them on a tie:
+ * that one ran into the limit, while a test that failed before it says nothing
+ * of the loop, and one after it throws at its first site, as the count of the
+ * unit stays over the limit. With no failed test, the limit stopped the load or
+ * a hook, whose error is the message. A hang names no test, as no adapter
+ * reports the try that hung.
  *
  * @param state - State of the run.
  * @param mutant - State of the unit's mutant.
@@ -26,21 +32,35 @@ export function readIsolatedUnit(
 ): MutantVerdict | 'survived' | null {
   let { request, facts, unit } = ran
   let { analysis } = state
-  let firstFailed = facts.tests.find(test => test.failed || test.timedOut)
-  let base = { test: firstFailed?.test ?? null, file: unit.file }
+  let failed = facts.tests.filter(test => test.failed || test.timedOut)
+  let [firstFailed] = failed
   if (facts.hits > unit.limits.hitLimit) {
+    let [stopped] = failed.toSorted((left, right) => right.hits - left.hits)
     return {
-      message: firstFailed?.message ?? null,
+      message: stopped?.message ?? facts.loadError ?? facts.hookError,
+      test: stopped?.test ?? null,
       cause: 'hit-limit',
       status: 'Timeout',
-      ...base,
+      file: unit.file,
     }
   }
   if (facts.incomplete === 'hang') {
-    return { status: 'Timeout', message: null, cause: 'hang', ...base }
+    return {
+      status: 'Timeout',
+      file: unit.file,
+      message: null,
+      cause: 'hang',
+      test: null,
+    }
   }
   if (facts.incomplete === 'crash') {
-    return { status: 'Killed', cause: 'crash', message: null, ...base }
+    return {
+      test: firstFailed?.test ?? null,
+      status: 'Killed',
+      file: unit.file,
+      cause: 'crash',
+      message: null,
+    }
   }
   let reached = mutant.static && facts.reached
   for (let test of facts.tests) {

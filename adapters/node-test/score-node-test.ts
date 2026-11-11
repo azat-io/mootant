@@ -6,8 +6,8 @@ import type { DetectionScore } from '../../types/adapter/built-in-adapters'
 import { readTestScripts } from '../shared/read-test-scripts'
 import { getDefaultPatterns } from './get-default-patterns'
 import { listNodeTestFiles } from './list-node-test-files'
+import { parseCommand } from '../shared/parse-command'
 import { resolveCommand } from './resolve-command'
-import { parseCommand } from './parse-command'
 
 /**
  * Packages that run node:test, as dependencies of a project.

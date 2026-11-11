@@ -126,7 +126,8 @@ describe('runBatch', () => {
       { ...tries[0], unit: 0 },
       { ...tries[1], unit: 0 },
       {
-        message: 'The worker stopped responding during this try.',
+        message:
+          'This try ran past its time budget, and its worker was stopped.',
         timedOut: true,
         skipped: false,
         reached: true,

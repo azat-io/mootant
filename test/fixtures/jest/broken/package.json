@@ -1,0 +1,7 @@
+{
+  "name": "jest-broken",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

@@ -4,6 +4,7 @@ import type { IsolatedFacts } from '../../../types/adapter/isolated-result'
 import type { IsolatedRequest } from '../../../types/run/run-state'
 import type { FakeWorld } from '../../helpers/create-fake-adapter'
 
+import { createHitLimitError } from '../../../core/runtime/create-hit-limit-error'
 import { applyIsolatedResult } from '../../../core/run/apply-isolated-result'
 import { planIsolated } from '../../../core/run/plan-isolated'
 import { createTestRun } from '../../helpers/create-test-run'
@@ -172,7 +173,7 @@ describe('applyIsolatedResult', () => {
     expect(state.diagnostics).toStrictEqual([
       {
         message:
-          'The worker running t/a.test.ts with mutant hung stopped responding and was stopped.',
+          'The test file t/a.test.ts ran past its time budget with mutant hung and was stopped.',
         code: 'worker-hang',
         file: 't/a.test.ts',
         severity: 'warning',
@@ -217,6 +218,115 @@ describe('applyIsolatedResult', () => {
       message: 'MootantHitLimitError',
       cause: 'hit-limit',
       test: 'a1',
+    })
+  })
+
+  it.each<[string, Record<string, [number, string] | null>, string]>([
+    [
+      'a test that failed before it',
+      {
+        a2: [999_000, createHitLimitError('m1', 100_000).message],
+        a1: [10, 'expect(received).toBe(expected)'],
+        a3: null,
+      },
+      'a2',
+    ],
+    [
+      'a later test that threw the error of the limit at its first site',
+      {
+        a3: [1, createHitLimitError('m1', 100_000).message],
+        a2: [999_000, 'expect(received).toThrow(expected)'],
+        a1: null,
+      },
+      'a2',
+    ],
+  ])(
+    'names the failed test with the most hits and its message, which ran into the hit limit, not %s',
+    async (_name, failures, expected) => {
+      let { state } = await apply(
+        {
+          tests: ['a1', 'a2', 'a3'].map(id => ({
+            file: '/t/a.test.ts',
+            covers: ['m1'],
+            id,
+          })),
+        },
+        ['m1'],
+        {
+          change: facts => ({
+            ...facts,
+            tests: facts.tests.map(test => {
+              let failure = failures[test.test] ?? null
+              return failure === null ? test : (
+                  {
+                    ...test,
+                    message: failure[1],
+                    hits: failure[0],
+                    failed: true,
+                  }
+                )
+            }),
+            hits: 1_000_000,
+          }),
+          request: { confirming: true },
+        },
+      )
+
+      expect(state.mutants.get('m1')!.verdict).toMatchObject({
+        message: failures[expected]![1],
+        cause: 'hit-limit',
+        status: 'Timeout',
+        test: expected,
+      })
+    },
+  )
+
+  it('takes the message of a hit limit that stopped the load, with no test named', async () => {
+    let stopped = createHitLimitError('m1', 100_000).message
+    let { state } = await apply(
+      { tests: [{ file: '/t/a.test.ts', covers: ['m1'], id: 'a1' }] },
+      ['m1'],
+      {
+        change: facts => ({
+          ...facts,
+          loadError: stopped,
+          hits: 1_000_000,
+          tests: [],
+        }),
+        request: { confirming: true },
+      },
+    )
+
+    expect(state.mutants.get('m1')!.verdict).toMatchObject({
+      cause: 'hit-limit',
+      status: 'Timeout',
+      message: stopped,
+      test: null,
+    })
+  })
+
+  it('names no test for a hang, as the try that hung is not among the facts', async () => {
+    let { state } = await apply(
+      { tests: [{ file: '/t/a.test.ts', covers: ['m1'], id: 'a1' }] },
+      ['m1'],
+      {
+        change: facts => ({
+          ...facts,
+          tests: facts.tests.map(test => ({
+            ...test,
+            message: 'expect(received).toBe(expected)',
+            failed: true,
+          })),
+          incomplete: 'hang',
+        }),
+        request: { confirming: true },
+      },
+    )
+
+    expect(state.mutants.get('m1')!.verdict).toMatchObject({
+      status: 'Timeout',
+      cause: 'hang',
+      test: null,
     })
   })
 

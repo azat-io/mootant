@@ -1,0 +1,7 @@
+{
+  "name": "jest-leftovers",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

@@ -34,6 +34,7 @@ async function run(
     args: ['--input-type=module', '-e', script],
     env: { ...process.env, OUT: out },
     node: process.execPath,
+    groups: new Set(),
     cwd: directory,
     deadline,
     out,
@@ -111,6 +112,32 @@ describe('runTestProcess', () => {
     expect(Date.now() - started).toBeLessThan(4500)
   })
 
+  it('holds its group in the set of its session while it runs, and not after', async () => {
+    directory = await mkdtemp(path.join(tmpdir(), 'mootant-process-'))
+    let out = path.join(directory, 'out.jsonl')
+    await writeFile(out, '')
+    let groups = new Set<number>()
+    let running = runTestProcess({
+      args: [
+        '--input-type=module',
+        '-e',
+        'await new Promise(resolve => setTimeout(resolve, 300))',
+      ],
+      deadline: () => Infinity,
+      node: process.execPath,
+      env: process.env,
+      cwd: directory,
+      groups,
+      out,
+    })
+
+    expect(groups.size).toBe(1)
+
+    await running
+
+    expect(groups.size).toBe(0)
+  })
+
   it('drops the output without a receiver', async () => {
     await expect(run('console.log("dropped")')).resolves.toMatchObject({
       code: 0,
@@ -126,6 +153,7 @@ describe('runTestProcess', () => {
       runTestProcess({
         node: path.join(directory, 'missing-node'),
         deadline: () => Infinity,
+        groups: new Set(),
         env: process.env,
         cwd: directory,
         args: [],

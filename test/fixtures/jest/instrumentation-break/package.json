@@ -1,0 +1,7 @@
+{
+  "name": "jest-instrumentation-break",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

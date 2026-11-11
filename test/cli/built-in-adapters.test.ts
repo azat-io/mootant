@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { scoreNodeTest } from '../../adapters/node-test/score-node-test'
 import { detectVitest } from '../../adapters/vitest/detect-vitest'
 import { getBuiltInAdapters } from '../../cli/built-in-adapters'
+import { scoreJest } from '../../adapters/jest/score-jest'
 
 vi.mock(import('../../adapters/vitest/detect-vitest'))
+vi.mock(import('../../adapters/jest/score-jest'))
 vi.mock(import('../../adapters/node-test/score-node-test'))
 
 describe('getBuiltInAdapters', () => {
@@ -50,11 +52,25 @@ describe('getBuiltInAdapters', () => {
 
     expect(adapter).toMatchObject({ name: 'vitest', batch: true })
   })
-  it('lists Vitest before node:test, the order of a tie', () => {
+  it('lists Vitest, then Jest, then node:test, the order of a tie', () => {
     expect(Object.keys(getBuiltInAdapters())).toStrictEqual([
       'vitest',
+      'jest',
       'node-test',
     ])
+  })
+
+  it('detects Jest with its score', async () => {
+    vi.mocked(scoreJest).mockResolvedValue(1)
+
+    await expect(getBuiltInAdapters()['jest']!.detect('/repo')).resolves.toBe(1)
+    expect(scoreJest).toHaveBeenCalledExactlyOnceWith('/repo')
+  })
+
+  it('loads the Jest adapter with default options', async () => {
+    let adapter = await getBuiltInAdapters()['jest']!.load()
+
+    expect(adapter).toMatchObject({ name: 'jest', batch: false })
   })
 
   it('detects node:test with its score', async () => {

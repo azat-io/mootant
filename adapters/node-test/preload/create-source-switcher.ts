@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs'
 
 import type { SwitchedFile } from '../../../types/adapter/switched-file'
+import type { SwitchPlan } from '../../shared/types/switch-plan'
 import type { NodeTestRecord } from '../types/node-test-record'
 import type { SourceSwitcher } from '../types/source-switcher'
-import type { NodeTestPlan } from '../types/node-test-plan'
 
 import { resolveSwitchedText } from '../../../core/instrument/resolve-switched-text'
 import { SERVED_KEY } from './served-key'
@@ -27,7 +27,7 @@ const LOADED_MARKER = `\n;globalThis[Symbol.for(${JSON.stringify(LOADED_KEY)})]?
  * `SwitchedFile` of a file is read on first use.
  *
  * @param options - Switch plan, test file and writer of records.
- * @param options.plan - Absolute path of the switch plan (`NodeTestPlan`).
+ * @param options.plan - Absolute path of the switch plan (`SwitchPlan`).
  * @param options.main - Real absolute path of the test file.
  * @param options.write - Writer of records.
  * @returns Switcher that the module hooks and `_compile` of the thread ask.
@@ -38,7 +38,7 @@ export function createSourceSwitcher(options: {
   main: string
 }): SourceSwitcher {
   let { write, main } = options
-  let plan = JSON.parse(readFileSync(options.plan, 'utf8')) as NodeTestPlan
+  let plan = JSON.parse(readFileSync(options.plan, 'utf8')) as SwitchPlan
   let mismatched = new Set<string>()
   return {
     switch(file, code) {

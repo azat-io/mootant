@@ -7,8 +7,8 @@ import type { TestProcessOutcome } from './types/test-process-outcome'
 import type { NodeTestRecord } from './types/node-test-record'
 import type { ProcessWatch } from './types/process-watch'
 
-import { trackProcessGroup } from './track-process-group'
-import { stopProcessGroup } from './stop-process-group'
+import { trackProcessGroup } from '../shared/track-process-group'
+import { stopProcessGroup } from '../shared/stop-process-group'
 
 /**
  * Milliseconds between two reads of the out file.
@@ -44,6 +44,12 @@ interface TestProcessOptions {
   env: NodeJS.ProcessEnv
 
   /**
+   * Process groups of the session's test processes that run, which holds this
+   * one's while it runs.
+   */
+  groups: Set<number>
+
+  /**
    * Arguments after the Node binary.
    */
   args: string[]
@@ -74,8 +80,9 @@ interface TestProcessOptions {
  * is stopped too, the deadline no longer applies, and the output gets 300 ms to
  * close before it is dropped, so a process the tests detached into a group of
  * its own cannot hold the outcome back. While the process runs, it is stopped
- * when mootant exits or gets SIGINT or SIGTERM (`trackProcessGroup`). A line
- * that is not JSON, as the last line of a stopped process, is ignored.
+ * when mootant exits or gets SIGINT or SIGTERM (`trackProcessGroup`), and its
+ * group is in `groups`, which the session stops when it closes. A line that is
+ * not JSON, as the last line of a stopped process, is ignored.
  *
  * @param options - Binary, arguments, environment, out file and deadline.
  * @returns Records, exit code or signal, start time and whether the watchdog
@@ -129,6 +136,9 @@ export function runTestProcess(
   }
   let untrack =
     child.pid === undefined ? () => {} : trackProcessGroup(child.pid)
+  if (child.pid !== undefined) {
+    options.groups.add(child.pid)
+  }
   let exited = false
   let timer = setInterval(() => {
     read()
@@ -150,6 +160,7 @@ export function runTestProcess(
     finished = true
     clearInterval(timer)
     untrack()
+    options.groups.delete(child.pid!)
     read()
     closeSync(descriptor)
     return true

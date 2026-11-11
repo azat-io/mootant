@@ -1,0 +1,7 @@
+{
+  "name": "jest-per-worker",
+  "private": true,
+  "scripts": {
+    "test": "jest --maxWorkers=1"
+  }
+}

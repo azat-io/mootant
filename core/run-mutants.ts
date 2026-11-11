@@ -157,7 +157,9 @@ interface RunMutantsOptions {
  * since the merge base of the revision and `HEAD` run, and when there are none
  * the test runner does not start. A run that writes an HTML report also lists
  * the candidates its mutators skipped. The adapter is closed and the work
- * directory removed whatever happens.
+ * directory removed whatever happens; what the adapter tells of its close, such
+ * as a global teardown that failed, joins the diagnostics of a run that went
+ * through, after its cache was saved.
  *
  * @param options - Paths, configuration, adapters and run settings.
  * @returns Verdicts, diagnostics and timings, before they are formatted.
@@ -298,8 +300,9 @@ export async function runMutants(
       files: switched,
       root,
     })
+    let result: RunResult
     try {
-      return await execute({
+      result = await execute({
         diagnostics: listing.diagnostics,
         listed: listing.files,
         runSettings,
@@ -317,9 +320,17 @@ export async function runMutants(
         live,
         fast,
       })
-    } finally {
+    } catch (error) {
       await session.close()
+      throw error
     }
+    let late: unknown = await session.close()
+    return Array.isArray(late) ?
+        {
+          ...result,
+          diagnostics: [...result.diagnostics, ...(late as Diagnostic[])],
+        }
+      : result
   } finally {
     await work.remove()
   }

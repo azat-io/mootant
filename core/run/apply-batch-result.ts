@@ -230,7 +230,8 @@ function recordTestTries(
 
 /**
  * Adds a `worker-hang` warning for a unit whose worker the adapter stopped,
- * naming the test and mutant of its last timed-out try.
+ * naming the test and mutant of its last timed-out try. Adapters stop a unit
+ * once it runs past its time budget, whether its worker still responds or not.
  *
  * @param state - State of the run.
  * @param file - Absolute path of the test file of the unit.
@@ -250,7 +251,7 @@ function reportHang(
       : ` in "${name}" with mutant ${hungTry.mutant}`
   }
   state.diagnostics.push({
-    message: `The worker running ${getDisplayPath(file, state.root)} stopped responding${where} and was stopped.`,
+    message: `The test file ${getDisplayPath(file, state.root)} ran past its time budget${where} and was stopped.`,
     file: getDisplayPath(file, state.root),
     code: 'worker-hang',
     severity: 'warning',

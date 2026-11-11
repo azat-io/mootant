@@ -103,6 +103,9 @@ existing mutators miss.
 ```
 mootant/
 ├── adapters/          # Test runner adapters
+│   ├── jest/          # Jest: session, host runner, worker pool, workers
+│   ├── node-test/     # Node Test: session, test processes, preload
+│   ├── shared/        # Helpers shared by adapters
 │   └── vitest/        # Vitest: session, Vite plugin, worker runner
 │       ├── types/     # Types used only by the Vitest adapter
 │       └── worker/    # Code that runs inside Vitest workers

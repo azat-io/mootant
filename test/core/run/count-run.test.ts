@@ -16,7 +16,13 @@ describe('countRun', () => {
 
     countRun(state, 'batch', { ...work, mutants: 3 })
     countRun(state, 'batch', { ...work, mutants: 1 })
-    countRun(state, 'isolated', { ...work, mutants: 2 })
+    countRun(state, 'isolated', {
+      ...work,
+      confirming: 1,
+      survivors: 0,
+      retrying: 1,
+      mutants: 2,
+    })
 
     expect(state.runs).toStrictEqual({ isolated: 1, batch: 2 })
     expect(events).toStrictEqual([
@@ -24,7 +30,10 @@ describe('countRun', () => {
       {
         ...work,
         kind: 'run-start',
+        confirming: 0,
+        survivors: 0,
         run: 'batch',
+        retrying: 0,
         mutants: 3,
         round: 1,
         units: 2,
@@ -32,7 +41,10 @@ describe('countRun', () => {
       {
         ...work,
         kind: 'run-start',
+        confirming: 0,
+        survivors: 0,
         run: 'batch',
+        retrying: 0,
         mutants: 1,
         round: 2,
         units: 2,
@@ -41,6 +53,9 @@ describe('countRun', () => {
         ...work,
         kind: 'run-start',
         run: 'isolated',
+        confirming: 1,
+        survivors: 0,
+        retrying: 1,
         mutants: 2,
         round: 1,
         units: 2,

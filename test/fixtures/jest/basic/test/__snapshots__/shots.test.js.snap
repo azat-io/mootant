@@ -1,0 +1,5 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`checks another 1`] = `"other"`;
+
+exports[`checks a snapshot when asked 1`] = `"kept"`;

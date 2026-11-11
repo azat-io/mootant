@@ -40,7 +40,10 @@ export async function runIsolatedRounds(
 
 /**
  * Runs one isolated round: the requests carried over from the round before that
- * are still undecided, and the next test files of every undecided mutant.
+ * are still undecided, and the next test files of every undecided mutant. Its
+ * start tells how many of its mutants confirm a timeout, else run again after a
+ * lost result, else, after the first round, run with more test files, so that
+ * the progress names the round by what it holds and counts each mutant once.
  *
  * @param session - Live test runner.
  * @param state - State of the run, updated in place.
@@ -85,6 +88,26 @@ async function runRound(
   }
   let plan = planIsolated(state, requests)
   let mutants = new Set(requests.map(({ mutant }) => mutant))
+  let held = {
+    confirming: new Set<string>(),
+    survivors: new Set<string>(),
+    retrying: new Set<string>(),
+  }
+  for (let request of requests) {
+    if (request.confirming) {
+      held.confirming.add(request.mutant)
+    } else if (request.retried) {
+      held.retrying.add(request.mutant)
+    } else if (round > 0) {
+      held.survivors.add(request.mutant)
+    }
+  }
+  for (let mutant of held.confirming) {
+    held.retrying.delete(mutant)
+  }
+  for (let mutant of [...held.confirming, ...held.retrying]) {
+    held.survivors.delete(mutant)
+  }
   countRun(state, 'isolated', {
     costs: requests.map((request, index) =>
       request.confirming ?
@@ -92,6 +115,9 @@ async function runRound(
       : getFileCost(state, request.file),
     ),
     chains: numberChains(requests.map(request => request.file)),
+    confirming: held.confirming.size,
+    survivors: held.survivors.size,
+    retrying: held.retrying.size,
     workers: state.workers,
     mutants: mutants.size,
   })

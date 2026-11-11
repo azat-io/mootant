@@ -17,12 +17,12 @@ import type { RunEvent } from '../../../types/run/run-event'
 import { startNodeTestSession } from '../../../adapters/node-test/start-node-test-session'
 import { createWorkDirectory } from '../../../core/run/create-work-directory'
 import { buildNodeTestPreload } from '../../helpers/build-node-test-preload'
-import { runNodeTestReference } from '../../helpers/run-node-test-reference'
 import { nodeTestAdapter } from '../../../adapters/node-test/index'
 import { classifyVerdict } from '../../helpers/classify-verdict'
 import { createBuiltIns } from '../../helpers/create-built-ins'
 import { shortenDryRuns } from '../../helpers/shorten-dry-runs'
 import { describeMutant } from '../../helpers/describe-mutant'
+import { runReference } from '../../helpers/run-reference'
 import { listMutants } from '../../../core/list-mutants'
 import { runMutants } from '../../../core/run-mutants'
 import { version } from '../../../package.json'
@@ -129,7 +129,7 @@ async function runBothWays(
     cache: false,
     cwd: root,
   })
-  let reference = await runNodeTestReference(
+  let reference = await runReference(
     root,
     result.results.map(entry => entry.mutant),
     {

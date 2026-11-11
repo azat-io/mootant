@@ -1,21 +1,21 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
+import type { VitestOutRecord, VitestHeartbeat } from './types/vitest-worker'
 import type { IsolatedFacts } from '../../types/adapter/isolated-result'
 import type { IsolatedUnit } from '../../types/adapter/isolated-plan'
 import type { VitestHandle } from './types/vitest-session-state'
 import type { BatchUnit } from '../../types/adapter/batch-plan'
-import type { VitestHeartbeat } from './types/vitest-worker'
 import type { UnitOutcome } from './types/unit-outcome'
 
 import { resetRunDirectory } from './reset-run-directory'
 import { runSpecifications } from './run-specifications'
+import { readOutFile } from '../shared/read-out-file'
 import { watchHeartbeats } from './watch-heartbeats'
 import { stopHungWorker } from './stop-hung-worker'
 import { writePlanFiles } from './write-plan-files'
 import { watchUnitEnds } from './watch-unit-ends'
 import { readOutFiles } from './read-out-files'
-import { readOutFile } from './read-out-file'
 
 /**
  * Runs the units of a batch or isolated plan in one Vitest run: writes the plan
@@ -83,7 +83,9 @@ export async function runPlan(
     onUnitEnd === undefined ? undefined : (
       name => {
         let unit = indexes.get(name)!
-        let records = readOutFile(path.join(directory, 'out', `${name}.jsonl`))
+        let records = readOutFile(
+          path.join(directory, 'out', `${name}.jsonl`),
+        ) as VitestOutRecord[]
         if (plan.describe === undefined) {
           let end = records.find(record => record.kind === 'end')
           onUnitEnd(

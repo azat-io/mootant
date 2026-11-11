@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import type { VitestOutRecord } from './types/vitest-worker'
 
-import { readOutFile } from './read-out-file'
+import { readOutFile } from '../shared/read-out-file'
 
 /**
  * Reads the records workers wrote in a run (`readOutFile`).
@@ -20,7 +20,7 @@ export function readOutFiles(
   for (let name of readdirSync(folder).toSorted()) {
     files.set(
       path.basename(name, '.jsonl'),
-      readOutFile(path.join(folder, name)),
+      readOutFile(path.join(folder, name)) as VitestOutRecord[],
     )
   }
   return files

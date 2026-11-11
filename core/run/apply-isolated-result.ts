@@ -116,7 +116,8 @@ export function applyIsolatedResult(
 
 /**
  * Adds a `worker-hang` warning for an isolated unit whose worker the adapter
- * stopped.
+ * stopped. Adapters stop a unit once it runs past its time budget, whether its
+ * worker still responds or not, so the warning says that.
  *
  * @param state - State of the run.
  * @param unit - Hung unit.
@@ -124,7 +125,7 @@ export function applyIsolatedResult(
 function reportHang(state: RunState, unit: IsolatedUnit): void {
   let display = getDisplayPath(unit.file, state.root)
   state.diagnostics.push({
-    message: `The worker running ${display} with mutant ${unit.mutant} stopped responding and was stopped.`,
+    message: `The test file ${display} ran past its time budget with mutant ${unit.mutant} and was stopped.`,
     code: 'worker-hang',
     severity: 'warning',
     file: display,

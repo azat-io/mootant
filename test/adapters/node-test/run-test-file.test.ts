@@ -48,6 +48,7 @@ async function createHandle(
     args: ['--import', 'preload'],
     checkTypeScript: () => null,
     preload: '/preload.js',
+    groups: new Set([7]),
     env: { A: '1' },
     testTimeout: 0,
     node: '/node',
@@ -100,6 +101,7 @@ describe('runTestFile', () => {
     ).resolves.toMatchObject({ code: 0 })
     expect(vi.mocked(runTestProcess).mock.calls[0]![0]).toMatchObject({
       args: ['--import', 'preload', '/project/a.test.js'],
+      groups: handle.groups,
       env: { A: '1' },
       cwd: '/project',
       node: '/node',

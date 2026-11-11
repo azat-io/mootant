@@ -1,11 +1,7 @@
 import type { NodeTestCommand } from './types/node-test-command'
 
-import { splitNodeArguments } from './split-node-arguments'
-
-/**
- * Words after a package manager that run a script of the package, not a binary.
- */
-const SCRIPT_WORDS = new Set(['run-script', 'test', 'run', 't'])
+import { splitNodeArguments } from '../shared/split-node-arguments'
+import { readCommandPrefix } from '../shared/read-command-prefix'
 
 /**
  * Options of better-node-test that take a value: `-t` becomes a name pattern,
@@ -36,14 +32,13 @@ const BORP_VALUES = new Set([
 
 /**
  * Reads the test command of one simple command of a script (`parseCommand`):
- * leading `NAME=value` words and `env` or `cross-env` set variables; `pnpm`,
- * `pnpm exec`, `npx`, `npm exec`, `yarn` and `yarn exec` run the binary that
- * follows; the binary is `node` with `--test`, `tsx` with `--test` (Node with
- * `--import tsx`; its `--tsconfig` becomes `TSX_TSCONFIG_PATH`),
- * better-node-test (`bnt`: `NODE_ENV=test`, `-t` as a name pattern, coverage
- * options left out) or borp (`--pattern`, `--timeout`, `--only` and
- * `--expose-gc` kept, its other options left out). A command that runs a script
- * of the package, or anything else, gives null.
+ * past what comes before the binary (`readCommandPrefix`), the binary is `node`
+ * with `--test`, `tsx` with `--test` (Node with `--import tsx`; its
+ * `--tsconfig` becomes `TSX_TSCONFIG_PATH`), better-node-test (`bnt`:
+ * `NODE_ENV=test`, `-t` as a name pattern, coverage options left out) or borp
+ * (`--pattern`, `--timeout`, `--only` and `--expose-gc` kept, its other options
+ * left out). A command that runs a script of the package, or anything else,
+ * gives null.
  *
  * @param words - Words of the simple command.
  * @returns The test command, or null when the words do not run node:test.
@@ -51,38 +46,11 @@ const BORP_VALUES = new Set([
 export function resolveCommand(
   words: readonly string[],
 ): NodeTestCommand | null {
-  let environment: Record<string, string> = {}
-  let rest = [...words]
-  let binary: undefined | string
-  while ((binary = rest.shift()) !== undefined) {
-    let assignment = /^(?<name>[A-Z_a-z]\w*)=(?<value>.*)$/su.exec(binary)
-    if (assignment !== null) {
-      environment[assignment.groups!['name']!] = assignment.groups!['value']!
-    } else if (['cross-env', 'env', 'npx'].includes(binary)) {
-      while (rest[0]?.startsWith('-')) {
-        rest.shift()
-      }
-    } else if (['pnpm', 'yarn', 'npm'].includes(binary)) {
-      let word = rest[0] ?? 'run'
-      if (word === 'exec' || (binary === 'npm' && word === 'x')) {
-        rest.shift()
-        if (rest[0] === '--') {
-          rest.shift()
-        }
-      } else if (binary === 'npm' || SCRIPT_WORDS.has(word)) {
-        return null
-      }
-    } else {
-      break
-    }
-  }
-  if (binary === undefined) {
+  let prefix = readCommandPrefix(words)
+  if (prefix === null) {
     return null
   }
-  let name = binary
-    .split(/[/\\]/u)
-    .at(-1)!
-    .replace(/\.(?:cmd|exe)$/iu, '')
+  let { environment, rest, name } = prefix
   if (name === 'node' || name === 'tsx') {
     return readNode(name, rest, environment)
   }

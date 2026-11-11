@@ -3,6 +3,7 @@ import childProcess from 'node:child_process'
 import { promisify } from 'node:util'
 
 import { trackEnvironment } from '../../../adapters/shared/track-environment'
+import { trackSpawners } from '../../../adapters/shared/track-spawners'
 
 /**
  * Promisified functions made before the tracking is installed, as a custom test
@@ -56,6 +57,7 @@ describe('trackEnvironment after an early promisify', () => {
 
     expect(stdout).toBe('ok')
     expect(new Set(names)).toStrictEqual(new Set(['*']))
+    expect(trackSpawners(process.env, null)).toBe(true)
 
     trackEnvironment({ holder: state, ignored: [] }, null)
   })

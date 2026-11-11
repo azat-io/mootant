@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { createNodeTestTry } from '../../helpers/create-node-test-try'
-import { getTestId } from '../../../adapters/node-test/get-test-id'
 import { readTries } from '../../../adapters/node-test/read-tries'
+import { getTestId } from '../../../adapters/shared/get-test-id'
 
 describe('readTries', () => {
   let input = { file: '/p/a.test.js', mutant: 'm1', root: '/p' }

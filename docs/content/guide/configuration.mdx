@@ -310,18 +310,18 @@ export default defineConfig({
 })
 ```
 
-| Setting                       | Default                                                     | For one run                         |
-| ----------------------------- | ----------------------------------------------------------- | ----------------------------------- |
-| [`paths`](#paths)             | None                                                        | The paths after `mootant run`       |
-| [`threshold`](#threshold)     | None                                                        | `--threshold`                       |
-| [`concurrency`](#concurrency) | `maxWorkers` of Vitest, CPU cores minus one for `node:test` | `--concurrency`                     |
-| [`fast`](#fast)               | `false`                                                     | `--fast`, `--no-fast`               |
-| [`cache`](#cache)             | `true`                                                      | `--cache`, `--no-cache`             |
-| [`incremental`](#incremental) | `false`                                                     | `--incremental`, `--no-incremental` |
-| [`html`](#html)               | No report                                                   | `--html`, `--no-html`               |
-| [`runner`](#runner)           | Detected                                                    | None                                |
-| [`timeout`](#timeout)         | `{ factor: 3, constant: 250 }`                              | None                                |
-| [`hitLimit`](#hitlimit)       | `{ factor: 100, floor: 100000 }`                            | None                                |
+| Setting                       | Default                                                           | For one run                         |
+| ----------------------------- | ----------------------------------------------------------------- | ----------------------------------- |
+| [`paths`](#paths)             | None                                                              | The paths after `mootant run`       |
+| [`threshold`](#threshold)     | None                                                              | `--threshold`                       |
+| [`concurrency`](#concurrency) | `maxWorkers` of Vitest or Jest, CPU cores minus one for Node Test | `--concurrency`                     |
+| [`fast`](#fast)               | `false`                                                           | `--fast`, `--no-fast`               |
+| [`cache`](#cache)             | `true`                                                            | `--cache`, `--no-cache`             |
+| [`incremental`](#incremental) | `false`                                                           | `--incremental`, `--no-incremental` |
+| [`html`](#html)               | No report                                                         | `--html`, `--no-html`               |
+| [`runner`](#runner)           | Detected                                                          | None                                |
+| [`timeout`](#timeout)         | `{ factor: 3, constant: 250 }`                                    | None                                |
+| [`hitLimit`](#hitlimit)       | `{ factor: 100, floor: 100000 }`                                  | None                                |
 
 ### `paths`
 
@@ -336,16 +336,16 @@ is 1. No threshold by default. The `--threshold` option sets it for one run.
 
 ### `concurrency`
 
-The most test files to run at once. By default, the `maxWorkers` of Vitest, or
-the number of CPU cores minus one for `node:test`. The `--concurrency` option
-sets it for one run.
+The most test files to run at once. By default, the `maxWorkers` of Vitest or
+Jest, or the number of CPU cores minus one for Node Test. The `--concurrency`
+option sets it for one run.
 
 ### `fast`
 
 Fast mode tries many mutants in one test run and trusts their kills. It is
 faster, but a kill may be false, and tests that run concurrently run one at a
-time. It works with Vitest and changes nothing with `node:test`. `false` by
-default. `--fast` and `--no-fast` set it for one run.
+time. It works with Vitest and changes nothing with Jest and Node Test. `false`
+by default. `--fast` and `--no-fast` set it for one run.
 
 ### `cache`
 
@@ -377,9 +377,9 @@ report only with `--html`, so a re-check keeps the report of the whole run.
 
 ### `runner`
 
-The test runner: `'vitest'`, `'node-test'` or an adapter object. By default,
-Mootant detects it, and a runner that the test scripts of `package.json` call
-wins over one that is only installed.
+The test runner: `'vitest'`, `'jest'`, `'node-test'` or an adapter object. By
+default, Mootant detects it, and a runner that the test scripts of
+`package.json` call wins over one that is only installed.
 
 To run Vitest with another configuration file than the one it finds, import the
 adapter from `mootant/vitest`. The path is relative to the root of the project:
@@ -395,7 +395,33 @@ export default defineConfig({
 })
 ```
 
-The adapter of `node:test` comes from `mootant/node-test`:
+The adapter of Jest comes from `mootant/jest`:
+
+```ts
+import { jestAdapter } from 'mootant/jest'
+import { defineConfig } from 'mootant'
+
+export default defineConfig({
+  run: {
+    runner: jestAdapter({ command: 'jest --config jest.unit.js' }),
+  },
+})
+```
+
+<details>
+<summary>Options of `jestAdapter`</summary>
+
+- `command`: the test command as a script of `package.json` has it, such as
+  `jest --config jest.unit.js`. Mootant reads its variables and flags and never
+  runs it. Taken from the test scripts by default.
+- `env`: environment variables added to the Jest processes
+- `freshWorkers`: `true` gives every run of a test file a new worker, so nothing
+  a test file leaves in a worker reaches the next one. It is slower, and what
+  global setup started and the files on disk stay shared. `false` by default.
+
+</details>
+
+The adapter of Node Test comes from `mootant/node-test`:
 
 ```ts
 import { nodeTestAdapter } from 'mootant/node-test'

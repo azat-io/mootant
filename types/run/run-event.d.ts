@@ -18,15 +18,35 @@ export type RunEvent =
       run: Exclude<RunKind, 'dry'>
 
       /**
+       * Distinct mutants of an isolated round whose units confirm a timeout
+       * with a longer limit; 0 in other runs.
+       */
+      confirming: number
+
+      /**
        * Kind of the event.
        */
       kind: 'run-start'
+
+      /**
+       * Distinct mutants of an isolated round after the first that run with
+       * more test files, as they survived those before, and are counted in
+       * neither `confirming` nor `retrying`; 0 in other runs.
+       */
+      survivors: number
 
       /**
        * Serial chain of each unit, in plan order: units with the same number
        * share a test file and never run at the same time.
        */
       chains: number[]
+
+      /**
+       * Distinct mutants of an isolated round whose units run again, as the
+       * test runner lost what they gave, and are not counted in `confirming`; 0
+       * in other runs.
+       */
+      retrying: number
 
       /**
        * Expected milliseconds of each unit of the plan, in plan order, from the

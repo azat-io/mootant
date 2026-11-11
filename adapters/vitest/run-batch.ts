@@ -54,13 +54,14 @@ export async function runBatch(
     }
     if (hung !== null && !ended) {
       result.incomplete.push({
-        message: 'The worker stopped responding and was stopped.',
+        message: 'The worker ran past its time budget and was stopped.',
         reason: 'hang',
         unit,
       })
       if (hung.mutant !== null && hung.test !== null) {
         result.tries.push({
-          message: 'The worker stopped responding during this try.',
+          message:
+            'This try ran past its time budget, and its worker was stopped.',
           duration: hung.budget,
           mutant: hung.mutant,
           test: hung.test,

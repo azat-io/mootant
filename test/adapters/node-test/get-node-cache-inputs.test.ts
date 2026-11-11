@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import { getNodeCacheInputs } from '../../../adapters/node-test/get-node-cache-inputs'
-import { hashEnvironment } from '../../../adapters/node-test/hash-environment'
+import { hashEnvironment } from '../../../adapters/shared/hash-environment'
 
 describe('getNodeCacheInputs', () => {
   it('lists files, settings and environment hashes', async () => {

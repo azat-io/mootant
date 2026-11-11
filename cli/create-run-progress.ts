@@ -435,11 +435,7 @@ function describeRun(event: Extract<RunEvent, { kind: 'run-start' }>): {
     case 'isolated':
       return event.round === 1 ?
           { label: `testing ${mutants}`, short: mutants, rounded: false }
-        : {
-            label: `testing ${survivors} with more test files`,
-            short: `round ${event.round}: ${survivors}`,
-            rounded: true,
-          }
+        : describeRound(event)
     case 'recovery':
       return {
         label: `recovering ${mutants} of lost batch tries`,
@@ -458,6 +454,50 @@ function describeRun(event: Extract<RunEvent, { kind: 'run-start' }>): {
             short: `batch round ${event.round}: ${survivors}`,
             rounded: true,
           }
+  }
+}
+
+/**
+ * Names an isolated round after the first by what it holds: survivors that run
+ * with more test files, timeouts it confirms and mutants it runs again after a
+ * lost result.
+ *
+ * @param event - Start of the round.
+ * @returns Name of the phase and its short form.
+ */
+function describeRound(event: Extract<RunEvent, { kind: 'run-start' }>): {
+  rounded: boolean
+  label: string
+  short: string
+} {
+  let { confirming, survivors, retrying, mutants, round } = event
+  if (survivors === 0 && retrying === 0) {
+    return {
+      label: `confirming ${pluralize(confirming, 'timeout')}`,
+      short: `confirming ${confirming}`,
+      rounded: false,
+    }
+  }
+  if (survivors === 0 && confirming === 0) {
+    return {
+      label: `retrying ${pluralize(retrying, 'mutant')}`,
+      short: `retrying ${retrying}`,
+      rounded: false,
+    }
+  }
+  let parts = [
+    survivors > 0 &&
+      `testing ${pluralize(survivors, 'survivor')} with more test files`,
+    confirming > 0 && `confirming ${pluralize(confirming, 'timeout')}`,
+    retrying > 0 && `retrying ${pluralize(retrying, 'mutant')}`,
+  ].filter(part => part !== false)
+  return {
+    short:
+      confirming + retrying === 0 ?
+        `round ${round}: ${pluralize(survivors, 'survivor')}`
+      : `round ${round}: ${pluralize(mutants, 'mutant')}`,
+    label: parts.join(', '),
+    rounded: true,
   }
 }
 

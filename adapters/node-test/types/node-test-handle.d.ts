@@ -37,6 +37,12 @@ export interface NodeTestHandle {
   testTimeout: number
 
   /**
+   * Process groups of the session's test processes that run, which closing the
+   * session stops; another session's stay.
+   */
+  groups: Set<number>
+
+  /**
    * Real absolute paths of the test files, sorted.
    */
   files: string[]

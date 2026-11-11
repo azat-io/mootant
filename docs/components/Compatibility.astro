@@ -3,18 +3,24 @@ import IconNodejs from '../icons/nodejs.svg'
 import IconVitest from '../icons/vitest.svg'
 import Typography from './Typography.astro'
 import Container from './Container.astro'
+import IconJest from '../icons/jest.svg'
 import Button from './Button.astro'
 import Badge from './Badge.astro'
 
 let runners = [
   {
-    text: 'Version 5',
     icon: IconVitest,
     title: 'Vitest',
+    text: '^5.0.0',
   },
   {
-    text: 'Built into Node.js',
-    title: 'Node Test Runner',
+    text: '^29.7.0 || ^30.0.0',
+    icon: IconJest,
+    title: 'Jest',
+  },
+  {
+    text: '^20.19.0 || >=22.12.0',
+    title: 'Node Test',
     icon: IconNodejs,
   },
 ]
@@ -131,7 +137,7 @@ let extensions = [
     display: grid;
     gap: var(--space-xl) var(--space-l);
 
-    @media (width >= 1152px) {
+    @media (width >= 1280px) {
       grid-template-columns: repeat(3, [column] 1fr);
     }
   }
@@ -140,7 +146,7 @@ let extensions = [
     display: flex;
     flex-flow: column nowrap;
 
-    @media (width >= 1152px) {
+    @media (width >= 1280px) {
       grid-column: span 2;
     }
   }
@@ -179,7 +185,7 @@ let extensions = [
     inline-size: fit-content;
     max-inline-size: 100%;
 
-    @media (width >= 768px) {
+    @media (width >= 800px) {
       grid-auto-columns: 1fr;
       grid-auto-flow: column;
     }

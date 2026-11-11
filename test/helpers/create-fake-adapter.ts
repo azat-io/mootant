@@ -46,6 +46,11 @@ export interface FakeWorld {
   output?: { file: string | null; text: string }[]
 
   /**
+   * What `close` tells of the stop of the test runner; nothing when omitted.
+   */
+  closeDiagnostics?: Diagnostic[]
+
+  /**
    * Warnings the session reports at start.
    */
   diagnostics?: Diagnostic[]
@@ -443,14 +448,16 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
       }
       return Promise.resolve(reported)
     },
+    close: () => {
+      fake.closed += 1
+      return world.closeDiagnostics === undefined ?
+          Promise.resolve()
+        : Promise.resolve(world.closeDiagnostics)
+    },
     listTestFiles: () =>
       Promise.resolve(
         world.testFiles ?? [...new Set(world.tests.map(test => test.file))],
       ),
-    close: () => {
-      fake.closed += 1
-      return Promise.resolve()
-    },
   }
 
   /**

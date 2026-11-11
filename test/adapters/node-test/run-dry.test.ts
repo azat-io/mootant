@@ -48,6 +48,7 @@ async function createHandle(): Promise<NodeTestHandle> {
     files: ['/p/b.test.js', '/p/a.test.js'],
     preload: '/m/preload/preload.js',
     checkTypeScript: () => null,
+    groups: new Set(),
     testTimeout: 0,
     node: 'node',
     workers: 2,

@@ -5,10 +5,10 @@ import type { NodeTestUnit } from './types/node-test-unit'
 
 import { describeHookFailure } from './describe-hook-failure'
 import { listRunningTries } from './list-running-tries'
+import { describeExit } from '../shared/describe-exit'
 import { dropTodoErrors } from './drop-todo-errors'
 import { listFileErrors } from './list-file-errors'
-import { describeExit } from './describe-exit'
-import { getTestId } from './get-test-id'
+import { getTestId } from '../shared/get-test-id'
 import { readTries } from './read-tries'
 
 /**
