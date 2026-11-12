@@ -12,3 +12,8 @@ allowBuilds:
   simple-git-hooks: true
 
 sideEffectsCache: false
+
+updateConfig:
+  ignoreDependencies:
+    - jest-29
+    - jest-environment-jsdom-29
