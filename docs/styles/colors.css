@@ -48,15 +48,8 @@
     var(--color-code-ansi-green) 10%,
     transparent
   );
-  --color-code-token-keyword: var(--color-code-ansi-blue);
-  --color-code-token-function: var(--color-code-ansi-green);
-  --color-code-token-string: var(--color-code-ansi-yellow);
-  --color-code-token-string-expression: var(--color-code-ansi-yellow);
-  --color-code-token-constant: var(--color-code-ansi-cyan);
-  --color-code-token-parameter: var(--color-code-ansi-magenta);
+  --color-code-token-keyword: var(--color-content-secondary);
   --color-code-token-comment: var(--color-code-ansi-bright-black);
-  --color-code-token-punctuation: oklch(45% 0.01 265deg);
-  --color-code-token-link: var(--color-code-ansi-bright-green);
 
   &[data-theme='dark'] {
     color-scheme: dark;
@@ -92,7 +85,6 @@
     --color-code-ansi-white: oklch(89% 0.008 265deg);
     --color-code-ansi-bright-black: oklch(62% 0.0083 91.48deg);
     --color-code-ansi-bright-white: oklch(98.5% 0.0083 91.48deg);
-    --color-code-token-punctuation: oklch(75% 0.0083 91.48deg);
     --color-code-line-removed: color-mix(
       in oklch,
       var(--color-code-ansi-red) 16%,

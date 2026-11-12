@@ -6,7 +6,6 @@ let theme = createCssVariablesTheme({
   variablePrefix: '--color-code-',
   name: 'css-variables',
   variableDefaults: {},
-  fontStyle: true,
 })
 
 /**
@@ -30,8 +29,39 @@ function getStandIn(index: number): string {
   return `#${(index + 1).toString(16).padStart(6, '0')}`
 }
 
+/**
+ * Theme of the code on the site. It highlights quietly, as the HTML report
+ * does: keywords and comments are dimmed, and everything else, operators and
+ * the inside of strings and regular expressions included, keeps the color of
+ * the text.
+ */
 export let colorTheme: ThemeRegistration = {
   ...theme,
+  tokenColors: [
+    {
+      scope: [
+        'keyword',
+        'storage',
+        'constant.language',
+        'variable.language',
+        'keyword.operator.new',
+        'keyword.operator.expression',
+      ],
+      settings: { foreground: 'var(--color-code-token-keyword)' },
+    },
+    {
+      scope: [
+        'keyword.operator',
+        'storage.type.function.arrow',
+        'string keyword',
+      ],
+      settings: { foreground: 'var(--color-code-foreground)' },
+    },
+    {
+      settings: { foreground: 'var(--color-code-token-comment)' },
+      scope: 'comment',
+    },
+  ],
   colors: {
     ...theme.colors,
     ...Object.fromEntries(

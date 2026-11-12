@@ -1703,11 +1703,11 @@ kbd {
 /* Quiet highlighting: the mutants are the only color of the code. */
 
 .token-keyword {
-  color: var(--color-content-secondary);
+  color: var(--color-code-token-keyword);
 }
 
 .token-comment {
-  color: var(--color-code-ansi-bright-black);
+  color: var(--color-code-token-comment);
 }
 
 .range {
