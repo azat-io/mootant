@@ -6,13 +6,14 @@ import { getCollection, render } from 'astro:content'
 import type { SearchSection } from '../plugins/rehype-search-sections'
 import type { SearchDocument } from '../utils/search-document'
 
+import { frontmatter as agentSkillPage } from '../content/agent-skill.md'
 import { frontmatter as mutatorsPage } from '../content/mutators.md'
 import { pages } from '../utils/pages'
 
 /**
  * Builds the index that the docs search loads: every section of every guide and
- * mutator page and of the page that lists the mutators, as the
- * `rehypeSearchSections` Markdown plugin splits them.
+ * mutator page, of the page that lists the mutators and of the agent skill
+ * page, as the `rehypeSearchSections` Markdown plugin splits them.
  *
  * @returns JSON array of search documents.
  */
@@ -30,7 +31,16 @@ export const GET: APIRoute = async () => {
     '/mutators',
     [String(mutatorsPage['title'])],
   )
-  return Response.json([...documents.flat(), ...listDocuments])
+  let skillDocuments = getDocuments(
+    agentSkillPage['searchSections'] as SearchSection[],
+    '/agent-skill',
+    [String(agentSkillPage['title'])],
+  )
+  return Response.json([
+    ...documents.flat(),
+    ...listDocuments,
+    ...skillDocuments,
+  ])
 }
 
 /**

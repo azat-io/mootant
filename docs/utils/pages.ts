@@ -45,6 +45,11 @@ export let pages: Section[] = [
     title: 'Guide',
   },
   {
+    title: 'Agent skill',
+    url: '/agent-skill',
+    links: [],
+  },
+  {
     links: mutators
       .map(({ data: { title }, id }) => ({ url: `/mutators/${id}`, title }))
       .toSorted(({ title: a }, { title: b }) => a.localeCompare(b)),

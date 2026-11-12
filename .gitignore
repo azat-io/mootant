@@ -1,9 +1,11 @@
 # AI
 
+.agents/
 .claude/
 .serena/
 .crush/
 *crush.json
+skills-lock.json
 
 # Astro
 .astro/

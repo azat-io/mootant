@@ -1,0 +1,23 @@
+---
+import { getHeadings, frontmatter, Content } from '../content/agent-skill.md'
+import ContentLayout from '../layouts/Content.astro'
+
+interface Frontmatter {
+  description: string
+  keywords: string[]
+  title: string
+}
+
+let { description, keywords, title } = frontmatter as Frontmatter
+---
+
+<ContentLayout
+  editLink="https://github.com/azat-io/mootant/edit/main/docs/content/agent-skill.md"
+  headings={getHeadings()}
+  {description}
+  {keywords}
+  {title}
+>
+  <h1>{title}</h1>
+  <Content />
+</ContentLayout>
