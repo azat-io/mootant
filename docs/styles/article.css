@@ -1,3 +1,89 @@
+details {
+  padding-inline: var(--space-m);
+  margin-block: var(--space-m);
+  overflow: clip;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--border-radius-m);
+  interpolate-size: allow-keywords;
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      border-color 200ms,
+      box-shadow 200ms;
+  }
+
+  @media (hover: hover) {
+    &:has(> summary:hover) {
+      border-color: var(--color-border-brand);
+    }
+  }
+
+  &:has(> summary:focus-visible) {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-color: var(--color-border-brand);
+    box-shadow: 0 0 0 3px var(--color-border-brand);
+  }
+
+  &::details-content {
+    display: flow-root;
+    block-size: 0;
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition:
+        block-size 250ms ease-in-out,
+        content-visibility 250ms ease-in-out allow-discrete;
+    }
+  }
+
+  &[open]::details-content {
+    block-size: auto;
+  }
+
+  & > summary + * {
+    margin-block-start: 0;
+  }
+
+  & > :last-child {
+    margin-block-end: var(--space-s);
+  }
+}
+
+summary {
+  position: relative;
+  display: block;
+  padding-block: var(--space-s);
+  padding-inline: calc(var(--space-m) + 1.25em + var(--space-xs)) var(--space-m);
+  margin-inline: calc(var(--space-m) * -1);
+  color: var(--color-content-primary);
+  cursor: pointer;
+  outline: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::before {
+    position: absolute;
+    inset-block-start: calc(var(--space-s) + (1lh - 1.25em) / 2);
+    inset-inline-start: var(--space-m);
+    inline-size: 1.25em;
+    block-size: 1.25em;
+    content: '';
+    background: currentcolor;
+    mask: url('../icons/chevron-right.svg') center / contain no-repeat;
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: rotate 250ms ease-in-out;
+    }
+  }
+
+  details[open] > &::before {
+    rotate: 90deg;
+  }
+}
+
 article {
   color: var(--color-content-secondary);
 
@@ -160,24 +246,6 @@ article {
 
   & .terminal {
     margin-block: var(--space-m);
-  }
-
-  & details {
-    padding: var(--space-xs) var(--space-s);
-    margin-block: var(--space-m);
-    background: var(--color-background-secondary);
-    border: 1px solid var(--color-border-primary);
-    border-radius: var(--border-radius-m);
-
-    & summary {
-      font-weight: 600;
-      color: var(--color-content-primary);
-      cursor: pointer;
-    }
-
-    & ul {
-      margin-block: var(--space-xs) 0;
-    }
   }
 
   & .command {
