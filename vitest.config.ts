@@ -9,6 +9,7 @@ import viteConfig from './vite.config.ts'
  */
 const PER_JEST_VERSION = [
   'test/adapters/jest/index.equivalence.test.ts',
+  'test/adapters/jest/index.warm-safety-edges.test.ts',
   'test/adapters/jest/index.warm-safety.test.ts',
 ]
 

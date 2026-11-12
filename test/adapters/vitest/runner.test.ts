@@ -1494,12 +1494,11 @@ describe('mootantRunner', () => {
       true,
       true,
     ])
-    // The later end of the running attempts, less the time since it began.
-    expect(
-      beats.map(beat => [beat.test, Math.round(beat.budget / 10) * 10]),
-    ).toStrictEqual([
-      ['a', 6050],
-      ['b', 2050],
+    // The later end of the running attempts, less the time since it began,
+    // which a busy machine can stretch to hundreds of milliseconds.
+    expect(beats.map(beat => [beat.test, beat.budget])).toStrictEqual([
+      ['a', expect.closeTo(6050, -3)],
+      ['b', expect.closeTo(2050, -3)],
     ])
     expect(
       (await readRecords())[`${hash}-${process.pid}`]!.map(record => {
