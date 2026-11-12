@@ -449,6 +449,25 @@ describe('node:test verdict equivalence', () => {
     ])
   }, 120_000)
 
+  it('keeps the names CommonJS exports through descriptors and reexports', async () => {
+    // Node 22.15 to 22.22.2 and 24.0 to 24.11.0 compile these modules past
+    // _compile once a module hook is registered, so their exports must still
+    // come from the original text, and a module outside the switch plan that
+    // they require in a cycle must still run once.
+    let { original, result, rows } = await runBothWays(
+      path.join(fixtures, 'exports'),
+      { args: ['--test'], extension: '.js' },
+    )
+    let decided = rows.filter(row => row.verdict !== 'Ignored')
+
+    expect(original).toBe(true)
+    expect(result.diagnostics).toStrictEqual([])
+    expect(decided).toStrictEqual(
+      decided.map(row => ({ ...row, verdict: row.reference })),
+    )
+    expect(decided).toHaveLength(rows.length - 1)
+  }, 120_000)
+
   it('never runs a test file twice at once', async () => {
     // Every unit of the test file uses one fixed file, so two units that ran
     // at once would kill equivalent mutants.

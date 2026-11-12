@@ -13,6 +13,27 @@ let data = { plan: '/work/plan.json', out: '/work/out.jsonl', main: '/a.js' }
 
 let hooks = new URL('file:///dist/hooks.js')
 
+/**
+ * Synchronous `load` hook as `registerHooks` receives it.
+ */
+type LoadHook = (
+  url: string,
+  context: object,
+  next: (url: string, context: object) => object,
+) => object
+
+/**
+ * Gives the `load` hook the mocked `registerHooks` received.
+ *
+ * @param registerHooks - Stand-in the hooks were registered with.
+ * @returns The `load` function of the hooks it received.
+ */
+function readLoadHook(
+  registerHooks: ReturnType<typeof vi.fn<(hooks: object) => unknown>>,
+): LoadHook {
+  return (registerHooks.mock.calls[0]![0] as { load: LoadHook }).load
+}
+
 describe('installModuleHooks', () => {
   it('registers a synchronous load hook where Node has registerHooks', () => {
     let registerHooks = vi.fn<(hooks: object) => unknown>()
@@ -24,18 +45,12 @@ describe('installModuleHooks', () => {
     expect(
       installModuleHooks(
         { registerHooks, register },
-        { prototype, switcher, record, hooks, data },
+        { commonjs: false, prototype, switcher, record, hooks, data },
       ),
     ).toBe('sync')
     expect(register).not.toHaveBeenCalled()
 
-    let { load } = registerHooks.mock.calls[0]![0] as {
-      load(
-        url: string,
-        context: object,
-        next: (url: string, context: object) => object,
-      ): object
-    }
+    let load = readLoadHook(registerHooks)
     let next = vi.fn(() => ({ format: 'module', source: 'code' }))
 
     expect(load('file:///a.js', { conditions: [] }, next)).toStrictEqual({
@@ -45,9 +60,46 @@ describe('installModuleHooks', () => {
     expect(next).toHaveBeenCalledWith('file:///a.js', { conditions: [] })
     expect(record).toHaveBeenCalledWith('/a.js')
 
-    let commonjs = { format: 'commonjs', source: 'code' }
+    let commonjs = { source: Buffer.from('code'), format: 'commonjs' }
 
     expect(load('file:///c.cjs', {}, () => commonjs)).toBe(commonjs)
+
+    prototype._compile('code', '/b.cjs')
+
+    expect(compile).toHaveBeenCalledWith('code!', '/b.cjs')
+  })
+
+  it('sends switched CommonJS through the CommonJS loader where Node compiles it past _compile', () => {
+    let registerHooks = vi.fn<(hooks: object) => unknown>()
+    let findPackageJSON = vi.fn<(specifier: string) => undefined | string>()
+    let compile = vi.fn()
+    let prototype = { _compile: compile }
+
+    installModuleHooks(
+      {
+        register: vi.fn<(specifier: URL, options: object) => void>(),
+        findPackageJSON,
+        registerHooks,
+      },
+      {
+        record: vi.fn<(file: string) => void>(),
+        commonjs: true,
+        prototype,
+        switcher,
+        hooks,
+        data,
+      },
+    )
+    let load = readLoadHook(registerHooks)
+    let source = Buffer.from('code')
+
+    expect(
+      load('file:///c.js', {}, () => ({ format: 'commonjs', source })),
+    ).toStrictEqual({ format: 'commonjs-sync', source })
+    expect(findPackageJSON).toHaveBeenCalledWith('file:///c.js')
+    expect(
+      load('file:///a.js', {}, () => ({ format: 'module', source: 'code' })),
+    ).toStrictEqual({ format: 'module', source: 'code!' })
 
     prototype._compile('code', '/b.cjs')
 
@@ -63,7 +115,7 @@ describe('installModuleHooks', () => {
     expect(
       installModuleHooks(
         { register },
-        { prototype, switcher, record, hooks, data },
+        { commonjs: true, prototype, switcher, record, hooks, data },
       ),
     ).toBe('async')
     expect(register).toHaveBeenCalledWith(hooks, { data })

@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { listPackageFiles } from '../shared/list-package-files'
+import { readPackageType } from '../shared/read-package-type'
 import { includesTsx } from './includes-tsx'
 
 /**
@@ -72,25 +72,4 @@ export function checkTypeScript(input: {
     return `mootant cannot switch TypeScript files that tsx loads as CommonJS, such as ${path.relative(input.root, commonjs)}; add "type": "module" to its package.json or run the tests with Node's type stripping instead of tsx.`
   }
   return null
-}
-
-/**
- * Reads the `type` field of a `package.json`.
- *
- * @param file - Absolute path of the `package.json`, which may be missing.
- * @param cache - Fields read before, by path; filled here.
- * @returns The field, or null when the file or the field is missing.
- */
-function readPackageType(file: string, cache: Map<string, unknown>): unknown {
-  if (!cache.has(file)) {
-    let type: unknown = null
-    try {
-      let manifest = JSON.parse(readFileSync(file, 'utf8')) as {
-        type?: unknown
-      }
-      type = manifest.type ?? null
-    } catch {}
-    cache.set(file, type)
-  }
-  return cache.get(file)
 }

@@ -67,6 +67,7 @@ if (unit !== null) {
     record: createFileRecorder(write, 'load'),
     prototype: moduleApi.Module.prototype,
     hooks: new URL(name, import.meta.url),
+    commonjs: unit.commonjs,
   })
   write({ node: process.version, pid: process.pid, kind: 'start', hooks, time })
   let inputs = trackInputs(unit.root, { ignored: NODE_TEST_VARIABLES })

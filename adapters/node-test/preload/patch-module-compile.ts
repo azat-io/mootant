@@ -2,7 +2,8 @@ import type { SourceSwitcher } from '../types/source-switcher'
 
 /**
  * Patches `Module.prototype._compile`, through which every CommonJS module
- * runs, so it reports the file and runs the text the switcher gives. Module
+ * runs, once `createCommonJsRoute` sends back what some Node versions compile
+ * past it, so it reports the file and runs the text the switcher gives. Module
  * hooks do not see every such module: `module.register()` hooks never see
  * `require()`, and a loader such as tsx reads a CommonJS file again after the
  * hooks served it, so the switched text would be lost.

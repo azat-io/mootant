@@ -9,6 +9,7 @@ let unit: NodeTestUnit = {
   plan: '/work/plan.json',
   out: '/work/out.jsonl',
   mode: 'isolated',
+  commonjs: false,
   hitLimit: 100,
   root: '/root',
   mutant: 'm1',

@@ -18,9 +18,10 @@ const MOCK_PARAMETER = 'node-test-mock'
  * `Module.prototype._compile` switches that. Without `commonjs`, a CommonJS
  * result with source stays as it is too: Node lists the exports of such a
  * module from the text the hook returns, which a switched text hides, and
- * compiles it through `_compile` anyway (`registerHooks`). A module that
- * `mock.module()` generates is neither reported nor switched, since its text is
- * not the file's.
+ * compiles it through `_compile` anyway (`registerHooks`), or is sent there by
+ * `createCommonJsRoute` where it would not be. A module that `mock.module()`
+ * generates is neither reported nor switched, since its text is not the
+ * file's.
  *
  * @param switcher - Switcher of module texts.
  * @param record - Receives the absolute path of every `file:` module loaded.

@@ -36,7 +36,12 @@ export async function runTestFile(
   let out = path.join(directory, `${state.count}.jsonl`)
   state.count += 1
   writeFileSync(out, '')
-  let unit: NodeTestUnit = { ...fields, root: context.root, out }
+  let unit: NodeTestUnit = {
+    ...fields,
+    commonjs: handle.commonjs,
+    root: context.root,
+    out,
+  }
   let { onOutput } = context
   try {
     return await runTestProcess({

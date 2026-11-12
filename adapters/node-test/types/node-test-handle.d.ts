@@ -43,6 +43,14 @@ export interface NodeTestHandle {
   groups: Set<number>
 
   /**
+   * Whether the module hooks of the test processes send CommonJS modules
+   * through Node's CommonJS loader, since the Node binary compiles them past
+   * `Module.prototype._compile` once a synchronous hook is registered
+   * (`readNodeRuntime`).
+   */
+  commonjs: boolean
+
+  /**
    * Real absolute paths of the test files, sorted.
    */
   files: string[]

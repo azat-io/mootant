@@ -50,6 +50,7 @@ async function createHandle(
     preload: '/preload.js',
     groups: new Set([7]),
     env: { A: '1' },
+    commonjs: true,
     testTimeout: 0,
     node: '/node',
     workers: 1,
@@ -110,6 +111,7 @@ describe('runTestFile', () => {
     expect(unit).toStrictEqual({
       out: path.join(directory, 'out', '3.jsonl'),
       root: '/project',
+      commonjs: true,
       hitLimit: null,
       plan: '/plan',
       expected: [],

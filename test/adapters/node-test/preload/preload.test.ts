@@ -90,6 +90,7 @@ describe('preload', () => {
     await writeFile(plan, '{}')
     process.env['MOOTANT_UNIT'] = JSON.stringify({
       root: directory,
+      commonjs: true,
       hitLimit: null,
       mutant: null,
       expected: [],
@@ -110,6 +111,7 @@ describe('preload', () => {
     let [api, options] = vi.mocked(installModuleHooks).mock.calls[0]!
 
     expect(typeof api.register).toBe('function')
+    expect(options.commonjs).toBe(true)
     expect(options.hooks.href).toMatch(/\/preload\/hooks\.ts$/u)
     expect(options.data).toStrictEqual({
       main: options.data.main,

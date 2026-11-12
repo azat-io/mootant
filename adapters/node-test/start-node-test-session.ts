@@ -69,7 +69,7 @@ export async function startNodeTestSession(
   let { root } = context
   let node = options.node ?? process.execPath
   let command = await findTestCommand(root, options.command)
-  let runtime = await readNodeRuntime(node)
+  let runtime = await readNodeRuntime(node, context.workDirectory)
   if (!checkNodeSupport(runtime.version)) {
     throw new Error(
       `mootant runs node:test on Node 20.19 or a later 20.x and on Node 22.12 or later, but ${node} is Node ${runtime.version}.`,
@@ -194,6 +194,7 @@ export async function startNodeTestSession(
     },
     workers: Math.max(1, context.concurrency ?? availableParallelism() - 1),
     testTimeout: readTestTimeout(execArgv),
+    commonjs: !runtime.compiles,
     checkTypeScript: check,
     groups: new Set(),
     env: environment,

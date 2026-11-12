@@ -140,9 +140,19 @@ function startSleeper(): {
  *
  * @param version - Version, such as `v26.0.0`.
  * @param typescript - Whether it strips types by default.
+ * @param compiles - Whether it compiles CommonJS modules through
+ *   `Module.prototype._compile` once a synchronous module hook is registered.
  */
-function mockRuntime(version: string, typescript = false): void {
-  vi.mocked(readNodeRuntime).mockResolvedValue({ typescript, version })
+function mockRuntime(
+  version: string,
+  typescript = false,
+  compiles = true,
+): void {
+  vi.mocked(readNodeRuntime).mockResolvedValue({
+    typescript,
+    compiles,
+    version,
+  })
 }
 
 describe('startNodeTestSession', () => {
@@ -261,7 +271,10 @@ describe('startNodeTestSession', () => {
       node: '/n/node',
     })
 
-    expect(readNodeRuntime).toHaveBeenCalledWith('/n/node')
+    expect(readNodeRuntime).toHaveBeenCalledWith(
+      '/n/node',
+      context.workDirectory,
+    )
     expect(handle).toMatchObject({
       args: [
         '--import',
@@ -275,7 +288,17 @@ describe('startNodeTestSession', () => {
       files: [path.join(root, 'b.js')],
       testTimeout: 500,
       env: { B: '2' },
+      commonjs: false,
       node: '/n/node',
+    })
+  })
+
+  it('has the module hooks send CommonJS through the CommonJS loader where Node skips _compile', async () => {
+    let context = await createProject({}, ['a.test.js'])
+    mockRuntime('v22.18.0', true, false)
+
+    await expect(readHandle(context)).resolves.toMatchObject({
+      commonjs: true,
     })
   })
 

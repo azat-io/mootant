@@ -28,6 +28,13 @@ export interface NodeTestUnit {
   mutant: string | null
 
   /**
+   * Whether the synchronous module hook sends CommonJS modules through Node's
+   * CommonJS loader, since Node compiles them past `Module.prototype._compile`
+   * otherwise (`readNodeRuntime`).
+   */
+  commonjs: boolean
+
+  /**
    * Whether the unit stops starting tests once a test failed after the mutant
    * was reached. False in a dry run.
    */

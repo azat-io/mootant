@@ -49,6 +49,7 @@ async function createHandle(): Promise<NodeTestHandle> {
     preload: '/m/preload/preload.js',
     checkTypeScript: () => null,
     groups: new Set(),
+    commonjs: false,
     testTimeout: 0,
     node: 'node',
     workers: 2,
