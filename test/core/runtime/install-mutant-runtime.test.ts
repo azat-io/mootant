@@ -23,6 +23,44 @@ describe('installMutantRuntime', () => {
     expect(runtime.hits).toBe(1)
   })
 
+  it('checks the sites of several removals until one is active', () => {
+    let runtime = installMutantRuntime()
+    runtime.active = 'b'
+
+    expect(runtime.hitAny(['a', 'b', 'c'])).toBe(true)
+    expect(runtime.hits).toBe(2)
+    expect(runtime.reached).toBe(true)
+    expect(runtime.hitAny(['c', 'd'])).toBe(false)
+    expect(runtime.hits).toBe(4)
+  })
+
+  it('drops the gaps of an array and spreads nothing without the array iterator', () => {
+    let runtime = installMutantRuntime()
+    let array = [1, runtime.gap, 2, runtime.gap]
+    let iterator = Reflect.get(
+      Array.prototype,
+      Symbol.iterator,
+    ) as () => unknown
+    let calls = 0
+    Reflect.set(Array.prototype, Symbol.iterator, function (this: unknown) {
+      calls += 1
+      return Reflect.apply(iterator, this, [])
+    })
+    let cut: unknown
+    let spread: unknown[]
+    try {
+      cut = runtime.cut(array)
+      spread = [...runtime.none]
+    } finally {
+      Reflect.set(Array.prototype, Symbol.iterator, iterator)
+    }
+
+    expect(calls).toBe(0)
+    expect(cut).toBe(array)
+    expect(array).toStrictEqual([1, 2])
+    expect(spread).toStrictEqual([])
+  })
+
   it('returns the runtime already installed', () => {
     let runtime = installMutantRuntime()
 

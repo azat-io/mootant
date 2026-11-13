@@ -39,10 +39,12 @@ import { compareCandidates } from './compare-candidates'
 import { getMutantRegions } from './get-mutant-regions'
 import { isLogMessage } from '../syntax/is-log-message'
 import { analyzeScopes } from '../hints/analyze-scopes'
+import { getMutantSite } from './get-mutant-site'
 import { parseFile } from '../parser/parse-file'
 import { skipRules } from '../skips/skip-rules'
 import { indexTree } from '../tree/index-tree'
 import { pickFocus } from './pick-focus'
+import { pickHost } from './pick-host'
 
 /**
  * One file to generate mutants for, with the mutators of the run.
@@ -309,7 +311,8 @@ export function generateFileMutants(
  * Lists the candidates of a file that are not mutants: the replacements the
  * collection did not accept, the coarse candidates of the solitary rule and the
  * duplicates. A dropped candidate names the candidate that dropped it, with its
- * id when that candidate is a mutant.
+ * id when that candidate is a mutant, where that candidate is placed (see
+ * `getMutantSite`).
  *
  * @param selection - Kept candidates, their ids and what dropped the others.
  * @param file - Display path of the file.
@@ -339,7 +342,7 @@ function listSkipped(selection: Selection, file: string): SkippedMutant[] {
       by: {
         id: listed.has(justifier) ? ids.get(justifier)! : null,
         mutator: justifier.registered.id,
-        start: justifier.start,
+        start: getMutantSite(justifier),
       },
       registered: candidate.registered,
       emission: candidate.emission,
@@ -568,38 +571,6 @@ function prepareProgram(
 }
 
 /**
- * Turns a kept candidate into a mutant with its status.
- *
- * @param candidate - Candidate that survived the solitary rule and
- *   deduplication.
- * @param id - Id assigned to the candidate.
- * @param file - Display path of the file.
- * @returns Pending mutant, or an ignored one with the reason and comment of the
- *   rule that covers it.
- */
-function createMutant(
-  candidate: MutantCandidate,
-  id: string,
-  file: string,
-): Mutant {
-  let rule = candidate.ignoreRule
-  return {
-    ignoredBy: rule === null ? null : rule.source,
-    status: rule === null ? 'Pending' : 'Ignored',
-    reason: rule === null ? null : rule.reason,
-    mutator: candidate.registered.id,
-    replacement: candidate.text,
-    scope: candidate.scope,
-    start: candidate.start,
-    kind: candidate.kind,
-    end: candidate.end,
-    ...pickFocus(candidate),
-    file,
-    id,
-  }
-}
-
-/**
  * Builds the skip of a candidate that can only change the text a logging call
  * writes (see `isLogMessage`).
  *
@@ -623,6 +594,37 @@ function createLogMessageSkip(candidate: MutantCandidate): SkippedCandidate {
     heuristic: false,
     ...pickFocus(candidate),
     by: null,
+  }
+}
+
+/**
+ * Turns a kept candidate into a mutant with its status.
+ *
+ * @param candidate - Candidate that survived the solitary rule and
+ *   deduplication.
+ * @param id - Id assigned to the candidate.
+ * @param file - Display path of the file.
+ * @returns Pending mutant, or an ignored one with the reason and comment of the
+ *   rule that covers it.
+ */
+function createMutant(
+  candidate: MutantCandidate,
+  id: string,
+  file: string,
+): Mutant {
+  let rule = candidate.ignoreRule
+  return {
+    ignoredBy: rule === null ? null : rule.source,
+    status: rule === null ? 'Pending' : 'Ignored',
+    reason: rule === null ? null : rule.reason,
+    mutator: candidate.registered.id,
+    replacement: candidate.text,
+    scope: candidate.scope,
+    start: candidate.start,
+    ...pickHost(candidate),
+    end: candidate.end,
+    file,
+    id,
   }
 }
 

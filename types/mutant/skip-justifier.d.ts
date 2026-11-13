@@ -15,7 +15,9 @@ export interface SkipJustifier {
   mutator: string
 
   /**
-   * Offset of the node the justifying mutant replaces.
+   * Offset where the justifying mutant is placed: at its removed element for
+   * kinds `element` and `property`, and at the start of the range it replaces
+   * otherwise.
    */
   start: number
 }

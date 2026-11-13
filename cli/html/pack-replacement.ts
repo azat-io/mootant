@@ -6,7 +6,7 @@ const MIN_KEPT = 32
 
 /**
  * Shortens a replacement for the HTML report: a mutant often keeps most of the
- * text it replaces, such as an object literal with one property dropped, so the
+ * text it replaces, such as a chain of calls with one call dropped, so the
  * start and the end it shares with the original are stored as their lengths and
  * only the text between them is kept.
  *

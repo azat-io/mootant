@@ -1,4 +1,5 @@
 import type { MutantStatus } from '../../types/mutant/mutant-status'
+import type { MutantKind } from '../../types/mutant/mutant-kind'
 import type { MutatorSetup } from './generate-candidates'
 
 import { getSourcePosition } from '../../core/text/get-source-position'
@@ -12,11 +13,6 @@ import { applyMutant } from './apply-mutant'
  * Mutant of a test run, with the fields a test compares.
  */
 export interface MutantSummary {
-  /**
-   * How the mutant will be switched on.
-   */
-  kind: 'expression' | 'block'
-
   /**
    * Reason of the ignore directive that covers the mutant, or null.
    */
@@ -36,6 +32,11 @@ export interface MutantSummary {
    * Text written in place of the original.
    */
   replacement: string
+
+  /**
+   * How the mutant will be switched on.
+   */
+  kind: MutantKind
 
   /**
    * Text of the snippet that the mutant replaces.

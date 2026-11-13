@@ -697,18 +697,26 @@
         "mutator": "number-literal",
         "id": "btbeyw0q7k1j"
       },
-      "original": "[1, 2]",
-      "replacement": "[2]",
+      "original": "1, ",
+      "replacement": "",
       "heuristic": true,
       "category": "subsumed",
       "mutator": "array-element",
       "reason": "a finer number-literal mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 16,
-      "start": 739,
+      "column": 17,
+      "start": 740,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "solitary",
       "line": 18,
-      "end": 745
+      "end": 743,
+      "focus": {
+        "original": "1",
+        "replacement": "",
+        "column": 17,
+        "line": 18,
+        "start": 740,
+        "end": 741
+      }
     },
     {
       "by": {
@@ -717,18 +725,26 @@
         "mutator": "number-literal",
         "id": "cjfzkp4cfe54"
       },
-      "original": "[1, 2]",
-      "replacement": "[1]",
+      "original": ", 2",
+      "replacement": "",
       "heuristic": true,
       "category": "subsumed",
       "mutator": "array-element",
       "reason": "a finer number-literal mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 16,
-      "start": 739,
+      "column": 18,
+      "start": 741,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "solitary",
       "line": 18,
-      "end": 745
+      "end": 744,
+      "focus": {
+        "original": "2",
+        "replacement": "",
+        "column": 20,
+        "line": 18,
+        "start": 743,
+        "end": 744
+      }
     },
     {
       "by": null,
@@ -1817,23 +1833,31 @@
     },
     {
       "by": {
-        "column": 45,
+        "column": 47,
         "line": 109,
         "mutator": "object-property",
-        "id": "1dyztrp72qxg"
+        "id": "nd4k2mr8d282"
       },
-      "original": "{ name, ...defaults, nested: { x } }",
-      "replacement": "{ name, ...defaults }",
+      "original": ", nested: { x }",
+      "replacement": "",
       "heuristic": true,
       "category": "subsumed",
       "mutator": "object-property",
       "reason": "a finer object-property mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 16,
-      "start": 5445,
+      "column": 35,
+      "start": 5464,
       "file": "test/fixtures/list/source/catalog.ts",
       "rule": "solitary",
       "line": 109,
-      "end": 5481
+      "end": 5479,
+      "focus": {
+        "original": "nested: { x }",
+        "replacement": "",
+        "column": 37,
+        "line": 109,
+        "start": 5466,
+        "end": 5479
+      }
     },
     {
       "by": null,
@@ -3637,18 +3661,26 @@
         "mutator": "string-literal",
         "id": "wpfrhy0xtx25"
       },
-      "original": "{ name: 'Greeting' }",
-      "replacement": "{}",
+      "original": " name: 'Greeting' ",
+      "replacement": "",
       "heuristic": true,
       "category": "subsumed",
       "mutator": "object-property",
       "reason": "a finer string-literal mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 16,
-      "start": 100,
+      "column": 17,
+      "start": 101,
       "file": "test/fixtures/list/source/component.vue",
       "rule": "solitary",
       "line": 6,
-      "end": 120
+      "end": 119,
+      "focus": {
+        "original": "name: 'Greeting'",
+        "replacement": "",
+        "column": 18,
+        "line": 6,
+        "start": 102,
+        "end": 118
+      }
     },
     {
       "by": {
@@ -4677,18 +4709,26 @@
         "mutator": "arithmetic-operator",
         "id": "yfypgw6pqzej"
       },
-      "original": "{\n  compute(a: number, b: number) {\n    return a - b\n  },\n}",
-      "replacement": "{}",
+      "original": "\n  compute(a: number, b: number) {\n    return a - b\n  },\n",
+      "replacement": "",
       "heuristic": true,
       "category": "subsumed",
       "mutator": "object-property",
       "reason": "a finer arithmetic-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 23,
-      "start": 1115,
+      "column": 24,
+      "start": 1116,
       "file": "test/fixtures/list/source/typed.ts",
       "rule": "solitary",
       "line": 56,
-      "end": 1174
+      "end": 1173,
+      "focus": {
+        "original": "compute(a: number, b: number) {\n    return a - b\n  }",
+        "replacement": "",
+        "column": 3,
+        "line": 57,
+        "start": 1119,
+        "end": 1171
+      }
     },
     {
       "by": {
@@ -4717,18 +4757,26 @@
         "mutator": "arithmetic-operator",
         "id": "qy3kgq8an33s"
       },
-      "original": "{ size: a % b }",
-      "replacement": "{}",
+      "original": " size: a % b ",
+      "replacement": "",
       "heuristic": true,
       "category": "subsumed",
       "mutator": "object-property",
       "reason": "a finer arithmetic-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 15,
-      "start": 1346,
+      "column": 16,
+      "start": 1347,
       "file": "test/fixtures/list/source/typed.ts",
       "rule": "solitary",
       "line": 64,
-      "end": 1361
+      "end": 1360,
+      "focus": {
+        "original": "size: a % b",
+        "replacement": "",
+        "column": 17,
+        "line": 64,
+        "start": 1348,
+        "end": 1359
+      }
     },
     {
       "by": {
@@ -4737,18 +4785,26 @@
         "mutator": "number-literal",
         "id": "8fxwae48jgfb"
       },
-      "original": "[1, 2]",
-      "replacement": "[2]",
+      "original": "1, ",
+      "replacement": "",
       "heuristic": true,
       "category": "subsumed",
       "mutator": "array-element",
       "reason": "a finer number-literal mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 14,
-      "start": 1451,
+      "column": 15,
+      "start": 1452,
       "file": "test/fixtures/list/source/typed.ts",
       "rule": "solitary",
       "line": 67,
-      "end": 1457
+      "end": 1455,
+      "focus": {
+        "original": "1",
+        "replacement": "",
+        "column": 15,
+        "line": 67,
+        "start": 1452,
+        "end": 1453
+      }
     },
     {
       "by": {
@@ -4757,18 +4813,26 @@
         "mutator": "number-literal",
         "id": "ncmdsyttzdf0"
       },
-      "original": "[1, 2]",
-      "replacement": "[1]",
+      "original": ", 2",
+      "replacement": "",
       "heuristic": true,
       "category": "subsumed",
       "mutator": "array-element",
       "reason": "a finer number-literal mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 14,
-      "start": 1451,
+      "column": 16,
+      "start": 1453,
       "file": "test/fixtures/list/source/typed.ts",
       "rule": "solitary",
       "line": 67,
-      "end": 1457
+      "end": 1456,
+      "focus": {
+        "original": "2",
+        "replacement": "",
+        "column": 18,
+        "line": 67,
+        "start": 1455,
+        "end": 1456
+      }
     },
     {
       "by": {
@@ -4937,18 +5001,26 @@
         "mutator": "string-literal",
         "id": "4zykfp2jnfys"
       },
-      "original": "[5, 'five']",
-      "replacement": "[5]",
+      "original": ", 'five'",
+      "replacement": "",
       "heuristic": true,
       "category": "subsumed",
       "mutator": "array-element",
       "reason": "a finer string-literal mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 19,
-      "start": 2415,
+      "column": 21,
+      "start": 2417,
       "file": "test/fixtures/list/source/typed.ts",
       "rule": "solitary",
       "line": 108,
-      "end": 2426
+      "end": 2425,
+      "focus": {
+        "original": "'five'",
+        "replacement": "",
+        "column": 23,
+        "line": 108,
+        "start": 2419,
+        "end": 2425
+      }
     },
     {
       "by": {
@@ -4957,18 +5029,26 @@
         "mutator": "arithmetic-operator",
         "id": "rh66h1j7x27j"
       },
-      "original": "{ label: 'default' + LIMIT }",
-      "replacement": "{}",
+      "original": " label: 'default' + LIMIT ",
+      "replacement": "",
       "heuristic": true,
       "category": "subsumed",
       "mutator": "object-property",
       "reason": "a finer arithmetic-operator mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 16,
-      "start": 3248,
+      "column": 17,
+      "start": 3249,
       "file": "test/fixtures/list/source/typed.ts",
       "rule": "solitary",
       "line": 135,
-      "end": 3276
+      "end": 3275,
+      "focus": {
+        "original": "label: 'default' + LIMIT",
+        "replacement": "",
+        "column": 18,
+        "line": 135,
+        "start": 3250,
+        "end": 3274
+      }
     },
     {
       "by": {

@@ -10,12 +10,13 @@ interface IgnoreTarget {
   mutator: string
 
   /**
-   * Start offset of the replaced node.
+   * Offset where the mutant is placed: the start of its focus, or of its range
+   * when it has none.
    */
   start: number
 
   /**
-   * 1-based line of the start offset.
+   * 1-based line of that offset.
    */
   line: number
 }
@@ -31,13 +32,13 @@ let kindPrecedence: Record<IgnoreRule['kind'], number> = {
 
 /**
  * Finds the rule that decides whether a mutant is ignored. A rule applies when
- * it lists the mutant's mutator or every mutator, and covers the mutant's
- * start: its line for a next-line rule, its offset for a region or file rule.
- * Among applicable rules a next-line rule beats a region, a region beats a file
- * rule, and within a kind the later directive wins.
+ * it lists the mutant's mutator or every mutator, and covers where the mutant
+ * is placed: its line for a next-line rule, its offset for a region or file
+ * rule. Among applicable rules a next-line rule beats a region, a region beats
+ * a file rule, and within a kind the later directive wins.
  *
  * @param rules - Ignore rules of the file.
- * @param target - Mutator id, start offset and start line of the mutant.
+ * @param target - Mutator id, offset and line where the mutant is placed.
  * @returns The winning rule, or null when no rule applies and the mutant runs.
  */
 export function findIgnoreRule(
@@ -58,7 +59,8 @@ export function findIgnoreRule(
  *
  * @param rule - Rule of the file.
  * @param target - Mutant to check.
- * @returns Whether the rule names the mutator and covers the mutant's start.
+ * @returns Whether the rule names the mutator and covers where the mutant is
+ *   placed.
  */
 function appliesTo(rule: IgnoreRule, target: IgnoreTarget): boolean {
   if (rule.mutators !== null && !rule.mutators.includes(target.mutator)) {

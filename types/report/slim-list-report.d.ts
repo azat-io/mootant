@@ -41,7 +41,7 @@ export interface SlimListReport {
   /**
    * Version of the report shape, the same as of the full report.
    */
-  schemaVersion: 3
+  schemaVersion: 4
 
   /**
    * Command that produced the report.
@@ -71,7 +71,9 @@ export interface SlimListReportMutant extends Pick<
   ignoredBy?: NonNullable<ListReportMutant['ignoredBy']>
 
   /**
-   * Part of the range the change amounts to, when the mutator names one.
+   * Part of the range the change amounts to, when the mutator names one or the
+   * mutant removes an array element or an object member with its comma, which
+   * ignore directives then cover at the line of the focus.
    */
   focus?: SlimReportFocus
 
@@ -100,7 +102,8 @@ export interface SlimListReportSkipped extends Omit<
   by?: NonNullable<ListReportSkipped['by']>
 
   /**
-   * Part of the range the change amounts to, when the mutator names one.
+   * Part of the range the change amounts to, when the mutator names one or the
+   * change removes an array element or an object member with its comma.
    */
   focus?: SlimReportFocus
 }

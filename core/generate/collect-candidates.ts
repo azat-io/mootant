@@ -9,16 +9,22 @@ import type { ActiveMutator } from '../../types/mutator/active-mutator'
 import type { SyntaxHelpers } from '../../types/syntax/syntax-helpers'
 import type { SourceRange } from '../../types/source/source-range'
 import type { Replacement } from '../../types/mutator/replacement'
+import type { ListRemoval } from '../../types/mutant/list-removal'
 import type { ParsedFile } from '../../types/source/parsed-file'
 import type { SourceCode } from '../../types/source/source-code'
+import type { MutantHost } from '../../types/mutant/mutant-host'
 import type { IgnoreRule } from '../../types/mutant/ignore-rule'
 import type { Diagnostic } from '../../types/mutant/diagnostic'
 import type { TreeIndex } from '../../types/syntax/tree-index'
 import type { TypeHints } from '../../types/hints/type-hints'
+import type { TextEdit } from '../../types/source/text-edit'
 import type { SkipNote } from '../../types/mutant/skip-note'
 
+import { getComponentFramework } from '../parser/get-component-framework'
+import { getListRemovalRange } from '../text/get-list-removal-range'
 import { getSourcePosition } from '../text/get-source-position'
 import { findCompilerPins } from '../syntax/find-compiler-pins'
+import { removeListElement } from '../text/remove-list-element'
 import { readLiteralType } from '../syntax/read-literal-type'
 import { validateReplacement } from './validate-replacement'
 import { findIgnoreRule } from '../ignore/find-ignore-rule'
@@ -27,6 +33,8 @@ import { parseExpression } from '../text/parse-expression'
 import { getScopePath } from '../identity/get-scope-path'
 import { groupReplacement } from './group-replacement'
 import { fitTemplateText } from './fit-template-text'
+import { findListRemoval } from './find-list-removal'
+import { getMutantSite } from './get-mutant-site'
 import { getSlot } from '../tree/get-slot'
 import { pickFocus } from './pick-focus'
 
@@ -34,6 +42,13 @@ import { pickFocus } from './pick-focus'
  * Scope path of every candidate of a template.
  */
 const TEMPLATE_SCOPE = '<template>'
+
+/**
+ * Most copies of one literal that removals which replace the whole literal may
+ * take; above it, none of them becomes a mutant, so the switched file and the
+ * reports hold at most this many copies of the literal for them.
+ */
+const MAX_LITERAL_COPIES = 8
 
 /**
  * Skip of a replacement in a timer delay.
@@ -169,10 +184,11 @@ interface VisitorEntry {
  * creates its visitors once, in rank order; then every dispatched node is
  * passed, in pre-order, to the visitors registered for its type. Each returned
  * replacement is validated and becomes a candidate with its kind, scope path,
- * solitary ranges and ignore rule. A throwing `create` or visitor and an
- * invalid replacement become mutator errors and cost only that mutator, visit
- * or replacement. A replacement that would move code its framework compiler
- * reads where it stands, such as a Svelte rune call or a Vue compiler macro, is
+ * solitary ranges and ignore rule, which ignore directives decide where it is
+ * placed (see `getMutantSite`). A throwing `create` or visitor and an invalid
+ * replacement become mutator errors and cost only that mutator, visit or
+ * replacement. A replacement that would move code its framework compiler reads
+ * where it stands, such as a Svelte rune call or a Vue compiler macro, is
  * dropped. A replacement that only changes a literal in the delay of a known
  * timer call, such as `1000` turned into `1001`, is skipped as noise, even when
  * its visitor skipped it for another rule; a replacement there that touches a
@@ -189,12 +205,31 @@ interface VisitorEntry {
  * template is fitted into the attribute value or the interpolation around it,
  * or skipped when it cannot be.
  *
+ * A replacement with an empty text for an element of an array literal or a
+ * member of an object literal removes that element (see `findListRemoval`). Its
+ * candidate replaces only the element with the comma next to it (see
+ * `getListRemovalRange`), with the element as its focus, and is hosted with the
+ * other removals of its literal. A removal that is not narrowed replaces the
+ * whole literal instead, which takes a copy of the literal per removal; when a
+ * literal has more than eight such removals, none of them becomes a candidate,
+ * and each is skipped in the narrowed shape, without a copy. Every check that
+ * looks at the replaced node, such as the template filter, compiler pins and
+ * loop advances, looks at the literal of a removal, as it does for the whole
+ * literal. In a Vue template, a removal that would join the text around it into
+ * the delimiter of the template code is skipped.
+ *
  * @param input - Mutators, parsed file, runtime tree, ignore rules and shared
  *   context services.
  * @returns Candidates in emission order, mutator errors and skipped
  *   replacements.
  */
 export function collectCandidates(input: CollectInput): CandidateCollection {
+  /**
+   * Range and text that a replacement gives its candidate, with how the mutant
+   * switch would host it; the kind is null when it cannot.
+   */
+  type Change = ({ focus?: TextEdit; kind: null } | MutantHost) & TextEdit
+
   let { services, parsed, rules, tree } = input
   let lang: 'js' | 'ts' = parsed.language === 'typescript' ? 'ts' : 'js'
   let diagnostics: Diagnostic[] = []
@@ -206,29 +241,75 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
    * requested.
    *
    * @param registered - Mutator that returned the replacement.
-   * @param replacement - Replacement that is not accepted.
+   * @param change - Range, text, kind and focus of the replacement.
    * @param note - Rule and reason of the skip.
    */
   function skip(
     registered: RegisteredMutator,
-    replacement: Replacement,
+    change: Change,
     note: SkipNote,
   ): void {
     if (input.skipped) {
       let { by } = note
       skipped.push({
         by: by ? { start: by.node.start, mutator: by.mutator, id: null } : null,
-        kind: getReplacementKind(replacement.node),
         heuristic: note.heuristic === true,
-        start: replacement.node.start,
-        end: replacement.node.end,
         emission: skipped.length,
-        text: replacement.text,
+        start: change.start,
         reason: note.reason,
+        kind: change.kind,
+        text: change.text,
+        end: change.end,
         rule: note.rule,
         registered,
-        ...pickFocus(replacement),
+        ...pickFocus(change),
       })
+    }
+  }
+  /**
+   * Reads what a replacement writes: the range and text of its node, grouped
+   * for its slot (see `groupReplacement`), or, for a removal, the element with
+   * the comma next to it and an empty text, or the whole literal without the
+   * element when the removal replaces the whole literal.
+   *
+   * @param registered - Mutator that returned the replacement.
+   * @param replacement - Replacement the visitor returned.
+   * @param removal - Removal the replacement asks for, or null.
+   * @returns Range, text and how the change is hosted.
+   */
+  function readChange(
+    registered: ActiveMutator,
+    replacement: Replacement,
+    removal: ListRemoval | null,
+  ): Change {
+    if (removal?.narrow) {
+      let { start, end } = replacement.node
+      return {
+        ...getListRemovalRange(parsed, removal.list, removal.index),
+        list: { start: removal.list.start, end: removal.list.end },
+        focus: { text: '', start, end },
+        kind: removal.kind,
+        text: '',
+      }
+    }
+    let written: Replacement =
+      removal === null ? replacement : (
+        {
+          text: removeListElement(parsed, removal.list, removal.index),
+          node: removal.list,
+        }
+      )
+    let { node, text } = groupReplacement(
+      written,
+      { parsed, tree },
+      registered.id.includes('/'),
+    )
+    return {
+      kind: getReplacementKind(node),
+      start: node.start,
+      end: node.end,
+      text,
+      ...pickFocus(written),
     }
   }
   /**
@@ -238,12 +319,12 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
    * value of the same type, such as `1000` turned into `1001` or `60 * 1000`
    * into `60 / 1000`. Its mutant can only change how long the timer waits.
    *
-   * @param replacement - Replacement to check.
+   * @param node - Replaced node.
+   * @param text - Text written in place of the node.
    * @returns Whether the replacement is skipped as a timer delay.
    */
-  function isTimerDelay(replacement: Replacement): boolean {
+  function isTimerDelay(node: Node, text: string): boolean {
     let { syntax } = services
-    let { node, text } = replacement
     if (!syntax.isRuntimeNode(node) || !syntax.isTimerDelay(node)) {
       return false
     }
@@ -253,6 +334,28 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
     }
     let written = parseExpression(text, lang)
     return written !== null && readLiteralType(written) === type
+  }
+  /**
+   * Fits the text of a change into the Vue template code around it: the text
+   * itself, or, for a narrowed removal, the text it joins, the characters
+   * before and after the deleted range.
+   *
+   * @param change - Range, text and kind of the change.
+   * @param delimiter - Text that ends the template code around the change.
+   * @returns The text to write, or why it cannot be written.
+   */
+  function fitChange(
+    change: Change,
+    delimiter: NonNullable<TemplateExpression['delimiter']>,
+  ): ReturnType<typeof fitTemplateText> {
+    if (change.kind !== 'element' && change.kind !== 'property') {
+      return fitTemplateText(change.text, delimiter, lang)
+    }
+    let joint =
+      parsed.text.slice(change.start - 1, change.start) +
+      parsed.text.slice(change.end, change.end + 1)
+    let fit = fitTemplateText(joint, delimiter, lang)
+    return fit.kind === 'fit' ? { text: change.text, kind: 'fit' } : fit
   }
   /**
    * Turns one replacement of a visit into a candidate, or into a skipped
@@ -268,26 +371,36 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
     node: Node,
     replacement: Replacement,
   ): void {
+    let removal = findListRemoval(tree, replacement, svelteTemplate)
+    let target = removal?.list ?? replacement.node
     if (
       hosts !== null &&
-      (hosts.has(replacement.node) ||
-        getReplacementKind(replacement.node) !== 'expression')
+      (hosts.has(target) || getReplacementKind(target) !== 'expression')
     ) {
       return
     }
+    let copied =
+      removal !== null && !removal.narrow && removal.copies > MAX_LITERAL_COPIES
+    if (copied && removal !== null) {
+      removal = { ...removal, narrow: true }
+    }
+    let change = readChange(registered, replacement, removal)
     if (replacement.skip) {
       skip(
         registered,
-        replacement,
-        isTimerDelay(replacement) ? TIMER_DELAY_SKIP : replacement.skip,
+        change,
+        isTimerDelay(target, change.text) ? TIMER_DELAY_SKIP : replacement.skip,
       )
       return
     }
-    let violation = validateReplacement(
-      tree,
-      replacement.node,
-      replacement.focus,
-    )
+    let empty =
+      removal === null &&
+      replacement.text === '' &&
+      change.kind === 'expression'
+    let violation =
+      empty ?
+        `returned an empty text for a ${target.type} node; only an element of an array literal or a member of an object literal is removed with an empty text.`
+      : validateReplacement(tree, target, change.focus)
     if (violation !== null) {
       diagnostics.push(
         createMutatorError(
@@ -296,13 +409,13 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
           `Mutator "${registered.id}" ${violation}`,
         ),
       )
-      skip(registered, replacement, {
+      skip(registered, empty ? { ...change, text: '' } : change, {
         reason: `the mutator ${violation.slice(0, -1)}`,
         rule: 'invalid-target',
       })
       return
     }
-    let { start, end } = replacement.node
+    let { start, end } = target
     let pin = pins.find(
       entry =>
         start <= entry.start &&
@@ -311,7 +424,7 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
         end <= entry.region.end,
     )
     if (pin) {
-      skip(registered, replacement, {
+      skip(registered, change, {
         rule: 'compiler-macro',
         reason: pin.reason,
       })
@@ -322,51 +435,63 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
     )?.delimiter
     let fit =
       delimiter === undefined ?
-        { text: replacement.text, kind: 'fit' as const }
-      : fitTemplateText(replacement.text, delimiter, lang)
+        { kind: 'fit' as const, text: change.text }
+      : fitChange(change, delimiter)
     if (fit.kind === 'unfit') {
-      skip(registered, replacement, {
+      skip(registered, change, {
         rule: 'template-text',
         reason: fit.reason,
       })
       return
     }
-    if (isTimerDelay(replacement)) {
-      skip(registered, replacement, TIMER_DELAY_SKIP)
+    if (isTimerDelay(target, change.text)) {
+      skip(registered, change, TIMER_DELAY_SKIP)
       return
     }
     if (
       !services.settings.timeouts &&
       registered.id !== 'optional-chaining' &&
-      services.syntax.isLoopAdvanceValue(replacement.node)
+      services.syntax.isLoopAdvanceValue(target)
     ) {
-      skip(registered, replacement, {
+      skip(registered, change, {
         reason:
           'it changes the value that advances a loop, so it may keep the loop running forever',
         rule: 'loop-advance',
       })
       return
     }
+    if (copied) {
+      skip(registered, change, {
+        reason: `removing it takes a copy of the whole literal, which Mootant does not make for a literal with more than ${MAX_LITERAL_COPIES} such ${change.kind === 'element' ? 'elements' : 'members'}`,
+        rule: 'literal-copies',
+      })
+      return
+    }
+    let host: MutantHost =
+      change.kind === 'element' || change.kind === 'property' ?
+        { focus: change.focus, kind: change.kind, list: change.list }
+      : { kind: change.kind!, ...pickFocus(change) }
+    let site = getMutantSite({ ...host, start: change.start })
     candidates.push({
       ignoreRule: findIgnoreRule(rules, {
-        line: getSourcePosition(parsed.lineStarts, start).line,
+        line: getSourcePosition(parsed.lineStarts, site).line,
         mutator: registered.id,
-        start,
+        start: site,
       }),
-      scope:
-        hosts === null ? getScopePath(tree, replacement.node) : TEMPLATE_SCOPE,
+      scope: hosts === null ? getScopePath(tree, target) : TEMPLATE_SCOPE,
       solitary: getSolitaryRanges(replacement.solitary),
-      kind: getReplacementKind(replacement.node)!,
       emission: candidates.length,
+      start: change.start,
+      end: change.end,
       text: fit.text,
       registered,
-      start,
-      end,
-      ...pickFocus(replacement),
+      ...host,
     })
   }
   let pins = findCompilerPins(tree, parsed.file)
   let hosts = input.hosts ?? null
+  let svelteTemplate =
+    hosts !== null && getComponentFramework(parsed.file) === 'svelte'
   let table = createVisitorTable(input, diagnostics)
 
   for (let node of tree.order) {
@@ -390,15 +515,7 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
         continue
       }
       for (let replacement of replacements) {
-        addReplacement(
-          registered,
-          node,
-          groupReplacement(
-            replacement,
-            { parsed, tree },
-            registered.id.includes('/'),
-          ),
-        )
+        addReplacement(registered, node, replacement)
       }
     }
   }

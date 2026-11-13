@@ -33,7 +33,7 @@ export function createListReport(
     ],
     files: [{ file: 'example.ts', parsed: true, mutants: 1 }],
     preset: 'recommended',
-    schemaVersion: 3,
+    schemaVersion: 4,
     command: 'list',
     diagnostics: [],
     since: null,

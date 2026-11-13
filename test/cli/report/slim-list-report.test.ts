@@ -16,7 +16,7 @@ describe('slimListReport', () => {
       mutants: [slimListMutant(report.mutants[0]!)],
       summary: report.summary,
       preset: 'recommended',
-      schemaVersion: 3,
+      schemaVersion: 4,
       command: 'list',
       diagnostics: [],
     })

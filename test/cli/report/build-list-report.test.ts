@@ -28,7 +28,7 @@ function createMutant(overrides: Partial<Mutant>): Mutant {
     start: 0,
     end: 0,
     ...overrides,
-  }
+  } as Mutant
 }
 
 /**
@@ -391,7 +391,7 @@ describe('buildListReport', () => {
         totalFiles: 4,
       },
       diagnostics: [skippedPath, parseError, readError],
-      schemaVersion: 3,
+      schemaVersion: 4,
       preset: 'strict',
       command: 'list',
       since: null,

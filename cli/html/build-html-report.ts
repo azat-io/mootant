@@ -146,7 +146,7 @@ export function buildHtmlReport(
       ...(killer !== undefined && { killedBy: killer }),
       ...(mutant.cause && { cause: mutant.cause }),
       ...(mutant.path !== null && { path: mutant.path }),
-      ...(mutant.kind === 'block' && { kind: 'block' }),
+      ...(mutant.kind !== 'expression' && { kind: mutant.kind }),
       ...(mutant.cached && { cached: true }),
       mutator: mutators.get(mutant.mutator)!,
       ...packReplacement(mutant.original, mutant.replacement),

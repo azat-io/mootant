@@ -218,7 +218,7 @@ describe('runList', () => {
     expect(JSON.parse(output)).toMatchObject({
       summary: { totalWarnings: 1, totalErrors: 1 },
       diagnostics: [skippedPath, readError],
-      schemaVersion: 3,
+      schemaVersion: 4,
     })
     expect(JSON.parse(output)).not.toHaveProperty('mutators')
     expect(consoleErrorSpy).not.toHaveBeenCalled()

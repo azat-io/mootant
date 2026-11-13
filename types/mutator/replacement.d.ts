@@ -18,7 +18,8 @@ export interface Replacement {
   /**
    * Edit inside the replaced node that the mutant amounts to, such as the
    * changed part of a regular expression pattern. Reports show it in place of
-   * the whole node; the mutant still replaces the whole node.
+   * the whole node; the mutant still replaces the whole node. Mootant sets the
+   * focus of a removed element or member, whatever the mutator gives.
    */
   focus?: TextEdit
 
@@ -32,13 +33,16 @@ export interface Replacement {
   /**
    * Text written in place of the node, built from slices of the original
    * source. An expression must parse inside parentheses, a statement list
-   * inside braces.
+   * inside braces. An empty text for an element of an array literal or a member
+   * of an object literal removes it with its comma.
    */
   text: string
 
   /**
    * Node whose whole range, from `node.start` to `node.end`, is replaced: an
-   * expression in a value position or a statement of the runtime tree.
+   * expression in a value position or a statement of the runtime tree. With an
+   * empty text, an element of an array literal or a member of an object literal
+   * is removed with its comma instead.
    */
   node: Node
 }

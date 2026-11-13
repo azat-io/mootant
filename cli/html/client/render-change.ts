@@ -10,8 +10,9 @@ const MAX_LENGTH = 64
 
 /**
  * Renders a change on one line as `before → after`, with runs of whitespace
- * folded: the whole range, or its focus when the range is long and the mutator
- * names one. A removal shows `removed`.
+ * folded: the whole range, or its focus when the mutator names one and the
+ * range is long or the change removes it, such as an array element with its
+ * comma. A removal shows `removed`.
  *
  * @param source - Text of the file.
  * @param change - Range, replacement and focus of the change.
@@ -20,7 +21,10 @@ const MAX_LENGTH = 64
 export function renderChange(source: string, change: ShownChange): string {
   let before = fold(source.slice(change.start, change.end))
   let after = fold(change.replacement)
-  if (before.length > MAX_LENGTH && change.focus) {
+  if (
+    change.focus &&
+    (before.length > MAX_LENGTH || change.replacement === '')
+  ) {
     before = fold(source.slice(change.focus.start, change.focus.end))
     after = fold(change.focus.replacement)
   }

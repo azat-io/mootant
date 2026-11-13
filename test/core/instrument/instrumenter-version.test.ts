@@ -4,6 +4,6 @@ import { INSTRUMENTER_VERSION } from '../../../core/instrument/instrumenter-vers
 
 describe('instrumenter version', () => {
   it('is a positive integer', () => {
-    expect(INSTRUMENTER_VERSION).toBe(1)
+    expect(INSTRUMENTER_VERSION).toBe(2)
   })
 })

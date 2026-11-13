@@ -78,7 +78,7 @@ node -e "const fs=require('fs');fs.mkdirSync('.mootant',{recursive:true});fs.exi
 
 # Problems of a run, then one line per mutant
 node -e "const r=require('./.mootant/before.json');console.log(JSON.stringify({schemaVersion:r.schemaVersion,diagnostics:r.diagnostics,summary:r.summary}))"
-node -e "for(const m of require('./.mootant/before.json').mutants)console.log(m.id,m.status,m.file+':'+m.line,m.scope||'-',m.mutator,m.tests)"
+node -e "for(const m of require('./.mootant/before.json').mutants)console.log(m.id,m.status,m.file+':'+(m.focus||m).line,m.scope||'-',m.mutator,m.tests)"
 
 # A recheck: the mutant's recheck with <mootant> in place of mootant, always with --no-fast --no-incremental
 <mootant> run [<paths>] --no-fast --no-incremental --mutant <id> [--mutant <id>] --json --all > .mootant/recheck.json 2> .mootant/recheck.log
@@ -127,9 +127,9 @@ smaller path, list the rest as not reached.
    when git does not track it.
 2. **Run once**, as Start says, in the background or with the longest timeout,
    and wait for the exit. Read its problems. An `Error:` line in the log: report
-   it with the lines under it and stop. `schemaVersion` other than 3: stop, this
-   skill does not fit this Mootant. No mutants to act on and no errors: say so
-   and stop.
+   it with the lines under it and stop. `schemaVersion` other than 3 or 4: stop,
+   this skill does not fit this Mootant. No mutants to act on and no errors: say
+   so and stop.
 3. **Ledger.** One row per id with verdict `pending`; the report keeps the rest.
    Over 20 rows: tell the user the counts per file and work file by file in the
    report's order.
@@ -187,14 +187,16 @@ outputs in a throwaway test and recheck: `Killed` or `Timeout` means you found a
 real test, so keep it; otherwise delete the throwaway test.
 
 An ignore comment hides every mutant of the named mutators on the next line, not
-one id. Before you propose `// mootant-ignore-next-line <mutator>: <reason>`,
-with mutator names separated by commas and never without one, list what it would
-hide with `<mootant> list <file> --json`. Propose it only when each of those
-mutants is equivalent, and show the user each one with its reason. When the user
-approves, add the comment and list the file again: the new `Ignored` mutants
-must be exactly the ones you showed, with no `malformed-directive` or
-`unknown-mutator` in `diagnostics`. A coarse mutant that comes back gets its own
-row.
+one id; a mutant is on its `line`, and one of `kind` `element` or `property` on
+the line of its `focus`. Before you propose
+`// mootant-ignore-next-line <mutator>: <reason>`, with mutator names separated
+by commas and never without one, list what it would hide with
+`<mootant> list <file> --json --verbose`, which gives `kind`. Propose it only
+when each of those mutants is equivalent, and show the user each one with its
+reason. When the user approves, add the comment and list the file again: the new
+`Ignored` mutants must be exactly the ones you showed, with no
+`malformed-directive` or `unknown-mutator` in `diagnostics`. A coarse mutant
+that comes back gets its own row.
 
 ## Report
 

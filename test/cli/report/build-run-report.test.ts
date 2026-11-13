@@ -181,7 +181,7 @@ describe('buildRunReport', () => {
       runnerVersion: '5.0.4',
       preset: 'recommended',
       runner: 'vitest',
-      schemaVersion: 3,
+      schemaVersion: 4,
       command: 'run',
       mode: 'fast',
     })

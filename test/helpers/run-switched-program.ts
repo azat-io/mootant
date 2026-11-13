@@ -24,8 +24,10 @@ interface SwitchedProgram {
 
 /**
  * Runs a switched program like `runProgram`, with a mutant runtime whose `hit`
- * tells only the active mutant's site to switch. The runtime is set, or
- * removed, by a line in front of the program, so every run sets its own.
+ * and `hitAny` tell only the active mutant's site to switch, and whose `gap`,
+ * `none` and `cut` work as the real ones do, with index loops and an iterator
+ * of their own. The runtime is set, or removed, by a line in front of the
+ * program, so every run sets its own.
  *
  * @param program - Switched text, file name and active mutant.
  * @param inputs - Arguments of `f`, one list per input.
@@ -36,9 +38,17 @@ export function runSwitchedProgram(
   inputs: unknown[][],
 ): Promise<string[]> {
   let { switched, active, file } = program
+  let runtime = [
+    `let runtime = { active: ${JSON.stringify(active)}, gap: Symbol('gap') };`,
+    'runtime.hit = id => id === runtime.active;',
+    'runtime.hitAny = ids => { for (let i = 0; i < ids.length; i++) { if (runtime.hit(ids[i])) { return true } } return false };',
+    'runtime.none = { [Symbol.iterator]: () => ({ next: () => ({ value: undefined, done: true }) }) };',
+    'runtime.cut = array => { let kept = 0; for (let i = 0; i < array.length; i++) { if (array[i] !== runtime.gap) { array[kept] = array[i]; kept += 1 } } array.length = kept; return array };',
+    `globalThis.${RUNTIME_GLOBAL} = runtime;`,
+  ]
   let setup =
     active === undefined ?
       `delete globalThis.${RUNTIME_GLOBAL};`
-    : `globalThis.${RUNTIME_GLOBAL} = { hit: id => id === ${JSON.stringify(active)} };`
+    : `{ ${runtime.join(' ')} }`
   return runProgram(`${setup}\n${switched}`, file, inputs)
 }

@@ -180,7 +180,7 @@ describe('startReport', () => {
       document,
       'mootant-report.json',
       expect.objectContaining({
-        schemaVersion: 3,
+        schemaVersion: 4,
         command: 'run',
         listed: 'all',
       }),

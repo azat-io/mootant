@@ -18,6 +18,7 @@ import { trackFileReads } from '../../../../adapters/shared/track-file-reads'
 import { CHANNEL_SLOT } from '../../../../adapters/jest/worker/channel-slot'
 import { trackSpawners } from '../../../../adapters/shared/track-spawners'
 import { bootWorker } from '../../../../adapters/jest/worker/boot-worker'
+import { createTestRuntime } from '../../../helpers/create-test-runtime'
 import { runUnit } from '../../../../adapters/jest/worker/run-unit'
 
 vi.mock(import('../../../../adapters/shared/track-file-reads'), () => ({
@@ -684,14 +685,7 @@ describe('bootWorker', () => {
     record('*')
     let addVariable = vi.fn<(name: string) => void>()
     channel.vm = {
-      runtime: {
-        hit: () => false,
-        coverage: null,
-        reached: false,
-        active: null,
-        hitLimit: 0,
-        hits: 0,
-      },
+      runtime: createTestRuntime({ hitLimit: 0 }),
       listVariables: () => [],
       isReached: () => false,
       realmError: Error,
@@ -737,13 +731,21 @@ describe('bootWorker', () => {
 
   it('makes the outer runtime an inert stub that records what ran there', async () => {
     let booted = await boot()
-    let stub = booted.global['__mootant'] as { hit(id: string): boolean }
+    let stub = booted.global['__mootant'] as {
+      hitAny(ids: readonly string[]): boolean
+      hit(id: string): boolean
+    }
 
     expect(stub.hit('outside-1')).toBe(false)
+    expect(stub.hitAny(['outside-2', 'outside-3'])).toBe(false)
 
     let worker = await readWorker(booted)
 
-    expect([...worker.outside]).toStrictEqual(['outside-1'])
+    expect([...worker.outside]).toStrictEqual([
+      'outside-1',
+      'outside-2',
+      'outside-3',
+    ])
   })
 
   it('tracks the stores of the given prototype', async () => {

@@ -28,7 +28,11 @@ vi.mock(import('../../../../adapters/shared/track-inputs'), () => ({
 
 vi.mock(import('../../../../core/runtime/install-mutant-runtime'), () => ({
   installMutantRuntime: vi.fn(() => ({
+    none: { [Symbol.iterator]: () => [][Symbol.iterator]() },
+    cut: <Value>(array: Value[]) => array,
+    hitAny: () => false,
     hitLimit: Infinity,
+    gap: Symbol('gap'),
     hit: () => false,
     coverage: null,
     reached: false,

@@ -108,7 +108,10 @@ export function indexReport(report: HtmlReport): ReportIndex {
 
 /**
  * Reads where a mutant or a skipped candidate is in its file, the text it
- * replaces and its whole replacement.
+ * replaces and its whole replacement. It is placed at the start of its range,
+ * and a mutant that removes an array element or an object member at the start
+ * of the element, since its range may start at the comma after the element
+ * before, as ignore comments cover it.
  *
  * @param entry - Mutant or skipped candidate as packed.
  * @param file - Its file with source and line starts.
@@ -121,7 +124,11 @@ function locateEntry(
   IndexedMutant,
   'replacement' | 'original' | 'endLine' | 'column' | 'line'
 > {
-  let start = getSourcePosition(file.lineStarts, entry.start)
+  let removed =
+    'kind' in entry && (entry.kind === 'element' || entry.kind === 'property') ?
+      entry.focus
+    : undefined
+  let start = getSourcePosition(file.lineStarts, (removed ?? entry).start)
   let original = file.source.slice(entry.start, entry.end)
   return {
     endLine: getSourcePosition(

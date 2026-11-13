@@ -79,7 +79,7 @@ export function renderDiff(
   let lineEnd = getLineEnd(
     source,
     lineStarts,
-    getSourcePosition(lineStarts, Math.max(change.end - 1, change.start)).line,
+    getSourcePosition(lineStarts, change.end).line,
   )
   let indent = /^[\t ]*/u.exec(source.slice(lineStart, start))![0].length
   let head = dedent(cutHead(source.slice(lineStart + indent, start)), indent)

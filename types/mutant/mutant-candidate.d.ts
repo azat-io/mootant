@@ -1,13 +1,18 @@
 import type { RegisteredMutator } from '../mutator/registered-mutator'
 import type { SourceRange } from '../source/source-range'
-import type { TextEdit } from '../source/text-edit'
 import type { IgnoreRule } from './ignore-rule'
+import type { MutantHost } from './mutant-host'
 
 /**
  * Replacement accepted from a visitor, before ids, the solitary rule and
- * deduplication.
+ * deduplication, with how the mutant switch would host it (see `MutantHost`).
  */
-export interface MutantCandidate {
+export type MutantCandidate = CandidateFields & MutantHost
+
+/**
+ * Fields of every candidate, whatever its host.
+ */
+interface CandidateFields {
   /**
    * Ranges of the nodes whose effect the mutant removes as a whole, or null
    * when the solitary rule does not apply.
@@ -25,20 +30,9 @@ export interface MutantCandidate {
   registered: RegisteredMutator
 
   /**
-   * How the mutant is switched on, derived from the replaced node.
-   */
-  kind: 'expression' | 'block'
-
-  /**
    * Dotted names of the declarations around the replaced node.
    */
   scope: string | null
-
-  /**
-   * Edit inside the replaced range that the mutant amounts to, which reports
-   * show in place of the whole range; absent when the mutator names none.
-   */
-  focus?: TextEdit
 
   /**
    * Position in the order in which visitors returned replacements.
@@ -46,17 +40,17 @@ export interface MutantCandidate {
   emission: number
 
   /**
-   * Start of the replaced node.
+   * Start of the replaced range.
    */
   start: number
 
   /**
-   * Text written in place of the node.
+   * Text written in place of the range.
    */
   text: string
 
   /**
-   * End of the replaced node.
+   * End of the replaced range.
    */
   end: number
 }

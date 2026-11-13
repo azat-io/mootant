@@ -192,7 +192,7 @@ export function buildRunReport(
     mode: result.mode,
     files: list.files,
     ...(list.skipped && { skipped: list.skipped }),
-    schemaVersion: 3,
+    schemaVersion: 4,
     command: 'run',
     mutants,
   }

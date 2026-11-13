@@ -305,4 +305,22 @@ describe('regexFlag', () => {
         .map(mutant => [mutant.replacement, mutant.focus]),
     ).toStrictEqual([["'g'", { text: 'g', start: 21, end: 23 }]])
   })
+
+  it.each([
+    { place: 'the call', status: 'Ignored', index: 0 },
+    { place: 'the pattern', status: 'Pending', index: 1 },
+  ])(
+    'covers a flag added to a call over several lines by a comment above $place',
+    ({ status, index }) => {
+      let lines = ['let re = new RegExp(', "  'ab+c',", ')']
+      lines.splice(index, 0, '// mootant-ignore-next-line regex-flag: test')
+
+      expect(
+        runMutator('regex-flag', lines.join('\n'), {
+          file: 'example.js',
+          preset: 'strict',
+        }).map(mutant => mutant.status),
+      ).toStrictEqual([status])
+    },
+  )
 })

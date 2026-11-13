@@ -115,6 +115,38 @@ describe('indexReport', () => {
     ])
   })
 
+  it('places a removal at its element and other entries at their range', () => {
+    let report = createHtmlReport()
+    report.files[0]!.source = 'let a = [\n  1,\n  2,\n]'
+    let removal = {
+      focus: { replacement: '', start: 17, end: 18 },
+      replacement: '',
+      start: 14,
+      end: 19,
+    }
+    report.mutants = [
+      { ...report.mutants[0]!, ...removal, kind: 'element' },
+      { ...report.mutants[0]!, ...removal, kind: 'property' },
+      { ...report.mutants[0]!, ...removal },
+    ]
+    report.skipped = [{ ...report.skipped[0]!, ...removal }]
+    let index = indexReport(report)
+
+    expect(
+      [...index.mutants, ...index.files[0]!.skipped].map(entry => [
+        entry.line,
+        entry.column,
+        entry.endLine,
+        entry.original,
+      ]),
+    ).toStrictEqual([
+      [3, 3, 3, '\n  2,'],
+      [3, 3, 3, '\n  2,'],
+      [2, 5, 3, '\n  2,'],
+      [2, 5, 3, '\n  2,'],
+    ])
+  })
+
   it('restores replacements stored as a difference from the original', () => {
     let report = createHtmlReport()
     report.mutants[2] = { ...report.mutants[2]!, replacement: '', keep: [4, 6] }

@@ -1,10 +1,16 @@
-import type { VariableDeclaration, Node } from 'oxc-parser'
+import type {
+  VariableDeclaration,
+  ObjectExpression,
+  ArrayExpression,
+  Node,
+} from 'oxc-parser'
 
 import { describe, expect, it } from 'vitest'
 
 import type { TemplateExpression } from '../../../types/source/template-expression'
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { ActiveMutator } from '../../../types/mutator/active-mutator'
+import type { Replacement } from '../../../types/mutator/replacement'
 import type { Mutator } from '../../../types/mutator/mutator'
 
 import { parseIgnoreDirectives } from '../../../core/ignore/parse-ignore-directives'
@@ -608,6 +614,34 @@ describe('collectCandidates', () => {
     ])
   })
 
+  it('reports an empty text for anything but an element or a member', () => {
+    let { diagnostics, candidates, skipped } = collect(
+      ['f(a, b)', 'run()'],
+      [
+        activate('first', 0, () => ({
+          CallExpression: node =>
+            node.arguments.slice(0, 1).map(argument => ({
+              node: argument,
+              text: '',
+            })),
+          ExpressionStatement: node => [{ text: '', node }],
+        })),
+      ],
+      { skipped: true },
+    )
+
+    expect(candidates.map(candidate => candidate.kind)).toStrictEqual([
+      'block',
+      'block',
+    ])
+    expect(diagnostics.map(diagnostic => diagnostic.message)).toStrictEqual([
+      'Mutator "first" returned an empty text for a Identifier node; only an element of an array literal or a member of an object literal is removed with an empty text.',
+    ])
+    expect(
+      skipped.map(candidate => [candidate.rule, candidate.text]),
+    ).toStrictEqual([['invalid-target', '']])
+  })
+
   it('lists an invalid replacement and a loop-advance value as skipped', () => {
     let { skipped } = collect(
       ['let x = 1', 'while (!done) {', '  done = check()', '}'],
@@ -676,6 +710,280 @@ describe('collectCandidates', () => {
     ).toHaveLength(2)
   })
 
+  it('removes an element or a member with the comma next to it', () => {
+    let { diagnostics, candidates } = collect(
+      ['x = [a, b]', 'y = { c, get d() { return 1 } }'],
+      [
+        activate('first', 0, () => ({
+          ObjectExpression: removeAll,
+          ArrayExpression: removeAll,
+        })),
+      ],
+    )
+
+    expect(diagnostics).toStrictEqual([])
+    expect(
+      candidates.map(candidate => ({
+        list: 'list' in candidate ? candidate.list : null,
+        focus: candidate.focus ?? null,
+        solitary: candidate.solitary,
+        start: candidate.start,
+        kind: candidate.kind,
+        text: candidate.text,
+        end: candidate.end,
+      })),
+    ).toStrictEqual([
+      {
+        focus: { text: '', start: 5, end: 6 },
+        solitary: [{ start: 5, end: 6 }],
+        list: { start: 4, end: 10 },
+        kind: 'element',
+        text: '',
+        start: 5,
+        end: 8,
+      },
+      {
+        focus: { text: '', start: 8, end: 9 },
+        solitary: [{ start: 8, end: 9 }],
+        list: { start: 4, end: 10 },
+        kind: 'element',
+        text: '',
+        start: 6,
+        end: 9,
+      },
+      {
+        focus: { start: 17, text: '', end: 18 },
+        solitary: [{ start: 17, end: 18 }],
+        list: { start: 15, end: 42 },
+        kind: 'property',
+        start: 17,
+        text: '',
+        end: 20,
+      },
+      {
+        solitary: [{ start: 20, end: 40 }],
+        kind: 'expression',
+        text: '{ c }',
+        focus: null,
+        list: null,
+        start: 15,
+        end: 42,
+      },
+    ])
+  })
+
+  it('replaces the whole literal for up to eight removals of one literal', () => {
+    let getters = Array.from(
+      { length: 8 },
+      (_, index) => `get g${index}() { return ${index} }`,
+    )
+    let { candidates, skipped } = collect(
+      [`x = { a: 1, ${getters.join(', ')} }`],
+      [activate('first', 0, () => ({ ObjectExpression: removeAll }))],
+      { skipped: true },
+    )
+
+    expect(candidates.map(candidate => candidate.kind)).toStrictEqual([
+      'property',
+      ...getters.map(() => 'expression'),
+    ])
+    expect(skipped).toStrictEqual([])
+  })
+
+  it('skips every removal that replaces a literal with more than eight of them', () => {
+    let lines = [
+      `x = { a: 1, ${Array.from({ length: 9 }, (_, index) => `get g${index}() {}`).join(', ')} }`,
+    ]
+    let { candidates, skipped } = collect(
+      lines,
+      [activate('first', 0, () => ({ ObjectExpression: removeAll }))],
+      { skipped: true },
+    )
+
+    expect(candidates.map(candidate => candidate.kind)).toStrictEqual([
+      'property',
+    ])
+    expect(skipped).toHaveLength(9)
+    expect(skipped[0]).toMatchObject({
+      reason:
+        'removing it takes a copy of the whole literal, which Mootant does not make for a literal with more than 8 such members',
+      focus: { start: 12, text: '', end: 23 },
+      rule: 'literal-copies',
+      kind: 'property',
+      start: 12,
+      text: '',
+      end: 25,
+    })
+  })
+
+  it('names the elements of an array whose removals each take a copy', () => {
+    let { skipped } = collect(
+      [
+        `x = [, ${Array.from({ length: 9 }, (_, index) => `e${index}`).join(', ')}]`,
+      ],
+      [activate('first', 0, () => ({ ArrayExpression: removeAll }))],
+      { skipped: true },
+    )
+
+    expect(
+      skipped.map(candidate => [candidate.rule, candidate.reason]),
+    ).toContainEqual([
+      'literal-copies',
+      'removing it takes a copy of the whole literal, which Mootant does not make for a literal with more than 8 such elements',
+    ])
+  })
+
+  it('keeps the skip of the mutator for a removal without a copy', () => {
+    let lines = [
+      `x = { ${Array.from({ length: 9 }, (_, index) => `get g${index}() {}`).join(', ')} }`,
+    ]
+    let { candidates, skipped } = collect(
+      lines,
+      [
+        activate('first', 0, () => ({
+          ObjectExpression: node =>
+            removeAll(node).map(replacement => ({
+              ...replacement,
+              skip: { reason: 'it is the default', rule: 'default-option' },
+            })),
+        })),
+      ],
+      { skipped: true },
+    )
+
+    expect(candidates).toStrictEqual([])
+    expect(
+      skipped.map(candidate => [
+        candidate.rule,
+        candidate.kind,
+        candidate.text,
+      ]),
+    ).toStrictEqual(
+      Array.from({ length: 9 }, () => ['default-option', 'property', '']),
+    )
+  })
+
+  it.each([
+    {
+      lines: [
+        'x = [',
+        '  a,',
+        '  // mootant-ignore-next-line first',
+        '  b',
+        ']',
+      ],
+      ignored: [false, true],
+    },
+    {
+      lines: [
+        'x = {',
+        '  a,',
+        '  // mootant-ignore-next-line first',
+        '  b: 1,',
+        '}',
+      ],
+      ignored: [false, true],
+    },
+    {
+      lines: [
+        '// mootant-ignore-next-line first',
+        'x = [',
+        '  a,',
+        '  b,',
+        ']',
+      ],
+      ignored: [false, false],
+    },
+    {
+      lines: [
+        '// mootant-ignore-next-line first',
+        'x = {',
+        '  a,',
+        '  get b() { return 1 },',
+        '}',
+      ],
+      ignored: [false, true],
+    },
+  ])(
+    'looks up the ignore directives of a removal at its element, or at a replaced literal, in $lines',
+    ({ ignored, lines }) => {
+      let { candidates } = collect(lines, [
+        activate('first', 0, () => ({
+          ObjectExpression: removeAll,
+          ArrayExpression: removeAll,
+        })),
+      ])
+
+      expect(
+        candidates.map(candidate => candidate.ignoreRule !== null),
+      ).toStrictEqual(ignored)
+    },
+  )
+
+  it('checks a removal against the value that advances a loop by its literal', () => {
+    let lines = [
+      'while (!state.done) {',
+      '  state = { done: step(), value }',
+      '}',
+    ]
+    let mutator = activate('first', 0, () => ({ ObjectExpression: removeAll }))
+    let { candidates, skipped } = collect(lines, [mutator], { skipped: true })
+
+    expect(candidates).toStrictEqual([])
+    expect(
+      skipped.map(candidate => [
+        candidate.rule,
+        candidate.kind,
+        candidate.start,
+        candidate.end,
+        candidate.focus,
+      ]),
+    ).toStrictEqual([
+      ['loop-advance', 'property', 34, 48, { start: 34, text: '', end: 46 }],
+      ['loop-advance', 'property', 46, 53, { start: 48, text: '', end: 53 }],
+    ])
+    expect(
+      collect(lines, [mutator], { timeouts: true }).candidates,
+    ).toHaveLength(2)
+  })
+
+  it('skips a removal that would join }} in a Vue interpolation', () => {
+    let { candidates, skipped } = collect(
+      ['f({a: {b},c})'],
+      [activate('first', 0, () => ({ ObjectExpression: removeAll }))],
+      {
+        expressions: [{ delimiter: '}}', wrap: 'value', start: 0, end: 13 }],
+        skipped: true,
+      },
+    )
+
+    expect(
+      candidates.map(candidate => [
+        candidate.start,
+        candidate.end,
+        candidate.text,
+      ]),
+    ).toStrictEqual([
+      [3, 10, ''],
+      [7, 8, ''],
+    ])
+    expect(
+      skipped.map(candidate => [
+        candidate.rule,
+        candidate.start,
+        candidate.end,
+        candidate.reason,
+      ]),
+    ).toStrictEqual([
+      [
+        'template-text',
+        9,
+        11,
+        'it would write }}, which ends the interpolation',
+      ],
+    ])
+  })
+
   it('fits replacements into the Vue template code around them', () => {
     let mutator = activate('first', 0, () => ({
       Identifier: node => [{ text: node.name === 'b' ? "`'`" : "''", node }],
@@ -702,3 +1010,18 @@ describe('collectCandidates', () => {
     ])
   })
 })
+
+/**
+ * Removes every element of an array literal, holes aside, or member of an
+ * object literal, each as the replacement of the element with an empty text.
+ *
+ * @param node - Array or object literal.
+ * @returns One removal per element or member.
+ */
+function removeAll(node: ObjectExpression | ArrayExpression): Replacement[] {
+  let elements =
+    node.type === 'ArrayExpression' ? node.elements : node.properties
+  return elements
+    .filter(element => element !== null)
+    .map(element => ({ solitary: [element], node: element, text: '' }))
+}

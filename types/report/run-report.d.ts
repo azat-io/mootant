@@ -290,7 +290,7 @@ export interface RunReport {
    * Version of the report shape. It changes when a field changes meaning or is
    * removed; new fields do not change it.
    */
-  schemaVersion: 3
+  schemaVersion: 4
 
   /**
    * Command that produced the report.

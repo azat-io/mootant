@@ -131,15 +131,15 @@ Mootant leaves out these changes. `npx mootant list src --skipped` shows them
 with the category and the rule; [Skipped changes](/mutators#skipped-changes)
 explains the categories.
 
-| Reason                                                     | Example                                       | Rule                            |
-| ---------------------------------------------------------- | --------------------------------------------- | ------------------------------- |
-| Removes code that has a finer mutant inside                | `['card', 'paypal']` → `['paypal']`           | `solitary`, subsumed            |
-| A React hook behaves the same with `[undefined]`           | `[]` → `[undefined]` in `useEffect(load, [])` | `hook-dependencies`, equivalent |
-| `join('')` writes `undefined` as an empty string           | `[]` → `[undefined]` in `let parts = []`      | `joined-array`, equivalent      |
-| May keep a loop running forever                            | `[...box, item]` → `[...box]`                 | `loop-advance`, timeout         |
-| Same code as another mutant                                | `[sku, sku]` → `[sku]`                        | `duplicate`, duplicate          |
-| Read by the Vue or Svelte compiler as written              | `['sku']` → `[]` in `defineProps()`           | `compiler-macro`, invalid       |
-| Vue would read the new `&…` as an HTML character reference | `['Q&A', reviews]` → `['Q&A']`                | `template-text`, invalid        |
+| Reason                                                                                                                  | Example                                          | Rule                            |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------- |
+| Removes code that has a finer mutant inside                                                                             | `['card', 'paypal']` → `['paypal']`              | `solitary`, subsumed            |
+| A React hook behaves the same with `[undefined]`                                                                        | `[]` → `[undefined]` in `useEffect(load, [])`    | `hook-dependencies`, equivalent |
+| `join('')` writes `undefined` as an empty string                                                                        | `[]` → `[undefined]` in `let parts = []`         | `joined-array`, equivalent      |
+| May keep a loop running forever                                                                                         | `[...box, item]` → `[...box]`                    | `loop-advance`, timeout         |
+| Same code as another mutant                                                                                             | `[sku, sku]` → `[sku]`                           | `duplicate`, duplicate          |
+| Read by the Vue or Svelte compiler as written                                                                           | `['sku']` → `[]` in `defineProps()`              | `compiler-macro`, invalid       |
+| An element in a Svelte template or in an array with a hole needs a copy of the array, and the array has more than eight | `['a', 'b', …]` → `['b', …]` in a Svelte `class` | `literal-copies`, invalid       |
 
 The [`coarseMutants`](/guide/configuration#coarsemutants) setting brings back
 `solitary`, and [`timeouts`](/guide/configuration#timeouts) brings back

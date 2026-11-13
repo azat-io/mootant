@@ -15,12 +15,14 @@ export interface ListReportJustifier {
   mutator: string
 
   /**
-   * 1-based UTF-16 column of the node the justifying mutant replaces.
+   * 1-based UTF-16 column of the justifying mutant: of its focus, or of the
+   * range it replaces when it has none.
    */
   column: number
 
   /**
-   * 1-based line of the node the justifying mutant replaces.
+   * 1-based line of the justifying mutant: of its focus, or of the range it
+   * replaces when it has none.
    */
   line: number
 }

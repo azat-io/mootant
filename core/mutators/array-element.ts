@@ -14,18 +14,19 @@ const HOOK_PATTERN = /^use[0-9A-Z]/u
 
 /**
  * Removes one element from an array literal, or puts undefined into an empty
- * one (catalog 4.2). Each removal (T6) is solitary over the removed element, so
- * the pipeline drops it while a mutant inside the element will run. Arrays with
- * holes get nothing; the `[undefined]` of the empty dependency list of a React
- * hook, and of an array that is only pushed to and joined with an empty
- * separator (see `isJoinedArray`), follows as a skipped replacement when the
- * name `undefined` surely holds the global value (see `isGlobalName`): a
+ * one (catalog 4.2). A removal replaces the element with an empty text, which
+ * removes it with its comma. Each removal (T6) is solitary over the removed
+ * element, so the pipeline drops it while a mutant inside the element will run.
+ * Arrays with holes get nothing; the `[undefined]` of the empty dependency list
+ * of a React hook, and of an array that is only pushed to and joined with an
+ * empty separator (see `isJoinedArray`), follows as a skipped replacement when
+ * the name `undefined` surely holds the global value (see `isGlobalName`): a
  * parameter, a local or a declaration that another script block of a component
  * makes may give it any value.
  */
 export let arrayElement: Mutator = {
   create(context) {
-    let { sourceCode, syntax } = context
+    let { syntax } = context
     return {
       ArrayExpression(node) {
         let { elements } = node
@@ -52,10 +53,10 @@ export let arrayElement: Mutator = {
           }
           return [replacement]
         }
-        return elements.map((element, index) => ({
-          text: sourceCode.removeListElement(node, index),
+        return elements.map(element => ({
           solitary: [element!],
-          node,
+          node: element!,
+          text: '',
         }))
       },
     }

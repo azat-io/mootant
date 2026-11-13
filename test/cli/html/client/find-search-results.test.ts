@@ -44,6 +44,26 @@ describe('findSearchResults', () => {
     ])
   })
 
+  it('shows the focus of a removal', () => {
+    let report = createHtmlReport()
+    let [mutant] = report.mutants
+    report.mutants = [
+      {
+        ...mutant!,
+        focus: {
+          start: mutant!.start + 1,
+          end: mutant!.end - 1,
+          replacement: '',
+        },
+        replacement: '',
+      },
+    ]
+
+    expect(findSearchResults(indexReport(report), 'cm')[0]!.text).toBe(
+      'src/cart.ts:1  string-literal  cm → removed',
+    )
+  })
+
   it('shows a removal and stops at 30 results', () => {
     let report = createHtmlReport()
     report.mutants = Array.from({ length: 40 }, (_, position) => ({

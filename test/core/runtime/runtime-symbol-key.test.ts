@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { getTemplateSiteCheck } from '../../../core/instrument/get-template-site-check'
 import { installMutantRuntime } from '../../../core/runtime/install-mutant-runtime'
 import { RUNTIME_SYMBOL_KEY } from '../../../core/runtime/runtime-symbol-key'
+import { getSiteSyntax } from '../../../core/instrument/get-site-syntax'
 
 describe('rUNTIME_SYMBOL_KEY', () => {
   it('names the symbol that template checks and the runtime share', () => {
@@ -10,7 +10,7 @@ describe('rUNTIME_SYMBOL_KEY', () => {
 
     expect(RUNTIME_SYMBOL_KEY).toBe('mootant')
     expect(Reflect.get(Math, Symbol.for(RUNTIME_SYMBOL_KEY))).toBe(runtime)
-    expect(getTemplateSiteCheck('m1')).toContain(
+    expect(getSiteSyntax(true).runtime).toContain(
       `Symbol.for(\`${RUNTIME_SYMBOL_KEY}\`)`,
     )
 

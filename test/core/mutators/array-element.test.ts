@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-candidates'
 
+import { listMutatedSources } from '../../helpers/list-mutated-sources'
 import { generateMutants } from '../../helpers/generate-mutants'
 import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
@@ -10,16 +11,8 @@ import { runMutator } from '../../helpers/run-mutator'
 describe('arrayElement', () => {
   it.each<{ expected: string[]; source: string }>([
     {
-      expected: [
-        '[a, b, ...more] -> [b, ...more]',
-        '[a, b, ...more] -> [a, ...more]',
-        '[a, b, ...more] -> [a, b]',
-      ],
+      expected: ['x = [b, ...more]', 'x = [a, ...more]', 'x = [a, b]'],
       source: 'x = [a, b, ...more]',
-    },
-    {
-      expected: ['[] -> [undefined]'],
-      source: 'x = []',
     },
     {
       source: 'x = [1, 2]',
@@ -27,19 +20,33 @@ describe('arrayElement', () => {
     },
     {
       expected: [
-        '[user, [inner, 4], other] -> [[inner, 4], other]',
-        '[user, [inner, 4], other] -> [user, [inner, 4]]',
-        '[inner, 4] -> [4]',
+        'x = [[inner, 4], other]',
+        'x = [user, [4], other]',
+        'x = [user, [inner, 4]]',
       ],
       source: 'x = [user, [inner, 4], other]',
     },
     {
-      expected: ['[ only ] -> []'],
       source: 'x = [ only ]',
+      expected: ['x = []'],
     },
     {
-      expected: ['[a?.b, c] -> [c]', '[a?.b, c] -> [a?.b]'],
+      expected: ['x = [c]', 'x = [a?.b]'],
       source: 'x = [a?.b, c]',
+    },
+  ])(
+    'removes elements of $source as in the catalog',
+    ({ expected, source }) => {
+      expect(listMutatedSources('array-element', source)).toStrictEqual(
+        expected,
+      )
+    },
+  )
+
+  it.each<{ expected: string[]; source: string }>([
+    {
+      expected: ['[] -> [undefined]'],
+      source: 'x = []',
     },
     {
       source: 'useEffect(load, [])',
@@ -54,15 +61,40 @@ describe('arrayElement', () => {
   it.each<{ expected: string[]; source: string }>([
     {
       expected: [
-        '[\n  first,\n  second,\n] -> [\n  second,\n]',
-        '[\n  first,\n  second,\n] -> [\n  first,\n]',
+        ['x = [', '  second,', ']'].join('\n'),
+        ['x = [', '  first,', ']'].join('\n'),
       ],
       source: ['x = [', '  first,', '  second,', ']'].join('\n'),
     },
     {
-      expected: ['[a /* c */, b] -> [b]', '[a /* c */, b] -> [a /* c */]'],
+      expected: ['x = [b]', 'x = [a /* c */]'],
       source: 'x = [a /* c */, b]',
     },
+    {
+      source: 'x = [a, , b]',
+      expected: [],
+    },
+    {
+      source: 'x = [, a]',
+      expected: [],
+    },
+    {
+      source: 'x = new Array(a, b)',
+      expected: [],
+    },
+    {
+      source: 'x = Array(a, b)',
+      expected: [],
+    },
+    {
+      source: 'let [a, b] = list',
+      expected: [],
+    },
+  ])('removes elements of $source', ({ expected, source }) => {
+    expect(listMutatedSources('array-element', source)).toStrictEqual(expected)
+  })
+
+  it.each<{ expected: string[]; source: string }>([
     {
       expected: ['[] -> [undefined]'],
       source: 'x = useState([])',
@@ -91,26 +123,6 @@ describe('arrayElement', () => {
       source: 'x = use2(load, [])',
       expected: [],
     },
-    {
-      source: 'x = [a, , b]',
-      expected: [],
-    },
-    {
-      source: 'x = [, a]',
-      expected: [],
-    },
-    {
-      source: 'x = new Array(a, b)',
-      expected: [],
-    },
-    {
-      source: 'x = Array(a, b)',
-      expected: [],
-    },
-    {
-      source: 'let [a, b] = list',
-      expected: [],
-    },
   ])('handles $source', ({ expected, source }) => {
     expect(runMutator('array-element', source).map(formatMutant)).toStrictEqual(
       expected,
@@ -132,11 +144,99 @@ describe('arrayElement', () => {
   ])(
     'removes an element whose own mutant will not run in $source',
     ({ source, setup }) => {
-      expect(
-        runMutator('array-element', source, setup).map(formatMutant),
-      ).toStrictEqual(['[1, 2] -> [2]', '[1, 2] -> [1]'])
+      expect(listMutatedSources('array-element', source, setup)).toStrictEqual([
+        source.replace('[1, 2]', '[2]'),
+        source.replace('[1, 2]', '[1]'),
+      ])
     },
   )
+
+  it('removes an element with the comma next to it', () => {
+    let source = 'x = [a, ...b, c]; y = [ d ]; z = [e, f,]'
+
+    expect(
+      generateMutants(source, { preset: 'strict' })
+        .filter(mutant => mutant.mutator === 'array-element')
+        .map(mutant => [
+          mutant.kind,
+          source.slice(mutant.start, mutant.end),
+          mutant.focus ?
+            source.slice(mutant.focus.start, mutant.focus.end)
+          : null,
+        ]),
+    ).toStrictEqual([
+      ['element', 'a, ', 'a'],
+      ['element', '...b, ', '...b'],
+      ['element', ', c', 'c'],
+      ['element', ' d ', 'd'],
+      ['element', 'e, ', 'e'],
+      ['element', ' f,', 'f'],
+    ])
+  })
+
+  it.each(['recommended', 'strict'])(
+    'leaves the props that defineProps declares to the Vue compiler under %s',
+    preset => {
+      let source = [
+        '<script setup>',
+        "defineProps(['size', 'tag'])",
+        '</script>',
+      ].join('\n')
+      let setup = { file: 'card.vue', preset }
+
+      expect(listMutatedSources('array-element', source, setup)).toStrictEqual(
+        [],
+      )
+      expect(
+        listMutatedSources('array-element', source, {
+          ...setup,
+          skipped: true,
+        }),
+      ).toStrictEqual([
+        `${source.replace("'size', ", '')} (invalid compiler-macro)`,
+        `${source.replace(", 'tag'", '')} (invalid compiler-macro)`,
+      ])
+    },
+  )
+
+  it.each([
+    {
+      expected: ['function f(x) { return ([]) } (subsumed solitary)'],
+      preset: 'recommended',
+    },
+    {
+      expected: ['function f(x) { return ([]) } (duplicate duplicate)'],
+      preset: 'strict',
+    },
+  ])(
+    'keeps the removal of the only element of a returned array under $preset',
+    ({ expected, preset }) => {
+      let source = 'function f(x) { return [x] }'
+
+      expect(
+        listMutatedSources('array-element', source, { preset }),
+      ).toStrictEqual(['function f(x) { return [] }'])
+      expect(
+        listMutatedSources('return-value', source, { skipped: true, preset }),
+      ).toStrictEqual(expected)
+    },
+  )
+
+  it('drops the removal of an element whose own array has a mutant', () => {
+    let source = 'function f() { return g([[]]) }'
+
+    expect(
+      listMutatedSources('array-element', source, { skipped: true }),
+    ).toStrictEqual(['function f() { return g([]) } (subsumed solitary)'])
+  })
+
+  it('keeps the returned value of a local that an only element assigns', () => {
+    let source = 'function f() { let x; g([x = load()]); return x }'
+
+    expect(listMutatedSources('return-value', source)).toStrictEqual([
+      'function f() { let x; g([x = load()]); return (undefined) }',
+    ])
+  })
 
   it('keeps an ignored removal when the element mutant runs', () => {
     let source = [

@@ -56,6 +56,12 @@ const IGNORE_RULE: IgnoreRule = {
  */
 interface CandidateFields {
   /**
+   * Literal of a candidate that removes the element at its range; a candidate
+   * that replaces its range when omitted.
+   */
+  list?: { start: number; end: number }
+
+  /**
    * Mutator of the candidate; the fine one when omitted.
    */
   registered?: RegisteredMutator
@@ -89,16 +95,21 @@ interface CandidateFields {
  * @returns Candidate in the shape the pipeline uses.
  */
 function createCandidate(fields: CandidateFields): MutantCandidate {
+  let { start, list, end } = fields
   return {
-    solitary: fields.solitary?.map(([start, end]) => ({ start, end })) ?? null,
+    ...(list ?
+      { focus: { text: '', start, end }, kind: 'element' as const, list }
+    : { kind: 'expression' as const }),
+    solitary:
+      fields.solitary?.map(range => ({ start: range[0], end: range[1] })) ??
+      null,
     ignoreRule: fields.ignored ? IGNORE_RULE : null,
     registered: fields.registered ?? FINE,
-    start: fields.start,
-    kind: 'expression',
-    end: fields.end,
     emission: 0,
     scope: null,
     text: '',
+    start,
+    end,
   }
 }
 
@@ -289,6 +300,45 @@ describe('applySolitaryRule', () => {
     let fine = createCandidate({ start: 32, end: 35 })
 
     expect(apply([outer, inner, fine])).toStrictEqual([outer, fine])
+  })
+
+  it('reads where a candidate lies from its target', () => {
+    let coarse = createCoarse(10, 20)
+    let removal = createCandidate({
+      list: { start: 5, end: 25 },
+      start: 12,
+      end: 14,
+    })
+
+    expect(apply([coarse, removal])).toStrictEqual([coarse, removal])
+  })
+
+  it('tells variants of one mutator apart by their targets', () => {
+    let outer = createCandidate({
+      list: { start: 0, end: 4 },
+      registered: COARSE,
+      solitary: [[1, 3]],
+      start: 1,
+      end: 3,
+    })
+    let inner = createCandidate({ registered: COARSE, start: 1, end: 3 })
+
+    expect(apply([outer, inner])).toStrictEqual([inner])
+  })
+
+  it('names the first counted candidate in order of targets', () => {
+    let coarse = createCoarse(0, 30)
+    let removal = createCandidate({
+      list: { start: 5, end: 20 },
+      start: 10,
+      end: 12,
+    })
+    let fine = createCandidate({ start: 7, end: 9 })
+
+    expect(
+      applySolitaryRule([coarse, fine, removal].toSorted(compareCandidates))
+        .dropped,
+    ).toStrictEqual(new Map([[coarse, removal]]))
   })
 
   it('names the finer candidate that dropped each coarse candidate', () => {

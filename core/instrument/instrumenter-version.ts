@@ -3,4 +3,4 @@
  * the site checks and `resolveSwitchedText`. Part of the cache key; bump it
  * when switched code may behave differently.
  */
-export const INSTRUMENTER_VERSION = 1
+export const INSTRUMENTER_VERSION = 2

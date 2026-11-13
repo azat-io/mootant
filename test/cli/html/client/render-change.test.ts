@@ -24,6 +24,19 @@ describe('renderChange', () => {
     ).toContain(squashHtml('<span class="removed">removed</span>'))
   })
 
+  it('shows the focus of a removal', () => {
+    expect(
+      squashHtml(
+        renderChange('[a, b]', {
+          focus: { replacement: '', start: 4, end: 5 },
+          replacement: '',
+          start: 2,
+          end: 5,
+        }),
+      ),
+    ).toContain(squashHtml('<span class="before">b</span>'))
+  })
+
   it('shows the focus of a long range, and cuts long text', () => {
     let pattern = `/${'a'.repeat(70)}b/`
     let focused = renderChange(pattern, {

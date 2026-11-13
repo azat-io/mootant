@@ -68,7 +68,7 @@ const BADGES: [status: RunStatus, statuses: RunStatus[]][] = [
 
 /**
  * Renders the code of a file line by line: the line number, a badge with the
- * number of shown mutants of each status that start on the line, and the text,
+ * number of shown mutants of each status placed on the line, and the text,
  * quietly highlighted, with the range of each highlighted mutant marked by the
  * status of the mutant it shows, the skipped candidates when shown, and the
  * selected mutant. The lines are built without the `html` tag: the white space
@@ -154,13 +154,12 @@ function renderRun(options: CodeOptions, start: number, end: number): string {
 
 /**
  * Renders the badges of a line: one with the number of shown mutants of each
- * status that start on the line, then one with the number of skipped
- * candidates.
+ * status placed on the line, then one with the number of skipped candidates.
  *
  * @param line - 1-based line.
- * @param mutants - Shown mutants that start on the line.
- * @param skippedCount - Skipped candidates that start on the line, when they
- *   are shown.
+ * @param mutants - Shown mutants placed on the line.
+ * @param skippedCount - Skipped candidates placed on the line, when they are
+ *   shown.
  * @returns HTML of the badges.
  */
 function renderBadges(

@@ -80,6 +80,84 @@ describe('groupMutantRanges', () => {
     ])
   })
 
+  it('groups the removals of one literal by the literal', () => {
+    let list = { start: 0, end: 6 }
+    expect(
+      describeRanges(
+        groupMutantRanges([
+          createMutant({
+            focus: { text: '', start: 1, end: 2 },
+            replacement: '',
+            kind: 'element',
+            start: 1,
+            id: 'a',
+            end: 4,
+            list,
+          }),
+          createMutant({
+            focus: { text: '', start: 4, end: 5 },
+            replacement: '',
+            kind: 'element',
+            start: 2,
+            id: 'b',
+            end: 5,
+            list,
+          }),
+          createMutant({ start: 4, id: 'c', end: 5 }),
+          createMutant({ start: 0, id: 'd', end: 6 }),
+        ]),
+      ),
+    ).toStrictEqual([
+      {
+        children: [
+          {
+            children: [
+              { range: 'expression 4-5', mutants: ['c'], children: [] },
+            ],
+            range: 'expression 0-6',
+            mutants: ['d'],
+          },
+        ],
+        range: 'element 0-6',
+        mutants: ['a', 'b'],
+      },
+    ])
+  })
+
+  it('nests the removals of a literal between a block and an expression of the same range', () => {
+    expect(
+      describeRanges(
+        groupMutantRanges([
+          createMutant({ start: 0, id: 'a', end: 8 }),
+          createMutant({
+            focus: { start: 2, text: '', end: 6 },
+            list: { start: 0, end: 8 },
+            kind: 'property',
+            replacement: '',
+            start: 2,
+            id: 'b',
+            end: 6,
+          }),
+          createMutant({ kind: 'block', start: 0, id: 'c', end: 8 }),
+        ]),
+      ),
+    ).toStrictEqual([
+      {
+        children: [
+          {
+            children: [
+              { range: 'expression 0-8', mutants: ['a'], children: [] },
+            ],
+            range: 'property 0-8',
+            mutants: ['b'],
+          },
+        ],
+        range: 'block 0-8',
+        mutants: ['c'],
+      },
+    ])
+  })
+
   it('throws on overlapping ranges', () => {
     expect(() =>
       groupMutantRanges([

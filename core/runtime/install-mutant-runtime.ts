@@ -31,11 +31,14 @@ export function installMutantRuntime(): MutantRuntime {
 
 /**
  * Creates a runtime with the original code active, no coverage and no hit
- * limit.
+ * limit. Its helpers for the removal of array elements use index loops over
+ * arrays the switched code builds, never an array iterator or a method of the
+ * array prototype, which tests may replace.
  *
  * @returns The new runtime.
  */
 function createRuntime(): MutantRuntime {
+  let gap = Symbol('mootant gap')
   let runtime: MutantRuntime = {
     hit(id) {
       runtime.hits += 1
@@ -51,11 +54,38 @@ function createRuntime(): MutantRuntime {
       }
       return false
     },
+    hitAny(ids) {
+      // eslint-disable-next-line unicorn/no-for-loop -- A for-of loop runs the array iterator, which tests may replace.
+      for (let index = 0; index < ids.length; index++) {
+        if (runtime.hit(ids[index]!)) {
+          return true
+        }
+      }
+      return false
+    },
+    cut(array) {
+      let kept = 0
+      for (let index = 0; index < array.length; index++) {
+        let value = array[index]!
+        if (value !== gap) {
+          array[kept] = value
+          kept += 1
+        }
+      }
+      array.length = kept
+      return array
+    },
+    none: {
+      [Symbol.iterator]: () => ({
+        next: () => ({ value: undefined, done: true }),
+      }),
+    },
     hitLimit: Infinity,
     coverage: null,
     reached: false,
     active: null,
     hits: 0,
+    gap,
   }
   return runtime
 }

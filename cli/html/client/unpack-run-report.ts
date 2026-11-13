@@ -138,7 +138,7 @@ export function unpackRunReport(report: HtmlReport): RunReport {
     runner: meta.runner,
     preset: meta.preset,
     since: meta.since,
-    schemaVersion: 3,
+    schemaVersion: 4,
     mode: meta.mode,
     command: 'run',
     listed: 'all',

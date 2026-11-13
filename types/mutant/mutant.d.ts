@@ -1,22 +1,22 @@
 import type { IgnoreSource } from './ignore-source'
 import type { MutantStatus } from './mutant-status'
-import type { TextEdit } from '../source/text-edit'
+import type { MutantHost } from './mutant-host'
 
 /**
- * Change to the source code that tests are expected to detect.
+ * Change to the source code that tests are expected to detect, with how the
+ * mutant switch hosts it (see `MutantHost`).
  */
-export interface Mutant {
+export type Mutant = MutantFields & MutantHost
+
+/**
+ * Fields of every mutant, whatever its host.
+ */
+interface MutantFields {
   /**
    * Ignore directive comment that excluded the mutant, or null while the mutant
    * is pending.
    */
   ignoredBy: IgnoreSource | null
-
-  /**
-   * How the mutant will be switched on: as a ternary around an expression, or
-   * as an `if`/`else` around a statement.
-   */
-  kind: 'expression' | 'block'
 
   /**
    * Why the mutant is not tested: the reason of the ignore directive that
@@ -39,12 +39,6 @@ export interface Mutant {
    * Text written in place of the range from `start` to `end`.
    */
   replacement: string
-
-  /**
-   * Edit inside the replaced range that the mutant amounts to, which reports
-   * show in place of the whole range; absent when the mutator names none.
-   */
-  focus?: TextEdit
 
   /**
    * Id of the mutator that produced the mutant: `name` or `plugin/name`.

@@ -56,9 +56,9 @@ export interface ExpressionCheck {
  * Runs the whole pipeline under `recommended` over a snippet, keeps the mutants
  * inside one expression, and checks them the way the catalog's brute force does
  * (12.2 to 12.4): each mutant is written into the expression in parentheses, as
- * the hosting rule writes it, and evaluated on every input together with the
- * original and the alternatives. Mutants are labeled `mutator original ->
- * replacement`; alternatives by their text.
+ * the hosting rule writes it, a removal of an element as is, and evaluated on
+ * every input together with the original and the alternatives. Mutants are
+ * labeled `mutator original -> replacement`; alternatives by their text.
  *
  * @param check - Snippet, expression, inputs and alternatives.
  * @returns The equivalent, duplicate and subsumed mutants and the uncovered
@@ -88,12 +88,18 @@ export function checkExpressionMutants(check: ExpressionCheck): WeakMutants {
 
   return findWeakMutants(
     observeOutputs(expression),
-    mutants.map(mutant => ({
-      outputs: observeOutputs(
-        `${source.slice(start, mutant.start)}(${mutant.replacement})${source.slice(mutant.end, end)}`,
-      ),
-      label: `${mutant.mutator} ${source.slice(mutant.start, mutant.end)} -> ${mutant.replacement}`,
-    })),
+    mutants.map(mutant => {
+      let written =
+        mutant.kind === 'element' || mutant.kind === 'property' ?
+          mutant.replacement
+        : `(${mutant.replacement})`
+      return {
+        outputs: observeOutputs(
+          `${source.slice(start, mutant.start)}${written}${source.slice(mutant.end, end)}`,
+        ),
+        label: `${mutant.mutator} ${source.slice(mutant.start, mutant.end)} -> ${mutant.replacement}`,
+      }
+    }),
     alternatives.map(alternative => ({
       outputs: observeOutputs(alternative),
       label: alternative,

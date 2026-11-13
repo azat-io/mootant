@@ -6,6 +6,7 @@ import type { TryContext } from '../../../../adapters/node-test/types/try-contex
 import type { MutantRuntime } from '../../../../types/adapter/mutant-runtime'
 
 import { createTryTracker } from '../../../../adapters/node-test/preload/create-try-tracker'
+import { createTestRuntime } from '../../../helpers/create-test-runtime'
 
 /**
  * Fake test of node:test.
@@ -108,7 +109,7 @@ function createTest(fullName: string): FakeTest {
  *   mutant.
  */
 function createRuntime(): MutantRuntime {
-  let runtime: MutantRuntime = {
+  let runtime: MutantRuntime = createTestRuntime({
     hit(id) {
       runtime.hits += 1
       runtime.coverage?.add(id)
@@ -118,12 +119,11 @@ function createRuntime(): MutantRuntime {
       }
       return false
     },
-    coverage: null,
     reached: true,
     hitLimit: 1,
     active: 'x',
     hits: 5,
-  }
+  })
   return runtime
 }
 

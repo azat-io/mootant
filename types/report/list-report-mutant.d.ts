@@ -2,6 +2,7 @@ import type { IgnoreSource } from '../mutant/ignore-source'
 import type { MutantStatus } from '../mutant/mutant-status'
 import type { ListReportFocus } from './list-report-focus'
 import type { ListReportDiff } from './list-report-diff'
+import type { MutantKind } from '../mutant/mutant-kind'
 
 /**
  * Mutant as an agent needs it, without reading the file, with its source lines
@@ -14,14 +15,10 @@ export interface ListReportMutant extends ListReportDiff {
   ignoredBy: IgnoreSource | null
 
   /**
-   * How the mutant will be switched on, and so how to apply it: wrap the
-   * replacement in parentheses for `expression`, in braces for `block`.
-   */
-  kind: 'expression' | 'block'
-
-  /**
-   * Part of the range the change amounts to, present when the mutator names
-   * one; text reports show its position and texts.
+   * Part of the range the change amounts to, present when the mutator names one
+   * and on every mutant of kind `element` or `property`; text reports show its
+   * position and texts, and ignore directives cover a mutant of those kinds at
+   * its line.
    */
   focus?: ListReportFocus
 
@@ -52,12 +49,20 @@ export interface ListReportMutant extends ListReportDiff {
   endColumn: number
 
   /**
+   * How the mutant will be switched on, and so how to apply it: wrap the
+   * replacement in parentheses for `expression`, in braces for `block`, and
+   * write it as is for `element` and `property`, which remove an array element
+   * or an object member with its comma.
+   */
+  kind: MutantKind
+
+  /**
    * Source text the mutant replaces.
    */
   original: string
 
   /**
-   * 1-based line of the last replaced character.
+   * 1-based line of the offset just past the last replaced character.
    */
   endLine: number
 

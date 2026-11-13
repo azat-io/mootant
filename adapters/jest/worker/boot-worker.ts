@@ -203,6 +203,12 @@ export function bootWorker(input: {
   })
   let outside = new Set<string>()
   Reflect.set(global, RUNTIME_GLOBAL, {
+    hitAny(ids: readonly string[]) {
+      for (let id of ids) {
+        outside.add(id)
+      }
+      return false
+    },
     hit(id: string) {
       outside.add(id)
       return false

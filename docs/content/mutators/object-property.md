@@ -119,14 +119,15 @@ Mootant leaves out these changes. `npx mootant list src --skipped` shows them
 with the category and the rule; [Skipped changes](/mutators#skipped-changes)
 explains the categories.
 
-| Reason                                                     | Example                                     | Rule                         |
-| ---------------------------------------------------------- | ------------------------------------------- | ---------------------------- |
-| Removes code that has a finer mutant inside                | `{ code, rate: 0.1 }` → `{ code }`          | `solitary`, subsumed         |
-| Read by the Vue or Svelte compiler as written              | `{ sku: String }` → `{}` in `defineProps()` | `compiler-macro`, invalid    |
-| Removes an `Intl` option equal to its default              | `{ style: 'decimal' }` → `{}`               | `default-option`, equivalent |
-| May keep a loop running forever                            | `{ page, done }` → `{ page }`               | `loop-advance`, timeout      |
-| Same code as another mutant                                | `{ id, id, total }` → `{ id, total }`       | `duplicate`, duplicate       |
-| Vue would read the new `&…` as an HTML character reference | `{ label: 'Q&A', id }` → `{ label: 'Q&A' }` | `template-text`, invalid     |
+| Reason                                                                                   | Example                                         | Rule                         |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------- |
+| Removes code that has a finer mutant inside                                              | `{ code, rate: 0.1 }` → `{ code }`              | `solitary`, subsumed         |
+| Read by the Vue or Svelte compiler as written                                            | `{ sku: String }` → `{}` in `defineProps()`     | `compiler-macro`, invalid    |
+| Removes an `Intl` option equal to its default                                            | `{ style: 'decimal' }` → `{}`                   | `default-option`, equivalent |
+| May keep a loop running forever                                                          | `{ page, done }` → `{ page }`                   | `loop-advance`, timeout      |
+| Same code as another mutant                                                              | `{ id, id, total }` → `{ id, total }`           | `duplicate`, duplicate       |
+| Vue would read the new `}}` as the end of an interpolation                               | `{a: {b},c}` → `{a: {b}}` in `{{ }}`            | `template-text`, invalid     |
+| A member such as a getter needs a copy of the object, and the object has more than eight | `{ get a() {}, … }` → `{ … }` with nine getters | `literal-copies`, invalid    |
 
 The [`coarseMutants`](/guide/configuration#coarsemutants) setting brings back
 `solitary`, and [`timeouts`](/guide/configuration#timeouts) brings back

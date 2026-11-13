@@ -321,6 +321,38 @@ describe('run', () => {
     },
   )
 
+  it.each([
+    { options: ['--json'], entries: 'mutants', preset: 'strict' },
+    { options: ['--json', '--verbose'], entries: 'mutants', preset: 'strict' },
+    {
+      options: ['--json', '--verbose', '--skipped'],
+      preset: 'recommended',
+      entries: 'skipped',
+    },
+  ] as const)(
+    'prints $options for a lookup table under $preset in a size linear in the table',
+    async ({ options, entries, preset }) => {
+      let [small, large] = [400, 800].map(
+        count => `test/fixtures/table/entities-${count}.js`,
+      )
+      await runCli('list', small!, ...options, '--preset', preset)
+      await runCli('list', large!, ...options, '--preset', preset)
+      let reports = consoleInfoSpy.mock.calls.map(([text]) => text as string)
+
+      expect(
+        reports.map(
+          text =>
+            (JSON.parse(text) as SlimListReport)[entries]!.filter(
+              entry => entry.mutator === 'object-property',
+            ).length,
+        ),
+      ).toStrictEqual([400, 800])
+      expect(reports[1]!.length / reports[0]!.length).toBeLessThanOrEqual(2.5)
+      expect(consoleWarnSpy).not.toHaveBeenCalled()
+      expect(process.exitCode).toBeUndefined()
+    },
+  )
+
   it('prints the same mutants before the skipped section in the text format', async () => {
     await runCli('list', 'test/fixtures/list/source')
     let plain = consoleInfoSpy.mock.calls[0]![0] as string

@@ -2,12 +2,11 @@ import type { TemplateCompilers } from '../../types/source/template-compilers'
 import type { Mutant } from '../../types/mutant/mutant'
 
 import { getComponentFramework } from '../parser/get-component-framework'
-import { getTemplateSiteCheck } from './get-template-site-check'
 import { scanScriptBlocks } from '../parser/scan-script-blocks'
 import { findStatementStarts } from './find-statement-starts'
 import { groupMutantRanges } from './group-mutant-ranges'
 import { renderMutantRange } from './render-mutant-range'
-import { getSiteCheck } from './get-site-check'
+import { getSiteSyntax } from './get-site-syntax'
 
 /**
  * File to switch with the mutants to host in it.
@@ -39,9 +38,10 @@ interface InstrumentFileInput {
  * Builds the switched text of a file: every mutant is hosted behind a site
  * check of the mutant runtime, so one text runs the original code or any one of
  * its mutants. Mutants of one range share a host; nested ranges are hosted
- * inside the original branch of the outer one. A mutant in the template of a
- * Vue component, outside its script blocks, reaches the runtime through `Math`.
- * No source map is made.
+ * inside the original branch of the outer one. The removals of the elements or
+ * members of one array or object literal share a host around the literal. A
+ * mutant in the template of a Vue component, outside its script blocks, reaches
+ * the runtime through `Math`. No source map is made.
  *
  * @param input - File name, text, mutants and template compilers.
  * @returns The switched text, or the text as is when there are no mutants.
@@ -67,7 +67,7 @@ export function instrumentFile(input: InstrumentFileInput): string {
       )
     switched += source.slice(cursor, range.start)
     switched += renderMutantRange(range, source, {
-      getCheck: template ? getTemplateSiteCheck : getSiteCheck,
+      syntax: getSiteSyntax(template),
       statementStarts,
     })
     cursor = range.end

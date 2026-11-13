@@ -15,7 +15,8 @@ export interface IndexedMutant extends HtmlReportMutant {
   endLine: number
 
   /**
-   * 1-based UTF-16 column of the first replaced character.
+   * 1-based UTF-16 column of the first replaced character, or of the removed
+   * element for kinds `element` and `property`.
    */
   column: number
 
@@ -25,7 +26,8 @@ export interface IndexedMutant extends HtmlReportMutant {
   index: number
 
   /**
-   * 1-based line of the first replaced character.
+   * 1-based line of the first replaced character, or of the removed element for
+   * kinds `element` and `property`.
    */
   line: number
 }

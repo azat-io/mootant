@@ -7,6 +7,7 @@ import type { JestRecord } from '../../../../adapters/jest/types/jest-record'
 import type { VmSide } from '../../../../adapters/jest/types/vm-side'
 
 import { createCircusTracker } from '../../../../adapters/jest/worker/create-circus-tracker'
+import { createTestRuntime } from '../../../helpers/create-test-runtime'
 
 /**
  * `Error` of the vm of a unit that ended.
@@ -111,14 +112,7 @@ function start(
   let reached = false
   let time = 1000
   let side: VmSide = {
-    runtime: {
-      hitLimit: Infinity,
-      hit: () => false,
-      reached: false,
-      active: null,
-      coverage,
-      hits: 0,
-    },
+    runtime: createTestRuntime({ coverage }),
     isReached: () => reached,
     listVariables: () => [],
     realmError: Error,

@@ -191,6 +191,10 @@ export let skipRules = {
     category: 'equivalent',
     heuristic: true,
   },
+  'literal-copies': {
+    category: 'invalid',
+    heuristic: false,
+  },
   'shifted-literal': {
     category: 'owned',
     heuristic: false,

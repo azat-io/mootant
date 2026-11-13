@@ -3,6 +3,7 @@ import type { ListReportMutator } from './list-report-mutator'
 import type { IsolatedReason } from '../run/isolated-reason'
 import type { IgnoreSource } from '../mutant/ignore-source'
 import type { SkipCategory } from '../mutant/skip-category'
+import type { MutantKind } from '../mutant/mutant-kind'
 import type { Diagnostic } from '../mutant/diagnostic'
 import type { RunStatus } from '../run/run-status'
 import type { TryCause } from '../run/try-cause'
@@ -16,7 +17,8 @@ import type { TryCause } from '../run/try-cause'
 export interface HtmlReportMutant {
   /**
    * Part of the range the change amounts to, as offsets and the text written in
-   * its place, when the mutator names one.
+   * its place, when the mutator names one or the mutant removes an array
+   * element or an object member.
    */
   focus?: { replacement: string; start: number; end: number }
 
@@ -26,6 +28,11 @@ export interface HtmlReportMutant {
    * killed or timed out.
    */
   testFiles?: [file: number, tests: number][]
+
+  /**
+   * How the mutant is switched on (see `MutantKind`); absent for an expression.
+   */
+  kind?: Exclude<MutantKind, 'expression'>
 
   /**
    * Lengths of the start and the end of the original that the replacement
@@ -113,11 +120,6 @@ export interface HtmlReportMutant {
   scope?: number
 
   /**
-   * `block` for a mutant that replaces a block; absent for an expression.
-   */
-  kind?: 'block'
-
-  /**
    * Whether the verdict came from the cache.
    */
   cached?: true
@@ -157,7 +159,8 @@ export interface HtmlReportSkipped {
 
   /**
    * Part of the range the change amounts to, as offsets and the text written in
-   * its place, when the mutator names one.
+   * its place, when the mutator names one or the mutant removes an array
+   * element or an object member.
    */
   focus?: { replacement: string; start: number; end: number }
 

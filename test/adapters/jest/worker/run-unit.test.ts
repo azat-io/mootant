@@ -15,6 +15,7 @@ import type { JestUnit } from '../../../../adapters/jest/types/jest-unit'
 import type { VmSide } from '../../../../adapters/jest/types/vm-side'
 
 import { createWorkerChannel } from '../../../../adapters/jest/worker/create-worker-channel'
+import { createTestRuntime } from '../../../helpers/create-test-runtime'
 import { readOutFile } from '../../../../adapters/shared/read-out-file'
 import { runUnit } from '../../../../adapters/jest/worker/run-unit'
 
@@ -233,14 +234,7 @@ function createRunnerClass(script: RunnerScript): UnitWorker['TestRunner'] {
  */
 function createSide(fields: Partial<VmSide> = {}): VmSide {
   return {
-    runtime: {
-      coverage: new Set<string>(),
-      hit: () => false,
-      reached: false,
-      active: null,
-      hitLimit: 0,
-      hits: 0,
-    },
+    runtime: createTestRuntime({ coverage: new Set<string>(), hitLimit: 0 }),
     realmError: runInNewContext('Error') as ErrorConstructor,
     addVariable: vi.fn<(name: string) => void>(),
     stopTimers: vi.fn<() => void>(),
@@ -463,14 +457,11 @@ describe('runUnit', () => {
 
   it('writes finish for a file that gave a result, with what the vm counted, and closes the file', async () => {
     let side = createSide({
-      runtime: {
+      runtime: createTestRuntime({
         coverage: new Set(['z', 'a']),
-        hit: () => false,
-        reached: false,
-        active: null,
         hitLimit: 0,
         hits: 7,
-      },
+      }),
       listVariables: () => ['HOME'],
       isReached: () => true,
     })
@@ -614,14 +605,7 @@ describe('runUnit', () => {
 
   it('has no covers when the side collects none', async () => {
     let side = createSide({
-      runtime: {
-        hit: () => false,
-        coverage: null,
-        reached: false,
-        hitLimit: 0,
-        active: 'm',
-        hits: 2,
-      },
+      runtime: createTestRuntime({ hitLimit: 0, active: 'm', hits: 2 }),
     })
     let worker = createWorker(runner => {
       worker.channel.vm = side

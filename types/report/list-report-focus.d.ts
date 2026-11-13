@@ -1,7 +1,8 @@
 /**
  * Part of a mutant's range that the mutant changes, such as the edited part of
- * a regular expression pattern. Apply the mutant with `original` and
- * `replacement` of the mutant; the focus only says where to look.
+ * a regular expression pattern or a removed array element without its comma.
+ * Apply the mutant with `original` and `replacement` of the mutant; the focus
+ * only says where to look.
  */
 export interface ListReportFocus {
   /**

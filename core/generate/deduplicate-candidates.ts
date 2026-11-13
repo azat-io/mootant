@@ -1,5 +1,7 @@
 import type { MutantCandidate } from '../../types/mutant/mutant-candidate'
 
+import { compareTargets } from './compare-targets'
+
 /**
  * Candidates that deduplication keeps and drops.
  */
@@ -17,10 +19,12 @@ interface DeduplicationOutcome {
 }
 
 /**
- * Keeps the first candidate, in canonical order, of every group of candidates
- * that produce the same mutated file. Two candidates are compared by the
- * smallest edit that turns the original text into their mutated text, so a
- * nested duplicate, such as dropping either `!` of `!!a`, is found as well as
+ * Keeps the first candidate of every group of candidates that produce the same
+ * mutated file, in canonical order but by the node each replacement names (see
+ * `getTarget`), so the removal of an element competes from the start of its
+ * literal, as the whole literal it amounts to does. Two candidates are compared
+ * by the smallest edit that turns the original text into their mutated text, so
+ * a nested duplicate, such as dropping either `!` of `!!a`, is found as well as
  * the same replacement from two mutators. Statuses do not matter: the first
  * candidate wins even when it is ignored.
  *
@@ -35,17 +39,19 @@ export function deduplicateCandidates(
 ): DeduplicationOutcome {
   let seen = new Map<string, MutantCandidate>()
   let duplicates = new Map<MutantCandidate, MutantCandidate>()
-  let kept = candidates.filter(candidate => {
+  for (let candidate of candidates.toSorted(compareTargets)) {
     let key = getCanonicalEdit(text, candidate)
     let first = seen.get(key)
     if (first) {
       duplicates.set(candidate, first)
-      return false
+    } else {
+      seen.set(key, candidate)
     }
-    seen.set(key, candidate)
-    return true
-  })
-  return { duplicates, kept }
+  }
+  return {
+    kept: candidates.filter(candidate => !duplicates.has(candidate)),
+    duplicates,
+  }
 }
 
 /**

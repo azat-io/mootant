@@ -2,17 +2,12 @@ import type { RegisteredMutator } from '../mutator/registered-mutator'
 import type { SkipJustifier } from './skip-justifier'
 import type { TextEdit } from '../source/text-edit'
 import type { SkipRuleId } from './skip-rule-id'
+import type { MutantKind } from './mutant-kind'
 
 /**
  * Replacement that was considered and not emitted, before it is sorted.
  */
 export interface SkippedCandidate {
-  /**
-   * How the mutant switch would host the replacement, derived from the replaced
-   * node; null when it cannot host it.
-   */
-  kind: 'expression' | 'block' | null
-
   /**
    * Mutator that considered the replacement.
    */
@@ -24,13 +19,21 @@ export interface SkippedCandidate {
   by: SkipJustifier | null
 
   /**
+   * How the mutant switch would host the replacement, derived from the replaced
+   * node or from the literal of a removed element or member; null when it
+   * cannot host it.
+   */
+  kind: MutantKind | null
+
+  /**
    * Whether the skip rests on a guess beyond its rule.
    */
   heuristic: boolean
 
   /**
    * Edit inside the replaced range that the mutant amounts to, which reports
-   * show in place of the whole range; absent when the mutator names none.
+   * show in place of the whole range; set when the mutator names one, and on
+   * every removal of kind `element` or `property`.
    */
   focus?: TextEdit
 
@@ -50,17 +53,17 @@ export interface SkippedCandidate {
   reason: string
 
   /**
-   * Start of the replaced node.
+   * Start of the replaced range.
    */
   start: number
 
   /**
-   * Text that would have been written in place of the node.
+   * Text that would have been written in place of the range.
    */
   text: string
 
   /**
-   * End of the replaced node.
+   * End of the replaced range.
    */
   end: number
 }

@@ -3,15 +3,18 @@ import type { TemplateChildNode, RootNode } from '@vue/compiler-dom'
 import { compile as compileDom, parse as parseDom } from '@vue/compiler-dom'
 import { compileTemplate, compileScript, parse } from 'vue/compiler-sfc'
 import { compileModule, compile } from 'svelte/compiler'
+import { createContext, runInContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
 import { readFile } from 'node:fs/promises'
 
+import { installMutantRuntime } from '../../../core/runtime/install-mutant-runtime'
 import { getSyntaxFingerprint } from '../../helpers/get-syntax-fingerprint'
 import { instrumentFile } from '../../../core/instrument/instrument-file'
 import { runSwitchedProgram } from '../../helpers/run-switched-program'
 import { compareCodeUnits } from '../../../core/compare-code-units'
 import expectations from '../../fixtures/list/expectations.json'
 import { generateMutants } from '../../helpers/generate-mutants'
+import { createReader } from '../../helpers/create-reader'
 import { createMutant } from '../../helpers/create-mutant'
 import { applyMutant } from '../../helpers/apply-mutant'
 import { runProgram } from '../../helpers/run-program'
@@ -111,6 +114,125 @@ const PROGRAMS: { inputs: unknown[][]; lines: string[]; file: string }[] = [
     ],
     file: 'example.js',
   },
+  {
+    lines: [
+      "let base = { label() { return 'base' } }",
+      'function f(name, extra) {',
+      '  let item = {',
+      '    __proto__: base,',
+      '    name,',
+      '    id: 1,',
+      '    ...extra,',
+      '    id: 2,',
+      "    [name + 'Key']: run(name),",
+      "    2: 'two',",
+      "    1: 'one',",
+      "    label() { return 'own ' + super.label() },",
+      '    wrap() { return () => super.label() },',
+      "    peek() { return eval('super.label()') },",
+      '    size() { return this.name.length },',
+      "    get length() { use('length'); return name.length },",
+      '    set length(value) { save(value) },',
+      '    handler: function () {},',
+      '    Widget: class {},',
+      '  }',
+      '  item.length = 3',
+      '  return [',
+      '    Object.keys(item),',
+      '    Object.getPrototypeOf(item) === base,',
+      '    item.label(),',
+      '    item.wrap()(),',
+      '    item.peek(),',
+      '    item.size(),',
+      '    item.length,',
+      '    item.handler.name,',
+      '    item.Widget.name,',
+      '    item.id,',
+      '  ]',
+      '}',
+    ],
+    inputs: [
+      ['a', {}],
+      ['bb', { label: 'shadow', name: 'x', id: 3 }],
+      ['', null],
+      ['c', createReader({ other: 5, id: 4 })],
+    ],
+    file: 'example.js',
+  },
+  {
+    lines: [
+      "let base = { kind: 'base' }",
+      'function f(value) {',
+      "  let first = { '__proto__': base, kind: value }",
+      "  let second = { ['__proto__']: value, b: 1, 2: 'two', 1: 'one', a: 0 }",
+      '  return [',
+      '    Object.getPrototypeOf(first) === base,',
+      '    first.kind,',
+      '    Object.keys(second),',
+      '    Object.getPrototypeOf(second) === Object.prototype,',
+      "    Object.hasOwn(second, '__proto__') && second.__proto__ === value,",
+      '  ]',
+      '}',
+    ],
+    inputs: [['x'], [null], [{ a: 1 }]],
+    file: 'example.js',
+  },
+  {
+    lines: [
+      'function* pair() {',
+      "  use('first')",
+      '  yield 1',
+      "  use('second')",
+      '  yield 2',
+      '}',
+      'function f(items, extra) {',
+      '  let list = [extra, ...items, ...pair(), [...items]]',
+      '  let lengths = [[...items].length, [extra, extra].length, list.length]',
+      '  return [',
+      '    list,',
+      '    lengths,',
+      '    Array.from({ length: items.length }, (_, index) => index * 2),',
+      '  ]',
+      '}',
+    ],
+    inputs: [
+      [[], 0],
+      [[1, 2], 'x'],
+      [['a'], null],
+    ],
+    file: 'example.js',
+  },
+  {
+    lines: [
+      'function f(a: number, b: number) {',
+      '  let pair = [a, b] as const',
+      '  let summary = { a, total: a + b } satisfies { a: number; total: number }',
+      '  return [pair, summary, Object.keys(summary), pair.length]',
+      '}',
+    ],
+    inputs: [
+      [1, 2],
+      [0, 0],
+      [-1, 5],
+    ],
+    file: 'example.ts',
+  },
+  {
+    lines: [
+      'let base = { x: 1 }',
+      'function f(extra: unknown) {',
+      '  let item = {',
+      '    __proto__: base,',
+      '    extra,',
+      "    direct() { return eval!('super.x') },",
+      "    cast() { return (eval as (code: string) => unknown)('super.x') },",
+      '  }',
+      '  return [item.direct(), item.cast(), Object.keys(item)]',
+      '}',
+    ],
+    inputs: [[0], ['a']],
+    file: 'example.ts',
+  },
 ]
 
 /**
@@ -185,6 +307,7 @@ const VUE_TEMPLATE = [
   '    <component :is="open ? \'b\' : \'i\'" v-bind="{ title: text + \'!\' }" v-on="{ mouseenter: () => go(1) }" />',
   '    <slot name="row" :value="count * 2" />',
   '    <template v-for="n in 3" :key="n"><i v-if="n % 2 === 0">{{ n }}</i></template>',
+  '    <i>{{ JSON.stringify({ n: count, at: { on: open } }) }}</i>',
   '    <span v-html="\'<b>\' + text + \'</b>\'"></span><span v-text="text.slice(1)"></span>',
   '    <!-- mootant-ignore-next-line -->',
   '    <i :title="count - 1"></i>',
@@ -334,6 +457,94 @@ describe('instrumentFile', () => {
     )
   })
 
+  it('hosts the removals of one literal around it with a copy of it', () => {
+    let source = ['x = [a, ...b]', 'y = { c, d }'].join('\n')
+    let removal = { replacement: '', text: '' }
+    let runtime = 'globalThis.__mootant'
+
+    expect(
+      instrumentFile({
+        mutants: [
+          createMutant({
+            focus: { ...removal, start: 5, end: 6 },
+            list: { start: 4, end: 13 },
+            ...removal,
+            kind: 'element',
+            start: 5,
+            id: 'm1',
+            end: 8,
+          }),
+          createMutant({
+            focus: { ...removal, start: 8, end: 12 },
+            list: { start: 4, end: 13 },
+            ...removal,
+            kind: 'element',
+            start: 6,
+            id: 'm2',
+            end: 12,
+          }),
+          createMutant({
+            focus: { ...removal, start: 20, end: 21 },
+            list: { start: 18, end: 26 },
+            ...removal,
+            kind: 'property',
+            start: 20,
+            id: 'm3',
+            end: 23,
+          }),
+          createMutant({
+            focus: { ...removal, start: 23, end: 24 },
+            list: { start: 18, end: 26 },
+            ...removal,
+            kind: 'property',
+            start: 21,
+            id: 'm4',
+            end: 24,
+          }),
+        ],
+        file: 'example.js',
+        source,
+      }),
+    ).toBe(
+      [
+        `x = (${runtime}?.hitAny(["m1", "m2"]) ? ${runtime}.cut([(${runtime}.active === "m1" ? ${runtime}.gap : a), ...(${runtime}.active === "m2" ? ${runtime}.none : b)]) : [a, ...b])`,
+        `y = (${runtime}?.hitAny(["m3", "m4"]) ? { ...(${runtime}.active === "m3" ? {} : { c }), ...(${runtime}.active === "m4" ? {} : { d }) } : { c, d })`,
+      ].join('\n'),
+    )
+  })
+
+  it('keeps the switched text of a table within a linear bound under strict', () => {
+    let entries = Array.from(
+      { length: 400 },
+      (_, index) => `  'entity${index};': ${index + 100},`,
+    )
+    let source = ['export default {', ...entries, '}'].join('\n')
+    let file = 'entities.js'
+    let mutants = generateMutants(source, { preset: 'strict', file })
+    let switched = instrumentFile({ mutants, source, file })
+
+    expect(
+      mutants.filter(mutant => mutant.mutator === 'object-property'),
+    ).toHaveLength(400)
+    expect(switched.length).toBeLessThan(50 * source.length)
+  })
+
+  it('copies a nested literal once more for each literal with removals around it', () => {
+    let depth = 6
+    let source = 'export let list = deep'
+    for (let level = depth; level > 0; level--) {
+      source = source.replace('deep', `[item${level}, deep]`)
+    }
+    let file = 'nested.js'
+    let mutants = generateMutants(source, { preset: 'strict', file })
+    let switched = instrumentFile({ mutants, source, file })
+
+    expect(
+      mutants.filter(mutant => mutant.mutator === 'array-element'),
+    ).toHaveLength(2 * depth)
+    expect(switched.split('deep')).toHaveLength(depth + 2)
+  })
+
   it('reaches the runtime through Math in a Vue template', () => {
     let source = [
       '<script setup>let a = 1 + 2</script>',
@@ -366,6 +577,25 @@ describe('instrumentFile', () => {
     )
   })
 
+  it('runs the array iterator only where the code it switches does', () => {
+    let source = 'list = [a, ...rest, [b]]'
+    let file = 'example.js'
+    let mutants = generateMutants(source, { preset: 'strict', file }).filter(
+      mutant => mutant.kind === 'element',
+    )
+    let switched = instrumentFile({ mutants, source, file })
+
+    expect(mutants).toHaveLength(4)
+    expect(runCountingIterator(switched, null)).toStrictEqual(
+      runCountingIterator(source, null),
+    )
+    for (let mutant of mutants) {
+      expect(runCountingIterator(switched, mutant.id)).toStrictEqual(
+        runCountingIterator(applyMutant(source, mutant), null),
+      )
+    }
+  })
+
   it('throws when the text does not parse', () => {
     expect(() =>
       instrumentFile({
@@ -388,13 +618,13 @@ describe('instrumentFile', () => {
       let pending = mutants.filter(mutant => mutant.status === 'Pending')
       let switched = instrumentFile({ mutants: pending, source, file })
       let sites = [
-        ...switched.matchAll(/\?\.hit\((?<quote>["`])(?<id>\w+)\k<quote>\)/gu),
-      ]
+        ...switched.matchAll(/\?\.hit(?:Any)?\((?<ids>\[[^\]]*\]|[^)]*)\)/gu),
+      ].flatMap(site => [...site.groups!['ids']!.matchAll(/\w+/gu)])
 
       expect(pending.length).toBeGreaterThan(0)
       expect(getSyntaxFingerprint(file, switched)).not.toBeNull()
       expect(
-        sites.map(site => site.groups!['id']!).toSorted(compareCodeUnits),
+        sites.map(site => site[0]).toSorted(compareCodeUnits),
       ).toStrictEqual(
         pending.map(mutant => mutant.id).toSorted(compareCodeUnits),
       )
@@ -475,7 +705,11 @@ describe('instrumentFile', () => {
 
       expect(pending.length).toBeGreaterThan(40)
       expect(describeTemplate(switched)).toStrictEqual(describeTemplate(source))
-      expect(switched.match(/hit\(`/gu)).toHaveLength(pending.length)
+      expect(
+        [
+          ...switched.matchAll(/hit(?:Any)?\((?<ids>\[[^\]]*\]|`\w+`)\)/gu),
+        ].flatMap(site => site.groups!['ids']!.match(/`\w+`/gu)!),
+      ).toHaveLength(pending.length)
       for (let ssr of [false, true]) {
         let { descriptor } = parse(switched, { filename: file })
         let { errors } = compileTemplate({
@@ -534,6 +768,37 @@ describe('instrumentFile', () => {
     },
   )
 
+  it.each(['recommended', 'strict'])(
+    'keeps the classes Svelte scopes in a switched component under %s',
+    preset => {
+      let source = [
+        '<script>',
+        '  let { open } = $props()',
+        '</script>',
+        '',
+        '<div class={{ hidden: !open, wide: open }}>x</div>',
+        "<span class={['plain', 'wide']}>s</span>",
+        '<p class="note">n</p>',
+        '',
+        '<style>',
+        '  .note { color: blue }',
+        '</style>',
+      ].join('\n')
+      let file = 'panel.svelte'
+      let mutants = generateMutants(source, { preset, file })
+      let switched = instrumentFile({ mutants, source, file })
+      let [original, hosted] = [source, switched].map(
+        text =>
+          compile(text, { filename: file }).js.code.split('svelte-').length,
+      )
+
+      expect(
+        mutants.filter(mutant => mutant.mutator === 'object-property'),
+      ).not.toHaveLength(0)
+      expect(hosted).toBe(original)
+    },
+  )
+
   it.each(
     SVELTE_FILES.flatMap(entry =>
       ['recommended', 'strict'].map(preset => ({ ...entry, preset })),
@@ -558,6 +823,42 @@ describe('instrumentFile', () => {
     },
   )
 })
+
+/**
+ * Runs a script in a realm of its own whose array iterator counts its calls,
+ * with `a`, `b` and `rest` defined and a mutant runtime with the given mutant
+ * active.
+ *
+ * @param code - Script whose last statement gives the result.
+ * @param active - Id of the active mutant, or null for the original code.
+ * @returns The result as JSON and the number of calls of the array iterator.
+ */
+function runCountingIterator(
+  code: string,
+  active: string | null,
+): { result: string; calls: number } {
+  let runtime = installMutantRuntime()
+  Reflect.deleteProperty(globalThis, '__mootant')
+  Reflect.deleteProperty(Math, Symbol.for('mootant'))
+  runtime.active = active
+  let calls = 0
+  let context = createContext({
+    count() {
+      calls += 1
+    },
+    __mootant: runtime,
+  })
+  runInContext(
+    [
+      'let iterator = Array.prototype[Symbol.iterator]',
+      'Array.prototype[Symbol.iterator] = function () { count(); return iterator.call(this) }',
+      'let a = 1, b = 2, rest = [3, 4]',
+    ].join('\n'),
+    context,
+  )
+  let result = JSON.stringify(runInContext(code, context))
+  return { result, calls }
+}
 
 /**
  * Describes the markup of a Vue component: the elements with the raw names of

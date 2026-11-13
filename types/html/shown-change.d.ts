@@ -1,11 +1,12 @@
 /**
  * Change of a text as the page shows it: a range of the file, the whole text
- * written in its place and, when the mutator names one, the part of the range
- * the change amounts to.
+ * written in its place and, when there is one, the part of the range the change
+ * amounts to.
  */
 export interface ShownChange {
   /**
-   * Part of the range the change amounts to, when a mutator names one.
+   * Part of the range the change amounts to, when the mutator names one or the
+   * change removes an array element or an object member with its comma.
    */
   focus?: { replacement: string; start: number; end: number }
 

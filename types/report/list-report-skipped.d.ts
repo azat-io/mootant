@@ -12,8 +12,9 @@ export interface ListReportSkipped {
   by: ListReportJustifier | null
 
   /**
-   * Part of the range the change amounts to, present when the mutator names
-   * one; text reports show its position and texts.
+   * Part of the range the change amounts to, present when the mutator names one
+   * and on every removal of an array element or an object member with its
+   * comma; text reports show its position and texts.
    */
   focus?: ListReportFocus
 

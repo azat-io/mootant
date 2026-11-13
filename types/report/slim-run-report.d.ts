@@ -142,7 +142,7 @@ export interface SlimRunReport extends Pick<
   /**
    * Version of the report shape, the same as of the full report.
    */
-  schemaVersion: 3
+  schemaVersion: 4
 
   /**
    * Command that produced the report.

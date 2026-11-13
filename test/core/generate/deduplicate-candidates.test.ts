@@ -5,6 +5,7 @@ import type { MutantCandidate } from '../../../types/mutant/mutant-candidate'
 import type { IgnoreRule } from '../../../types/mutant/ignore-rule'
 
 import { deduplicateCandidates } from '../../../core/generate/deduplicate-candidates'
+import { compareCandidates } from '../../../core/generate/compare-candidates'
 
 /**
  * Mutator that every candidate of these tests belongs to.
@@ -152,11 +153,29 @@ describe('deduplicateCandidates', () => {
       'aab',
       '(a)',
       'abab',
-    ])
+    ]).toSorted(compareCandidates)
 
     expect(deduplicateCandidates(candidates, text).kept).toStrictEqual(
       keepFirstMutatedTexts(candidates, text),
     )
+  })
+
+  it('keeps the candidate whose target comes first in canonical order', () => {
+    let removal: MutantCandidate = {
+      ...createCandidate(5, 6, ''),
+      focus: { text: '', start: 5, end: 6 },
+      list: { start: 4, end: 7 },
+      kind: 'element',
+    }
+    let literal = {
+      ...createCandidate(4, 7, '[]'),
+      registered: { ...REGISTERED, rank: 1 },
+    }
+
+    expect(deduplicateCandidates([literal, removal], 'x = [y]')).toStrictEqual({
+      duplicates: new Map([[literal, removal]]),
+      kept: [removal],
+    })
   })
 
   it('names the kept candidate that each dropped candidate duplicates', () => {

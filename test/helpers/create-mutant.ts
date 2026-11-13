@@ -2,7 +2,9 @@ import type { Mutant } from '../../types/mutant/mutant'
 
 /**
  * Builds a pending mutant of `example.ts` for tests that only read its range,
- * kind, replacement and id.
+ * kind, replacement and id. A mutant of kind `element` or `property` needs its
+ * focus and its literal too, since it is hosted with the other removals of the
+ * literal.
  *
  * @param fields - Fields that differ from the defaults: an expression mutant
  *   with the id `m1` that replaces the range with `x`.
@@ -22,5 +24,5 @@ export function createMutant(
     scope: null,
     id: 'm1',
     ...fields,
-  }
+  } as Mutant
 }

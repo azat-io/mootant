@@ -16,6 +16,7 @@ describe('unpackRunReport', () => {
       text: '',
     }
     timeout!.kind = 'block'
+    survived!.kind = 'property'
     survived!.scope = 'fits'
     result.results[0]!.killedIn = '/repo/test/other.test.ts'
     result.results[0]!.cached = true

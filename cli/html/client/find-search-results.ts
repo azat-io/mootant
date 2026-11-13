@@ -85,7 +85,8 @@ export function findSearchResults(
 
 /**
  * Describes a mutant as a search result: its place, mutator and change on one
- * line, with its status.
+ * line, with its status. A removal with a focus, such as an array element with
+ * its comma, shows the focus.
  *
  * @param index - Index of the report.
  * @param mutant - Mutant found.
@@ -94,7 +95,12 @@ export function findSearchResults(
 function describe(index: ReportIndex, mutant: IndexedMutant): SearchResult {
   let file = index.files[mutant.file]!
   let mutator = index.report.mutators[mutant.mutator]!
-  let before = mutant.original.replaceAll(/\s+/gu, ' ')
+  let { focus } = mutant
+  let original =
+    focus && mutant.replacement === '' ?
+      file.source.slice(focus.start, focus.end)
+    : mutant.original
+  let before = original.replaceAll(/\s+/gu, ' ')
   let after = mutant.replacement.replaceAll(/\s+/gu, ' ') || 'removed'
   return {
     text: `${file.path}:${mutant.line}  ${mutator.id}  ${before} → ${after}`,

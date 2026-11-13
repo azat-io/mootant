@@ -39,10 +39,11 @@ let listedStatements = new Map<string, ListedStatements>()
 /**
  * Applies a mutant the way the mutant switch will host it: an expression
  * replacement is written inside parentheses and a block replacement inside
- * braces. An expression that starts an expression statement of a statement list
- * gets the guard of that statement in front, so a previous line without a
- * semicolon does not take the parentheses as call arguments; the statements of
- * Svelte and Vue templates count too.
+ * braces, and the removal of an array element or an object member is written as
+ * is, which deletes the element with its comma. An expression that starts an
+ * expression statement of a statement list gets the guard of that statement in
+ * front, so a previous line without a semicolon does not take the parentheses
+ * as call arguments; the statements of Svelte and Vue templates count too.
  *
  * @param source - Text of the file the mutant belongs to.
  * @param mutant - Mutant with its range, replacement, kind and file name.
@@ -55,6 +56,9 @@ export function applyMutant(source: string, mutant: AppliedMutant): string {
   let after = source.slice(end)
   if (kind === 'block') {
     return `${before}{${replacement}}${after}`
+  }
+  if (kind === 'element' || kind === 'property') {
+    return `${before}${replacement}${after}`
   }
   let starts = getListedStatementStarts(source, mutant.file)
   let guard = starts.get(start) ?? ''

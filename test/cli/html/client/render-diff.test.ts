@@ -60,6 +60,20 @@ describe('renderDiff', () => {
     )
   })
 
+  it('keeps the text after a range that ends at the start of a line', () => {
+    let source = 'f({\n  a: 1,\n})\n'
+
+    expect(
+      renderDiff(source, getLineStarts(source), {
+        replacement: '',
+        start: 3,
+        end: 12,
+      }),
+    ).toBe(
+      '<div class="removed"><span class="sign">-</span> f({</div><div class="removed"><span class="sign">-</span> <span class="changed">  a: 1,</span></div><div class="removed"><span class="sign">-</span> })</div><div class="added"><span class="sign">+</span> f({})</div>',
+    )
+  })
+
   it('marks only the focus of the change', () => {
     let source = 'let r = /ab+c/u'
 

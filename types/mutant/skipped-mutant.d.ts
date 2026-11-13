@@ -2,6 +2,7 @@ import type { SkipJustifier } from './skip-justifier'
 import type { SkipCategory } from './skip-category'
 import type { TextEdit } from '../source/text-edit'
 import type { SkipRuleId } from './skip-rule-id'
+import type { MutantKind } from './mutant-kind'
 
 /**
  * Mutation that a mutator or the pipeline considered and did not emit. It has
@@ -9,15 +10,16 @@ import type { SkipRuleId } from './skip-rule-id'
  */
 export interface SkippedMutant {
   /**
-   * How the mutant switch would host the replacement, derived from the replaced
-   * node; null when it cannot host it.
-   */
-  kind: 'expression' | 'block' | null
-
-  /**
    * Mutant that justifies the skip, or null when no single mutant does.
    */
   by: SkipJustifier | null
+
+  /**
+   * How the mutant switch would host the replacement, derived from the replaced
+   * node or from the literal of a removed element or member; null when it
+   * cannot host it.
+   */
+  kind: MutantKind | null
 
   /**
    * Category of the skip rule.
@@ -36,7 +38,8 @@ export interface SkippedMutant {
 
   /**
    * Edit inside the replaced range that the mutant amounts to, which reports
-   * show in place of the whole range; absent when the mutator names none.
+   * show in place of the whole range; set when the mutator names one, and on
+   * every removal of kind `element` or `property`.
    */
   focus?: TextEdit
 

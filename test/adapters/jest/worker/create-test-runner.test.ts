@@ -15,6 +15,7 @@ import type { VmSide } from '../../../../adapters/jest/types/vm-side'
 
 import { createWorkerChannel } from '../../../../adapters/jest/worker/create-worker-channel'
 import { createTestRunner } from '../../../../adapters/jest/worker/create-test-runner'
+import { createTestRuntime } from '../../../helpers/create-test-runtime'
 
 /**
  * Key of what `expect` keeps on the global object of a vm.
@@ -94,15 +95,8 @@ async function run(
     out,
   })
   let side: VmSide = {
-    runtime: {
-      hitLimit: Infinity,
-      hit: () => false,
-      coverage: null,
-      reached: false,
-      active: null,
-      hits: 0,
-    },
     realmError: runInNewContext('Error') as ErrorConstructor,
+    runtime: createTestRuntime(),
     listVariables: () => [],
     isReached: () => true,
     addVariable() {},

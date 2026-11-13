@@ -1,7 +1,8 @@
 import type { MutantCandidate } from '../../types/mutant/mutant-candidate'
 import type { SourceRange } from '../../types/source/source-range'
 
-import { compareCandidates } from './compare-candidates'
+import { compareTargets } from './compare-targets'
+import { getTarget } from './get-target'
 
 /**
  * Coarse candidate and one of its solitary ranges, with the state of the rule.
@@ -13,7 +14,7 @@ interface RangeSearch {
   dropped: ReadonlyMap<MutantCandidate, MutantCandidate>
 
   /**
-   * Every candidate of the file in canonical order.
+   * Every candidate of the file in canonical order by target.
    */
   candidates: readonly MutantCandidate[]
 
@@ -50,7 +51,9 @@ interface SolitaryOutcome {
  * must observe the effect the coarse mutant erases. A finer candidate counts
  * unless its mutator opts out with `countsForSolitary: false`, it is a variant
  * of the same mutator on the same range, it was dropped itself, or it is
- * ignored while the coarse candidate will run. Coarse candidates are decided
+ * ignored while the coarse candidate will run. Candidates are placed, ordered
+ * and told apart by their targets (see `getTarget`), so the removal of an
+ * element lies where its whole literal does. Coarse candidates are decided
  * innermost first.
  *
  * @param candidates - Candidates of one file in canonical order.
@@ -61,14 +64,15 @@ export function applySolitaryRule(
   candidates: readonly MutantCandidate[],
 ): SolitaryOutcome {
   let dropped = new Map<MutantCandidate, MutantCandidate>()
-  let coarse = candidates
+  let ordered = candidates.toSorted(compareTargets)
+  let coarse = ordered
     .filter(candidate => candidate.solitary !== null)
     .toSorted(compareCoarseCandidates)
 
   for (let candidate of coarse) {
     for (let range of candidate.solitary!) {
       let inner = findCountedCandidate({
-        candidates,
+        candidates: ordered,
         candidate,
         dropped,
         range,
@@ -88,8 +92,9 @@ export function applySolitaryRule(
 
 /**
  * Finds a candidate that counts inside a solitary range of a coarse candidate.
- * Candidates are sorted by start, so the search starts at the first candidate
- * that starts in the range and stops at the first one that starts after it.
+ * Candidates are sorted by target, so the search starts at the first candidate
+ * whose target starts in the range and stops at the first one whose target
+ * starts after it.
  *
  * @param search - Coarse candidate, its range and the state of the rule.
  * @returns The first counted candidate inside the range, or null.
@@ -98,13 +103,14 @@ function findCountedCandidate(search: RangeSearch): MutantCandidate | null {
   let { candidates, candidate, dropped, range } = search
   for (
     let index = findFirstStart(candidates, range.start);
-    index < candidates.length && candidates[index]!.start < range.end;
+    index < candidates.length &&
+    getTarget(candidates[index]!).start < range.end;
     index++
   ) {
     let inner = candidates[index]!
     if (
       inner !== candidate &&
-      inner.end <= range.end &&
+      getTarget(inner).end <= range.end &&
       !dropped.has(inner) &&
       countsFor(inner, candidate)
     ) {
@@ -125,10 +131,12 @@ function countsFor(inner: MutantCandidate, coarse: MutantCandidate): boolean {
   if (inner.registered.mutator.meta.countsForSolitary === false) {
     return false
   }
+  let target = getTarget(inner)
+  let coarseTarget = getTarget(coarse)
   if (
     inner.registered === coarse.registered &&
-    inner.start === coarse.start &&
-    inner.end === coarse.end
+    target.start === coarseTarget.start &&
+    target.end === coarseTarget.end
   ) {
     return false
   }
@@ -136,9 +144,9 @@ function countsFor(inner: MutantCandidate, coarse: MutantCandidate): boolean {
 }
 
 /**
- * Finds the first candidate that starts at or after an offset.
+ * Finds the first candidate whose target starts at or after an offset.
  *
- * @param candidates - Candidates sorted by start.
+ * @param candidates - Candidates sorted by target.
  * @param offset - Offset to look for.
  * @returns Index of the first such candidate, or the length of the list.
  */
@@ -150,7 +158,7 @@ function findFirstStart(
   let high = candidates.length
   while (low < high) {
     let middle = Math.floor((low + high) / 2)
-    if (candidates[middle]!.start < offset) {
+    if (getTarget(candidates[middle]!).start < offset) {
       low = middle + 1
     } else {
       high = middle
@@ -161,7 +169,8 @@ function findFirstStart(
 
 /**
  * Orders coarse candidates innermost first: by the summed length of their
- * solitary ranges, then by the start of their first range, then canonically.
+ * solitary ranges, then by the start of their first range, then canonically by
+ * target.
  *
  * @param left - First coarse candidate.
  * @param right - Second coarse candidate.
@@ -174,7 +183,7 @@ function compareCoarseCandidates(
   return (
     getSolitaryLength(left) - getSolitaryLength(right) ||
     left.solitary![0]!.start - right.solitary![0]!.start ||
-    compareCandidates(left, right)
+    compareTargets(left, right)
   )
 }
 

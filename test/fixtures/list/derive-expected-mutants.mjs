@@ -7,6 +7,11 @@
  * preset: expected-mutants.json for `recommended` and
  * expected-mutants-strict.json for `strict`.
  *
+ * The removal of an array element or an object member (kind `element` or
+ * `property`) is written as the text it deletes, the element with the comma
+ * next to it, an empty replacement and the element itself as `focus`, which the
+ * oracle finds at its first occurrence inside the original text.
+ *
  * It never imports the implementation; which mutants exist is decided by the
  * expectations alone. Run it by hand from any directory, as `node
  * test/fixtures/list/derive-expected-mutants.mjs`.
@@ -26,6 +31,11 @@ const FIXTURE_DIRECTORY = import.meta.dirname
  * the display paths of the expectations resolve.
  */
 const ROOT_DIRECTORY = path.resolve(FIXTURE_DIRECTORY, '../../..')
+
+/**
+ * How the mutant switch hosts a mutant.
+ */
+const KINDS = ['expression', 'block', 'element', 'property']
 
 /**
  * Output file of each preset, in the order the oracle runs them.
@@ -424,8 +434,25 @@ function validateExpectation(expectation, files) {
   if (typeof expectation.replacement !== 'string') {
     fail(expectation, 'The replacement must be a string.')
   }
-  if (expectation.kind !== 'expression' && expectation.kind !== 'block') {
-    fail(expectation, 'The kind must be expression or block.')
+  if (!KINDS.includes(expectation.kind)) {
+    fail(expectation, `The kind must be one of ${KINDS.join(', ')}.`)
+  }
+  let removal =
+    expectation.kind === 'element' || expectation.kind === 'property'
+  if (
+    removal &&
+    (expectation.replacement !== '' ||
+      typeof expectation.focus !== 'string' ||
+      expectation.focus === '' ||
+      !expectation.original.includes(expectation.focus))
+  ) {
+    fail(
+      expectation,
+      'A removal has an empty replacement and a focus inside its original text.',
+    )
+  }
+  if (!removal && expectation.focus !== undefined) {
+    fail(expectation, 'Only a removal has a focus.')
   }
   if (expectation.scope !== null && typeof expectation.scope !== 'string') {
     fail(expectation, 'The scope must be a string or null.')
@@ -587,6 +614,12 @@ function buildReport(expectations, sources, preset) {
     seen.set(key, occurrence + 1)
     let position = getPosition(source.lineStarts, start)
     let endPosition = getPosition(source.lineStarts, end)
+    let focusStart =
+      expectation.focus === undefined ?
+        null
+      : start + expectation.original.indexOf(expectation.focus)
+    let focusPosition =
+      focusStart === null ? null : getPosition(source.lineStarts, focusStart)
     return {
       id: createMutantId({
         mutator: expectation.mutator,
@@ -609,6 +642,16 @@ function buildReport(expectations, sources, preset) {
       original: source.text.slice(start, end),
       replacement: expectation.replacement,
       ...getDiff(source, start, end, expectation.replacement),
+      ...(focusStart !== null && {
+        focus: {
+          original: expectation.focus,
+          replacement: '',
+          column: focusPosition.column,
+          line: focusPosition.line,
+          start: focusStart,
+          end: focusStart + expectation.focus.length,
+        },
+      }),
       status: expectation.status,
       reason: expectation.reason,
       ignoredBy:
@@ -634,7 +677,7 @@ function buildReport(expectations, sources, preset) {
     .toSorted(compareDiagnostics)
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     command: 'list',
     preset,
     since: null,

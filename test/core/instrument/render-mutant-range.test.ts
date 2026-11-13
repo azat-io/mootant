@@ -2,7 +2,23 @@ import { describe, expect, it } from 'vitest'
 
 import { renderMutantRange } from '../../../core/instrument/render-mutant-range'
 import { groupMutantRanges } from '../../../core/instrument/group-mutant-ranges'
+import { getSiteSyntax } from '../../../core/instrument/get-site-syntax'
 import { createMutant } from '../../helpers/create-mutant'
+
+/**
+ * Runtime of script code as rendered.
+ */
+const RUNTIME = 'globalThis.__mootant'
+
+/**
+ * Check in the copy of a literal that a removal is active, as rendered.
+ *
+ * @param id - Id of the removal.
+ * @returns Text of the check.
+ */
+function active(id: string): string {
+  return `${RUNTIME}.active === "${id}"`
+}
 
 /**
  * Site check of a mutant as rendered.
@@ -11,7 +27,7 @@ import { createMutant } from '../../helpers/create-mutant'
  * @returns Text of the check.
  */
 function check(id: string): string {
-  return `globalThis.__mootant?.hit("${id}")`
+  return `${RUNTIME}?.hit("${id}")`
 }
 
 describe('renderMutantRange', () => {
@@ -101,17 +117,115 @@ describe('renderMutantRange', () => {
     )
   })
 
-  it('builds the checks with the given function', () => {
+  it('hosts the removals of an array around it with a copy that cuts the active element', () => {
+    let source = '[a, (b), ...c]'
+    let list = { start: 0, end: 14 }
     let [range] = groupMutantRanges([
-      createMutant({ replacement: ';', kind: 'block', start: 0, end: 3 }),
-      createMutant({ replacement: 'a--', start: 0, id: 'm2', end: 3 }),
+      createMutant({
+        focus: { text: '', start: 1, end: 2 },
+        replacement: '',
+        kind: 'element',
+        id: 'first',
+        start: 1,
+        end: 4,
+        list,
+      }),
+      createMutant({
+        focus: { text: '', start: 4, end: 7 },
+        replacement: '',
+        kind: 'element',
+        id: 'second',
+        start: 4,
+        end: 9,
+        list,
+      }),
+      createMutant({
+        focus: { text: '', start: 9, end: 13 },
+        replacement: '',
+        kind: 'element',
+        id: 'third',
+        start: 7,
+        end: 13,
+        list,
+      }),
+      createMutant({ replacement: 'd', id: 'name', start: 5, end: 6 }),
     ])
 
     expect(
-      renderMutantRange(range!, 'a++', {
-        getCheck: id => `on(${id})`,
-        statementStarts: new Map(),
+      renderMutantRange(range!, source, {
+        statementStarts: new Map([[0, ';']]),
       }),
-    ).toBe('{ if (on(m1)) {;} else {(on(m2) ? (a--) : (a++))} }')
+    ).toBe(
+      `;(${RUNTIME}?.hitAny(["first", "second", "third"]) ? ${RUNTIME}.cut([(${active('first')} ? ${RUNTIME}.gap : a), (${active('second')} ? ${RUNTIME}.gap : (b)), ...(${active('third')} ? ${RUNTIME}.none : c)]) : [a, ((${check('name')} ? (d) : (b))), ...c])`,
+    )
+  })
+
+  it('hosts the removals of an object around it with a copy that spreads its members', () => {
+    let source = '{ a: { b } }'
+    let outer = { start: 0, end: 12 }
+    let [range] = groupMutantRanges([
+      createMutant({
+        focus: { start: 2, text: '', end: 10 },
+        kind: 'property',
+        replacement: '',
+        list: outer,
+        start: 2,
+        id: 'm1',
+        end: 10,
+      }),
+      createMutant({
+        focus: { start: 2, text: '', end: 10 },
+        kind: 'property',
+        replacement: '',
+        list: outer,
+        start: 2,
+        id: 'm2',
+        end: 10,
+      }),
+      createMutant({
+        focus: { start: 7, text: '', end: 8 },
+        list: { start: 5, end: 10 },
+        kind: 'property',
+        replacement: '',
+        id: 'inner',
+        start: 7,
+        end: 8,
+      }),
+    ])
+
+    expect(
+      renderMutantRange(range!, source, { statementStarts: new Map() }),
+    ).toBe(
+      `(${RUNTIME}?.hitAny(["m1", "m2"]) ? { ...(${active('m1')} || ${active('m2')} ? {} : { a: { b } }) } : { a: (${RUNTIME}?.hitAny(["inner"]) ? { ...(${active('inner')} ? {} : { b }) } : { b }) })`,
+    )
+  })
+
+  it('reaches the runtime with the given syntax', () => {
+    let template = 'Math[Symbol.for(`mootant`)]'
+    let ranges = groupMutantRanges([
+      createMutant({ replacement: ';', kind: 'block', start: 0, end: 3 }),
+      createMutant({ replacement: 'a--', start: 0, id: 'm2', end: 3 }),
+      createMutant({
+        focus: { text: '', start: 5, end: 6 },
+        list: { start: 4, end: 7 },
+        replacement: '',
+        kind: 'element',
+        start: 5,
+        id: 'm3',
+        end: 6,
+      }),
+    ])
+
+    expect(
+      ranges.map(range =>
+        renderMutantRange(range, 'a++;[b]', {
+          syntax: getSiteSyntax(true),
+          statementStarts: new Map(),
+        }),
+      ),
+    ).toStrictEqual([
+      `{ if (${template}?.hit(\`m1\`)) {;} else {(${template}?.hit(\`m2\`) ? (a--) : (a++))} }`,
+      `(${template}?.hitAny([\`m3\`]) ? ${template}.cut([(${template}.active === \`m3\` ? ${template}.gap : b)]) : [b])`,
+    ])
   })
 })

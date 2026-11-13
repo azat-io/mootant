@@ -120,7 +120,7 @@ describe('slimRunReport', () => {
       diagnostics: report.diagnostics,
       preset: 'recommended',
       runner: 'vitest',
-      schemaVersion: 3,
+      schemaVersion: 4,
       command: 'run',
       listed: 'all',
       mode: 'fast',
