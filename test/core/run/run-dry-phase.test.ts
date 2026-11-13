@@ -638,7 +638,7 @@ describe('runDryPhase', () => {
                 file.file === '/t/b.test.ts' ?
                   {
                     ...file,
-                    dependencies: ['/t/b.test.ts', '/src/a.ts', '/src/b.ts'],
+                    dependencies: ['/t/b.test.ts', '/src/b.ts'],
                     loadFailed: true,
                     errors: ['Boom'],
                     covers: ['a1'],
@@ -767,6 +767,52 @@ describe('runDryPhase', () => {
     expect(progress.at(-1)).toBe(
       JSON.stringify({ files: ['t/b.test.ts'], kind: 'dry-failed' }),
     )
+  })
+
+  it('goes on when a test that passed in a file failing in a suite hook fails only without the switched files', async () => {
+    let { switched, phase } = await run(
+      {
+        onDry: (result, request) => {
+          if (!request.instrumented) {
+            return {
+              ...result,
+              tests: result.tests.map(test => ({
+                ...test,
+                tries: test.tries.map(facts => ({
+                  ...facts,
+                  message: 'Port in use',
+                  failed: true,
+                })),
+              })),
+            }
+          }
+          return result.served.includes('/src/b.ts') ?
+              {
+                ...result,
+                files: result.files.map(file =>
+                  file.file === '/t/b.test.ts' ?
+                    {
+                      ...file,
+                      dependencies: ['/t/b.test.ts', '/src/b.ts'],
+                      errors: ['afterAll failed'],
+                      loadFailed: true,
+                    }
+                  : file,
+                ),
+              }
+            : result
+        },
+        tests: [
+          { file: '/t/a.test.ts', covers: ['a1'], id: 't1' },
+          { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
+        ],
+      },
+      false,
+    )
+
+    expect(phase.runs).toBe(4)
+    expect(switched.map(entry => entry.file)).toStrictEqual(['/src/a.ts'])
+    expect([...phase.errors.keys()]).toStrictEqual(['src/b.ts'])
   })
 
   it('stops when the test file of a failing test fails outside its tests without the switched files', async () => {

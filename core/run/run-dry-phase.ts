@@ -188,6 +188,7 @@ export async function runDryPhase(
   if (failures.failing.length > 0 || failures.unloaded.length > 0) {
     let recovered = await recoverFromFailures(session, input, {
       files: checked.dry.files,
+      tests: checked.dry.tests,
       diagnostics,
       failures,
       related,
@@ -405,6 +406,7 @@ function findBrokenFiles(
  * @param context.failures - Failing tests and unloaded files of the dry run.
  * @param context.related - Absolute paths of the switched files it ran with.
  * @param context.files - Test files of the dry run.
+ * @param context.tests - Tests of the dry run.
  * @returns The repeated dry run, or an empty one when no switched file is left,
  *   the keys of its unrepeatable test files, and the number of runs, the one
  *   without the switched files included.
@@ -421,6 +423,7 @@ async function recoverFromFailures(
     failures: DryFailures
     related: string[]
     files: DryFile[]
+    tests: DryTest[]
   },
 ): Promise<Pick<DryPhase, 'unrepeatableFiles' | 'runs' | 'dry'>> {
   await checkRealFailures(session, input, context)
@@ -465,25 +468,29 @@ async function recoverFromFailures(
  * dry run again without the switched files, each test once. Failures that
  * remain are real, not caused by the instrumentation, and stop the run. So do a
  * test file of a failing test that then fails outside its tests, and a failing
- * test of a file that failed outside its tests with the switched files, since
- * its tests did not run then.
+ * test that did not run in the dry run because its file failed outside its
+ * tests there, as when it failed to load. A test that passed in the dry run and
+ * fails only now is left alone, as in a file that loaded.
  *
  * @param session - Live test runner.
  * @param input - Progress and the directory display paths are relative to.
- * @param check - Failures of the dry run and the switched files it ran with.
+ * @param check - Failures and tests of the dry run, and the switched files it
+ *   ran with.
  * @param check.failures - Failing tests and unloaded files of the dry run.
  * @param check.related - Absolute paths of the switched files.
+ * @param check.tests - Tests of the dry run.
  * @throws Error - When tests fail without the switched files, or when a test or
  *   test file hangs.
  */
 async function checkRealFailures(
   session: AdapterSession,
   input: DryPhaseInput,
-  check: { failures: DryFailures; related: string[] },
+  check: { failures: DryFailures; related: string[]; tests: DryTest[] },
 ): Promise<void> {
-  let { failures, related } = check
+  let { failures, related, tests } = check
   let { unloaded, failing } = failures
   let failingIds = new Set(failing.map(test => test.id))
+  let ranIds = new Set(tests.map(test => test.id))
   let unloadedKeys = new Set(unloaded.map(file => getTestFileKey(file)))
   let failedKeys = new Set(
     [...unloaded, ...failing].map(entry => getTestFileKey(entry)),
@@ -504,7 +511,9 @@ async function checkRealFailures(
   )
   let real = findFailures(plain)
   let realTests = real.failing.filter(
-    test => failingIds.has(test.id) || unloadedKeys.has(getTestFileKey(test)),
+    test =>
+      failingIds.has(test.id) ||
+      (!ranIds.has(test.id) && unloadedKeys.has(getTestFileKey(test))),
   )
   let realFiles = real.unloaded.filter(file =>
     failedKeys.has(getTestFileKey(file)),
