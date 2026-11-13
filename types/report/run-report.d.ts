@@ -118,7 +118,7 @@ export interface RunReportSummary {
 
   /**
    * Tests whose two dry tries differed in pass/fail or stray errors, or null
-   * outside fast mode, which does not check.
+   * outside fast mode.
    */
   totalUnrepeatableTests: number | null
 

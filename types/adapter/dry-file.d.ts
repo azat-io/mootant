@@ -8,7 +8,8 @@ export interface DryFile {
    * plugins watch for them, files the test code read, a missing one or a
    * directory included, and its snapshot files, whether they exist or not. Null
    * or omitted when the adapter cannot tell; the cache then never reuses or
-   * stores verdicts of this test file.
+   * stores verdicts of this test file, and the dry phase ties its failures to
+   * switched files by mutant sites alone.
    */
   dependencies?: string[] | null
 

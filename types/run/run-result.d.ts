@@ -20,8 +20,7 @@ export interface RunResult {
 
   /**
    * Ids of the tests whose two dry tries differed in pass/fail or had stray
-   * errors, sorted; null outside fast mode, which tries each test once and does
-   * not check.
+   * errors, sorted; null outside fast mode, which tries each test once.
    */
   unrepeatable: string[] | null
 

@@ -343,22 +343,16 @@ describe('runDryPhase', () => {
         files: null,
       },
     ])
+    let broken =
+      "Tests that reach mutant sites of src/a.ts fail only with mootant's switched files, such as t/b.test.ts, which fails outside its tests (broken); its mutants are not run."
     expect(switched.map(entry => entry.file)).toStrictEqual(['/src/b.ts'])
-    expect(phase.errors).toStrictEqual(
-      new Map([
-        [
-          'src/a.ts',
-          'Tests fail with the switched src/a.ts and pass without it; its mutants are not run.',
-        ],
-      ]),
-    )
+    expect(phase.errors).toStrictEqual(new Map([['src/a.ts', broken]]))
     expect(phase.diagnostics).toStrictEqual([
       {
-        message:
-          'Tests fail with the switched src/a.ts and pass without it; its mutants are not run.',
         code: 'instrumentation-break',
         severity: 'error',
         file: 'src/a.ts',
+        message: broken,
         column: null,
         line: null,
       },
@@ -370,9 +364,16 @@ describe('runDryPhase', () => {
     ])
   })
 
-  it('tries each test once outside fast mode and checks failures at once', async () => {
+  it('tries each test once outside fast mode and runs the files of failures again before checking them', async () => {
     let { progress, switched, phase, fake } = await run(
       {
+        onDry: result => ({
+          ...result,
+          files: result.files.map(file => ({
+            ...file,
+            dependencies: [file.file, '/src/a.ts', '/src/b.ts'],
+          })),
+        }),
         tests: [
           { file: '/t/a.test.ts', covers: ['a1'], dry: 'broken', id: 't1' },
           { file: '/t/b.test.ts', dry: 'repeated', covers: ['b1'], id: 't2' },
@@ -383,16 +384,36 @@ describe('runDryPhase', () => {
 
     expect(progress).toStrictEqual([
       '{"files":2,"kind":"dry-start"}',
+      '1 test file failed; running it again to see whether the failures repeat.',
       'Some tests failed; running them again without mutants to check.',
       'Running the dry run again without 1 file that broke tests.',
     ])
+    expect(fake.calls.dry[1]).toStrictEqual({
+      files: [{ file: '/t/a.test.ts', project: '' }],
+      related: ['/src/a.ts', '/src/b.ts'],
+      instrumented: true,
+      timeouts: TIMEOUTS,
+      repeat: false,
+    })
     expect(fake.calls.dry.map(request => request.repeat)).toStrictEqual([
       false,
       false,
       false,
+      false,
     ])
-    expect(phase.runs).toBe(3)
+    expect(phase.runs).toBe(4)
     expect(phase.unrepeatableFiles).toStrictEqual(new Set())
+    expect(phase.errors).toStrictEqual(
+      new Map([
+        [
+          'src/a.ts',
+          'Tests that reach mutant sites of src/a.ts fail only with mootant\'s switched files, such as "t1" in t/a.test.ts (expected true to be false); its mutants are not run.',
+        ],
+      ]),
+    )
+    expect(phase.diagnostics.map(diagnostic => diagnostic.code)).toStrictEqual([
+      'instrumentation-break',
+    ])
     expect(switched.map(entry => entry.file)).toStrictEqual(['/src/b.ts'])
     expect(
       phase.dry.tests.map(test => [test.id, test.tries.length]),
@@ -418,7 +439,7 @@ describe('runDryPhase', () => {
 
     expect(progress).toStrictEqual([
       '{"files":2,"kind":"dry-start"}',
-      '1 test file failed with each test run twice; running them again with each test once.',
+      '1 test file failed with each test run twice; running it again with each test once.',
     ])
     expect(fake.calls.dry[1]).toStrictEqual({
       files: [{ file: '/t/a.test.ts', project: '' }],
@@ -463,7 +484,7 @@ describe('runDryPhase', () => {
     ])
   })
 
-  it('drops every switched file when the breakage reached no site', async () => {
+  it('drops every switched file when no failure reached a site or a switched file it depends on', async () => {
     let { switched, phase } = await run({
       onDry: (result, request) => ({
         ...result,
@@ -475,13 +496,24 @@ describe('runDryPhase', () => {
             covers: null,
           })),
         })),
+        files: result.files.map(file => ({
+          ...file,
+          dependencies: [file.file, '/src/c.ts'],
+        })),
       }),
       tests: [{ file: '/t/a.test.ts', id: 't1' }],
     })
+    let broken =
+      'Tests fail only with mootant\'s switched files, such as "t1" in t/a.test.ts, and mootant cannot tell which switched file breaks them; the mutants of every switched file are not run.'
 
     expect(phase.runs).toBe(3)
     expect(switched).toStrictEqual([])
-    expect([...phase.errors.keys()]).toStrictEqual(['src/a.ts', 'src/b.ts'])
+    expect(phase.errors).toStrictEqual(
+      new Map([
+        ['src/a.ts', broken],
+        ['src/b.ts', broken],
+      ]),
+    )
     expect(phase.dry).toStrictEqual({
       mismatched: [],
       outside: [],
@@ -490,6 +522,428 @@ describe('runDryPhase', () => {
       tests: [],
       hung: [],
     })
+  })
+
+  it('drops only the switched file a test file depends on when it fails to load before any site', async () => {
+    let { progress, switched, phase, fake } = await run(
+      {
+        onDry: (result, request) =>
+          request.instrumented && result.served.includes('/src/b.ts') ?
+            {
+              ...result,
+              files: result.files.map(file =>
+                file.file === '/t/b.test.ts' ?
+                  {
+                    ...file,
+                    errors: [
+                      "Cannot access 'globalThis' before initialization.",
+                    ],
+                    dependencies: ['/t/b.test.ts', '/src/b.ts', '/src/c.ts'],
+                    loadFailed: true,
+                    covers: [],
+                  }
+                : file,
+              ),
+              tests: result.tests.filter(test => test.file !== '/t/b.test.ts'),
+            }
+          : result,
+        tests: [
+          { file: '/t/a.test.ts', covers: ['a1'], id: 't1' },
+          { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
+        ],
+      },
+      false,
+    )
+    let broken =
+      "Tests that depend on src/b.ts fail only with mootant's switched files, such as t/b.test.ts, which fails outside its tests (Cannot access 'globalThis' before initialization); its mutants are not run."
+
+    expect(progress).toStrictEqual([
+      '{"files":2,"kind":"dry-start"}',
+      '1 test file failed; running it again to see whether the failures repeat.',
+      'Some tests failed; running them again without mutants to check.',
+      'Running the dry run again without 1 file that broke tests.',
+    ])
+    expect(
+      fake.calls.dry.map(request => [request.instrumented, request.related]),
+    ).toStrictEqual([
+      [true, ['/src/a.ts', '/src/b.ts']],
+      [true, ['/src/a.ts', '/src/b.ts']],
+      [false, ['/src/a.ts', '/src/b.ts']],
+      [true, ['/src/a.ts']],
+    ])
+    expect(phase.runs).toBe(4)
+    expect(switched.map(entry => entry.file)).toStrictEqual(['/src/a.ts'])
+    expect(phase.errors).toStrictEqual(new Map([['src/b.ts', broken]]))
+    expect(phase.diagnostics).toStrictEqual([
+      {
+        code: 'instrumentation-break',
+        severity: 'error',
+        file: 'src/b.ts',
+        message: broken,
+        column: null,
+        line: null,
+      },
+    ])
+    expect(phase.dry.tests.map(test => test.id)).toStrictEqual(['t1', 't2'])
+  })
+
+  it('drops the switched files that the test file of a failing test depends on when the test reached no site', async () => {
+    let { switched, phase } = await run(
+      {
+        onDry: (result, request) =>
+          request.instrumented && result.served.includes('/src/a.ts') ?
+            {
+              ...result,
+              tests: result.tests.map(test =>
+                test.id === 't1' ?
+                  {
+                    ...test,
+                    tries: test.tries.map(facts => ({
+                      ...facts,
+                      failed: true,
+                      covers: [],
+                    })),
+                  }
+                : test,
+              ),
+              files: result.files.map(file => ({
+                ...file,
+                dependencies: [
+                  file.file === '/t/a.test.ts' ? '/src/a.ts' : '/src/b.ts',
+                ],
+              })),
+            }
+          : result,
+        tests: [
+          { file: '/t/a.test.ts', id: 't1' },
+          { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
+        ],
+      },
+      false,
+    )
+
+    expect(phase.runs).toBe(4)
+    expect(switched.map(entry => entry.file)).toStrictEqual(['/src/b.ts'])
+    expect([...phase.errors.keys()]).toStrictEqual(['src/a.ts'])
+  })
+
+  it('drops every switched file a test file depends on when it fails outside its tests, with the files of the sites it reached', async () => {
+    let { progress, switched, phase } = await run(
+      {
+        onDry: (result, request) =>
+          request.instrumented && result.served.includes('/src/b.ts') ?
+            {
+              ...result,
+              files: result.files.map(file =>
+                file.file === '/t/b.test.ts' ?
+                  {
+                    ...file,
+                    dependencies: ['/t/b.test.ts', '/src/a.ts', '/src/b.ts'],
+                    loadFailed: true,
+                    errors: ['Boom'],
+                    covers: ['a1'],
+                  }
+                : file,
+              ),
+              tests: result.tests.filter(test => test.file !== '/t/b.test.ts'),
+            }
+          : result,
+        tests: [
+          { file: '/t/a.test.ts', covers: ['a1'], id: 't1' },
+          { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
+        ],
+      },
+      false,
+    )
+
+    expect(progress.at(-1)).toBe(
+      'Some tests failed; running them again without mutants to check.',
+    )
+    expect(phase.runs).toBe(3)
+    expect(switched).toStrictEqual([])
+    expect(phase.errors).toStrictEqual(
+      new Map(
+        ['src/a.ts', 'src/b.ts'].map(display => [
+          display,
+          `Tests that depend on ${display} fail only with mootant's switched files, such as t/b.test.ts, which fails outside its tests (Boom); its mutants are not run.`,
+        ]),
+      ),
+    )
+  })
+
+  it('drops what a failing test without sites depends on even when another test of its file reached sites', async () => {
+    let { switched, phase } = await run(
+      {
+        onDry: (result, request) =>
+          request.instrumented && result.served.includes('/src/b.ts') ?
+            {
+              ...result,
+              tests: result.tests.map(test =>
+                test.id === 't1' ?
+                  test
+                : {
+                    ...test,
+                    tries: test.tries.map(facts => ({
+                      ...facts,
+                      failed: true,
+                      covers: [],
+                    })),
+                  },
+              ),
+              files: result.files
+                .filter(file => file.file !== '/t/c.test.ts')
+                .map(file => ({
+                  ...file,
+                  dependencies: [file.file, '/src/a.ts', '/src/b.ts'],
+                })),
+            }
+          : result,
+        tests: [
+          { file: '/t/a.test.ts', covers: ['a1'], dry: 'broken', id: 't1' },
+          { file: '/t/a.test.ts', id: 't2' },
+          { file: '/t/c.test.ts', id: 't3' },
+        ],
+      },
+      false,
+    )
+
+    expect(phase.runs).toBe(3)
+    expect(switched).toStrictEqual([])
+    expect(phase.errors).toStrictEqual(
+      new Map([
+        [
+          'src/a.ts',
+          'Tests that reach mutant sites of src/a.ts fail only with mootant\'s switched files, such as "t1" in t/a.test.ts (expected true to be false); its mutants are not run.',
+        ],
+        [
+          'src/b.ts',
+          'Tests that depend on src/b.ts fail only with mootant\'s switched files, such as "t2" in t/a.test.ts; its mutants are not run.',
+        ],
+      ]),
+    )
+  })
+
+  it('stops when a test of a file that failed outside its tests fails without the switched files', async () => {
+    let progress: string[] = []
+
+    await expect(
+      run(
+        {
+          onDry: (result, request) =>
+            request.instrumented ?
+              {
+                ...result,
+                files: result.files.map(file =>
+                  file.file === '/t/b.test.ts' ?
+                    { ...file, errors: ['Boom'], loadFailed: true }
+                  : file,
+                ),
+                tests: result.tests.filter(
+                  test => test.file !== '/t/b.test.ts',
+                ),
+              }
+            : {
+                ...result,
+                tests: result.tests.map(test => ({
+                  ...test,
+                  tries: test.tries.map(facts => ({
+                    ...facts,
+                    message: 'PORT is not set',
+                    failed: true,
+                  })),
+                })),
+              },
+          tests: [
+            { file: '/t/a.test.ts', covers: ['a1'], id: 't1' },
+            { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
+          ],
+        },
+        false,
+        progress,
+      ),
+    ).rejects.toThrow(
+      'Tests fail without mutants; fix them first (1 test):\n  t/b.test.ts > t2: PORT is not set',
+    )
+    expect(progress.at(-1)).toBe(
+      JSON.stringify({ files: ['t/b.test.ts'], kind: 'dry-failed' }),
+    )
+  })
+
+  it('stops when the test file of a failing test fails outside its tests without the switched files', async () => {
+    await expect(
+      run(
+        {
+          onDry: (result, request) =>
+            request.instrumented ? result : (
+              {
+                ...result,
+                files: result.files.map(file => ({
+                  ...file,
+                  errors: ['Port in use'],
+                  loadFailed: true,
+                })),
+                tests: [],
+              }
+            ),
+          tests: [
+            { file: '/t/a.test.ts', covers: ['a1'], dry: 'broken', id: 't1' },
+          ],
+        },
+        false,
+      ),
+    ).rejects.toThrow(
+      'Tests fail without mutants; fix them first (1 test file):\n  t/a.test.ts: fails to load: Port in use',
+    )
+  })
+
+  it('warns once of a test that fails in each first run outside fast mode and passes when run again', async () => {
+    let { progress, switched, phase } = await run(
+      {
+        onDry: (result, request) =>
+          request.instrumented && request.files === null ?
+            {
+              ...result,
+              tests: result.tests.map(test =>
+                test.id === 't2' ?
+                  {
+                    ...test,
+                    tries: test.tries.map(facts => ({
+                      ...facts,
+                      message: 'Port in use',
+                      failed: true,
+                    })),
+                  }
+                : test,
+              ),
+            }
+          : result,
+        tests: [
+          { file: '/t/a.test.ts', covers: ['a1'], dry: 'broken', id: 't1' },
+          { file: '/t/b.test.ts', covers: ['b1'], id: 't2', line: 7 },
+        ],
+      },
+      false,
+    )
+
+    expect(progress).toStrictEqual([
+      '{"files":2,"kind":"dry-start"}',
+      '2 test files failed; running them again to see whether the failures repeat.',
+      'Some tests failed; running them again without mutants to check.',
+      'Running the dry run again without 1 file that broke tests.',
+      '1 test file failed; running it again to see whether the failures repeat.',
+    ])
+    expect(phase.runs).toBe(5)
+    expect(switched.map(entry => entry.file)).toStrictEqual(['/src/b.ts'])
+    expect(phase.diagnostics.map(diagnostic => diagnostic.code)).toStrictEqual([
+      'unrepeatable-test',
+      'instrumentation-break',
+    ])
+    expect(phase.diagnostics[0]).toStrictEqual({
+      message:
+        '"t2" failed (Port in use) in a run without mutants and passed when run again; it may be flaky and kill mutants by chance.',
+      code: 'unrepeatable-test',
+      severity: 'warning',
+      file: 't/b.test.ts',
+      column: null,
+      line: 7,
+    })
+  })
+
+  it('keeps every switched file when tests fail once before any site and pass when run again', async () => {
+    let instrumentedRuns = 0
+    let { progress, switched, phase, fake } = await run(
+      {
+        onDry: (result, request) => {
+          if (request.instrumented) {
+            instrumentedRuns += 1
+          }
+          return instrumentedRuns === 1 ?
+              {
+                ...result,
+                tests: result.tests
+                  .filter(test => test.file !== '/t/b.test.ts')
+                  .map(test => ({
+                    ...test,
+                    tries: test.tries.map(facts => ({
+                      ...facts,
+                      message: 'Timed out.',
+                      failed: true,
+                      covers: [],
+                    })),
+                    line: 3,
+                  })),
+                files: result.files.map(file =>
+                  file.file === '/t/b.test.ts' ?
+                    {
+                      ...file,
+                      errors: ['Resource not ready'],
+                      loadFailed: true,
+                      covers: [],
+                    }
+                  : file,
+                ),
+              }
+            : result
+        },
+        tests: [
+          { file: '/t/a.test.ts', covers: ['a1'], id: 't1' },
+          { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
+        ],
+      },
+      false,
+    )
+
+    expect(progress).toStrictEqual([
+      '{"files":2,"kind":"dry-start"}',
+      '2 test files failed; running them again to see whether the failures repeat.',
+    ])
+    expect(fake.calls.dry[1]).toStrictEqual({
+      files: [
+        { file: '/t/a.test.ts', project: '' },
+        { file: '/t/b.test.ts', project: '' },
+      ],
+      related: ['/src/a.ts', '/src/b.ts'],
+      instrumented: true,
+      timeouts: TIMEOUTS,
+      repeat: false,
+    })
+    expect(phase.runs).toBe(2)
+    expect(switched.map(entry => entry.file)).toStrictEqual([
+      '/src/a.ts',
+      '/src/b.ts',
+    ])
+    expect(phase.errors).toStrictEqual(new Map())
+    expect(phase.unrepeatableFiles).toStrictEqual(new Set())
+    expect(phase.diagnostics).toStrictEqual([
+      {
+        message:
+          't/b.test.ts failed outside its tests (Resource not ready) in a run without mutants and passed when run again; its tests may be flaky and kill mutants by chance.',
+        code: 'unrepeatable-test',
+        severity: 'warning',
+        file: 't/b.test.ts',
+        column: null,
+        line: null,
+      },
+      {
+        message:
+          '"t1" failed (Timed out) in a run without mutants and passed when run again; it may be flaky and kill mutants by chance.',
+        code: 'unrepeatable-test',
+        severity: 'warning',
+        file: 't/a.test.ts',
+        column: null,
+        line: 3,
+      },
+    ])
+    expect(phase.dry.files.map(file => file.loadFailed)).toStrictEqual([
+      false,
+      false,
+    ])
+    expect(
+      phase.dry.tests.map(test => [test.id, test.tries[0]!.covers]),
+    ).toStrictEqual([
+      ['t1', ['a1']],
+      ['t2', ['b1']],
+    ])
   })
 
   it('stops when tests still fail after the broken files were dropped', async () => {

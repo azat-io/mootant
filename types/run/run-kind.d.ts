@@ -1,7 +1,7 @@
 /**
  * Kind of a run of the test runner:
  *
- * - `dry`: the tests without a mutant, each twice;
+ * - `dry`: the tests without a mutant, and the reruns of failed test files;
  * - `batch`: a batch phase;
  * - `recovery`: batch tries that went missing, planned again;
  * - `confirmation`: batch timeouts tried again with doubled bounds;

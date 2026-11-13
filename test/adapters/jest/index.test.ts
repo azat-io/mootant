@@ -599,7 +599,7 @@ describe('jest adapter at the edges', { timeout: 180_000 }, () => {
     ).toStrictEqual(['buffer', 'buffer'])
   })
 
-  it('runs the three dry runs of the core when the switched text breaks a test, and drops that file alone', async () => {
+  it('runs the four dry runs of the core when the switched text breaks a test, and drops that file alone', async () => {
     let again: string[] = []
     let result = await runMutants({
       onProgress: event => {
@@ -614,10 +614,11 @@ describe('jest adapter at the edges', { timeout: 180_000 }, () => {
       cache: false,
     })
     let broken =
-      'Tests fail with the switched src/render.js and pass without it; its mutants are not run.'
+      'Tests that reach mutant sites of src/render.js fail only with mootant\'s switched files, such as "renders a name, and its source is as written" in test/render.test.js (expect(received).toBe(expected) // Object.is equality); its mutants are not run.'
 
-    expect(result.runs.dry).toBe(3)
+    expect(result.runs.dry).toBe(4)
     expect(again).toStrictEqual([
+      '1 test file failed; running it again to see whether the failures repeat.',
       'Some tests failed; running them again without mutants to check.',
       'Running the dry run again without 1 file that broke tests.',
     ])

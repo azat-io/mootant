@@ -44,18 +44,18 @@ interface DryFileReport {
  * ids of tests hold the project, or the core keys the tests of two projects as
  * one. Per-test coverage is wrong in a file with concurrent tests, as their
  * bodies interleave, so the file holds what ran while it loaded and every try
- * what ran after that. Covers stay on a file that failed to load, as an empty
- * list would make the core drop every switched file. A tracker error fails the
- * file, as the `try` it lost would leave a test out with no word. A failed
- * `beforeAll` fails the tests under it, as in plain Jest, which forgives it
- * when they pass on retry or are all `test.todo`, so the file says nothing of
- * it. A snapshot no test checked, such as one of a deleted test, or one that
- * failed in a test that still passed, fails a plain run of Jest with every test
- * passing, so then it fails the file; next to a failed test, that test tells
- * it. What the file depended on comes from the `finish` record
- * (`collectJestDependencies`), and so do the variables the code read and the
- * files it read and changed itself, whose contents the cache then compares, as
- * their times say nothing of edits.
+ * what ran after that. Covers stay on a file that failed to load, as they are
+ * what the core can blame when it cannot tell what the file depends on, instead
+ * of every switched file. A tracker error fails the file, as the `try` it lost
+ * would leave a test out with no word. A failed `beforeAll` fails the tests
+ * under it, as in plain Jest, which forgives it when they pass on retry or are
+ * all `test.todo`, so the file says nothing of it. A snapshot no test checked,
+ * such as one of a deleted test, or one that failed in a test that still
+ * passed, fails a plain run of Jest with every test passing, so then it fails
+ * the file; next to a failed test, that test tells it. What the file depended
+ * on comes from the `finish` record (`collectJestDependencies`), and so do the
+ * variables the code read and the files it read and changed itself, whose
+ * contents the cache then compares, as their times say nothing of edits.
  *
  * @param outcome - What the unit left behind.
  * @param input - Test file, project and root.
