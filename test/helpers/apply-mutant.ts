@@ -4,6 +4,7 @@ import * as vue from '@vue/compiler-dom'
 import type { Mutant } from '../../types/mutant/mutant'
 
 import { findStatementStarts } from '../../core/instrument/find-statement-starts'
+import { renderBranch } from '../../core/instrument/render-branch'
 
 /**
  * Starts of the expression statements that sit in a statement list, found in
@@ -38,12 +39,13 @@ let listedStatements = new Map<string, ListedStatements>()
 
 /**
  * Applies a mutant the way the mutant switch will host it: an expression
- * replacement is written inside parentheses and a block replacement inside
- * braces, and the removal of an array element or an object member is written as
- * is, which deletes the element with its comma. An expression that starts an
- * expression statement of a statement list gets the guard of that statement in
- * front, so a previous line without a semicolon does not take the parentheses
- * as call arguments; the statements of Svelte and Vue templates count too.
+ * replacement is written inside parentheses, as a branch of the switch (see
+ * `renderBranch`), and a block replacement inside braces, and the removal of an
+ * array element or an object member is written as is, which deletes the element
+ * with its comma. An expression that starts an expression statement of a
+ * statement list gets the guard of that statement in front, so a previous line
+ * without a semicolon does not take the parentheses as call arguments; the
+ * statements of Svelte and Vue templates count too.
  *
  * @param source - Text of the file the mutant belongs to.
  * @param mutant - Mutant with its range, replacement, kind and file name.
@@ -62,7 +64,7 @@ export function applyMutant(source: string, mutant: AppliedMutant): string {
   }
   let starts = getListedStatementStarts(source, mutant.file)
   let guard = starts.get(start) ?? ''
-  return `${before}${guard}(${replacement})${after}`
+  return `${before}${guard}${renderBranch(replacement)}${after}`
 }
 
 /**

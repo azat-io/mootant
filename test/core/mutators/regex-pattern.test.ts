@@ -419,6 +419,15 @@ describe('regexPattern', () => {
     expect(mutate('/a?|b+/g', ALL_OPTIONS)).toContain('/a?|b+/g -> /a?|b*/g')
   })
 
+  it('hosts a pattern that starts with <!-- in a module that oxc parses', () => {
+    expect(
+      runMutator(
+        'regex-pattern',
+        String.raw`export let strip = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '')`,
+      ).map(formatMutant),
+    ).toStrictEqual([String.raw`/<!--[\s\S]*?-->/g -> /<!--[\s\S]+?-->/g`])
+  })
+
   it('names the changed part of the pattern as the focus', () => {
     let { mutants } = generateCandidates(String.raw`x = s.split(/,\s*/)`)
 

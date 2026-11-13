@@ -4,6 +4,7 @@ import type { TextEdit } from '../../types/source/text-edit'
 import type { Mutant } from '../../types/mutant/mutant'
 
 import { getSiteSyntax } from './get-site-syntax'
+import { renderBranch } from './render-branch'
 
 /**
  * Where a group sits in the switched text.
@@ -36,13 +37,14 @@ type RemovalMutant = Extract<Mutant, { kind: 'property' | 'element' }>
  * Renders the host of one group of mutants, the hosts of its nested groups
  * first. An expression group becomes a chain of conditional expressions, a
  * block group a chain of `if` statements; the last branch holds the original
- * text with the nested hosts in it, and replacement texts are used verbatim. A
- * group of removals of array elements or object members becomes one conditional
- * expression around their literal: while none of them is active it runs the
- * literal as written, with the nested hosts in it, and otherwise a copy of the
- * literal that leaves the active element out (see `renderCopy`). An expression
- * group or a group of removals that starts a statement of a statement list gets
- * the guard of that statement in front.
+ * text with the nested hosts in it, and replacement texts are used verbatim.
+ * The branches of an expression group are in parentheses (see `renderBranch`).
+ * A group of removals of array elements or object members becomes one
+ * conditional expression around their literal: while none of them is active it
+ * runs the literal as written, with the nested hosts in it, and otherwise a
+ * copy of the literal that leaves the active element out (see `renderCopy`). An
+ * expression group or a group of removals that starts a statement of a
+ * statement list gets the guard of that statement in front.
  *
  * @param range - Group to render.
  * @param source - Text of the file the mutants belong to.
@@ -111,9 +113,9 @@ function renderRange(
   }
   let branches = range.mutants.map(
     mutant =>
-      `${runtime}?.hit(${quote(mutant.id)}) ? (${mutant.replacement}) : `,
+      `${runtime}?.hit(${quote(mutant.id)}) ? ${renderBranch(mutant.replacement)} : `,
   )
-  return `${guard}(${branches.join('')}(${original}))`
+  return `${guard}(${branches.join('')}${renderBranch(original)})`
 }
 
 /**

@@ -33,6 +33,15 @@ describe('parseExpression', () => {
     expect(parseExpression('await | c', 'js')).toBeNull()
   })
 
+  it('reads import.meta with a regular expression that starts with <!-- in a module', () => {
+    let text = '/<!--/.test(import.meta.url)'
+
+    expect(parseExpression(text, 'js')).toMatchObject({
+      expression: { type: 'CallExpression' },
+      type: 'ParenthesizedExpression',
+    })
+  })
+
   it('reads await as a name in a sloppy script', () => {
     expect(parseExpression('await | c', 'js', 'script')).toMatchObject({
       expression: { left: { name: 'await' }, operator: '|' },

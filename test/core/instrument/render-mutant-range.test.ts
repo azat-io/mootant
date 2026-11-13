@@ -85,6 +85,32 @@ describe('renderMutantRange', () => {
     ).toBe(`{}(${check('m1')} ? (x) : (a++))`)
   })
 
+  it('puts 0 after a ( that would come right before a regular expression that starts with <!--', () => {
+    let source = 'if (/<!--x/.test(s), ok) f(/<!--x/g, /x/g, a ?? b ?? 1)'
+    let ranges = groupMutantRanges([
+      createMutant({ replacement: 'false', start: 4, end: 23 }),
+      createMutant({ replacement: '/<!--y/g', start: 27, id: 'm2', end: 35 }),
+      createMutant({ replacement: '/x/', start: 37, id: 'm3', end: 41 }),
+      createMutant({
+        replacement: '(/<!--x/.exec(s) ?? b) || 1',
+        start: 43,
+        id: 'm4',
+        end: 54,
+      }),
+    ])
+
+    expect(
+      ranges.map(range =>
+        renderMutantRange(range, source, { statementStarts: new Map() }),
+      ),
+    ).toStrictEqual([
+      `(${check('m1')} ? (false) : (0, /<!--x/.test(s), ok))`,
+      `(${check('m2')} ? (0, /<!--y/g) : (0, /<!--x/g))`,
+      `(${check('m3')} ? (/x/) : (/x/g))`,
+      `(${check('m4')} ? ((0, /<!--x/.exec(s) ?? b) || 1) : (a ?? b ?? 1))`,
+    ])
+  })
+
   it('hosts nested ranges in the original branch', () => {
     let source = 'a.trim().length === 0'
     let [range] = groupMutantRanges([

@@ -55,6 +55,26 @@ const PROGRAMS: { inputs: unknown[][]; lines: string[]; file: string }[] = [
   },
   {
     lines: [
+      String.raw`let comment = /<!--[\s\S]*?-->/g`,
+      'function f(html, ready) {',
+      "  let open = /<!--/.test(html) && html.indexOf('<!--')",
+      '  if (/<!--/.test(html), ready) html = html.trim()',
+      '  let index = /<!--/.exec(html)?.index ?? 1 ?? 2',
+      '  let tested = (/<!--/.test)(html) && html.length > 0',
+      '  let bumped = (/<!--/.lastIndex)++ + 1',
+      "  return [html.replace(comment, ''), open, index, tested, bumped, 1/~/<!--/.test(html)]",
+      '}',
+    ],
+    inputs: [
+      ['', true],
+      ['a<!-- b -->c', false],
+      [' <!--x--><!--y--> ', true],
+      ['<!-- open', false],
+    ],
+    file: 'example.js',
+  },
+  {
+    lines: [
       'let total = 0',
       'function f(value, min, max) {',
       '  let result = value',
@@ -345,6 +365,17 @@ const SVELTE_FILES: { lines: string[]; file: string }[] = [
   {
     lines: [
       '<script>',
+      "  let { n = 0, s = '' } = $props()",
+      '</script>',
+      '',
+      '<p>{n || /a/.source}</p>',
+      '<p>{s.match(/a/) ?? /<!--b/.exec(s)}</p>',
+    ],
+    file: 'regex.svelte',
+  },
+  {
+    lines: [
+      '<script>',
       "  let { size = 2, label = 'box', bound = $bindable(1) } = $props()",
       '  let count = $state(size * 2)',
       '  let items = $state.raw([1, 2])',
@@ -631,6 +662,118 @@ describe('instrumentFile', () => {
     },
   )
 
+  it.each([
+    {
+      lines: [
+        'export function strip(html: string): string {',
+        String.raw`  return html.replace(/<!--[\s\S]*?-->/g, '')`,
+        '}',
+      ],
+      mutator: 'regex-pattern',
+      file: 'strip.ts',
+    },
+    {
+      lines: [
+        'const commentStripRE = /^(?:-?>)+|<!--|-->|--!>|<!-$/g',
+        'export function escapeHtmlComment(src: string): string {',
+        "  return src.replace(commentStripRE, '')",
+        '}',
+      ],
+      mutator: 'regex-pattern',
+      file: 'escape.ts',
+    },
+    {
+      lines: [
+        'export function open(html, ready) {',
+        '  if (/<!--/.test(html), ready) show(html)',
+        '}',
+      ],
+      mutator: 'condition',
+      file: 'open.js',
+    },
+    {
+      lines: [
+        'export function open(html: unknown) {',
+        '  if (/<!--/.test(<string>html)) show(html)',
+        '}',
+      ],
+      mutator: 'condition',
+      file: 'open.ts',
+    },
+    {
+      lines: [
+        'export function load() {',
+        '  if (/<!--/.test(import.meta.url)) run()',
+        '}',
+      ],
+      mutator: 'condition',
+      file: 'load.ts',
+    },
+    {
+      lines: [
+        'export let local = (debug: boolean) =>',
+        '  debug || /<!--/.test(import.meta.url) || !debug',
+      ],
+      mutator: 'logical-operator',
+      file: 'local.ts',
+    },
+    {
+      lines: [
+        'export function find(s) {',
+        '  return /<!--/.exec(s)?.index ?? 1 ?? 2',
+        '}',
+      ],
+      mutator: 'logical-operator',
+      file: 'find.js',
+    },
+    {
+      lines: [
+        'export function open(s: string, a: boolean, b: boolean) {',
+        '  return a || (/<!--/.test(s) && b)',
+        '}',
+      ],
+      mutator: 'logical-operator',
+      file: 'kept.ts',
+    },
+    {
+      lines: [
+        'export function mask(a, b) {',
+        '  return /<!--/.lastIndex | a | b',
+        '}',
+      ],
+      mutator: 'bitwise-operator',
+      file: 'mask.js',
+    },
+    {
+      lines: [
+        'export function note(s, a) {',
+        '  return a || (/* note */ /<!--/.test(s))',
+        '}',
+      ],
+      mutator: 'logical-operator',
+      file: 'note.js',
+    },
+    {
+      lines: [
+        'export function bound(fallback: unknown) {',
+        '  return fallback || /<!--/.test.bind<RegExp>',
+        '}',
+      ],
+      mutator: 'logical-operator',
+      file: 'bound.ts',
+    },
+  ])(
+    'hosts the $mutator mutants of a regular expression with <!-- in $file, a module that oxc parses',
+    ({ mutator, lines, file }) => {
+      let source = lines.join('\n')
+      let mutants = generateMutants(source, { file })
+      let switched = instrumentFile({ mutants, source, file })
+
+      expect(mutants.map(mutant => mutant.mutator)).toContain(mutator)
+      expect(getSyntaxFingerprint(file, switched)).not.toBeNull()
+    },
+  )
+
   it.each(
     PROGRAMS.flatMap(program =>
       ['recommended', 'strict'].map(preset => ({ ...program, preset })),
@@ -731,6 +874,41 @@ describe('instrumentFile', () => {
     },
   )
 
+  it('switches a regular expression with <!-- in a Vue template into a render function that oxc parses', () => {
+    let source = [
+      '<script setup>',
+      "let html = ''",
+      '</script>',
+      '',
+      String.raw`<template><p>{{ html.replace(/<!--[\s\S]*?-->/g, '') }}</p></template>`,
+    ].join('\n')
+    let file = 'note.vue'
+    let mutants = generateMutants(source, { file })
+    let switched = instrumentFile({
+      compilers: {
+        vue: { compile: compileDom, parse: parseDom },
+        svelte: null,
+      },
+      mutants,
+      source,
+      file,
+    })
+    let { descriptor } = parse(switched, { filename: file })
+    let { code } = compileTemplate({
+      compilerOptions: { prefixIdentifiers: true },
+      source: descriptor.template!.content,
+      filename: file,
+      id: 'note',
+    })
+
+    expect(
+      mutants
+        .filter(mutant => mutant.scope === '<template>')
+        .map(mutant => mutant.mutator),
+    ).toContain('regex-pattern')
+    expect(getSyntaxFingerprint('render.js', code)).not.toBeNull()
+  })
+
   it.each(['recommended', 'strict'])(
     'keeps how Vue compiles the event handlers of a template under %s',
     preset => {
@@ -804,21 +982,24 @@ describe('instrumentFile', () => {
       ['recommended', 'strict'].map(preset => ({ ...entry, preset })),
     ),
   )(
-    'switches $file under $preset into one the Svelte compiler accepts',
+    'switches $file under $preset into one the Svelte compiler accepts, as it accepts each mutant applied alone',
     ({ preset, lines, file }) => {
       let source = lines.join('\n')
       let mutants = generateMutants(source, { preset, file })
       let switched = instrumentFile({ mutants, source, file })
+      let applied = mutants.map(mutant => applyMutant(source, mutant))
 
       expect(mutants.length).toBeGreaterThan(0)
-      for (let generate of ['client', 'server'] as const) {
-        expect(() => {
-          if (file.endsWith('.svelte')) {
-            compile(switched, { filename: file, generate })
-          } else {
-            compileModule(switched, { filename: file, generate })
-          }
-        }).not.toThrow()
+      for (let text of [switched, ...applied]) {
+        for (let generate of ['client', 'server'] as const) {
+          expect(() => {
+            if (file.endsWith('.svelte')) {
+              compile(text, { filename: file, generate })
+            } else {
+              compileModule(text, { filename: file, generate })
+            }
+          }).not.toThrow()
+        }
       }
     },
   )
