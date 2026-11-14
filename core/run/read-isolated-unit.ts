@@ -11,10 +11,10 @@ import { classifyTry } from './classify-try'
  * mutant, once the unit reached it anywhere. A unit past its hit limit is a
  * timeout of the failed test with the most hits, the first of them on a tie:
  * that one ran into the limit, while a test that failed before it says nothing
- * of the loop, and one after it throws at its first site, as the count of the
- * unit stays over the limit. With no failed test, the limit stopped the load or
- * a hook, whose error is the message. A hang names no test, as no adapter
- * reports the try that hung.
+ * of the overrun, and one after it throws at its first site, as the count of
+ * the unit stays over the limit. With no failed test, the limit stopped the
+ * load or a hook, whose error is the message. A hang names no test, as no
+ * adapter reports the try that hung.
  *
  * @param state - State of the run.
  * @param mutant - State of the unit's mutant.

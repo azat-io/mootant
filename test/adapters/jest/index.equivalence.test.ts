@@ -42,6 +42,11 @@ const OWN_TIMEOUT = [
 const LATE_REJECTION = 'src/deferred.js | condition | false'
 
 /**
+ * The mutant that loops through a site and never yields.
+ */
+const ENDLESS = 'src/settle.js | missing-await | pending.promise'
+
+/**
  * How both runs take the TypeScript file of the `transforms` fixture: with its
  * configuration of no transformer.
  */
@@ -95,6 +100,9 @@ describe.each(majors)('jest verdict equivalence on Jest %i', major => {
     let { original, result, rows } = await runJestBothWays(root)
     let compared = rows.filter(row => !OWN_TIMEOUT.includes(row.mutant))
     let late = rows.find(row => row.mutant === LATE_REJECTION)!
+    let endless = result.results.find(
+      entry => describeMutant(entry) === ENDLESS,
+    )!
 
     expect(original).toBe(true)
     expect(new Set(rows.map(row => row.reference))).toStrictEqual(
@@ -178,7 +186,7 @@ describe.each(majors)('jest verdict equivalence on Jest %i', major => {
         // Loads a JSON file beside it.
         'src/settings.js | arithmetic-operator | value',
         // A loop through a site that never yields.
-        'src/settle.js | missing-await | pending.promise',
+        ENDLESS,
         // No test fails, and a snapshot goes unchecked, which fails plain Jest.
         'src/shots.js | boolean-literal | false',
         // `test.skip` and `test.todo` decide nothing, and leave what they would
@@ -235,7 +243,9 @@ describe.each(majors)('jest verdict equivalence on Jest %i', major => {
       'src/retried.js | arithmetic-operator | value * 2 | Killed | assertion | -',
       'src/schema.js | comparison-operator | true | Killed | load-error | static',
       'src/settings.js | arithmetic-operator | value | Killed | assertion | -',
-      'src/settle.js | missing-await | pending.promise | Timeout | hit-limit | -',
+      // Its confirmation allows far more evaluations, which code in the vm of
+      // Jest may not make within the doubled time, so the watchdog may stop it.
+      `${ENDLESS} | Timeout | ${endless.cause === 'hang' ? 'hang' : 'hit-limit'} | -`,
       'src/shelved.js | arithmetic-operator | value / 2 | Killed | assertion | -',
       'src/shelved.js | arithmetic-operator | value / 3 | NoCoverage | - | -',
       'src/shots.js | boolean-literal | false | Killed | hook-error | -',
@@ -286,6 +296,32 @@ describe.each(majors)('jest verdict equivalence on Jest %i', major => {
     )
     expect(listForked().filter(pid => isAlive(pid))).toStrictEqual([])
   })
+
+  it(
+    'lets the tests decide mutants that only make code hotter, as plain Jest does',
+    { timeout: 120_000 },
+    async () => {
+      // Without the memo, the test evaluates mutant sites about two million
+      // times, over the hit limit of its unit. In the vm of Jest that takes a
+      // few hundred milliseconds, though plain Jest passes it in time.
+      let { original, result, rows } = await runJestBothWays(
+        await createProject('hot', major),
+      )
+
+      expect(original).toBe(true)
+      expect(result.diagnostics).toStrictEqual([])
+      expect(rows).toStrictEqual(
+        rows.map(row => ({ ...row, verdict: row.reference })),
+      )
+      expect(
+        rows.filter(row => row.reference === 'survived').map(row => row.mutant),
+      ).toStrictEqual([
+        'src/fib.js | condition | false',
+        'src/fib.js | statement-removal | ;',
+      ])
+      expect(result.runs).toStrictEqual({ isolated: 2, dry: 1 })
+    },
+  )
 
   it(
     'agrees with mutants applied by hand in ES modules',

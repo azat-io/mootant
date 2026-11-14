@@ -341,6 +341,29 @@ describe('node:test verdict equivalence', () => {
     await built.remove()
   })
 
+  it('lets the tests decide mutants that only make code hotter, as a plain run does', async () => {
+    // Without the memo, the test evaluates mutant sites about two million
+    // times in a few milliseconds, over the hit limit of its process, though a
+    // plain run passes it in time.
+    let { original, result, rows } = await runBothWays(
+      path.join(fixtures, 'hot'),
+      { args: ['--test'], extension: '.js' },
+    )
+
+    expect(original).toBe(true)
+    expect(result.diagnostics).toStrictEqual([])
+    expect(rows).toStrictEqual(
+      rows.map(row => ({ ...row, verdict: row.reference })),
+    )
+    expect(
+      rows.filter(row => row.reference === 'survived').map(row => row.mutant),
+    ).toStrictEqual([
+      'src/fib.js | condition | false',
+      'src/fib.js | statement-removal | ;',
+    ])
+    expect(result.runs).toStrictEqual({ isolated: 2, dry: 1 })
+  }, 60_000)
+
   it('agrees with mutants applied by hand', async () => {
     let { original, result, rows } = await runBothWays(
       path.join(fixtures, 'basic'),

@@ -20,14 +20,16 @@ function createVerdict(
 }
 
 describe('getUnitEvidence', () => {
-  it('waits for a confirmation of timer and hang timeouts only', () => {
+  it('waits for a confirmation of every timeout, and of a hit limit until the limit was raised', () => {
     let request: IsolatedRequest = {
       file: '/t/a.test.ts',
       confirming: false,
       retried: false,
+      raised: false,
       mutant: 'm',
     }
     let confirming = { ...request, confirming: true }
+    let raised = { ...confirming, raised: true }
     let timer = createVerdict('Timeout', 'time-limit')
     let hang = createVerdict('Timeout', 'hang')
     let hits = createVerdict('Timeout', 'hit-limit')
@@ -35,8 +37,11 @@ describe('getUnitEvidence', () => {
 
     expect(getUnitEvidence(timer, request)).toBe('confirming')
     expect(getUnitEvidence(hang, request)).toBe('confirming')
+    expect(getUnitEvidence(hits, request)).toBe('confirming')
     expect(getUnitEvidence(timer, confirming)).toBe(timer)
-    expect(getUnitEvidence(hits, request)).toBe(hits)
+    expect(getUnitEvidence(hang, confirming)).toBe(hang)
+    expect(getUnitEvidence(hits, confirming)).toBe('confirming')
+    expect(getUnitEvidence(hits, raised)).toBe(hits)
     expect(getUnitEvidence(kill, request)).toBe(kill)
     expect(getUnitEvidence('survived', request)).toBe('none')
     expect(getUnitEvidence(null, request)).toBe('none')

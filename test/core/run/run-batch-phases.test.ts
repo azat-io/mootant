@@ -211,4 +211,70 @@ describe('runBatchPhases', () => {
       isolatedBecause: 'recovery',
     })
   })
+
+  it('sends a mutant to the isolated path when the confirmation of its timer goes over the hit limit', async () => {
+    let { progress, state } = await run(
+      {
+        onBatch: (result, _plan, call) =>
+          call === 2 ?
+            {
+              ...result,
+              tries: result.tries.map(facts =>
+                facts.mutant === 'late' ?
+                  { ...facts, timedOut: false, hits: 1_000_000 }
+                : facts,
+              ),
+            }
+          : result,
+        tests: [
+          {
+            file: '/t/a.test.ts',
+            covers: ['late'],
+            hangs: ['late'],
+            id: 't1',
+          },
+        ],
+      },
+      ['late'],
+    )
+
+    expect(progress).toStrictEqual([
+      'batch 1: 1 mutants, 1 units',
+      'confirmation 1: 1 mutants, 1 units',
+    ])
+    expect(state.mutants.get('late')).toMatchObject({
+      isolatedBecause: 'doubtful',
+      path: 'isolated',
+      verdict: null,
+    })
+  })
+
+  it('sends a mutant over the hit limit to the isolated path, as a batch run cannot confirm it', async () => {
+    let { progress, state } = await run(
+      {
+        tests: [
+          {
+            covers: ['hot', 'looped'],
+            file: '/t/a.test.ts',
+            loops: ['looped'],
+            hot: ['hot'],
+            id: 't1',
+          },
+        ],
+      },
+      ['hot', 'looped'],
+    )
+
+    expect(progress).toStrictEqual(['batch 1: 2 mutants, 1 units'])
+    expect(state.mutants.get('hot')).toMatchObject({
+      isolatedBecause: 'doubtful',
+      path: 'isolated',
+      verdict: null,
+    })
+    expect(state.mutants.get('looped')).toMatchObject({
+      isolatedBecause: 'doubtful',
+      path: 'isolated',
+      verdict: null,
+    })
+  })
 })

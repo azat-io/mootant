@@ -54,7 +54,7 @@ const HUNG_CONTROLS: Record<string, Partial<TryFacts>> = {
 }
 
 describe('applyBatchResult', () => {
-  it('records kills, passes, hit limits and timeouts to confirm', async () => {
+  it('records kills, passes and timeouts to confirm, and isolates hit limits', async () => {
     let { missing, state } = await apply(
       {
         tests: [
@@ -97,9 +97,11 @@ describe('applyBatchResult', () => {
       survived: true,
       verdict: null,
     })
-    expect(state.mutants.get('looped')!.verdict).toMatchObject({
-      cause: 'hit-limit',
-      status: 'Timeout',
+    expect(state.mutants.get('looped')).toMatchObject({
+      isolatedBecause: 'doubtful',
+      path: 'isolated',
+      verdict: null,
+      confirm: [],
     })
     expect(state.mutants.get('slow')).toMatchObject({
       confirm: [{ cause: 'time-limit', test: 't1' }],
@@ -112,20 +114,34 @@ describe('applyBatchResult', () => {
     })
   })
 
-  it('makes timeouts final in a confirmation run', async () => {
+  it('makes timer timeouts final in a confirmation run, and isolates hit limits there', async () => {
     let { state } = await apply(
       {
         tests: [
-          { file: '/t/a.test.ts', covers: ['slow'], hangs: ['slow'], id: 't1' },
+          {
+            covers: ['slow', 'looped'],
+            file: '/t/a.test.ts',
+            loops: ['looped'],
+            hangs: ['slow'],
+            id: 't1',
+          },
         ],
       },
-      [{ mutant: 'slow', test: 't1' }],
-      { mutants: ['slow'], confirming: true },
+      [
+        { mutant: 'slow', test: 't1' },
+        { mutant: 'looped', test: 't1' },
+      ],
+      { mutants: ['slow', 'looped'], confirming: true },
     )
 
     expect(state.mutants.get('slow')).toMatchObject({
       verdict: { cause: 'time-limit', status: 'Timeout' },
       confirm: [],
+    })
+    expect(state.mutants.get('looped')).toMatchObject({
+      isolatedBecause: 'doubtful',
+      path: 'isolated',
+      verdict: null,
     })
   })
 
@@ -142,10 +158,9 @@ describe('applyBatchResult', () => {
             id: 't1',
           },
           {
-            covers: ['k3', 's2', 'l1'],
             kills: { k3: 'boom' },
             file: '/t/a.test.ts',
-            loops: ['l1'],
+            covers: ['k3', 's2'],
             id: 't2',
           },
         ],
@@ -158,7 +173,6 @@ describe('applyBatchResult', () => {
         { mutant: 'h1', test: 't1' },
         { mutant: 'k3', test: 't2' },
         { mutant: 's2', test: 't2' },
-        { mutant: 'l1', test: 't2' },
       ],
       {
         change: result => {
@@ -170,12 +184,12 @@ describe('applyBatchResult', () => {
               positions.set(facts.test, position + 1)
               let bad =
                 (facts.test === 't1' && (position === 0 || position === 10)) ||
-                (facts.test === 't2' && (position === 2 || position === 6))
+                (facts.test === 't2' && position === 2)
               return bad ? { ...facts, failed: true } : facts
             }),
           }
         },
-        mutants: ['k1', 'k2', 's1', 'm4', 'h1', 'k3', 's2', 'l1'],
+        mutants: ['k1', 'k2', 's1', 'm4', 'h1', 'k3', 's2'],
       },
     )
 
@@ -204,10 +218,6 @@ describe('applyBatchResult', () => {
     expect(state.mutants.get('s2')).toMatchObject({
       survived: true,
       path: 'batch',
-    })
-    expect(state.mutants.get('l1')).toMatchObject({
-      isolatedBecause: 'doubtful',
-      verdict: null,
     })
   })
 

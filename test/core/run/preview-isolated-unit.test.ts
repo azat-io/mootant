@@ -80,6 +80,7 @@ describe('previewIsolatedUnit', () => {
           file: '/t/a.test.ts',
           confirming: false,
           retried: false,
+          raised: false,
           mutant: 'm',
         },
       ],

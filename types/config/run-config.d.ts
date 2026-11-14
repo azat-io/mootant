@@ -12,8 +12,12 @@ export interface RunConfig {
   timeout?: { constant?: number; factor?: number }
 
   /**
-   * Hit limit per try: `max(floor, factor × dry hits)`. Defaults: factor 100,
-   * floor 100000.
+   * Hit limit: `max(floor, factor × dry hits)` for loading a test file and for
+   * each test, added up while a test file runs with a mutant, or per test in
+   * the batch runs of fast mode, which send a mutant over it to a run of its
+   * whole test file. A mutant over it runs its test file once more with doubled
+   * time and `factor × floor` more evaluations, and counts as a timeout only
+   * when that run times out too. Defaults: factor 100, floor 100000.
    */
   hitLimit?: { factor?: number; floor?: number }
 

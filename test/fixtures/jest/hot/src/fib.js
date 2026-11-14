@@ -1,0 +1,15 @@
+let memo = new Map()
+
+function fib(index) {
+  if (index < 2) {
+    return index
+  }
+  if (memo.has(index)) {
+    return memo.get(index)
+  }
+  let value = fib(index - 1) + fib(index - 2)
+  memo.set(index, value)
+  return value
+}
+
+module.exports = { fib }

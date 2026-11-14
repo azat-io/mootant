@@ -486,7 +486,9 @@ describe('vitest adapter with the cache', () => {
     expect(cached.result.results.map(summarizeCachedVerdict)).toStrictEqual(
       fresh.result.results.map(summarizeCachedVerdict),
     )
-    expect(cached.units).toBe(2)
+    // A unit of the changed file per mutant, and the confirmation of the one
+    // that went over the hit limit there.
+    expect(cached.units).toBe(3)
   }, 60_000)
 
   it('reuses a batch kill in fast mode only after the tests tried before it pass', async () => {

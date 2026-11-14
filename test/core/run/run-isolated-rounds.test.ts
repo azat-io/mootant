@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { RunEvent } from '../../../types/run/run-event'
 
+import { createHitLimitError } from '../../../core/runtime/create-hit-limit-error'
 import { previewIsolatedUnit } from '../../../core/run/preview-isolated-unit'
 import { runIsolatedRounds } from '../../../core/run/run-isolated-rounds'
 import { createTestRun } from '../../helpers/create-test-run'
@@ -81,6 +82,111 @@ describe('runIsolatedRounds', () => {
       survived: true,
       verdict: null,
       units: 7,
+    })
+  })
+
+  it('confirms a hit limit once with factor × floor more evaluations, however long the tests took', async () => {
+    let stopped = createHitLimitError('m', 200_000).message
+    let { session, state, fake } = await createTestRun(
+      {
+        tests: [
+          {
+            kills: { looped: stopped },
+            covers: ['hot', 'looped'],
+            file: '/t/a.test.ts',
+            loops: ['looped'],
+            duration: 1000,
+            hot: ['hot'],
+            id: 'a1',
+          },
+        ],
+        files: [{ file: '/t/a.test.ts', loadDuration: 10 }],
+      },
+      { mutants: ['hot', 'looped'], isolate: true },
+    )
+
+    await runIsolatedRounds(session, state)
+
+    // The test spends its second, as in a slow hook, without evaluating a
+    // site, which leaves the room of the confirmation as it is.
+    expect(
+      fake.calls.isolated.map(plan =>
+        plan.units.map(unit => [unit.mutant, unit.limits]),
+      ),
+    ).toStrictEqual([
+      [
+        ['hot', { timeout: 280 + 3250, hitLimit: 200_000 }],
+        ['looped', { timeout: 280 + 3250, hitLimit: 200_000 }],
+      ],
+      [
+        [
+          'hot',
+          {
+            hitLimit: 200_000 + 100 * 100_000,
+            timeout: 2 * (280 + 3250),
+          },
+        ],
+        [
+          'looped',
+          {
+            hitLimit: 200_000 + 100 * 100_000,
+            timeout: 2 * (280 + 3250),
+          },
+        ],
+      ],
+    ])
+    expect(state.runs).toStrictEqual({ isolated: 2 })
+    expect(state.mutants.get('hot')).toMatchObject({
+      survived: true,
+      verdict: null,
+      units: 2,
+    })
+    expect(state.mutants.get('looped')!.verdict).toMatchObject({
+      cause: 'hit-limit',
+      status: 'Timeout',
+      message: stopped,
+      test: 'a1',
+    })
+  })
+
+  it('confirms a hit limit that the confirmation of a timer went over, with the raised limit', async () => {
+    let { session, state, fake } = await createTestRun(
+      {
+        onIsolated: (result, _plan, call) =>
+          call === 1 ? result : (
+            {
+              units: result.units.map(facts => ({
+                ...facts,
+                tests: facts.tests.map(test => ({
+                  ...test,
+                  hits: 1_000_000,
+                  timedOut: false,
+                })),
+                hits: 1_000_000,
+              })),
+            }
+          ),
+        tests: [
+          { file: '/t/a.test.ts', covers: ['late'], hangs: ['late'], id: 'a1' },
+        ],
+      },
+      { mutants: ['late'], isolate: true },
+    )
+
+    await runIsolatedRounds(session, state)
+
+    // Its doubled time lets the test reach hot code past its wait.
+    expect(
+      fake.calls.isolated.map(plan => plan.units.map(unit => unit.limits)),
+    ).toStrictEqual([
+      [{ hitLimit: 200_000, timeout: 503 }],
+      [{ hitLimit: 200_000, timeout: 1006 }],
+      [{ hitLimit: 200_000 + 100 * 100_000, timeout: 1006 }],
+    ])
+    expect(state.mutants.get('late')).toMatchObject({
+      survived: true,
+      verdict: null,
+      units: 3,
     })
   })
 

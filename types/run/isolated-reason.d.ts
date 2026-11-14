@@ -6,9 +6,10 @@
  *   tries;
  * - `unrepeatable`: in fast mode, a covering test passed once and failed once
  *   without a mutant, or had stray errors;
- * - `doubtful`: a batch try could not decide it (see `TryVerdict`), a control try
- *   next to its kill failed, a late error followed its try, a suite hook of its
- *   batch unit failed, or no batch try reached it;
+ * - `doubtful`: a batch try could not decide it (see `TryVerdict`) or went over
+ *   its hit limit, a control try next to its kill failed, a late error followed
+ *   its try, a suite hook of its batch unit failed, or no batch try reached
+ *   it;
  * - `batch-survivor`: it passed every batch try that reached it; batch passes are
  *   not trusted, so a fresh module graph with its whole covering test files
  *   decides whether it survives;

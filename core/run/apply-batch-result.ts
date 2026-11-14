@@ -42,25 +42,27 @@ interface BatchTestContext {
 
 /**
  * Records what a batch run reported, in fast mode. Each mutant try is
- * classified. Only kills are accepted, and a kill or hit-limit timeout only
- * when the control tries right before and right after it both passed, else it
- * is doubtful. An accepted kill is heuristic and final: passing controls do not
- * prove that the mutant alone fails the test, since state an earlier try left
- * can fail it, such as a value a control try set that the mutant no longer
- * resets; the default mode decides every mutant isolated instead. A try that
- * ran out of time has no control after it, since the worker gives up the unit:
- * it counts only after a passing control, and then waits for a confirmation
- * with doubled bounds in a fresh run, or is final when the run was one.
- * Doubtful tries and late errors send the mutant to the isolated path; a
- * reached pass is only noted, since state left by a control try may hide the
- * mutant, and the core rechecks it on the isolated path. A unit whose suite
- * hook failed sends every mutant it planned that is still undecided to the
- * isolated path. A test whose leading control skipped itself ends its repeats
- * there, so its mutants count as tried without evidence rather than missing. A
- * hung unit gets a `worker-hang` warning and its timed-out try the cause
- * `hang`. Accepted kills and passes, whether they reached the mutant or not, go
- * to the cache of the run, so a later run reuses a kill only after the same
- * passes, unless the kill came from the first test of the mutant
+ * classified. Only kills are accepted, and a kill only when the control tries
+ * right before and right after it both passed, else it is doubtful. An accepted
+ * kill is heuristic and final: passing controls do not prove that the mutant
+ * alone fails the test, since state an earlier try left can fail it, such as a
+ * value a control try set that the mutant no longer resets; the default mode
+ * decides every mutant isolated instead. A try that ran out of time has no
+ * control after it, since the worker gives up the unit: it counts only after a
+ * passing control, and then waits for a confirmation with doubled bounds in a
+ * fresh run, or is final when the run was one. A hit-limit timeout sends the
+ * mutant to the isolated path, even in such a run, since a mutant that only
+ * makes code hotter goes over the hit limit too and only that path confirms it
+ * with a raised limit. Doubtful tries and late errors send the mutant to the
+ * isolated path; a reached pass is only noted, since state left by a control
+ * try may hide the mutant, and the core rechecks it on the isolated path. A
+ * unit whose suite hook failed sends every mutant it planned that is still
+ * undecided to the isolated path. A test whose leading control skipped itself
+ * ends its repeats there, so its mutants count as tried without evidence rather
+ * than missing. A hung unit gets a `worker-hang` warning and its timed-out try
+ * the cause `hang`. Accepted kills and passes, whether they reached the mutant
+ * or not, go to the cache of the run, so a later run reuses a kill only after
+ * the same passes, unless the kill came from the first test of the mutant
  * (`applyCachedBatch`).
  *
  * @param state - State of the run, updated in place.
@@ -121,10 +123,10 @@ export function applyBatchResult(
  * Applies a mutant try to its mutant, still undecided on the batch path. A pass
  * goes to the cache whether it reached the mutant or not, and a reached pass
  * marks the mutant survived; a doubtful try sends it to the isolated path; a
- * timeout of the timer takes the cause `hang` when the worker of the unit hung,
- * and a hit-limit timeout, or any timeout in a run that confirms timeouts, is
- * final, any other waits for a confirmation; a kill is final and goes to the
- * cache.
+ * hit-limit timeout sends it to the isolated path as doubtful; a timeout of the
+ * timer takes the cause `hang` when the worker of the unit hung, and is final
+ * in a run that confirms timeouts, else it waits for a confirmation; a kill is
+ * final and goes to the cache.
  *
  * @param state - State of the run, updated in place.
  * @param mutant - Mutant of the try, undecided on the batch path.
@@ -162,7 +164,9 @@ function recordBatchTry(
     }
     case 'timeout': {
       let timeoutCause = cause === 'time-limit' && hung ? 'hang' : cause!
-      if (timeoutCause === 'hit-limit' || confirming) {
+      if (timeoutCause === 'hit-limit') {
+        routeIsolated(state, mutant.mutant.id, 'doubtful')
+      } else if (confirming) {
         mutant.verdict = {
           cause: timeoutCause,
           status: 'Timeout',
@@ -291,10 +295,9 @@ function isolateSpoiled(
 
 /**
  * Classifies a mutant try of a batch run by the control tries next to it. A
- * kill or a hit-limit timeout counts only when the control tries right before
- * and right after it passed; a timeout of the timer only needs a passing
- * control before it, since the worker gives up the unit. Otherwise the try is
- * doubtful.
+ * kill counts only when the control tries right before and right after it
+ * passed; a timeout only needs a passing control before it, since the worker
+ * gives up the unit after a timer fired. Otherwise the try is doubtful.
  *
  * @param facts - Facts of the mutant try.
  * @param test - The planned test with its limits.
@@ -309,7 +312,7 @@ function classifyBatchTry(
   controls: { before: undefined | TryFacts; after: undefined | TryFacts },
 ): TryVerdict {
   let { outcome, cause } = classifyTry(facts, test, 'batch')
-  let needsAfter = outcome === 'killed' || cause === 'hit-limit'
+  let needsAfter = outcome === 'killed'
   if (
     (needsAfter || outcome === 'timeout') &&
     (!isGoodControl(controls.before) ||

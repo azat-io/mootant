@@ -23,12 +23,14 @@ describe('planIsolated', () => {
           file: '/t/a.test.ts',
           confirming: false,
           retried: false,
+          raised: false,
           mutant: 'm1',
         },
         {
           file: '/t/a.test.ts',
           confirming: true,
           retried: false,
+          raised: false,
           mutant: 'm2',
         },
       ]),
@@ -50,6 +52,28 @@ describe('planIsolated', () => {
     })
   })
 
+  it('gives a unit that confirms a hit-limit timeout factor × floor more evaluations', async () => {
+    let { state } = await createTestRun(
+      { tests: [{ file: '/t/a.test.ts', covers: ['m1'], id: 'a1' }] },
+      { mutants: ['m1'], isolate: true },
+    )
+
+    expect(
+      planIsolated(state, [
+        {
+          file: '/t/a.test.ts',
+          confirming: true,
+          retried: false,
+          mutant: 'm1',
+          raised: true,
+        },
+      ]).units[0]!.limits,
+    ).toStrictEqual({
+      hitLimit: 200_000 + 100 * 100_000,
+      timeout: 2 * (250 + 253),
+    })
+  })
+
   it('plans a file the dry run did not load or saw no tests of', async () => {
     let { state } = await createTestRun(
       { tests: [{ file: '/t/a.test.ts', covers: ['m1'], id: 'a1' }] },
@@ -63,6 +87,7 @@ describe('planIsolated', () => {
           file: '/t/a.test.ts',
           confirming: false,
           retried: false,
+          raised: false,
           mutant: 'm1',
         },
       ]).units[0]!.limits,
@@ -76,6 +101,7 @@ describe('planIsolated', () => {
           file: '/t/a.test.ts',
           confirming: false,
           retried: false,
+          raised: false,
           mutant: 'm1',
         },
       ]).units[0]!.limits,

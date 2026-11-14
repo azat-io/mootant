@@ -39,6 +39,7 @@ async function apply(
     file: '/t/a.test.ts',
     confirming: false,
     retried: false,
+    raised: false,
     mutant,
     ...options.request,
   }))
@@ -131,7 +132,7 @@ describe('applyIsolatedResult', () => {
     })
   })
 
-  it('stops loops and waits to confirm hangs and slow tests', async () => {
+  it('waits to confirm loops, hangs and slow tests', async () => {
     let { state, next } = await apply(
       {
         tests: [
@@ -151,23 +152,31 @@ describe('applyIsolatedResult', () => {
       },
     )
 
-    expect(state.mutants.get('looped')!.verdict).toMatchObject({
-      cause: 'hit-limit',
-      status: 'Timeout',
-      test: null,
+    expect(state.mutants.get('looped')).toMatchObject({
+      evidence: new Map([['/t/a.test.ts', 'confirming']]),
+      verdict: null,
     })
     expect(next).toStrictEqual([
       {
         file: '/t/a.test.ts',
         confirming: true,
+        mutant: 'looped',
+        retried: false,
+        raised: true,
+      },
+      {
+        file: '/t/a.test.ts',
+        confirming: true,
         retried: false,
         mutant: 'slow',
+        raised: false,
       },
       {
         file: '/t/a.test.ts',
         confirming: true,
         retried: false,
         mutant: 'hung',
+        raised: false,
       },
     ])
     expect(state.diagnostics).toStrictEqual([
@@ -183,42 +192,92 @@ describe('applyIsolatedResult', () => {
     ])
   })
 
-  it('makes timeouts final when the unit confirms one', async () => {
-    let { state } = await apply(
-      {
-        tests: [
-          {
-            kills: { looped: 'MootantHitLimitError' },
-            covers: ['slow', 'hung', 'looped'],
-            file: '/t/a.test.ts',
-            loops: ['looped'],
-            hangs: ['slow'],
-            id: 'a1',
-          },
-        ],
-      },
-      ['slow', 'hung', 'looped'],
-      {
-        change: facts =>
-          facts.unit === 1 ? { ...facts, incomplete: 'hang' } : facts,
-        request: { confirming: true },
-      },
-    )
+  it('makes timeouts final when the unit confirms them, a hit limit once the limit was raised', async () => {
+    let world: FakeWorld = {
+      tests: [
+        {
+          kills: { looped: 'MootantHitLimitError' },
+          covers: ['slow', 'hung', 'looped'],
+          file: '/t/a.test.ts',
+          loops: ['looped'],
+          hangs: ['slow'],
+          id: 'a1',
+        },
+      ],
+    }
+    let timers = await apply(world, ['slow', 'hung'], {
+      change: facts =>
+        facts.unit === 1 ? { ...facts, incomplete: 'hang' } : facts,
+      request: { confirming: true },
+    })
+    let raised = await apply(world, ['looped'], {
+      request: { confirming: true, raised: true },
+    })
 
-    expect(state.mutants.get('slow')!.verdict).toMatchObject({
+    expect(timers.state.mutants.get('slow')!.verdict).toMatchObject({
       cause: 'time-limit',
       status: 'Timeout',
       test: 'a1',
     })
-    expect(state.mutants.get('hung')!.verdict).toMatchObject({
+    expect(timers.state.mutants.get('hung')!.verdict).toMatchObject({
       status: 'Timeout',
       cause: 'hang',
     })
-    expect(state.mutants.get('looped')!.verdict).toMatchObject({
+    expect(raised.state.mutants.get('looped')!.verdict).toMatchObject({
       message: 'MootantHitLimitError',
       cause: 'hit-limit',
       test: 'a1',
     })
+  })
+
+  it('keeps a hang of a unit with the raised limit a hang, with its warning', async () => {
+    let { state } = await apply(
+      { tests: [{ file: '/t/a.test.ts', covers: ['looped'], id: 'a1' }] },
+      ['looped'],
+      {
+        change: facts => ({ ...facts, incomplete: 'hang' }),
+        request: { confirming: true, raised: true },
+      },
+    )
+
+    // The raised limit may have held: a teardown can hang after the hot code.
+    expect(state.mutants.get('looped')!.verdict).toMatchObject({
+      status: 'Timeout',
+      cause: 'hang',
+      test: null,
+    })
+    expect(state.diagnostics.map(diagnostic => diagnostic.code)).toStrictEqual([
+      'worker-hang',
+    ])
+  })
+
+  it('confirms a hit limit once more with the raised limit when the confirmation of a timer goes over it', async () => {
+    let { state, next } = await apply(
+      { tests: [{ file: '/t/a.test.ts', covers: ['late'], id: 'a1' }] },
+      ['late'],
+      {
+        change: facts => ({
+          ...facts,
+          tests: facts.tests.map(test => ({ ...test, hits: 1_000_000 })),
+          hits: 1_000_000,
+        }),
+        request: { confirming: true },
+      },
+    )
+
+    expect(state.mutants.get('late')).toMatchObject({
+      evidence: new Map([['/t/a.test.ts', 'confirming']]),
+      verdict: null,
+    })
+    expect(next).toStrictEqual([
+      {
+        file: '/t/a.test.ts',
+        confirming: true,
+        retried: false,
+        mutant: 'late',
+        raised: true,
+      },
+    ])
   })
 
   it.each<[string, Record<string, [number, string] | null>, string]>([
@@ -266,9 +325,9 @@ describe('applyIsolatedResult', () => {
                   }
                 )
             }),
-            hits: 1_000_000,
+            hits: 100_000_000,
           }),
-          request: { confirming: true },
+          request: { confirming: true, raised: true },
         },
       )
 
@@ -290,10 +349,10 @@ describe('applyIsolatedResult', () => {
         change: facts => ({
           ...facts,
           loadError: stopped,
-          hits: 1_000_000,
+          hits: 100_000_000,
           tests: [],
         }),
-        request: { confirming: true },
+        request: { confirming: true, raised: true },
       },
     )
 
@@ -366,18 +425,30 @@ describe('applyIsolatedResult', () => {
       request: { retried: true },
     })
     let confirmation = await apply(world, ['m1'], {
+      request: { confirming: true, raised: true },
       change: facts => ({ ...facts, unit: -1 }),
-      request: { confirming: true },
     })
 
     expect(first.next).toStrictEqual([
-      { file: '/t/a.test.ts', confirming: false, retried: true, mutant: 'm1' },
+      {
+        file: '/t/a.test.ts',
+        confirming: false,
+        retried: true,
+        raised: false,
+        mutant: 'm1',
+      },
     ])
     expect(first.state.mutants.get('m1')!.evidence.get('/t/a.test.ts')).toBe(
       'retrying',
     )
     expect(confirmation.next).toStrictEqual([
-      { file: '/t/a.test.ts', confirming: true, retried: true, mutant: 'm1' },
+      {
+        file: '/t/a.test.ts',
+        confirming: true,
+        retried: true,
+        mutant: 'm1',
+        raised: true,
+      },
     ])
     expect(
       confirmation.state.mutants.get('m1')!.evidence.has('/t/a.test.ts'),
@@ -408,7 +479,13 @@ describe('applyIsolatedResult', () => {
       { mutants: ['m1'], isolate: true },
     )
     let requests = ['/t/a.test.ts', '/t/b.test.ts', '/t/b.test.ts'].map(
-      file => ({ confirming: false, retried: false, mutant: 'm1', file }),
+      file => ({
+        confirming: false,
+        retried: false,
+        raised: false,
+        mutant: 'm1',
+        file,
+      }),
     )
     let plan = planIsolated(state, requests)
     let result = await session.runIsolated(plan)
@@ -443,9 +520,13 @@ describe('applyIsolatedResult', () => {
       { mutants: ['m1'], isolate: true },
     )
     let mutant = state.mutants.get('m1')!
-    let requests = mutant.files
-      .splice(0)
-      .map(file => ({ confirming: false, retried: false, mutant: 'm1', file }))
+    let requests = mutant.files.splice(0).map(file => ({
+      confirming: false,
+      retried: false,
+      raised: false,
+      mutant: 'm1',
+      file,
+    }))
     let plan = planIsolated(state, requests)
     let result = await session.runIsolated(plan)
 
@@ -461,13 +542,32 @@ describe('applyIsolatedResult', () => {
 
     let retry = planIsolated(state, next)
     let retried = await session.runIsolated(retry)
-    applyIsolatedResult(
+    let confirming = applyIsolatedResult(
       state,
       { requests: next, plan: retry },
       {
         units: retried.units.map(facts => ({
           ...facts,
           hits: facts.hits + 1_000_000,
+        })),
+      },
+    )
+
+    expect(confirming).toStrictEqual([
+      { ...requests[0], confirming: true, raised: true },
+    ])
+    expect(mutant.verdict).toBeNull()
+    expect(mutant.evidence.get('/t/a.test.ts')).toBe('confirming')
+
+    let confirmation = planIsolated(state, confirming)
+    let confirmed = await session.runIsolated(confirmation)
+    applyIsolatedResult(
+      state,
+      { requests: confirming, plan: confirmation },
+      {
+        units: confirmed.units.map(facts => ({
+          ...facts,
+          hits: confirmation.units[0]!.limits.hitLimit + 1,
         })),
       },
     )
@@ -602,6 +702,7 @@ describe('applyIsolatedResult', () => {
         confirming: true,
         retried: false,
         mutant: 'slow',
+        raised: false,
       },
     ])
     expect(state.mutants.get('unreached')).toMatchObject({

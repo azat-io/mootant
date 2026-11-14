@@ -92,6 +92,12 @@ export interface IsolatedRequest {
   retried: boolean
 
   /**
+   * Whether the unit confirms a hit-limit timeout, with `factor × floor` more
+   * site evaluations than planned.
+   */
+  raised: boolean
+
+  /**
    * Id of the mutant.
    */
   mutant: string
@@ -113,7 +119,9 @@ export interface LimitSettings {
   timeout: { constant: number; factor: number }
 
   /**
-   * Hit limit per try: `max(floor, factor × dry hits)`.
+   * Hit limit of a try or of loading a test file: `max(floor, factor × dry
+   * hits)`. A unit that confirms a hit-limit timeout gets `factor × floor`
+   * more.
    */
   hitLimit: { factor: number; floor: number }
 }

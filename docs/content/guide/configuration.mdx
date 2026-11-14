@@ -461,7 +461,15 @@ default.
 
 ### `hitLimit`
 
-The most evaluations of mutated code in each test: `max(floor, factor × hits)`,
-where the hits are how many evaluations the test made without mutants. A mutant
-that goes over it, such as a loop made endless, counts as a timeout without
-waiting for the time limit. `{ factor: 100, floor: 100000 }` by default.
+The most evaluations of mutated code while a test file runs with a mutant:
+`max(floor, factor × hits)` for its loading and for each of its tests, added up,
+where the hits are how many evaluations they made without mutants. When fast
+mode tries many mutants in one test run, each test has its own, and a mutant
+over it runs its whole test file instead. A mutant that goes over the limit,
+such as a loop made endless, stops at once and runs the file again with twice
+the time limit and `factor × floor` more evaluations. Only a timeout there
+counts, so a mutant that only makes code hotter, such as a cache turned off,
+gets the verdict of its tests when these evaluations are enough for it. One that
+needs more counts as a timeout again, and so as detected in the score, even when
+a plain run of its tests passes in time. Raise `hitLimit` for such a mutant.
+`{ factor: 100, floor: 100000 }` by default.

@@ -1,0 +1,7 @@
+{
+  "name": "jest-hot",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

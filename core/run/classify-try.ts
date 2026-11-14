@@ -4,14 +4,15 @@ import type { TryFacts } from '../../types/adapter/try-facts'
 
 /**
  * Classifies the raw facts of one try. In order: more site evaluations than the
- * hit limit is a timeout, since only a loop through sites gets there; a try
- * that ran out of time is a timeout when it reached the mutant; stray errors
- * make a batch try doubtful, since orphaned work of an earlier try may throw
- * them, and kill on the isolated path when the try reached the mutant; a
- * failure kills when the try reached the mutant; a pass, or a skip, survives
- * when it reached the mutant. A try that failed, ran out of time or had stray
- * errors without reaching the mutant is doubtful; one that passed without
- * reaching it is unreached.
+ * hit limit is a timeout, whether a mutant made a loop through sites endless or
+ * only made code far hotter, which its confirmation tells apart; a try that ran
+ * out of time is a timeout when it reached the mutant; stray errors make a
+ * batch try doubtful, since orphaned work of an earlier try may throw them, and
+ * kill on the isolated path when the try reached the mutant; a failure kills
+ * when the try reached the mutant; a pass, or a skip, survives when it reached
+ * the mutant. A try that failed, ran out of time or had stray errors without
+ * reaching the mutant is doubtful; one that passed without reaching it is
+ * unreached.
  *
  * @param facts - Facts the adapter reported for the try.
  * @param limits - Limits the try ran with.

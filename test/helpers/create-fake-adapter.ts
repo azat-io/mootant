@@ -185,9 +185,16 @@ interface FakeTest {
   hangs?: string[]
 
   /**
-   * Mutants that make it loop through sites past any hit limit.
+   * Mutants that make it loop through sites until the hit limit stops it.
    */
   loops?: string[]
+
+  /**
+   * Mutants that make it evaluate a million sites and pass when it reaches
+   * them: more than the default hit limit of a try or of a unit of a few tests,
+   * less than that of its confirmation.
+   */
+  hot?: string[]
 
   /**
    * 1-based line in its test file; null when omitted.
@@ -423,7 +430,10 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
                 ),
               ]
           for (let mutant of mutants) {
-            let facts = simulate(test, mutant, false)
+            let facts = simulate(test, mutant, {
+              hitLimit: planned?.hitLimit ?? Infinity,
+              fresh: false,
+            })
             if (mutant !== null && (facts.failed || facts.timedOut)) {
               killed.add(mutant)
             }
@@ -517,7 +527,12 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
       spec?.loadKills?.includes(unit.mutant) === true ? 'load boom' : null
     let tries =
       loadError === null ?
-        getFileTests(unit.file).map(test => simulate(test, unit.mutant, true))
+        getFileTests(unit.file).map(test =>
+          simulate(test, unit.mutant, {
+            hitLimit: unit.limits.hitLimit,
+            fresh: true,
+          }),
+        )
       : []
     return {
       ...(world.cacheInputs && { inputs: readInputs(unit.file) }),
@@ -549,23 +564,30 @@ export function createFakeAdapter(world: FakeWorld): FakeAdapter {
  *
  * @param test - Test of the world.
  * @param mutant - Active mutant, or null for a control try.
- * @param fresh - Whether the try runs in a fresh module graph.
+ * @param run - How the try runs.
+ * @param run.hitLimit - Site evaluations it may make.
+ * @param run.fresh - Whether it runs in a fresh module graph.
  * @returns Facts of the try.
  */
 function simulate(
   test: FakeTest,
   mutant: string | null,
-  fresh: boolean,
+  run: { hitLimit: number; fresh: boolean },
 ): TryFacts {
   let reached = mutant !== null && (test.covers ?? []).includes(mutant)
   let message =
     reached ?
       (test.kills?.[mutant!] ??
-      (fresh ? test.freshKills?.[mutant!] : undefined) ??
+      (run.fresh ? test.freshKills?.[mutant!] : undefined) ??
       null)
     : null
+  let hits = 1
+  if (reached && has(test.loops, mutant)) {
+    hits = run.hitLimit + 1
+  } else if (reached && has(test.hot, mutant)) {
+    hits = 1_000_000
+  }
   return {
-    hits: reached && has(test.loops, mutant) ? Number.MAX_SAFE_INTEGER : 1,
     strays: reached && has(test.strays, mutant) ? ['stray boom'] : [],
     timedOut: reached && has(test.hangs, mutant),
     duration: test.duration ?? 1,
@@ -576,6 +598,7 @@ function simulate(
     reached,
     message,
     mutant,
+    hits,
   }
 }
 

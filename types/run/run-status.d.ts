@@ -2,8 +2,8 @@
  * Final state of a mutant after a run:
  *
  * - `Killed`: a test failed with the mutant active (`cause` tells how);
- * - `Timeout`: a test did not finish (hit limit, or timer or hang confirmed with
- *   doubled bounds); counts as detected;
+ * - `Timeout`: a test did not finish (hit limit, timer or hang, each confirmed by
+ *   a second run); counts as detected;
  * - `Survived`: every test of the test files that cover it passed in a fresh
  *   module graph, and one of them reached it (always the isolated path);
  * - `NoCoverage`: no test reached it;

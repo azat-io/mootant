@@ -22,11 +22,12 @@ import { countRun } from './count-run'
  * confirmation takes no new files until the confirmation decides it. The
  * verdict comes from the first file with evidence (`decideEvidence`), so it
  * does not depend on the batches or the workers. A round also runs the retries
- * and confirmations of the round before. A request lives at most four rounds,
- * as a unit missing twice gets an `Error` verdict and a timeout is confirmed
- * once, so the rounds end. While a round runs, its units count in the live
- * verdict counts as they end (`previewIsolatedUnit`), and every mutant is
- * counted again once its result is recorded (`countVerdicts`).
+ * and confirmations of the round before. A request lives at most six rounds, as
+ * a unit missing twice gets an `Error` verdict and a timeout is confirmed once,
+ * or twice when the confirmation of a timer goes over the hit limit, so the
+ * rounds end. While a round runs, its units count in the live verdict counts as
+ * they end (`previewIsolatedUnit`), and every mutant is counted again once its
+ * result is recorded (`countVerdicts`).
  *
  * @param session - Live test runner.
  * @param state - State of the run, updated in place.
@@ -79,6 +80,7 @@ async function runRound(
         mutant: mutant.mutant.id,
         confirming: false,
         retried: false,
+        raised: false,
         file,
       })
     }

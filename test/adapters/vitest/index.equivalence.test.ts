@@ -281,6 +281,39 @@ describe('verdict equivalence', () => {
     ).toMatchObject({ isolatedBecause: null, status: 'Survived' })
   }, 60_000)
 
+  it('lets the tests decide mutants that only make code hotter, as a plain run does', async () => {
+    // Without the memo, the test evaluates mutant sites about two million
+    // times in a few milliseconds: over the hit limit of its unit, though a
+    // plain run passes it in time.
+    let { original, isolated, fast, rows } = await runAllPaths(
+      path.join(equivalenceRoot, 'hot'),
+      ['src/fib.ts'],
+    )
+
+    expect(original).toBe(true)
+    expect(isolated.diagnostics).toStrictEqual([])
+    expectAgreement(rows)
+    expect(
+      rows.filter(row => row.reference === 'survived').map(row => row.mutant),
+    ).toStrictEqual([
+      'src/fib.ts | condition | false',
+      'src/fib.ts | statement-removal | ;',
+    ])
+    expect(isolated.runs).toStrictEqual({ isolated: 2, dry: 1 })
+    expect(fast.runs).toStrictEqual({ isolated: 2, batch: 1, dry: 1 })
+    // In fast mode the missing check goes over the limit of its batch try
+    // too, while the missing store runs isolated from the start, as the second
+    // dry try finds the memo the first one filled.
+    expect(
+      fast.results
+        .filter(result => result.status === 'Survived')
+        .map(result => [describeMutant(result), result.isolatedBecause]),
+    ).toStrictEqual([
+      ['src/fib.ts | condition | false', 'doubtful'],
+      ['src/fib.ts | statement-removal | ;', 'first-reach'],
+    ])
+  }, 60_000)
+
   it('counts errors of worker-scoped fixture cleanup against the mutant', async () => {
     // Only the cleanup of a worker-scoped fixture, after the test file ran,
     // sees the mutants of `release`. The fixture holds a fixed port until
