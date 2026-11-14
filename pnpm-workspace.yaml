@@ -13,6 +13,11 @@ allowBuilds:
 
 sideEffectsCache: false
 
+packageExtensions:
+  '@astrojs/astro2tsx':
+    dependencies:
+      '@emnapi/runtime': 1.11.3
+
 updateConfig:
   ignoreDependencies:
     - jest-29

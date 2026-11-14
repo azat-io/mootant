@@ -18,33 +18,32 @@ type Props =
 let { icon: Icon, title, text } = Astro.props
 ---
 
-{
-  Icon ?
-    <div class="card">
-      <Icon
-        aria-hidden="true"
-        class="icon"
-      />
-      <div class="info">
-        <Typography
-          color="primary"
-          class="line"
-          size="m"
-          bold
-        >
-          {title}
-        </Typography>
-        <Typography
-          class="line"
-          size="2xs"
-        >
-          {text}
-        </Typography>
-      </div>
+{Icon ?
+  <div class="card">
+    <Icon
+      aria-hidden="true"
+      class="icon"
+    />
+    <div class="info">
+      <Typography
+        color="primary"
+        class="line"
+        size="m"
+        bold
+      >
+        {title}
+      </Typography>
+      <Typography
+        class="line"
+        size="2xs"
+      >
+        {text}
+      </Typography>
     </div>
-  : <span class="badge">
-      <slot />
-    </span>
+  </div>
+: <span class="badge">
+    <slot />
+  </span>
 }
 
 <style>

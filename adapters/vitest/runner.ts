@@ -3,6 +3,7 @@ import type {
   RunnerTestSuite,
   RunnerTestCase,
   RunnerTestFile,
+  TestTryOptions,
   RunnerTask,
 } from 'vitest'
 
@@ -756,6 +757,25 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
+   * Notes the state of the test after its `afterEach` hooks; the try's facts
+   * are read once its teardown finished.
+   *
+   * @param test - Vitest task of the try.
+   * @param options - Retry and repeat numbers of the try.
+   */
+  public override async onAfterRetryTask(
+    test: RunnerTestCase,
+    options: TestTryOptions,
+  ): Promise<void> {
+    let current = this.records.get(test)?.current
+    if (current) {
+      current.state = test.result!.state
+    }
+    // eslint-disable-next-line typescript/no-unnecessary-condition -- Vitest 5.0 has no such hook.
+    await super.onAfterRetryTask?.(test, options)
+  }
+
+  /**
    * Records a test that ended with a skip before a suite's hooks run. After an
    * isolated unit bailed, a suite that has not started is skipped with its
    * hooks.
@@ -770,19 +790,6 @@ export default class MootantRunner extends TestRunner {
       suite.mode = 'skip'
     }
     await super.onBeforeRunSuite(suite)
-  }
-
-  /**
-   * Notes the state of the test after its `afterEach` hooks; the try's facts
-   * are read once its teardown finished.
-   *
-   * @param test - Vitest task of the try.
-   */
-  public onAfterRetryTask(test: RunnerTestCase): void {
-    let current = this.records.get(test)?.current
-    if (current) {
-      current.state = test.result!.state
-    }
   }
 
   /**

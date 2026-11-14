@@ -27,16 +27,16 @@ let demoProps =
   >
     <span class="header">
       <span class="title">{title}</span>
-      {
-        Icon && (
-          <Icon
-            aria-hidden="true"
-            class="icon"
-          />
-        )
-      }
+      {Icon && (
+        <Icon
+          aria-hidden="true"
+          class="icon"
+        />
+      )}
     </span>
-    <div class="text"><slot /></div>
+    <div class="text">
+      <slot />
+    </div>
   </a>
 </li>
 

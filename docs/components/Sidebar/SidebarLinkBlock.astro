@@ -27,26 +27,22 @@ let isActive = getPageUrl(Astro.url.pathname) === url
     tag="h2"
     bold
   >
-    {
-      url ?
-        <a
-          aria-current={isActive ? 'page' : undefined}
-          class="label link"
-          href={url}
-        >
-          {title}
-        </a>
-      : <span class="label">{title}</span>
-    }
+    {url ?
+      <a
+        aria-current={isActive ? 'page' : undefined}
+        class="label link"
+        href={url}
+      >
+        {title}
+      </a>
+    : <span class="label">{title}</span>}
   </Typography>
   <ul class="links">
-    {
-      links.map(link => (
-        <li class="item">
-          <SidebarLink {...link} />
-        </li>
-      ))
-    }
+    {links.map(link => (
+      <li class="item">
+        <SidebarLink {...link} />
+      </li>
+    ))}
   </ul>
 </div>
 

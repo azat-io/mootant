@@ -71,30 +71,28 @@ let cards = [
       </Lead>
     </div>
     <ul class="cards">
-      {
-        cards.map(({ description, icon: Icon, title }) => (
-          <li class="card">
-            <div class="card-header">
-              <Typography
-                color="primary"
-                align="start"
-                size="l"
-                tag="h3"
-                bold
-              >
-                {title}
-              </Typography>
-              <Icon class="icon" />
-            </div>
+      {cards.map(({ description, icon: Icon, title }) => (
+        <li class="card">
+          <div class="card-header">
             <Typography
+              color="primary"
               align="start"
-              size="s"
+              size="l"
+              tag="h3"
+              bold
             >
-              {description}
+              {title}
             </Typography>
-          </li>
-        ))
-      }
+            <Icon class="icon" />
+          </div>
+          <Typography
+            align="start"
+            size="s"
+          >
+            {description}
+          </Typography>
+        </li>
+      ))}
     </ul>
   </Container>
 </section>

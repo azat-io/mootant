@@ -13,12 +13,16 @@ let range = getChangedRange(before, after)
 ---
 
 <div class:list={['mutant-diff', `size-${size}`]}>
-  <code class="line removed"
-    >{range.prefix}<del>{range.before}</del>{range.suffix}</code
-  >
-  <code class="line added"
-    >{range.prefix}<ins>{range.after}</ins>{range.suffix}</code
-  >
+  <code class="line removed">
+    {range.prefix}
+    <del>{range.before}</del>
+    {range.suffix}
+  </code>
+  <code class="line added">
+    {range.prefix}
+    <ins>{range.after}</ins>
+    {range.suffix}
+  </code>
 </div>
 
 <style>

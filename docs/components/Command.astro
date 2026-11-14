@@ -14,7 +14,10 @@ let { class: className, command, ...props } = Astro.props
   class:list={['command', className]}
   {...props}
 >
-  <code class="text"><span class="prompt">$ </span>{command}</code>
+  <code class="text">
+    <span class="prompt">$ </span>
+    {command}
+  </code>
   <button
     aria-label="Copy command"
     data-command={command}

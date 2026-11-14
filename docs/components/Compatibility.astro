@@ -61,29 +61,25 @@ let extensions = [
         <div>
           <h3 class="label">File extensions</h3>
           <ul class="list extensions">
-            {
-              extensions.map(extension => (
-                <li class="item">
-                  <Badge>{extension}</Badge>
-                </li>
-              ))
-            }
+            {extensions.map(extension => (
+              <li class="item">
+                <Badge>{extension}</Badge>
+              </li>
+            ))}
           </ul>
         </div>
         <div>
           <h3 class="label">Test runners</h3>
           <ul class="list cards">
-            {
-              runners.map(({ title, icon, text }) => (
-                <li class="item">
-                  <Badge
-                    {title}
-                    {icon}
-                    {text}
-                  />
-                </li>
-              ))
-            }
+            {runners.map(({ title, icon, text }) => (
+              <li class="item">
+                <Badge
+                  {title}
+                  {icon}
+                  {text}
+                />
+              </li>
+            ))}
           </ul>
         </div>
       </div>
@@ -112,7 +108,8 @@ let extensions = [
         size="m"
         mbe="l"
       >
-        Add <code>--html</code> to a run to write the same report for your project.
+        Add <code>--html</code> to a run to write the same report for your
+        project.
       </Typography>
       <Button
         data-astro-prefetch="false"

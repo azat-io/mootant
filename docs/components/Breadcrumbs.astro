@@ -11,57 +11,55 @@ let section = pages.find(
 let page = section?.links.find(link => link.url === url)
 ---
 
-{
-  section && (
-    <nav aria-label="Breadcrumbs">
-      <ol class="list">
-        <li class="item">
+{section && (
+  <nav aria-label="Breadcrumbs">
+    <ol class="list">
+      <li class="item">
+        <a
+          class="nav-link link"
+          aria-label="Home"
+          href="/"
+        >
+          <IconHome class="icon" />
+        </a>
+      </li>
+      <li class="item">
+        <IconChevronRight
+          aria-hidden="true"
+          class="icon"
+        />
+        {page && section.url ?
           <a
             class="nav-link link"
-            aria-label="Home"
-            href="/"
+            href={section.url}
           >
-            <IconHome class="icon" />
+            {section.title}
           </a>
-        </li>
+        : <span
+            aria-current={page ? undefined : 'page'}
+            class="text"
+          >
+            {section.title}
+          </span>
+        }
+      </li>
+      {page && (
         <li class="item">
           <IconChevronRight
             aria-hidden="true"
             class="icon"
           />
-          {page && section.url ?
-            <a
-              class="nav-link link"
-              href={section.url}
-            >
-              {section.title}
-            </a>
-          : <span
-              aria-current={page ? undefined : 'page'}
-              class="text"
-            >
-              {section.title}
-            </span>
-          }
+          <span
+            aria-current="page"
+            class="text"
+          >
+            {page.title}
+          </span>
         </li>
-        {page && (
-          <li class="item">
-            <IconChevronRight
-              aria-hidden="true"
-              class="icon"
-            />
-            <span
-              aria-current="page"
-              class="text"
-            >
-              {page.title}
-            </span>
-          </li>
-        )}
-      </ol>
-    </nav>
-  )
-}
+      )}
+    </ol>
+  </nav>
+)}
 
 <style>
   .list {

@@ -52,20 +52,20 @@ let survivedFile = 'discount.ts'
           <thead>
             <tr>
               <th scope="col">File</th>
-              {metrics.map(metric => <th scope="col">{metric}</th>)}
+              {metrics.map(metric => (
+                <th scope="col">{metric}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {
-              files.map(file => (
-                <tr class:list={{ survived: file === survivedFile }}>
-                  <th scope="row">{file}</th>
-                  {metrics.map(() => (
-                    <td>100%</td>
-                  ))}
-                </tr>
-              ))
-            }
+            {files.map(file => (
+              <tr class:list={{ survived: file === survivedFile }}>
+                <th scope="row">{file}</th>
+                {metrics.map(() => (
+                  <td>100%</td>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -82,8 +82,7 @@ let survivedFile = 'discount.ts'
           <figcaption class="file">
             src/discount.ts<span class="location">:2:7</span>
           </figcaption>
-          <pre
-            class="code"><code><span class="removed"><span class="marker">-</span> if (total <span class="change">&gt;=</span> 100 || isMember) &#123;</span>
+          <pre class="code"><code><span class="removed"><span class="marker">-</span> if (total <span class="change">&gt;=</span> 100 || isMember) &#123;</span>
 <span class="added"><span class="marker">+</span> if (total <span class="change">&gt;</span> 100 || isMember) &#123;</span></code></pre>
         </figure>
         <span class="caption">

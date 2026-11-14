@@ -12,40 +12,38 @@ let { headings } = Astro.props
 let items = headings.filter(({ depth }) => depth === 2 || depth === 3)
 ---
 
-{
-  items.length > 0 && (
-    <nav
-      aria-labelledby="table-of-contents-title"
-      class="table-of-contents"
-      id="table-of-contents"
-    >
-      <div class="content">
-        <Typography
-          id="table-of-contents-title"
-          color="primary"
-          class="title"
-          size="s"
-          tag="h2"
-          bold
-        >
-          On this page
-        </Typography>
-        <ul class="list">
-          {items.map(({ depth, slug, text }) => (
-            <li class:list={['item', { subheading: depth === 3 }]}>
-              <a
-                class="nav-link link"
-                href={`#${slug}`}
-              >
-                {text}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </nav>
-  )
-}
+{items.length > 0 && (
+  <nav
+    aria-labelledby="table-of-contents-title"
+    class="table-of-contents"
+    id="table-of-contents"
+  >
+    <div class="content">
+      <Typography
+        id="table-of-contents-title"
+        color="primary"
+        class="title"
+        size="s"
+        tag="h2"
+        bold
+      >
+        On this page
+      </Typography>
+      <ul class="list">
+        {items.map(({ depth, slug, text }) => (
+          <li class:list={['item', { subheading: depth === 3 }]}>
+            <a
+              class="nav-link link"
+              href={`#${slug}`}
+            >
+              {text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </nav>
+)}
 
 <script>
   let sections: { heading: HTMLElement; link: HTMLAnchorElement }[] = []

@@ -38,18 +38,16 @@ let hasNavigation = Astro.slots.has('navigation')
       >
         <slot name="navigation" />
         <ul class:list={['links', hasNavigation && 'desktop-only']}>
-          {
-            links.map(link => (
-              <li class="item">
-                <a
-                  href={link.href}
-                  class="link"
-                >
-                  {link.title}
-                </a>
-              </li>
-            ))
-          }
+          {links.map(link => (
+            <li class="item">
+              <a
+                href={link.href}
+                class="link"
+              >
+                {link.title}
+              </a>
+            </li>
+          ))}
         </ul>
         <div class="navigation-tools">
           <HeaderTools />

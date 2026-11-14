@@ -10,25 +10,23 @@ let { headings } = Astro.props
 let items = headings.filter(({ depth }) => depth === 2)
 ---
 
-{
-  items.length > 0 && (
-    <details class="outline">
-      <summary class="summary">On this page</summary>
-      <ul class="list">
-        {items.map(({ slug, text }) => (
-          <li class="item">
-            <a
-              class="nav-link link"
-              href={`#${slug}`}
-            >
-              {text}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </details>
-  )
-}
+{items.length > 0 && (
+  <details class="outline">
+    <summary class="summary">On this page</summary>
+    <ul class="list">
+      {items.map(({ slug, text }) => (
+        <li class="item">
+          <a
+            class="nav-link link"
+            href={`#${slug}`}
+          >
+            {text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </details>
+)}
 
 <style>
   .outline {

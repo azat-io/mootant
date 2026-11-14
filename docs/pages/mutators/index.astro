@@ -30,32 +30,29 @@ let mutators = (await getCollection('mutators')).toSorted(
   <h1>{title}</h1>
   <p class="lead">
     A mutator makes one kind of change to your code, such as <code>+</code> to
-    <code>-</code>. <strong
-      >Each mutant in a report names the mutator that made it.</strong
-    >
-    The page of a mutator shows its changes, a test that catches them and the changes
-    it skips.
+    <code>-</code>.{' '}
+    <strong>Each mutant in a report names the mutator that made it.</strong>
+    The page of a mutator shows its changes, a test that catches them and the
+    changes it skips.
   </p>
   <p>
     Mootant has 20 built-in mutators, and both
     <a href="/guide/configuration#presets">presets</a> turn all of them on.
-    <code>strict</code> also turns on all mutator options, the mutants that may cause
-    timeouts and the
+    <code>strict</code> also turns on all mutator options, the mutants that may
+    cause timeouts and the
     <a href="/guide/configuration#coarsemutants">coarse mutants</a> that
     <code>recommended</code> drops.
   </p>
   <Cards>
-    {
-      mutators.map(({ data, id }) => (
-        <Card
-          href={`/mutators/${id}`}
-          title={data.title}
-        >
-          <MutantDiff {...data.example} />
-          <p>{data.shortDescription}</p>
-        </Card>
-      ))
-    }
+    {mutators.map(({ data, id }) => (
+      <Card
+        href={`/mutators/${id}`}
+        title={data.title}
+      >
+        <MutantDiff {...data.example} />
+        <p>{data.shortDescription}</p>
+      </Card>
+    ))}
   </Cards>
   <Content />
 </ContentLayout>

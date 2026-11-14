@@ -40,28 +40,26 @@ let steps = [
       How it works
     </Typography>
     <ol class="steps">
-      {
-        steps.map(({ description, title, label }) => (
-          <li class="step">
-            <span class="label">{label}</span>
-            <Typography
-              color="primary"
-              align="start"
-              size="l"
-              tag="h3"
-              bold
-            >
-              {title}
-            </Typography>
-            <Typography
-              align="start"
-              size="s"
-            >
-              {description}
-            </Typography>
-          </li>
-        ))
-      }
+      {steps.map(({ description, title, label }) => (
+        <li class="step">
+          <span class="label">{label}</span>
+          <Typography
+            color="primary"
+            align="start"
+            size="l"
+            tag="h3"
+            bold
+          >
+            {title}
+          </Typography>
+          <Typography
+            align="start"
+            size="s"
+          >
+            {description}
+          </Typography>
+        </li>
+      ))}
     </ol>
   </Container>
 </section>

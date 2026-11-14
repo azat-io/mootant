@@ -13,20 +13,19 @@ let presets = [
 
 <figure class="stats">
   <div class="grid">
-    {
-      presets.map(({ command, mutants, name }) => (
-        <div class="stat">
-          <span class="name">{name}</span>
-          <span class="value">
-            {mutants} <span class="unit">mutants</span>
-          </span>
-          <span class="source">{command}</span>
-        </div>
-      ))
-    }
+    {presets.map(({ command, mutants, name }) => (
+      <div class="stat">
+        <span class="name">{name}</span>
+        <span class="value">
+          {mutants} <span class="unit">mutants</span>
+        </span>
+        <span class="source">{command}</span>
+      </div>
+    ))}
   </div>
   <figcaption class="caption">
-    Mutants of the same <DemoLink route="#/">sample shop</DemoLink> in each preset.
+    Mutants of the same <DemoLink route="#/">sample shop</DemoLink> in each
+    preset.
   </figcaption>
 </figure>
 

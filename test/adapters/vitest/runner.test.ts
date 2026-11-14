@@ -194,7 +194,7 @@ async function simulateRepeat(
       } catch (error) {
         failTry(test, error)
       }
-      runner.onAfterRetryTask(test)
+      await runner.onAfterRetryTask(test, { repeats: 0, retry: 0 })
     })
   } catch (error) {
     failTry(test, error)

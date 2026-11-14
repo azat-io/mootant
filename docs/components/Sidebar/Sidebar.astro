@@ -14,7 +14,9 @@ let { isMobileOnly = false } = Astro.props
   aria-label="Docs"
 >
   <div class="content">
-    {pages.map(section => <SidebarLinkBlock {...section} />)}
+    {pages.map(section => (
+      <SidebarLinkBlock {...section} />
+    ))}
   </div>
 </nav>
 

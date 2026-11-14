@@ -9,6 +9,7 @@ export default defineConfig({
     'changelogen',
     'changelogithub',
     'coarsemutants',
+    'emnapi',
     'freeship',
     'frontmatter',
     'instrumenter',

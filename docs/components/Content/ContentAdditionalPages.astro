@@ -15,37 +15,35 @@ let previousPage = links[index - 1]
 let nextPage = index === -1 ? undefined : links[index + 1]
 ---
 
-{
-  (previousPage ?? nextPage) && (
-    <nav
-      aria-label="Docs pages"
-      class="pages"
-    >
-      {previousPage && (
-        <ContentFooterLink
-          url={previousPage.url}
-          class="page card-link"
-          title="Previous page"
-          rel="prev"
-        >
-          <IconArrowLeft slot="icon" />
-          {previousPage.title}
-        </ContentFooterLink>
-      )}
-      {nextPage && (
-        <ContentFooterLink
-          class="page card-link next"
-          url={nextPage.url}
-          title="Next page"
-          rel="next"
-        >
-          <IconArrowRight slot="icon" />
-          {nextPage.title}
-        </ContentFooterLink>
-      )}
-    </nav>
-  )
-}
+{(previousPage ?? nextPage) && (
+  <nav
+    aria-label="Docs pages"
+    class="pages"
+  >
+    {previousPage && (
+      <ContentFooterLink
+        url={previousPage.url}
+        class="page card-link"
+        title="Previous page"
+        rel="prev"
+      >
+        <IconArrowLeft slot="icon" />
+        {previousPage.title}
+      </ContentFooterLink>
+    )}
+    {nextPage && (
+      <ContentFooterLink
+        class="page card-link next"
+        url={nextPage.url}
+        title="Next page"
+        rel="next"
+      >
+        <IconArrowRight slot="icon" />
+        {nextPage.title}
+      </ContentFooterLink>
+    )}
+  </nav>
+)}
 
 <style>
   .pages {

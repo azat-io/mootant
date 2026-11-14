@@ -9,15 +9,13 @@ interface Props {
 let { url } = Astro.props
 ---
 
-{
-  url && (
-    <ContentFooterLink
-      rel="noopener noreferrer"
-      target="_blank"
-      {url}
-    >
-      <IconEdit slot="icon" />
-      Edit this page
-    </ContentFooterLink>
-  )
-}
+{url && (
+  <ContentFooterLink
+    rel="noopener noreferrer"
+    target="_blank"
+    {url}
+  >
+    <IconEdit slot="icon" />
+    Edit this page
+  </ContentFooterLink>
+)}
