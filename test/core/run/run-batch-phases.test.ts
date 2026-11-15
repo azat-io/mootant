@@ -153,7 +153,7 @@ describe('runBatchPhases', () => {
     )
   })
 
-  it('confirms timeouts with doubled bounds and half the workers', async () => {
+  it('confirms timeouts with the doubled time of their test file and half the workers', async () => {
     let { progress, state, fake } = await run(
       {
         onBatch: (result, _plan, call) =>
@@ -194,7 +194,9 @@ describe('runBatchPhases', () => {
       'confirmation 1: 4 mutants, 1 units',
     ])
     expect(fake.calls.batch.map(plan => plan.concurrency)).toStrictEqual([4, 2])
-    expect(fake.calls.batch[1]!.units[0]!.tests[0]!.timeout).toBe(506)
+    expect(fake.calls.batch[1]!.units[0]!.tests[0]!.timeout).toBe(
+      2 * (250 + 253 + 256),
+    )
     expect(state.mutants.get('slow')!.verdict).toMatchObject({
       cause: 'time-limit',
       status: 'Timeout',

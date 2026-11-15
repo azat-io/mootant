@@ -5,6 +5,7 @@ import type {
 } from '../../types/adapter/batch-plan'
 import type { PlannedTry, RunState } from '../../types/run/run-state'
 
+import { getTestFileLimits } from './get-test-file-limits'
 import { compareCodeUnits } from '../compare-code-units'
 import { getTestFileKey } from './get-test-file-key'
 import { getTryLimits } from './get-try-limits'
@@ -29,12 +30,15 @@ interface FileWork {
  * with limits from the dry run, one unit per test file. The adapter never runs
  * two units of one test file at once, as a plain run of the test runner never
  * runs a test file twice at once, so splitting a file would only load it more
- * often. A run that confirms timeouts gets doubled bounds and half the workers,
- * so the tries compete less for the processor.
+ * often. A run that confirms timeouts gives each test twice the time limit of
+ * its whole test file (`getTestFileLimits`), as an isolated unit that confirms
+ * a timeout has: a test slowed past its own limit may still fit in the time of
+ * its file and pass there. It also gets half the workers, so the tries compete
+ * less for the processor.
  *
  * @param state - State of the run.
  * @param tries - Mutants to try in tests.
- * @param scale - 1, or 2 to confirm timeouts with doubled bounds.
+ * @param scale - 1, or 2 to confirm timeouts.
  * @returns Units sorted by test file, and the workers the run may use.
  */
 export function planBatch(
@@ -72,9 +76,10 @@ export function planBatch(
 
 /**
  * Builds a batch unit with the limits of its tests and of the work outside
- * tries: loading the file and its suite hooks. The unit budget covers that
- * work, every try and control of the planned tests, and one try of each
- * unplanned test before the last planned one.
+ * tries: loading the file and its suite hooks; to confirm timeouts, a planned
+ * test has the time limit of the whole file instead of its own. The unit budget
+ * covers that work, every try and control of the planned tests, and one try of
+ * each unplanned test before the last planned one.
  *
  * @param state - State of the run.
  * @param work - Key of the test file and its planned tests in file order.
@@ -89,11 +94,16 @@ function createUnit(state: RunState, work: FileWork, scale: number): BatchUnit {
     limits,
     scale,
   )
-  let tests: BatchTest[] = planned.map(test => ({
-    ...getTryLimits(analysis.baselines.get(test.id)!, limits, scale),
-    mutants: test.mutants,
-    id: test.id,
-  }))
+  let fileLimits = scale > 1 ? getTestFileLimits(state, key, scale) : null
+  let tests: BatchTest[] = planned.map(test => {
+    let own = getTryLimits(analysis.baselines.get(test.id)!, limits, scale)
+    return {
+      timeout: fileLimits?.timeout ?? own.timeout,
+      hitLimit: own.hitLimit,
+      mutants: test.mutants,
+      id: test.id,
+    }
+  })
   let siblings = analysis.fileTests.get(key)!
   let last = siblings.indexOf(planned.at(-1)!.id)
   let total = load.timeout

@@ -1,7 +1,7 @@
 import type { IsolatedRequest, RunState } from '../../types/run/run-state'
 import type { IsolatedPlan } from '../../types/adapter/isolated-plan'
 
-import { getTryLimits } from './get-try-limits'
+import { getTestFileLimits } from './get-test-file-limits'
 
 /**
  * Plans one isolated run: a unit per request on its whole test file, with
@@ -22,24 +22,11 @@ export function planIsolated(
   let { analysis, limits } = state
   return {
     units: requests.map(request => {
-      let scale = request.confirming ? 2 : 1
-      let total = getTryLimits(
-        analysis.loads.get(request.file) ?? { duration: 0, hits: 0 },
-        limits,
-        scale,
+      let total = getTestFileLimits(
+        state,
+        request.file,
+        request.confirming ? 2 : 1,
       )
-      let tests = analysis.fileTests.get(request.file)
-      if (tests !== undefined) {
-        for (let test of tests) {
-          let testLimits = getTryLimits(
-            analysis.baselines.get(test)!,
-            limits,
-            scale,
-          )
-          total.hitLimit += testLimits.hitLimit
-          total.timeout += testLimits.timeout
-        }
-      }
       if (request.raised) {
         total.hitLimit += limits.hitLimit.factor * limits.hitLimit.floor
       }

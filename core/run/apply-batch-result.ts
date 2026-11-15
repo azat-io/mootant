@@ -20,7 +20,7 @@ interface BatchTestContext {
   inputs: RunInputs | undefined
 
   /**
-   * Whether the run confirms timeouts with doubled bounds.
+   * Whether the run confirms timeouts.
    */
   confirming: boolean
 
@@ -49,28 +49,27 @@ interface BatchTestContext {
  * value a control try set that the mutant no longer resets; the default mode
  * decides every mutant isolated instead. A try that ran out of time has no
  * control after it, since the worker gives up the unit: it counts only after a
- * passing control, and then waits for a confirmation with doubled bounds in a
- * fresh run, or is final when the run was one. A hit-limit timeout sends the
- * mutant to the isolated path, even in such a run, since a mutant that only
- * makes code hotter goes over the hit limit too and only that path confirms it
- * with a raised limit. Doubtful tries and late errors send the mutant to the
- * isolated path; a reached pass is only noted, since state left by a control
- * try may hide the mutant, and the core rechecks it on the isolated path. A
- * unit whose suite hook failed sends every mutant it planned that is still
- * undecided to the isolated path. A test whose leading control skipped itself
- * ends its repeats there, so its mutants count as tried without evidence rather
- * than missing. A hung unit gets a `worker-hang` warning and its timed-out try
- * the cause `hang`. Accepted kills and passes, whether they reached the mutant
- * or not, go to the cache of the run, so a later run reuses a kill only after
- * the same passes, unless the kill came from the first test of the mutant
- * (`applyCachedBatch`).
+ * passing control, and then waits for a confirmation in a fresh run with twice
+ * the time of its whole test file, or is final when the run was one. A
+ * hit-limit timeout sends the mutant to the isolated path, even in such a run,
+ * since a mutant that only makes code hotter goes over the hit limit too and
+ * only that path confirms it with a raised limit. Doubtful tries and late
+ * errors send the mutant to the isolated path; a reached pass is only noted,
+ * since state left by a control try may hide the mutant, and the core rechecks
+ * it on the isolated path. A unit whose suite hook failed sends every mutant it
+ * planned that is still undecided to the isolated path. A test whose leading
+ * control skipped itself ends its repeats there, so its mutants count as tried
+ * without evidence rather than missing. A hung unit gets a `worker-hang`
+ * warning and its timed-out try the cause `hang`. Accepted kills and passes,
+ * whether they reached the mutant or not, go to the cache of the run, so a
+ * later run reuses a kill only after the same passes, unless the kill came from
+ * the first test of the mutant (`applyCachedBatch`).
  *
  * @param state - State of the run, updated in place.
  * @param run - The run to record.
  * @param run.plan - Plan the run executed.
  * @param run.result - What the adapter reported.
- * @param run.confirming - Whether the run confirmed timeouts with doubled
- *   bounds.
+ * @param run.confirming - Whether the run confirms timeouts.
  * @returns Planned tries without facts whose mutant is still undecided on the
  *   batch path.
  */

@@ -4,7 +4,8 @@
  * - `dry`: the tests without a mutant, and the reruns of failed test files;
  * - `batch`: a batch phase;
  * - `recovery`: batch tries that went missing, planned again;
- * - `confirmation`: batch timeouts tried again with doubled bounds;
+ * - `confirmation`: batch timeouts tried again with twice the time of their whole
+ *   test file;
  * - `isolated`: isolated units.
  */
 export type RunKind = 'confirmation' | 'recovery' | 'isolated' | 'batch' | 'dry'

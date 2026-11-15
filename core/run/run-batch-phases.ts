@@ -34,9 +34,10 @@ const PHASE_RUNS: Exclude<RunKind, 'dry'>[] = [
  * all their other covering tests. Tries that go missing are planned again in at
  * most two recovery runs per phase, then the mutant runs isolated. A mutant
  * that only ran out of time skips phase 2; the confirmation run tries those
- * again with doubled bounds and half the workers. Batch decides kills and
- * timeouts only: every mutant left undecided runs isolated, as a
- * `batch-survivor` when a batch try reached it and passed, else as `doubtful`.
+ * again with twice the time of their whole test file and half the workers.
+ * Batch decides kills and timer or hang timeouts only: every mutant left
+ * undecided runs isolated, as a `batch-survivor` when a batch try reached it
+ * and passed, else as `doubtful`.
  *
  * @param session - Live test runner.
  * @param state - State of the run, updated in place.

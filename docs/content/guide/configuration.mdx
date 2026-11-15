@@ -454,10 +454,11 @@ export default defineConfig({
 
 ### `timeout`
 
-The time limit of each test with a mutant: `factor × duration + constant`
-milliseconds, where the duration is how long the test took without mutants. A
-mutant that goes over it counts as a timeout. `{ factor: 3, constant: 250 }` by
-default.
+The time limit while a test file runs with a mutant:
+`factor × duration + constant` milliseconds for its loading and for each of its
+tests, added up, where the durations are how long they took without mutants. A
+mutant that goes over it counts as a timeout only when a second run with twice
+the limit times out too. `{ factor: 3, constant: 250 }` by default.
 
 ### `hitLimit`
 

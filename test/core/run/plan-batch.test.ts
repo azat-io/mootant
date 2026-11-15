@@ -61,7 +61,7 @@ describe('planBatch', () => {
     })
   })
 
-  it('runs unplanned tests before the last planned one and doubles bounds', async () => {
+  it('runs unplanned tests before the last planned one and confirms with the doubled time of the file', async () => {
     let { state } = await createTestRun(
       {
         tests: [
@@ -74,16 +74,23 @@ describe('planBatch', () => {
     )
     state.analysis.loads.delete('/t/a.test.ts')
 
+    // An isolated unit that confirms a timeout of a2 has the doubled time of
+    // loading the file and of all its tests, so its batch try gets that too.
     expect(planBatch(state, [{ mutant: 'm1', test: 'a2' }], 2)).toStrictEqual({
       units: [
         {
+          tests: [
+            {
+              timeout: 500 + 506 * 3,
+              hitLimit: 100_000,
+              mutants: ['m1'],
+              id: 'a2',
+            },
+          ],
           limits: {
             load: { hitLimit: 100_000, timeout: 500 },
-            total: 500 + 506 + 506 * 3,
+            total: 500 + 506 + (500 + 506 * 3) * 3,
           },
-          tests: [
-            { hitLimit: 100_000, mutants: ['m1'], timeout: 506, id: 'a2' },
-          ],
           file: '/t/a.test.ts',
           project: '',
         },

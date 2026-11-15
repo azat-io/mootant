@@ -136,8 +136,8 @@ async function runAllPaths(
 
 /**
  * Expects the default run, the `--fast` run and the reference to agree on every
- * mutant. No fixture mutant runs into a timer or a loop, so no Timeout verdict
- * is excepted: every mutant is Killed or Survived in both modes, as by hand.
+ * mutant. No fixture mutant times out in a plain run, so no Timeout verdict is
+ * excepted: every mutant is Killed or Survived in both modes, as by hand.
  *
  * @param rows - Verdicts per mutant.
  */
@@ -312,6 +312,27 @@ describe('verdict equivalence', () => {
       ['src/fib.ts | condition | false', 'doubtful'],
       ['src/fib.ts | statement-removal | ;', 'first-reach'],
     ])
+  }, 60_000)
+
+  it('lets the tests decide mutants that only make a test slower, as a plain run does', async () => {
+    // Without the quick path the first test waits a second: over twice its
+    // own time limit, but within the time limit of its whole test file, which
+    // an isolated unit has. The confirmation of its batch try gets twice that.
+    let { original, isolated, fast, rows } = await runAllPaths(
+      path.join(equivalenceRoot, 'wait'),
+      ['src/settle.ts'],
+    )
+
+    expect(original).toBe(true)
+    expect(isolated.diagnostics).toStrictEqual([])
+    expect(fast.diagnostics).toStrictEqual([])
+    expectAgreement(rows)
+    expect(fast.runs.confirmation).toBe(1)
+    expect(
+      fast.results
+        .filter(result => result.mutant.replacement === 'false')
+        .map(result => [describeMutant(result), result.isolatedBecause]),
+    ).toStrictEqual([['src/settle.ts | condition | false', 'batch-survivor']])
   }, 60_000)
 
   it('counts errors of worker-scoped fixture cleanup against the mutant', async () => {

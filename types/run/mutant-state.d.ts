@@ -9,7 +9,7 @@ import type { TryCause } from './try-cause'
 export interface MutantState {
   /**
    * Batch tries that ran out of time with it and wait for a confirmation with
-   * doubled bounds.
+   * twice the time of their whole test file.
    */
   confirm: { cause: 'time-limit' | 'hang'; test: string }[]
 
