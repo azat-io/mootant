@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import type {
-  VitestOutRecord,
   VitestHeartbeat,
+  VitestOutLine,
 } from '../../../adapters/vitest/types/vitest-worker'
 import type { VitestHandle } from '../../../adapters/vitest/types/vitest-session-state'
 import type { SwitchedFile } from '../../../types/adapter/switched-file'
@@ -13,6 +13,7 @@ import type { SwitchedFile } from '../../../types/adapter/switched-file'
 import { createVitestSessionState } from '../../helpers/create-vitest-session-state'
 import { getFileHash } from '../../../adapters/vitest/worker/get-file-hash'
 import { watchHeartbeats } from '../../../adapters/vitest/watch-heartbeats'
+import { encodeStray } from '../../../adapters/vitest/worker/encode-stray'
 import { stopHungWorker } from '../../../adapters/vitest/stop-hung-worker'
 import { createTryFacts } from '../../helpers/create-try-facts'
 import { runDry } from '../../../adapters/vitest/run-dry'
@@ -52,12 +53,12 @@ let project: FakeProject = { vite: { environments: {} }, name: '' }
 let other: FakeProject = { vite: { environments: {} }, name: 'b' }
 
 /**
- * Builds the end record of a test file.
+ * Builds the end line of a test file.
  *
  * @param fields - Fields that differ from a clean load.
- * @returns End record.
+ * @returns End line, as a worker writes it.
  */
-function createEnd(fields: Partial<VitestOutRecord> = {}): VitestOutRecord {
+function createEnd(fields: Partial<VitestOutLine> = {}): VitestOutLine {
   return {
     concurrent: false,
     abandoned: false,
@@ -74,19 +75,22 @@ function createEnd(fields: Partial<VitestOutRecord> = {}): VitestOutRecord {
     hits: 2,
     unit: 0,
     ...fields,
-  } as VitestOutRecord
+  } as VitestOutLine
 }
 
 /**
- * Builds the record of a test with its tries.
+ * Builds the line of a test with its tries.
  *
  * @param id - Id of the test, also its name.
  * @param count - How many tries the test ran.
- * @returns Out record of kind `test` on line 1.
+ * @returns Out line of kind `test` on line 1, as a worker writes it.
  */
-function createTestRecord(id: string, count = 1): VitestOutRecord {
+function createTestRecord(id: string, count = 1): VitestOutLine {
   return {
-    tries: Array.from({ length: count }, () => createTryFacts({ test: id })),
+    tries: Array.from({ length: count }, () => ({
+      ...createTryFacts({ test: id }),
+      strays: [],
+    })),
     kind: 'test',
     name: id,
     line: 1,
@@ -111,7 +115,7 @@ describe('runDry', () => {
   let directory: string
   let handle: VitestHandle
   let files: SwitchedFile[]
-  let outputs: Record<string, VitestOutRecord[]>
+  let outputs: Record<string, VitestOutLine[]>
   let ran: FakeSpecification[][]
   let instrumented: boolean[]
   let related: (undefined | string[])[]
@@ -172,9 +176,13 @@ describe('runDry', () => {
           { moduleId: '/test/a.test.ts', project: other, pool: 'forks' },
         ])
       },
-      config: { related: undefined as undefined | string[] },
+      config: {
+        related: undefined as undefined | string[],
+        dangerouslyIgnoreUnhandledErrors: false,
+      },
       invalidateFile: vi.fn(),
       provide: vi.fn(),
+      state: {},
     }
     handle = {
       context: { workDirectory: directory, root: '/', files },
@@ -194,7 +202,12 @@ describe('runDry', () => {
     outputs = {
       [`${a}-2`]: [
         createTestRecord('a1', 2),
-        { message: 'ignored', kind: 'late', mutant: null, test: 'a1' },
+        {
+          stray: encodeStray('ignored', 'Unhandled Rejection', 0),
+          kind: 'late',
+          mutant: null,
+          test: 'a1',
+        },
         createEnd({
           dependencies: ['/src/a.ts?v=1'],
           modified: ['/test/a.json'],
@@ -205,9 +218,9 @@ describe('runDry', () => {
       [`${b}-1`]: [
         createTestRecord('b1'),
         createEnd({
+          strays: [encodeStray(new Error('stray'), 'Uncaught Exception', 0)],
           hookError: 'afterAll boom',
           loadError: 'load boom',
-          strays: ['stray'],
         }),
       ],
       [`${ab}-3`]: [

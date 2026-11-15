@@ -1,7 +1,7 @@
 import type { RunnerTestCase } from 'vitest'
 
 import type { MutantRuntime } from '../../../types/adapter/mutant-runtime'
-import type { TryFacts } from '../../../types/adapter/try-facts'
+import type { VitestTryFacts } from '../types/vitest-worker'
 
 import { getErrorMessage } from '../../shared/get-error-message'
 import { isTimeoutMessage } from './is-timeout-message'
@@ -10,7 +10,7 @@ import { isTimeoutMessage } from './is-timeout-message'
  * What the worker runner observed of a try besides the runtime's counters.
  */
 interface TryObservation extends Pick<
-  TryFacts,
+  VitestTryFacts,
   'timedOut' | 'duration' | 'strays' | 'covers' | 'hits'
 > {
   /**
@@ -40,13 +40,14 @@ interface TryObservation extends Pick<
  * @param runtime - Switch and counters the switched code updated.
  * @param observed - Errors and state of the try, its duration, hits, coverage,
  *   stray errors and mootant's timeout.
- * @returns Raw facts for `classifyTry`.
+ * @returns Raw facts, with the unhandled errors as the worker recorded them,
+ *   which the main process reads for `classifyTry` (`readOutRecords`).
  */
 export function readTryFacts(
   test: RunnerTestCase,
   runtime: MutantRuntime,
   observed: TryObservation,
-): TryFacts {
+): VitestTryFacts {
   let { errors, state } = observed
   let skipped = state === 'skip' || test.result?.state === 'skip'
   let failed =

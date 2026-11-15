@@ -128,7 +128,7 @@ async function readDryResult(
   specifications: readonly TestSpecification[],
   error: string | null,
 ): Promise<Omit<DryRunResult, 'hung'>> {
-  let { context, state } = handle
+  let { context, vitest, state } = handle
   let mismatched = [...state.mismatched].toSorted(compareCodeUnits)
   let outside = [...state.outside].toSorted(compareCodeUnits)
   let served = [...state.served].toSorted(compareCodeUnits)
@@ -143,7 +143,8 @@ async function readDryResult(
   let collecting: [DryFile, Parameters<typeof collectDependencies>[0]][] = []
   let files: DryFile[] = []
   let tests: DryTest[] = []
-  for (let [name, records] of readOutFiles(context.workDirectory)) {
+  let outputs = readOutFiles(vitest, context.workDirectory, new Map())
+  for (let [name, records] of outputs) {
     let hash = name.split('-', 1)[0]!
     let { project, source, file } = entries.get(hash)!
     let ended = false

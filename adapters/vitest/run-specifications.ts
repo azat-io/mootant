@@ -12,8 +12,9 @@ import { waitForWorkers } from './wait-for-workers'
  * them after the run, and a unit's end is recorded only after the worker's
  * teardown, the test environment's teardown included. The caller's watchdog
  * must run until this resolves: the wait relies on it to stop workers that hang
- * in their teardown. Failing tests and stray errors are expected in mootant's
- * runs, so the exit code Vitest sets for them is restored.
+ * in their teardown. Failing tests and unhandled errors, such as a worker that
+ * died, are expected in mootant's runs, so the exit code Vitest sets for them
+ * is restored.
  *
  * @param handle - Live Vitest instance of the session.
  * @param worker - Kind of the run the workers perform and, for a dry run, the

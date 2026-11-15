@@ -1,6 +1,6 @@
 import { writeSync } from 'node:fs'
 
-import type { VitestOutRecord } from '../types/vitest-worker'
+import type { VitestOutLine } from '../types/vitest-worker'
 
 /**
  * Appends one record to the out file of a unit through its open descriptor. The
@@ -12,7 +12,7 @@ import type { VitestOutRecord } from '../types/vitest-worker'
  */
 export function writeOutRecord(
   descriptor: number,
-  record: VitestOutRecord,
+  record: VitestOutLine,
 ): void {
   writeSync(descriptor, `${JSON.stringify(record)}\n`)
 }

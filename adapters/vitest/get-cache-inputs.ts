@@ -65,8 +65,10 @@ export function getCacheInputs(
  * `defines` and `_scriptDefines` of the project, and those global setup files
  * `provide`, which configuration and global setup may take from files and
  * environment variables of the main process (but the options mootant provides
- * its workers), and with `TZ`, `NODE_ENV`, `LANG` and the `LC_*` variables,
- * which change verdicts whether test code reads them or not.
+ * its workers), with `dangerouslyIgnoreUnhandledErrors` and the source of
+ * `onUnhandledError` of the root configuration, which decide for every project
+ * whether unhandled errors count, and with `TZ`, `NODE_ENV`, `LANG` and the
+ * `LC_*` variables, which change verdicts whether test code reads them or not.
  *
  * @param project - Vitest project.
  * @param hashes - Hashes of the environment variables the project's workers
@@ -78,6 +80,7 @@ function describeProjectSettings(
   hashes: Readonly<Record<string, string>>,
 ): Record<string, unknown> {
   let { config } = project
+  let filter = project.vitest.state.onUnhandledError
   return {
     values: inspect(
       [
@@ -99,6 +102,9 @@ function describeProjectSettings(
     variables: Object.entries(hashes).filter(([name]) =>
       VERDICT_VARIABLE_PATTERN.test(name),
     ),
+    dangerouslyIgnoreUnhandledErrors:
+      project.globalConfig.dangerouslyIgnoreUnhandledErrors,
+    onUnhandledError: filter ? String(filter) : null,
     environmentOptions: config.environmentOptions,
     update: config.snapshotOptions.updateSnapshot,
     maxConcurrency: config.maxConcurrency,

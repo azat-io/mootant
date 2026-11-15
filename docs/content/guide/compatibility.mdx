@@ -64,6 +64,16 @@ your configuration. It does not support:
 
 Any of these in one project stops the whole run with an error.
 
+Mootant follows `dangerouslyIgnoreUnhandledErrors` and `onUnhandledError` of the
+Vitest configuration when it decides whether an unhandled error or rejection
+kills a mutant, and leaves such an error to the test code when it listens for
+that event with its own `process.on` handler, as Vitest does. It does not read
+flags in test scripts: with `--dangerouslyIgnoreUnhandledErrors` there, these
+errors still kill mutants, which raises the score. One session runs every
+mutant, so an `onUnhandledError` that keeps state between calls, such as one
+that drops only the first occurrence of an error, may decide otherwise than a
+plain run with that mutant.
+
 Tests that load a mutated file only through a computed `import()`, or through a
 `vi.mock` that still loads the original module, may not be selected: a
 `__mocks__` file, or an inline factory without parameters whose own code does

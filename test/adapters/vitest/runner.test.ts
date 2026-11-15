@@ -25,12 +25,14 @@ import type {
   VitestWorkerOptions,
   VitestOutRecord,
   VitestHeartbeat,
+  VitestOutLine,
 } from '../../../adapters/vitest/types/vitest-worker'
 import type { BatchUnit, BatchTest } from '../../../types/adapter/batch-plan'
 import type { MutantRuntime } from '../../../types/adapter/mutant-runtime'
 import type { IsolatedUnit } from '../../../types/adapter/isolated-plan'
 
 import { getFileHash } from '../../../adapters/vitest/worker/get-file-hash'
+import { readOutRecords } from '../../../adapters/vitest/read-out-records'
 import MootantRunner from '../../../adapters/vitest/runner'
 
 /**
@@ -104,8 +106,18 @@ let hooks = new WeakMap<object, FakeHooks>()
 let cleanups: (() => unknown)[] = []
 let workerState = Reflect.get(globalThis, '__vitest_worker__') as {
   ctx: { environment: { name: string }; traces?: unknown; pool: string }
+  rpc: object
 }
 let realTraces = workerState.ctx.traces
+let realRpc = workerState.rpc
+
+/**
+ * Main process of the fake runs, which counts every unhandled error.
+ */
+let mainVitest = {
+  config: { dangerouslyIgnoreUnhandledErrors: false },
+  state: {},
+} as never
 let traces: FakeTraces | undefined
 let directory: string
 let options: VitestWorkerOptions
@@ -276,26 +288,6 @@ async function runTasks(
 }
 
 /**
- * Reads the out files of the run.
- *
- * @returns Records by out file name.
- */
-async function readRecords(): Promise<Record<string, VitestOutRecord[]>> {
-  let names = await readdir(path.join(directory, 'out'))
-  let texts = await Promise.all(
-    names.map(name => readFile(path.join(directory, 'out', name), 'utf8')),
-  )
-  return Object.fromEntries(
-    names.map((name, index) => [
-      name.replace(/\.jsonl$/u, ''),
-      texts[index]!.trim()
-        .split('\n')
-        .map(line => JSON.parse(line) as VitestOutRecord),
-    ]),
-  )
-}
-
-/**
  * Creates a fake test file.
  *
  * @param tasks - Fake tests and suites in file order.
@@ -419,6 +411,22 @@ async function collectAndRun(
     await runTasks(runner, file, file.tasks)
   }
   runner.onAfterRunFiles([file])
+}
+
+/**
+ * Reads the out files of the run as the main process does, counting every
+ * unhandled error (`readOutRecords`).
+ *
+ * @returns Records by out file name.
+ */
+async function readRecords(): Promise<Record<string, VitestOutRecord[]>> {
+  let names = await readdir(path.join(directory, 'out'))
+  return Object.fromEntries(
+    names.map(name => [
+      name.replace(/\.jsonl$/u, ''),
+      readOutRecords(mainVitest, path.join(directory, 'out', name), new Map()),
+    ]),
+  )
 }
 
 /**
@@ -632,23 +640,14 @@ describe('mootantRunner', () => {
   afterEach(async () => {
     cleanups = []
     workerState.ctx.traces = realTraces
+    workerState.rpc = realRpc
+    Reflect.deleteProperty(workerState, Symbol.for('mootant.vitest.strays'))
     vi.restoreAllMocks()
     await rm(directory, { recursive: true, force: true })
   })
 
   afterAll(() => {
-    for (let listener of process.listeners('unhandledRejection')) {
-      if (!listeners.unhandledRejection.includes(listener)) {
-        process.off('unhandledRejection', listener)
-      }
-    }
-    for (let listener of process.listeners('uncaughtException')) {
-      if (!listeners.uncaughtException.includes(listener)) {
-        process.off('uncaughtException', listener)
-      }
-    }
     Reflect.deleteProperty(globalThis, '__mootant')
-    Reflect.deleteProperty(globalThis, Symbol.for('mootant.vitest.strays'))
   })
 
   it('records coverage, stray errors and flips in a dry run with beats', async () => {
@@ -666,7 +665,7 @@ describe('mootantRunner', () => {
         }
       }),
       createTest('b', () => {
-        runner.onStray(new Error('during'))
+        runner.onStray(new Error('during'), 'Unhandled Rejection')
         throw new Error('fails\nstack')
       }),
       createTest('c', () => {}),
@@ -685,7 +684,7 @@ describe('mootantRunner', () => {
     await runFile(runner, file, () => {
       beats.push(readBeat())
       getRuntime().hit('load')
-      runner.onStray(new Error('outside'))
+      runner.onStray(new Error('outside'), 'Unhandled Rejection')
     })
 
     let records = await readRecords()
@@ -938,7 +937,7 @@ describe('mootantRunner', () => {
     await runner.onBeforeCollect([FILE])
     runner.onCollected([file])
     await simulateTest(runner, file, tests[0]!)
-    runner.onStray(new Error('late one'))
+    runner.onStray(new Error('late one'), 'Unhandled Rejection')
     await simulateTest(runner, file, tests[1]!)
     runner.onAfterRunFiles([file])
 
@@ -981,7 +980,7 @@ describe('mootantRunner', () => {
     let { runner } = createRunner()
     let tests = [createTest('a')]
     await runFile(runner, createFile(tests))
-    runner.onStray(new Error('ignored'))
+    runner.onStray(new Error('ignored'), 'Unhandled Rejection')
 
     writePlan([])
     let second = createRunner().runner
@@ -1014,7 +1013,7 @@ describe('mootantRunner', () => {
     ]
     await runFile(runner, createFile(tests), () => {
       getRuntime().hit('other')
-      runner.onStray(new Error('load stray'))
+      runner.onStray(new Error('load stray'), 'Unhandled Rejection')
     })
     let second = createRunner().runner
     let all = [createTest('a'), createTest('b', body), createTest('c', body)]
@@ -1108,7 +1107,7 @@ describe('mootantRunner', () => {
           readFileSync(path.join(directory, 'out', `${hash}-0.jsonl`), 'utf8')
             .trim()
             .split('\n')
-            .map(line => (JSON.parse(line) as VitestOutRecord).kind),
+            .map(line => (JSON.parse(line) as VitestOutLine).kind),
         )
         throw new Error('1 left open\nstack')
       }),
@@ -1447,7 +1446,7 @@ describe('mootantRunner', () => {
       createTest('a', async runtime => {
         await gates.bRunning.promise
         runtime.hit('both')
-        runner.onStray(new Error('shared'))
+        runner.onStray(new Error('shared'), 'Unhandled Rejection')
       }),
       { concurrent: true, timeout: 5000 },
     )
@@ -1535,27 +1534,80 @@ describe('mootantRunner', () => {
     ])
   })
 
-  it('sends unhandled errors to the runner of the current file', () => {
+  it("takes Vitest's report of unhandled errors for the runner of the current file, without listeners of its own", () => {
     setOptions('dry', true)
     let first = createRunner().runner
     let second = createRunner().runner
     let stray = vi.spyOn(second, 'onStray').mockReturnValue()
     let ignored = vi.spyOn(first, 'onStray').mockReturnValue()
-    let added = process
-      .listeners('unhandledRejection')
-      .filter(listener => !listeners.unhandledRejection.includes(listener))
-    let thrown = process
-      .listeners('uncaughtException')
-      .filter(listener => !listeners.uncaughtException.includes(listener))
+    let error = { message: 'stray' }
+    ;(
+      workerState.rpc as {
+        onUnhandledError(error: unknown, type: string): void
+      }
+    ).onUnhandledError(error, 'Uncaught Exception')
 
-    expect(added).toHaveLength(1)
-    expect(thrown).toHaveLength(1)
-
-    let error = new Error('stray')
-    ;(added[0] as (reason: unknown) => void)(error)
-    ;(thrown[0] as (reason: unknown) => void)(error)
-
-    expect(stray).toHaveBeenCalledTimes(2)
+    expect(stray).toHaveBeenCalledExactlyOnceWith(error, 'Uncaught Exception')
     expect(ignored).not.toHaveBeenCalled()
+    expect({
+      unhandledRejection: process.listeners('unhandledRejection'),
+      uncaughtException: process.listeners('uncaughtException'),
+    }).toStrictEqual(listeners)
+  })
+
+  it("records the unhandled errors Vitest's listener reports, but not those of an event the test code listens for", async () => {
+    setOptions('dry')
+    let { runner } = createRunner()
+    let listener = vi.fn<NodeJS.UnhandledRejectionListener>()
+    let tests = [
+      createTest('a', () => {
+        process.emit('uncaughtException', new TypeError('not a function'))
+        process.emit('unhandledRejection', 'settled late', Promise.resolve())
+      }),
+      createTest('b', () => {
+        process.on('unhandledRejection', listener)
+        try {
+          process.emit('unhandledRejection', 'handled', Promise.resolve())
+        } finally {
+          process.off('unhandledRejection', listener)
+        }
+      }),
+    ]
+    await runFile(runner, createFile(tests))
+    let filter = vi.fn()
+    let records = readOutRecords(
+      {
+        config: { dangerouslyIgnoreUnhandledErrors: false },
+        state: { onUnhandledError: filter },
+      } as never,
+      path.join(directory, 'out', `${hash}-${process.pid}.jsonl`),
+      new Map(),
+    )
+
+    expect(
+      records.flatMap(record =>
+        record.kind === 'test' ?
+          record.tries.map(facts => [facts.test, facts.strays])
+        : [],
+      ),
+    ).toStrictEqual([
+      ['a', ['not a function', 'settled late']],
+      ['b', []],
+    ])
+    expect(listener).toHaveBeenCalledExactlyOnceWith(
+      'handled',
+      expect.any(Promise),
+    )
+    expect(filter.mock.calls).toMatchObject([
+      [
+        {
+          VITEST_TEST_PATH: import.meta.filename,
+          type: 'Uncaught Exception',
+          message: 'not a function',
+          name: 'TypeError',
+        },
+      ],
+      [{ type: 'Unhandled Rejection', message: 'settled late' }],
+    ])
   })
 })

@@ -3,8 +3,10 @@ import type { BatchUnit } from '../../../types/adapter/batch-plan'
 import type { TryFacts } from '../../../types/adapter/try-facts'
 
 /**
- * One line of `out/<hash>-<n>.jsonl`: the tries of one test, an unhandled error
- * after a try, or the end of a unit.
+ * One line of `out/<hash>-<n>.jsonl` as the main process reads it
+ * (`readOutRecords`): the tries of one test, an unhandled error after a try, or
+ * the end of a unit, with the first lines of only those unhandled errors that
+ * count (`readStrays`).
  */
 export type VitestOutRecord =
   | {
@@ -58,6 +60,13 @@ export type VitestOutRecord =
       abandoned: boolean
 
       /**
+       * Whether `onUnhandledError` of the root configuration decided an
+       * unhandled error of the unit; what that callback depends on is out of
+       * sight, so the unit's inputs cannot be told (`readUnitInputs`).
+       */
+      filtered: boolean
+
+      /**
        * Milliseconds from the start of loading to the end of the file.
        */
       duration: number
@@ -73,7 +82,7 @@ export type VitestOutRecord =
       reached: boolean
 
       /**
-       * Unhandled errors outside tries.
+       * First lines of the unhandled errors outside tries that count.
        */
       strays: string[]
 
@@ -105,7 +114,7 @@ export type VitestOutRecord =
       mutant: string | null
 
       /**
-       * First line of the error.
+       * First line of the error, which counts.
        */
       message: string
 
@@ -220,6 +229,57 @@ export interface VitestWorkerOptions {
 }
 
 /**
+ * Unhandled error as a worker recorded it: what Vitest's listener passed to the
+ * worker's RPC (`interceptStrays`), encoded (`encodeStray`), before the main
+ * process decides whether it counts (`readStrays`).
+ */
+export interface VitestStray {
+  /**
+   * Base64 of the `node:v8` serialization of the error as Vitest serialized it,
+   * with the name of the running test and the path of the test file, or of a
+   * reason that is not an object.
+   */
+  error: string
+
+  /**
+   * Event of the error, as Vitest names it: `Uncaught Exception` or `Unhandled
+   * Rejection`.
+   */
+  type: string
+
+  /**
+   * Number of the error among those the worker recorded, from 0; its copies in
+   * tries that ran at once share it, so the main process decides it once.
+   */
+  id: number
+}
+
+/**
+ * One line of `out/<hash>-<n>.jsonl` as the worker writes it, with the
+ * unhandled errors as it recorded them; the main process reads it into a
+ * `VitestOutRecord` (`readOutRecords`).
+ */
+export type VitestOutLine =
+  | ({
+      /**
+       * Unhandled errors outside tries.
+       */
+      strays: VitestStray[]
+    } & Omit<Extract<VitestOutRecord, { kind: 'end' }>, 'filtered' | 'strays'>)
+  | ({
+      /**
+       * Tries of the test in the order they ran.
+       */
+      tries: VitestTryFacts[]
+    } & Omit<Extract<VitestOutRecord, { kind: 'test' }>, 'tries'>)
+  | ({
+      /**
+       * Unhandled error after the try.
+       */
+      stray: VitestStray
+    } & Omit<Extract<VitestOutRecord, { kind: 'late' }>, 'message'>)
+
+/**
  * Plan file of one test file: `plan/<hash of the path>.json`.
  */
 export interface VitestPlanFile {
@@ -232,6 +292,17 @@ export interface VitestPlanFile {
    * Index of each unit in the run's plan.
    */
   indexes: number[]
+}
+
+/**
+ * Facts of a try as the worker writes them, with its unhandled errors as it
+ * recorded them.
+ */
+export interface VitestTryFacts extends Omit<TryFacts, 'strays'> {
+  /**
+   * Unhandled errors while the try ran.
+   */
+  strays: VitestStray[]
 }
 
 declare module 'vitest' {

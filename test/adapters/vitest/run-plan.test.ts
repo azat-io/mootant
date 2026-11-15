@@ -10,6 +10,7 @@ import type { IsolatedUnit } from '../../../types/adapter/isolated-plan'
 
 import { watchHeartbeats } from '../../../adapters/vitest/watch-heartbeats'
 import { getFileHash } from '../../../adapters/vitest/worker/get-file-hash'
+import { encodeStray } from '../../../adapters/vitest/worker/encode-stray'
 import { stopHungWorker } from '../../../adapters/vitest/stop-hung-worker'
 import { runPlan } from '../../../adapters/vitest/run-plan'
 
@@ -73,17 +74,21 @@ describe('runPlan', () => {
     let other = getFileHash('/b.test.ts', '')
     let spawns = new Map([[1, 1]])
     let onUnitEnd = vi.fn()
+    let onUnhandledError = vi.fn()
+    let late = `${JSON.stringify({
+      stray: encodeStray(new Error('x'), 'Unhandled Rejection', 0),
+      kind: 'late',
+      mutant: null,
+      test: 't',
+    })}\n`
     let handle = {
       vitest: {
         runTestSpecifications: async () => {
           seen.push(...configs.map(config => config.maxWorkers), spawns.size)
           await writeFile(path.join(directory, 'claim', `${hash}-0`), '12')
-          await writeFile(
-            path.join(directory, 'out', `${hash}-0.jsonl`),
-            '{"kind":"late","message":"x","mutant":null,"test":"t"}\n',
-          )
+          await writeFile(path.join(directory, 'out', `${hash}-0.jsonl`), late)
           await writeFile(path.join(directory, 'claim', `${other}-0`), '13')
-          await writeFile(path.join(directory, 'out', `${other}-0.jsonl`), '')
+          await writeFile(path.join(directory, 'out', `${other}-0.jsonl`), late)
           await writeFile(path.join(directory, 'done', `${other}-0`), '')
           return { unhandledErrors: [new Error('worker died')] }
         },
@@ -93,7 +98,9 @@ describe('runPlan', () => {
             return { moduleId: file }
           },
         }),
+        config: { dangerouslyIgnoreUnhandledErrors: false },
         projects: configs.map(config => ({ config })),
+        state: { onUnhandledError },
         provide: vi.fn(),
       },
       context: { workDirectory: directory, onUnitEnd },
@@ -108,6 +115,7 @@ describe('runPlan', () => {
 
     let facts = { unit: 1 } as IsolatedFacts
     let describeUnit = vi.fn(() => facts)
+    let read = { message: 'x', kind: 'late', mutant: null, test: 't' }
 
     await expect(
       runPlan(handle, {
@@ -118,13 +126,8 @@ describe('runPlan', () => {
       }),
     ).resolves.toStrictEqual({
       units: [
-        {
-          records: [{ message: 'x', kind: 'late', mutant: null, test: 't' }],
-          claimed: true,
-          hung: null,
-          pid: 12,
-        },
-        { hung: createBeat(1), claimed: true, records: [], pid: 13 },
+        { records: [read], claimed: true, hung: null, pid: 12 },
+        { hung: createBeat(1), records: [read], claimed: true, pid: 13 },
         { claimed: false, records: [], hung: null, pid: null },
       ],
       error: 'worker died',
@@ -141,9 +144,12 @@ describe('runPlan', () => {
       [{ unit: 1, facts }],
       [{ unit: 0 }],
     ])
+    // The unit marked done reads its records as the run goes on, and the
+    // read after the run reuses what was decided of its unhandled error.
     expect(describeUnit.mock.calls).toStrictEqual([
-      [1, { records: [], hung: null, pid: 13 }],
+      [1, { records: [read], hung: null, pid: 13 }],
     ])
+    expect(onUnhandledError).toHaveBeenCalledTimes(2)
     expect(configs).toStrictEqual([{ maxWorkers: 4 }, { maxWorkers: 1 }])
   })
 
@@ -154,7 +160,7 @@ describe('runPlan', () => {
       vitest: {
         runTestSpecifications: async () => {
           await Promise.all(
-            ['{"kind":"end","duration":40}\n', ''].map(
+            ['{"kind":"end","duration":40,"strays":[]}\n', ''].map(
               async (records, index) => {
                 let name = `${hash}-${index}`
                 await writeFile(
@@ -171,8 +177,10 @@ describe('runPlan', () => {
         getProjectByName: () => ({
           createSpecification: (file: string) => ({ moduleId: file }),
         }),
+        config: { dangerouslyIgnoreUnhandledErrors: false },
         provide: vi.fn(),
         projects: [],
+        state: {},
       },
       context: { workDirectory: directory, onUnitEnd },
       state: { spawns: new Map() },

@@ -22,9 +22,73 @@ vi.mock(
 )
 
 /**
+ * Verdicts of the fixture `unhandled` that do not depend on how Vitest treats
+ * unhandled errors, by mode: mutants that fail an assertion, and mutants that
+ * change nothing the tests see.
+ */
+const SETTLED_VERDICTS = {
+  fast: [
+    'src/events.ts | boolean-literal | false | Killed | batch | - | assertion',
+    'src/events.ts | comparison-operator | true | Survived | isolated | batch-survivor | -',
+    'src/events.ts | condition | false | Survived | isolated | batch-survivor | -',
+    'src/events.ts | return-value | 0 | Killed | batch | - | assertion',
+  ],
+  isolated: [
+    'src/events.ts | boolean-literal | false | Killed | isolated | - | assertion',
+    'src/events.ts | comparison-operator | true | Survived | isolated | - | -',
+    'src/events.ts | condition | false | Survived | isolated | - | -',
+    'src/events.ts | return-value | 0 | Killed | isolated | - | assertion',
+  ],
+}
+
+/**
+ * Verdicts of the mutants of the fixture `unhandled` that only cause an
+ * unhandled error, by mode, when a plain run fails on both errors: a batch try
+ * with an unhandled error is doubtful.
+ */
+const COUNTED_VERDICTS = {
+  fast: [
+    'src/events.ts | comparison-operator | false | Killed | isolated | doubtful | stray-error',
+    'src/events.ts | condition | true | Killed | isolated | doubtful | stray-error',
+  ],
+  isolated: [
+    'src/events.ts | comparison-operator | false | Killed | isolated | - | stray-error',
+    'src/events.ts | condition | true | Killed | isolated | - | stray-error',
+  ],
+}
+
+/**
+ * Verdicts of the mutants of the fixture `unhandled` that only cause an
+ * unhandled error, by mode, when a plain run passes despite both errors: their
+ * batch tries pass, so they are rechecked as survivors.
+ */
+const IGNORED_VERDICTS = {
+  fast: [
+    'src/events.ts | comparison-operator | false | Survived | isolated | batch-survivor | -',
+    'src/events.ts | condition | true | Survived | isolated | batch-survivor | -',
+  ],
+  isolated: [
+    'src/events.ts | comparison-operator | false | Survived | isolated | - | -',
+    'src/events.ts | condition | true | Survived | isolated | - | -',
+  ],
+}
+
+/**
  * Root of the fixture project, with its own Vitest configuration.
  */
 let runnerRoot = path.resolve(import.meta.dirname, '../../fixtures/runner')
+
+/**
+ * Root of a fixture project whose mutants fail an assertion or only cause an
+ * unhandled error: `listener` calls an undefined listener from a timer, and
+ * `value !== null` leaves a rejection without a handler. It has a Vitest
+ * configuration file for each way a plain run treats such errors; its project
+ * `listener` has a test file that listens for unhandled rejections itself.
+ */
+let unhandledRoot = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/unhandled',
+)
 
 /**
  * Summarizes a verdict for comparison.
@@ -179,6 +243,91 @@ describe('vitest adapter', () => {
       'src',
       'test',
       'vitest.config.ts',
+    ])
+  }, 30_000)
+
+  it.each([
+    {
+      // A plain run fails on both errors.
+      messages: ['listener is not a function', 'settled late'],
+      config: 'vitest.config.ts',
+      ...COUNTED_VERDICTS,
+    },
+    {
+      // The filter drops only errors of ResizeObserver.
+      messages: ['listener is not a function', 'settled late'],
+      config: 'vitest.keep.ts',
+      ...COUNTED_VERDICTS,
+    },
+    {
+      // A plain run prints both errors and passes.
+      config: 'vitest.ignore.ts',
+      ...IGNORED_VERDICTS,
+      messages: [],
+    },
+    {
+      // The filter drops both errors, so a plain run prints none and passes.
+      config: 'vitest.drop.ts',
+      ...IGNORED_VERDICTS,
+      messages: [],
+    },
+    {
+      // The filter drops only the error of the listener.
+      fast: [
+        'src/events.ts | comparison-operator | false | Killed | isolated | doubtful | stray-error',
+        'src/events.ts | condition | true | Survived | isolated | batch-survivor | -',
+      ],
+      isolated: [
+        'src/events.ts | comparison-operator | false | Killed | isolated | - | stray-error',
+        'src/events.ts | condition | true | Survived | isolated | - | -',
+      ],
+      config: 'vitest.filter.ts',
+      messages: ['settled late'],
+    },
+  ])(
+    'decides mutants that only cause unhandled errors as a plain run with $config does',
+    async ({ isolated, messages, config, fast }) => {
+      let options = {
+        builtIns: createBuiltIns('vitest', vitestAdapter({ config })),
+        cwd: unhandledRoot,
+        paths: ['src'],
+        concurrency: 2,
+        cache: false,
+      }
+      let byDefault = await runMutants(options)
+      let quick = await runMutants({ ...options, fast: true })
+
+      expect([byDefault.diagnostics, quick.diagnostics]).toStrictEqual([[], []])
+      expect(byDefault.results.map(summarizeVerdict).toSorted()).toStrictEqual(
+        [...SETTLED_VERDICTS.isolated, ...isolated].toSorted(),
+      )
+      expect(quick.results.map(summarizeVerdict).toSorted()).toStrictEqual(
+        [...SETTLED_VERDICTS.fast, ...fast].toSorted(),
+      )
+      expect(
+        byDefault.results
+          .filter(result => result.cause === 'stray-error')
+          .map(result => result.message!)
+          .toSorted(),
+      ).toStrictEqual(messages)
+    },
+    30_000,
+  )
+
+  it('leaves an unhandled rejection to a listener of the test file, as a plain run does', async () => {
+    let result = await runMutants({
+      builtIns: createBuiltIns('vitest', vitestAdapter()),
+      cwd: path.join(unhandledRoot, 'listener'),
+      paths: ['src'],
+      concurrency: 2,
+      cache: false,
+    })
+
+    expect(result.diagnostics).toStrictEqual([])
+    expect(result.results.map(summarizeVerdict).toSorted()).toStrictEqual([
+      'src/settle.ts | comparison-operator | false | Survived | isolated | - | -',
+      'src/settle.ts | comparison-operator | true | Survived | isolated | - | -',
+      'src/settle.ts | return-value | 0 | Killed | isolated | - | assertion',
     ])
   }, 30_000)
 

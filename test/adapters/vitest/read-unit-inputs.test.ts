@@ -22,7 +22,11 @@ describe('readUnitInputs', () => {
       readUnitInputs(
         handle,
         { file: '/p/a.test.ts', project: 'web', tsconfigs },
-        { dependencies: ['/p/src/a.ts?v=1'], environment: ['MODE'] },
+        {
+          dependencies: ['/p/src/a.ts?v=1'],
+          environment: ['MODE'],
+          filtered: false,
+        },
       ),
     ).resolves.toStrictEqual({
       dependencies: ['/p/a.test.ts'],
@@ -46,7 +50,15 @@ describe('readUnitInputs', () => {
       readUnitInputs(
         handle,
         { file: '/p/a.test.ts', project: 'web', tsconfigs },
-        { dependencies: null, environment: [] },
+        { dependencies: null, environment: [], filtered: false },
+      ),
+    ).resolves.toBeNull()
+    // What `onUnhandledError` depends on is out of sight.
+    await expect(
+      readUnitInputs(
+        handle,
+        { file: '/p/a.test.ts', project: 'web', tsconfigs },
+        { dependencies: ['/p/src/a.ts?v=1'], environment: [], filtered: true },
       ),
     ).resolves.toBeNull()
   })

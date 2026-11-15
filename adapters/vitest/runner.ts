@@ -14,18 +14,22 @@ import { createHash } from 'node:crypto'
 import { TestRunner } from 'vitest'
 import path from 'node:path'
 
+import type {
+  VitestWorkerOptions,
+  VitestTryFacts,
+  VitestStray,
+} from './types/vitest-worker'
 import type { BatchUnit, BatchTest } from '../../types/adapter/batch-plan'
 import type { MutantRuntime } from '../../types/adapter/mutant-runtime'
 import type { IsolatedUnit } from '../../types/adapter/isolated-plan'
 import type { InputTracking } from '../shared/types/input-tracking'
-import type { VitestWorkerOptions } from './types/vitest-worker'
-import type { TryFacts } from '../../types/adapter/try-facts'
 
 import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
 import { watchWorkerClose } from './worker/watch-worker-close'
 import { listDependencies } from './worker/list-dependencies'
 import { getErrorMessage } from '../shared/get-error-message'
 import { VITEST_VARIABLES } from './worker/vitest-variables'
+import { interceptStrays } from './worker/intercept-strays'
 import { readWorkerPlan } from './worker/read-worker-plan'
 import { raceTryTimeout } from './worker/race-try-timeout'
 import { writeOutRecord } from './worker/write-out-record'
@@ -38,6 +42,7 @@ import { captureClock } from '../shared/capture-clock'
 import { trackInputs } from '../shared/track-inputs'
 import { getFileHash } from './worker/get-file-hash'
 import { waitForTurn } from './worker/wait-for-turn'
+import { encodeStray } from './worker/encode-stray'
 import { orderTests } from './worker/order-tests'
 import { claimUnit } from './worker/claim-unit'
 import { listTests } from './worker/list-tests'
@@ -73,6 +78,12 @@ interface CurrentTry {
   deadline: number | null
 
   /**
+   * Unhandled errors Vitest reported while the try ran, encoded for the main
+   * process (`encodeStray`).
+   */
+  strays: VitestStray[]
+
+  /**
    * Test of the try.
    */
   test: RunnerTestCase
@@ -92,11 +103,6 @@ interface CurrentTry {
    * attempt Vitest retried are left out, as a plain run does.
    */
   errors: unknown[]
-
-  /**
-   * Unhandled errors while the try ran.
-   */
-  strays: string[]
 
   /**
    * Retries Vitest had counted for the test when the attempt started.
@@ -140,14 +146,14 @@ interface TestRecord {
   plan: (string | null)[]
 
   /**
+   * Facts of the tries that finished.
+   */
+  tries: VitestTryFacts[]
+
+  /**
    * Test of the record.
    */
   test: RunnerTestCase
-
-  /**
-   * Facts of the tries that finished.
-   */
-  tries: TryFacts[]
 
   /**
    * Repetitions in one try: the test's own `repeats` plus one.
@@ -161,17 +167,6 @@ interface TestRecord {
 }
 
 /**
- * Receiver of the stray errors of the process: the runner of the file that runs
- * now.
- */
-interface StraySlot {
-  /**
-   * Runner that records stray errors.
-   */
-  current: MootantRunner
-}
-
-/**
  * Milliseconds the watchdog waits past a budget before it stops a worker.
  */
 const HANG_GRACE = 1000
@@ -181,11 +176,6 @@ const HANG_GRACE = 1000
  * for a hook without a timeout, never stops the worker.
  */
 const MAX_BUDGET = 2 ** 31 - 1
-
-/**
- * Global slot that keeps one pair of process listeners per worker process.
- */
-const STRAY_SLOT = Symbol.for('mootant.vitest.strays')
 
 /**
  * Timers of the worker, captured when the runner loads: before setup files and
@@ -236,7 +226,10 @@ let clock = captureClock()
  * variable cannot change inside a running worker); switched code reads it on
  * every evaluation. Facts go to out files in the work directory, one line per
  * test; heartbeats let the main process stop a worker that hangs, dry runs
- * included.
+ * included. An unhandled error is recorded only as Vitest's own listener
+ * reports it to the main process in a plain run, so an error of an event the
+ * code listens for itself is left to that code (`interceptStrays`); the main
+ * process decides which of the recorded errors count (`readStrays`).
  */
 export default class MootantRunner extends TestRunner {
   /**
@@ -279,6 +272,12 @@ export default class MootantRunner extends TestRunner {
   private readonly loadCovers = new Set<string>()
 
   /**
+   * Unhandled errors Vitest reported outside tries, encoded for the main
+   * process (`encodeStray`).
+   */
+  private readonly loadStrays: VitestStray[] = []
+
+  /**
    * Site evaluations while tries of a dry run ran, and the count when the
    * current stretch of tries began.
    */
@@ -316,11 +315,6 @@ export default class MootantRunner extends TestRunner {
    * Ids of the tests that run, or null to run every test.
    */
   private runnable: Set<string> | null = null
-
-  /**
-   * Unhandled errors outside tries.
-   */
-  private readonly loadStrays: string[] = []
 
   /**
    * Coverage sets of the tries that run now, in a dry run.
@@ -427,6 +421,11 @@ export default class MootantRunner extends TestRunner {
   private beatLength = 0
 
   /**
+   * Unhandled errors the runner recorded, which numbers the next one.
+   */
+  private strayCount = 0
+
+  /**
    * Index of the unit in the run's plan.
    */
   private unitIndex = 0
@@ -464,9 +463,10 @@ export default class MootantRunner extends TestRunner {
   private file = ''
 
   /**
-   * Creates the runner of one test file, installs the mutant runtime, records
-   * the worker's process id, so the main process waits until the worker is
-   * gone, and moves the end of the unit to the end of the worker's teardown,
+   * Creates the runner of one test file, installs the mutant runtime, takes
+   * over Vitest's report of the worker's unhandled errors (`interceptStrays`),
+   * records the worker's process id, so the main process waits until the worker
+   * is gone, and moves the end of the unit to the end of the worker's teardown,
    * after the test environment's teardown, whose error fails the unit like a
    * failed suite hook.
    *
@@ -481,7 +481,9 @@ export default class MootantRunner extends TestRunner {
     closeSync(
       openSync(path.join(directory, 'worker', String(process.pid)), 'w'),
     )
-    listenForStrays(this)
+    interceptStrays(Reflect.get(this, 'workerState'), (error, type) => {
+      this.onStray(error, type)
+    })
     let register = this.onCleanupWorkerContext
     if (register !== undefined) {
       let state = Reflect.get(this, 'workerState') as { ctx: object }
@@ -657,18 +659,23 @@ export default class MootantRunner extends TestRunner {
   }
 
   /**
-   * Records an unhandled error of the process: in every try that runs now, as a
-   * late error of the last try in a batch run, or else as an error outside
+   * Records an unhandled error as Vitest's listener reports it
+   * (`interceptStrays`), encoded and numbered for the main process, which
+   * decides once whether it counts (`readStrays`): in every try that runs now,
+   * as a late error of the last try in a batch run, or else as an error outside
    * tries.
    *
-   * @param error - Unhandled error or rejection reason.
+   * @param error - Error as Vitest serialized it, or a reason that is not an
+   *   object.
+   * @param type - Event of the error, as Vitest names it.
    */
-  public onStray(error: unknown): void {
-    let message = getErrorMessage(error)
+  public onStray(error: unknown, type: string): void {
+    let stray = encodeStray(error, type, this.strayCount)
+    this.strayCount += 1
     let active = this.listActive()
     if (active.length > 0) {
       for (let current of active) {
-        current.strays.push(message)
+        current.strays.push(stray)
       }
     } else if (
       this.options.mode === 'batch' &&
@@ -679,10 +686,10 @@ export default class MootantRunner extends TestRunner {
         mutant: this.lastMutant,
         test: this.lastTest,
         kind: 'late',
-        message,
+        stray,
       })
     } else {
-      this.loadStrays.push(message)
+      this.loadStrays.push(stray)
     }
   }
 
@@ -1244,33 +1251,6 @@ export default class MootantRunner extends TestRunner {
       }
     }
   }
-}
-
-/**
- * Sends the unhandled errors of the process to the given runner. The process
- * listeners are added once per process, so a second runner in the same process
- * only takes them over.
- *
- * @param runner - Runner of the file that runs now.
- */
-function listenForStrays(runner: MootantRunner): void {
-  let slot = Reflect.get(globalThis, STRAY_SLOT) as StraySlot | undefined
-  if (slot === undefined) {
-    let created: StraySlot = { current: runner }
-    /**
-     * Passes an unhandled error to the current runner.
-     *
-     * @param error - Unhandled error or rejection reason.
-     */
-    function forward(error: unknown): void {
-      created.current.onStray(error)
-    }
-    process.on('unhandledRejection', forward)
-    process.on('uncaughtException', forward)
-    Reflect.set(globalThis, STRAY_SLOT, created)
-    slot = created
-  }
-  slot.current = runner
 }
 
 /**

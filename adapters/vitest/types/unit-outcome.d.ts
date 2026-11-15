@@ -10,7 +10,8 @@ export interface UnitOutcome {
   hung: VitestHeartbeat | null
 
   /**
-   * Records the worker wrote, in order.
+   * Records the worker wrote, in order, as the main process reads them
+   * (`readOutRecords`).
    */
   records: VitestOutRecord[]
 

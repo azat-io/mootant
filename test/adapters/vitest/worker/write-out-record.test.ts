@@ -10,8 +10,9 @@ describe('writeOutRecord', () => {
     let directory = await mkdtemp(path.join(tmpdir(), 'mootant-out-'))
     let file = path.join(directory, 'a-0.jsonl')
     let handle = await open(file, 'a')
-    let first = { kind: 'late' as const, message: 'a', mutant: null, test: 't' }
-    let second = { kind: 'late' as const, message: 'b', mutant: 'm', test: 't' }
+    let stray = { type: 'Unhandled Rejection', error: 'YQ==', id: 0 }
+    let first = { kind: 'late' as const, mutant: null, test: 't', stray }
+    let second = { kind: 'late' as const, mutant: 'm', test: 't', stray }
     writeOutRecord(handle.fd, first)
     writeOutRecord(handle.fd, second)
     await handle.close()

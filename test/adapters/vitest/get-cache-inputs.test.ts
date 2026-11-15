@@ -15,6 +15,8 @@ import { createDigest } from '../../../core/cache/create-digest'
  * @param fields.evaluated - Module ids the main process evaluated for the
  *   global setup files, or undefined without a module runner.
  * @param fields.define - Values Vite's `define` replaces, or undefined.
+ * @param fields.filter - `onUnhandledError` of the root configuration, or
+ *   undefined.
  * @returns Project with settings and Vite configuration.
  */
 function createProject(fields: {
@@ -22,6 +24,7 @@ function createProject(fields: {
   envDir?: string | false
   evaluated?: string[]
   environment?: string
+  filter?(): boolean
   shuffle?: boolean
   name?: string
 }): unknown {
@@ -69,8 +72,19 @@ function createProject(fields: {
       seed: new Map([['n', 1]]),
       big: 1n,
     }),
+    globalConfig: { dangerouslyIgnoreUnhandledErrors: true },
+    vitest: { state: { onUnhandledError: fields.filter } },
     name: fields.name ?? '',
   }
+}
+
+/**
+ * `onUnhandledError` of a root configuration that drops every unhandled error.
+ *
+ * @returns False.
+ */
+function dropErrors(): boolean {
+  return false
 }
 
 describe('getCacheInputs', () => {
@@ -87,6 +101,7 @@ describe('getCacheInputs', () => {
             ],
             environment: './env/custom.ts',
             define: { __N__: '1' },
+            filter: dropErrors,
             shuffle: true,
           }),
           createProject({ environment: 'jsdom', envDir: false, name: 'web' }),
@@ -135,6 +150,8 @@ describe('getCacheInputs', () => {
         },
         values:
           "[ { __N__: '1' }, { __D__: 2 }, { 'a.b': 'x' }, [ [ 'seed', Map(1) { 'n' => 1 } ], [ 'big', 1n ] ] ]",
+        dangerouslyIgnoreUnhandledErrors: true,
+        onUnhandledError: String(dropErrors),
         environment: './env/custom.ts',
         environmentOptions: {},
         hookTimeout: 10_000,
@@ -156,6 +173,7 @@ describe('getCacheInputs', () => {
         },
         values:
           "[ null, { __D__: 2 }, null, [ [ 'seed', Map(1) { 'n' => 1 } ], [ 'big', 1n ] ] ]",
+        onUnhandledError: null,
         environment: 'jsdom',
         variables: [],
         name: 'web',

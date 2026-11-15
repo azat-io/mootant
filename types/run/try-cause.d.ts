@@ -2,8 +2,8 @@
  * How a mutant was detected:
  *
  * - `assertion`: a test or hook failed;
- * - `stray-error`: an unhandled error (isolated path only; in batch it makes the
- *   try doubtful);
+ * - `stray-error`: an unhandled error that the test runner counts (isolated path
+ *   only; in batch it makes the try doubtful);
  * - `load-error`: the test file failed to load with the mutant active;
  * - `hook-error`: a suite hook (such as `beforeAll`/`before`, `afterAll`/`after`,
  *   `aroundAll`) or the file teardown, such as the cleanup of a worker-scoped

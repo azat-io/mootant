@@ -1,17 +1,18 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
-import type { VitestOutRecord, VitestHeartbeat } from './types/vitest-worker'
 import type { IsolatedFacts } from '../../types/adapter/isolated-result'
 import type { IsolatedUnit } from '../../types/adapter/isolated-plan'
 import type { VitestHandle } from './types/vitest-session-state'
 import type { BatchUnit } from '../../types/adapter/batch-plan'
+import type { StrayDecisions } from './types/stray-decisions'
+import type { VitestHeartbeat } from './types/vitest-worker'
 import type { UnitOutcome } from './types/unit-outcome'
 
 import { resetRunDirectory } from './reset-run-directory'
 import { runSpecifications } from './run-specifications'
-import { readOutFile } from '../shared/read-out-file'
 import { watchHeartbeats } from './watch-heartbeats'
+import { readOutRecords } from './read-out-records'
 import { stopHungWorker } from './stop-hung-worker'
 import { writePlanFiles } from './write-plan-files'
 import { watchUnitEnds } from './watch-unit-ends'
@@ -28,7 +29,9 @@ import { readOutFiles } from './read-out-files'
  * is over, when a worker claimed it and died or was stopped before it could, so
  * the progress reaches the number of units that ran. The context's `onUnitEnd`
  * gets the index of each finished unit and, for a unit its worker marked done,
- * its facts with `describe`, else how long it ran, from its records.
+ * its facts with `describe`, else how long it ran, from its records. The read
+ * as a unit ends and the read after the run share their decisions of the
+ * unhandled errors, so each error is decided once (`StrayDecisions`).
  *
  * @param handle - Live Vitest instance of the session.
  * @param plan - Kind of the run, units in plan order and the most units at
@@ -77,15 +80,18 @@ export async function runPlan(
     }
   })
   let { onUnitEnd } = handle.context
+  let decisions: StrayDecisions = new Map()
   let indexes = new Map(names.map((name, index) => [name, index]))
   let ends = watchUnitEnds(
     directory,
     onUnitEnd === undefined ? undefined : (
       name => {
         let unit = indexes.get(name)!
-        let records = readOutFile(
+        let records = readOutRecords(
+          vitest,
           path.join(directory, 'out', `${name}.jsonl`),
-        ) as VitestOutRecord[]
+          decisions,
+        )
         if (plan.describe === undefined) {
           let end = records.find(record => record.kind === 'end')
           onUnitEnd(
@@ -120,7 +126,7 @@ export async function runPlan(
       config.maxWorkers = maxWorkers[index]!
     }
   }
-  let records = readOutFiles(directory)
+  let records = readOutFiles(vitest, directory, decisions)
   let claims = new Set(readdirSync(path.join(directory, 'claim')))
   let done = new Set(readdirSync(path.join(directory, 'done')))
   for (let [unit, name] of names.entries()) {

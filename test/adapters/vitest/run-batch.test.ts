@@ -35,6 +35,7 @@ let end = {
   kind: 'end' as const,
   concurrent: false,
   abandoned: false,
+  filtered: false,
   loadDuration: 1,
   hookError: null,
   loadError: null,
