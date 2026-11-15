@@ -26,11 +26,12 @@ Pass files or directories, relative to the current directory. Without paths,
 runner and uses its existing configuration; see
 [compatibility](/guide/compatibility) for supported runners and frameworks.
 
-Mootant selects test files related to the mutated code, and they must pass
-without mutants first. It then reports surviving mutants, uncovered mutants and
-errors in separate sections, grouped by file. Each finding shows the source
-lines before and after the change and a short id, then the reason of an error
-or, when Mootant finds one, a test file to extend.
+Mootant selects test files related to every file it can mutate in the paths,
+even with `--mutant` or `--since`, and they must pass without mutants first. It
+then reports surviving mutants, uncovered mutants and errors in separate
+sections, grouped by file. Each finding shows the source lines before and after
+the change and a short id, then the reason of an error or, when Mootant finds
+one, a test file to extend.
 
 In a terminal, the report also lists the five files with the lowest scores below
 100%. Piped output and JSON leave this list out. Test output is hidden unless

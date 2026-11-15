@@ -64,10 +64,15 @@ your configuration. It does not support:
 
 Any of these in one project stops the whole run with an error.
 
-Tests that load a mutated file only through a computed `import()` may not be
-selected. Child processes and workers started by a test run the original code.
-For a custom Vitest configuration path, use
-[`vitestAdapter`](/guide/configuration#runner).
+Tests that load a mutated file only through a computed `import()`, or through a
+`vi.mock` that still loads the original module, may not be selected: a
+`__mocks__` file, or an inline factory without parameters whose own code does
+not call `importActual`, such as one that uses a helper. Mootant still runs such
+a test when it imports another mutated file of the paths, so with narrower paths
+the mutants it would kill may stay uncovered or survive, which lowers the score;
+re-check them with the paths of the full run. Child processes and workers
+started by a test run the original code. For a custom Vitest configuration path,
+use [`vitestAdapter`](/guide/configuration#runner).
 
 ## Jest
 

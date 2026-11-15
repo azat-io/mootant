@@ -20,25 +20,35 @@ const SOURCES: Record<string, string[]> = {
 }
 
 /**
+ * Files to relate tests to: the switched ones and `/src/c.ts`, whose mutants a
+ * run of some mutants does not switch.
+ */
+const RELATED = ['/src/a.ts', '/src/b.ts', '/src/c.ts']
+
+/**
  * Runs the dry phase over a simulated project with `/src/a.ts` and `/src/b.ts`
  * switched.
  *
  * @param world - Simulated project.
  * @param repeat - Whether every test is tried twice, as in fast mode.
- * @param progress - Receives the reasons of dry runs that run again, and the
- *   other events as JSON.
+ * @param options - Where the phase reports and what it relates tests to.
+ * @param options.progress - Receives the reasons of dry runs that run again,
+ *   and the other events as JSON.
+ * @param options.related - Files to relate tests to; the switched files when
+ *   omitted.
  * @returns Outcome of the phase, the switched files left and the adapter.
  */
 async function run(
   world: FakeWorld,
   repeat = true,
-  progress: string[] = [],
+  options: { progress?: string[]; related?: string[] } = {},
 ): Promise<{
   phase: Awaited<ReturnType<typeof runDryPhase>>
   switched: SwitchedFile[]
   progress: string[]
   fake: FakeAdapter
 }> {
+  let { related = Object.keys(SOURCES), progress = [] } = options
   let fake = createFakeAdapter(world)
   let switched: SwitchedFile[] = Object.entries(SOURCES).map(([file, ids]) => ({
     switched: ids.map(id => `hit("${id}")`).join(';'),
@@ -68,6 +78,7 @@ async function run(
     ]),
     root: '/',
     switched,
+    related,
     repeat,
   })
   return { progress, switched, phase, fake }
@@ -111,6 +122,7 @@ describe('runDryPhase', () => {
         report: () => {},
         repeat: false,
         switched: [],
+        related: [],
         root: '/',
       }),
     ).resolves.toStrictEqual({
@@ -225,7 +237,7 @@ describe('runDryPhase', () => {
     }
     let progress: string[] = []
 
-    await expect(run(world, true, progress)).rejects.toThrow(
+    await expect(run(world, true, { progress })).rejects.toThrow(
       [
         'Tests fail without mutants; fix them first (11 tests, 1 test file):',
         '  t/a.test.ts: fails to load: unknown error',
@@ -273,6 +285,7 @@ describe('runDryPhase', () => {
       runDryPhase(session, {
         displays: new Map([['/src/a.ts', 'src/a.ts']]),
         mutantFiles: new Map([['a1', '/src/a.ts']]),
+        related: ['/src/a.ts'],
         report: () => {},
         repeat: true,
         root: '/',
@@ -362,6 +375,32 @@ describe('runDryPhase', () => {
       ['b1'],
       [],
     ])
+  })
+
+  it('relates every dry run to the given files, also those not switched, and leaves out only the files that break tests', async () => {
+    let { progress, switched, phase, fake } = await run(
+      {
+        tests: [
+          { file: '/t/a.test.ts', covers: ['a1'], dry: 'broken', id: 't1' },
+          { file: '/t/c.test.ts', id: 'c1' },
+        ],
+      },
+      true,
+      { related: RELATED },
+    )
+
+    expect(progress[0]).toBe('{"files":2,"kind":"dry-start"}')
+    expect(
+      fake.calls.dry.map(request => [request.instrumented, request.related]),
+    ).toStrictEqual([
+      [true, RELATED],
+      [true, RELATED],
+      [false, RELATED],
+      [true, ['/src/b.ts', '/src/c.ts']],
+    ])
+    expect(switched.map(entry => entry.file)).toStrictEqual(['/src/b.ts'])
+    expect([...phase.errors.keys()]).toStrictEqual(['src/a.ts'])
+    expect(phase.dry.tests.map(test => test.id)).toStrictEqual(['t1', 'c1'])
   })
 
   it('tries each test once outside fast mode and runs the files of failures again before checking them', async () => {
@@ -485,24 +524,28 @@ describe('runDryPhase', () => {
   })
 
   it('drops every switched file when no failure reached a site or a switched file it depends on', async () => {
-    let { switched, phase } = await run({
-      onDry: (result, request) => ({
-        ...result,
-        tests: result.tests.map(test => ({
-          ...test,
-          tries: test.tries.map(facts => ({
-            ...facts,
-            failed: request.instrumented,
-            covers: null,
+    let { switched, phase } = await run(
+      {
+        onDry: (result, request) => ({
+          ...result,
+          tests: result.tests.map(test => ({
+            ...test,
+            tries: test.tries.map(facts => ({
+              ...facts,
+              failed: request.instrumented,
+              covers: null,
+            })),
           })),
-        })),
-        files: result.files.map(file => ({
-          ...file,
-          dependencies: [file.file, '/src/c.ts'],
-        })),
-      }),
-      tests: [{ file: '/t/a.test.ts', id: 't1' }],
-    })
+          files: result.files.map(file => ({
+            ...file,
+            dependencies: [file.file, '/src/c.ts'],
+          })),
+        }),
+        tests: [{ file: '/t/a.test.ts', id: 't1' }],
+      },
+      true,
+      { related: RELATED },
+    )
     let broken =
       'Tests fail only with mootant\'s switched files, such as "t1" in t/a.test.ts, and mootant cannot tell which switched file breaks them; the mutants of every switched file are not run.'
 
@@ -759,7 +802,7 @@ describe('runDryPhase', () => {
           ],
         },
         false,
-        progress,
+        { progress },
       ),
     ).rejects.toThrow(
       'Tests fail without mutants; fix them first (1 test):\n  t/b.test.ts > t2: PORT is not set',
@@ -1119,7 +1162,7 @@ describe('runDryPhase', () => {
           files: [{ file: '/t/a.test.ts', loadCovers: ['a1'] }],
         },
         true,
-        progress,
+        { progress },
       ),
     ).rejects.toThrow('Tests still fail')
     expect(progress.at(-1)).toBe(

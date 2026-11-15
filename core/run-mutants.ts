@@ -140,22 +140,25 @@ interface RunMutantsOptions {
 
 /**
  * Runs the mutants of the given paths against the project's tests: lists the
- * mutants, starts the test runner through its adapter, switches the mutated
- * files, checking that switched Svelte and Vue components compile, runs the
- * related tests without a mutant, then decides every covered mutant on the
- * isolated path, where each mutant gets a fresh module graph and its whole
- * covering test files. In fast mode, runtime mutants first take the batch path,
- * where one test run tries many mutants and kills are accepted as heuristic
- * verdicts; its survivors and doubtful tries still run isolated. An adapter
- * without batch mode runs fast mode as the default mode, with a note. Mutants
- * the test runner ran outside its workers end with `Error` unless a test killed
- * them. Unless the cache is off, valid verdicts of earlier runs are reused
- * before anything runs, in incremental mode also those whose mutant kept its
- * region, with a warning that counts the mutants whose cached evidence only
- * their region matched, and the evidence of the run is saved after it, unless
- * it has error diagnostics. With `--since`, only the mutants on lines changed
- * since the merge base of the revision and `HEAD` run, and when there are none
- * the test runner does not start. A run that writes an HTML report also lists
+ * mutants, starts the test runner through its adapter, hosts the mutants of
+ * every file of the paths, checking that switched Svelte and Vue components
+ * compile, switches the files of the selected mutants, runs the related tests
+ * without a mutant, then decides every covered mutant on the isolated path,
+ * where each mutant gets a fresh module graph and its whole covering test
+ * files. In fast mode, runtime mutants first take the batch path, where one
+ * test run tries many mutants and kills are accepted as heuristic verdicts; its
+ * survivors and doubtful tries still run isolated. An adapter without batch
+ * mode runs fast mode as the default mode, with a note. Mutants the test runner
+ * ran outside its workers end with `Error` unless a test killed them. Unless
+ * the cache is off, valid verdicts of earlier runs are reused before anything
+ * runs, in incremental mode also those whose mutant kept its region, with a
+ * warning that counts the mutants whose cached evidence only their region
+ * matched, and the evidence of the run is saved after it, unless it has error
+ * diagnostics. With `--since`, only the mutants on lines changed since the
+ * merge base of the revision and `HEAD` run, and when there are none the test
+ * runner does not start. With `--since` or `--mutant`, the dry run still
+ * relates tests to the same files as a run of every mutant, not only to the
+ * files of the mutants that run. A run that writes an HTML report also lists
  * the candidates its mutators skipped. The adapter is closed and the work
  * directory removed whatever happens; what the adapter tells of its close, such
  * as a global teardown that failed, joins the diagnostics of a run that went
@@ -348,9 +351,12 @@ export async function runMutants(
  * @param context.started - Start time of the run.
  * @param context.startedAt - Start of the run in milliseconds since the epoch.
  * @param context.files - Listed files with the selected mutants.
- * @param context.listed - Listed files with all their mutants. The dry run
- *   hosts every pending mutant of the files of the run, selected or not, so the
- *   plan of a mutant does not depend on the selection.
+ * @param context.listed - Listed files with all their mutants. The run hosts
+ *   every pending mutant of every file that `selectRunFiles` keeps, as a run of
+ *   every mutant does, and switches only the files of the selected mutants; the
+ *   dry run relates tests to every file it could host, so the tests that reach
+ *   a mutant do not depend on the selection. Only the files of the selected
+ *   mutants report that their mutants could not be hosted.
  * @param context.listedIds - Ids of every listed mutant of the paths.
  * @param context.since - Revision of `--since` with its merge base, or null.
  * @param context.html - Absolute path of the HTML report, or null.
@@ -387,42 +393,49 @@ async function execute(context: {
   let cachePath = getCachePath(root)
   let stored = runSettings.cache ? readRunCache(cachePath) : null
   let testFiles = await session.listTestFiles()
-  let selected = selectRunFiles(context.files, testFiles, getPackageDirectory())
+  let packageDirectory = getPackageDirectory()
+  let selected = selectRunFiles(context.files, testFiles, packageDirectory)
+  let runnable = selectRunFiles(context.listed, testFiles, packageDirectory)
   let diagnostics = [
     ...context.diagnostics,
     ...(session.diagnostics ?? []),
     ...selected.diagnostics,
   ]
   let frameworks = new Set(
-    selected.files.map(file => getComponentFramework(file.file)),
+    runnable.files.map(file => getComponentFramework(file.file)),
   )
-  let listed = new Map(context.listed.map(file => [file.absolute, file]))
-  let hosting = selected.files.map(file => listed.get(file.absolute)!)
-  let built = createSwitchedFiles(hosting, {
+  let built = createSwitchedFiles(runnable.files, {
     svelte: frameworks.has('svelte') ? await loadSvelteCompiler() : null,
     vue: frameworks.has('vue') ? await loadVueCompiler() : null,
   })
-  context.switched.push(...built.switched)
-  diagnostics.push(...built.diagnostics)
-  let errors = new Map<string, string>()
-  for (let diagnostic of built.diagnostics) {
-    errors.set(diagnostic.file!, diagnostic.message)
-  }
-  let mutants = selected.files.flatMap(file => file.mutants)
-  let pending = mutants.filter(mutant => mutant.status === 'Pending')
-  let hosted = hosting
-    .flatMap(file => file.mutants)
-    .filter(mutant => mutant.status === 'Pending')
   let displays = new Map(selected.files.map(file => [file.absolute, file.file]))
   let absolutes = new Map(
     selected.files.map(file => [file.file, file.absolute]),
   )
+  context.switched.push(
+    ...built.switched.filter(entry => displays.has(entry.file)),
+  )
+  let hostErrors = built.diagnostics.filter(diagnostic =>
+    absolutes.has(diagnostic.file!),
+  )
+  diagnostics.push(...hostErrors)
+  let errors = new Map<string, string>()
+  for (let diagnostic of hostErrors) {
+    errors.set(diagnostic.file!, diagnostic.message)
+  }
+  let mutants = selected.files.flatMap(file => file.mutants)
+  let pending = mutants.filter(mutant => mutant.status === 'Pending')
+  let hosted = runnable.files
+    .filter(file => displays.has(file.absolute))
+    .flatMap(file => file.mutants)
+    .filter(mutant => mutant.status === 'Pending')
 
   let dryStarted = performance.now()
   let dryPhase = await runDryPhase(session, {
     mutantFiles: new Map(
       hosted.map(mutant => [mutant.id, absolutes.get(mutant.file)!]),
     ),
+    related: built.switched.map(entry => entry.file),
     report: event => options.onProgress?.(event),
     switched: context.switched,
     repeat: fast,
@@ -453,11 +466,10 @@ async function execute(context: {
   let cache =
     stored === null ? null : (
       await prepareRunCache({
-        files: selectRunFiles(context.listed, testFiles, getPackageDirectory())
-          .files,
         incremental: runSettings.incremental,
         started: context.startedAt,
         adapter: context.adapter,
+        files: runnable.files,
         dry: dryPhase.dry,
         analysis,
         session,

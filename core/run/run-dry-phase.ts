@@ -40,6 +40,14 @@ interface DryPhaseInput {
   switched: SwitchedFile[]
 
   /**
+   * Absolute paths of the files the dry runs relate tests to: the switched
+   * files and, in a run of some mutants, the other files a run of every mutant
+   * would switch, which are served as they are. Files that break tests are left
+   * out of the repeated dry run.
+   */
+  related: string[]
+
+  /**
    * Whether every test is tried twice in a row, as fast mode needs to tell
    * stable mutants and repeatable tests; otherwise each test runs once.
    */
@@ -135,16 +143,16 @@ const LISTED_FAILURES = 10
 const DRY_TIMEOUTS = { file: 60_000, test: 60_000 }
 
 /**
- * Runs the tests related to the switched files without a mutant, each once, or
- * in fast mode (`repeat`) twice in a row. When tests fail or files fail to
- * load, their test files run again with the same switched files and each test
- * once, as a plain run of the test runner does. In fast mode a try can leave
- * state, such as a counter or collected results, that fails the next test or a
- * suite hook only because the tests were repeated: test files that pass then
- * keep the results of that run and are unrepeatable, so every mutant their
- * tests reach runs isolated. Outside fast mode a test file that passes then may
- * be flaky, such as one that waits for a port or a resource: it keeps the
- * results of that run, and each of its failures gets an `unrepeatable-test`
+ * Runs the tests related to the given files (`related`) without a mutant, each
+ * once, or in fast mode (`repeat`) twice in a row. When tests fail or files
+ * fail to load, their test files run again with the same switched files and
+ * each test once, as a plain run of the test runner does. In fast mode a try
+ * can leave state, such as a counter or collected results, that fails the next
+ * test or a suite hook only because the tests were repeated: test files that
+ * pass then keep the results of that run and are unrepeatable, so every mutant
+ * their tests reach runs isolated. Outside fast mode a test file that passes
+ * then may be flaky, such as one that waits for a port or a resource: it keeps
+ * the results of that run, and each of its failures gets an `unrepeatable-test`
  * warning. Failures that remain run again without the switched files: failures
  * that remain are real and stop the run; the others come from the
  * instrumentation (`findBrokenFiles`). The switched files they break are
@@ -158,7 +166,8 @@ const DRY_TIMEOUTS = { file: 60_000, test: 60_000 }
  * in.
  *
  * @param session - Live test runner.
- * @param input - Switched files, mutant files, display paths and progress.
+ * @param input - Switched and related files, mutant files, display paths and
+ *   progress.
  * @returns Final dry run, failed files, unrepeatable test files, diagnostics
  *   and the number of runs.
  * @throws Error - When tests fail without the switched files, when tests still
@@ -180,9 +189,11 @@ export async function runDryPhase(
       errors,
     }
   }
-  let related = input.switched.map(entry => entry.file)
-  input.report({ files: related.length, kind: 'dry-start' })
-  let checked = await runCheckedDry(session, input, { diagnostics, related })
+  input.report({ files: input.switched.length, kind: 'dry-start' })
+  let checked = await runCheckedDry(session, input, {
+    related: input.related,
+    diagnostics,
+  })
   let instrumented = [checked.dry]
   let failures = findFailures(checked.dry)
   if (failures.failing.length > 0 || failures.unloaded.length > 0) {
@@ -191,7 +202,6 @@ export async function runDryPhase(
       tests: checked.dry.tests,
       diagnostics,
       failures,
-      related,
       errors,
     })
     instrumented.push(recovered.dry)
@@ -202,21 +212,21 @@ export async function runDryPhase(
 }
 
 /**
- * Runs the dry run of the given switched files, each test once, or twice in a
- * row with `repeat`; then runs the test files of failed tests and failed files
- * once more with the same switched files and each test once. Test files that
- * pass then take the results of that run, since a plain run of the test runner
- * passes them too; the others keep their failures from it, even those the first
- * run did not have. With `repeat` the test files that pass are unrepeatable;
- * without it each failure in them gets an `unrepeatable-test` warning, once, as
- * a flaky test fails and passes this way.
+ * Runs the dry run of the tests related to the given files, each test once, or
+ * twice in a row with `repeat`; then runs the test files of failed tests and
+ * failed files once more with the same switched files and each test once. Test
+ * files that pass then take the results of that run, since a plain run of the
+ * test runner passes them too; the others keep their failures from it, even
+ * those the first run did not have. With `repeat` the test files that pass are
+ * unrepeatable; without it each failure in them gets an `unrepeatable-test`
+ * warning, once, as a flaky test fails and passes this way.
  *
  * @param session - Live test runner.
  * @param input - Repeats, progress and the directory display paths are relative
  *   to.
- * @param check - Switched files to run with and what the dry phase collects.
+ * @param check - Files to relate tests to and what the dry phase collects.
  * @param check.diagnostics - Diagnostics of the dry phase, added to.
- * @param check.related - Absolute paths of the switched files.
+ * @param check.related - Absolute paths of the files to relate tests to.
  * @returns The dry run, the keys of the test files that failed only when
  *   repeated, and the number of runs.
  * @throws Error - When a test or test file hangs.
@@ -316,11 +326,10 @@ async function runCheckedDry(
  * depends on, it breaks the files of its sites alone. When no failure ties to a
  * switched file in any of these ways, every switched file counts as broken.
  *
- * @param input - Source files of the pending mutants.
- * @param outcome - Failures of the dry run, its test files and the switched
- *   files it ran with.
+ * @param input - Switched files the dry run ran with and the source files of
+ *   the pending mutants.
+ * @param outcome - Failures of the dry run and its test files.
  * @param outcome.failures - Failing tests and unloaded files of the dry run.
- * @param outcome.related - Absolute paths of the switched files.
  * @param outcome.files - Test files of the dry run.
  * @returns The first failure that breaks each broken file and how, or with
  *   `unknown` the first failure of the dry run, by absolute path, in the order
@@ -328,10 +337,11 @@ async function runCheckedDry(
  */
 function findBrokenFiles(
   input: DryPhaseInput,
-  outcome: { failures: DryFailures; related: string[]; files: DryFile[] },
+  outcome: { failures: DryFailures; files: DryFile[] },
 ): Map<string, Breakage> {
-  let { failures, related, files } = outcome
-  let switched = new Set(related)
+  let { failures, files } = outcome
+  let paths = input.switched.map(entry => entry.file)
+  let switched = new Set(paths)
   let dependencies = new Map(
     files.map(file => [
       getTestFileKey(file),
@@ -379,13 +389,11 @@ function findBrokenFiles(
   if (found.size === 0) {
     let [failure] = [...failures.unloaded, ...failures.failing]
     return new Map(
-      related.map(file => [file, { failure: failure!, link: 'unknown' }]),
+      paths.map(file => [file, { failure: failure!, link: 'unknown' }]),
     )
   }
   return new Map(
-    related
-      .filter(file => found.has(file))
-      .map(file => [file, found.get(file)!]),
+    paths.filter(file => found.has(file)).map(file => [file, found.get(file)!]),
   )
 }
 
@@ -395,16 +403,17 @@ function findBrokenFiles(
  * stop the run; the switched files the others break (`findBrokenFiles`) get an
  * `instrumentation-break` error that names a failure and are removed from
  * `input.switched` in place, before the dry run is repeated once for the
- * switched files left.
+ * switched files left, with the tests related to the files left of
+ * `input.related`.
  *
  * @param session - Live test runner.
- * @param input - Switched files, mutant files, display paths and progress.
+ * @param input - Switched and related files, mutant files, display paths and
+ *   progress.
  * @param context - Failures of the dry run and what the dry phase collects.
  * @param context.errors - Messages of the files whose mutants get no verdict,
  *   by display path, added to.
  * @param context.diagnostics - Diagnostics of the dry phase, added to.
  * @param context.failures - Failing tests and unloaded files of the dry run.
- * @param context.related - Absolute paths of the switched files it ran with.
  * @param context.files - Test files of the dry run.
  * @param context.tests - Tests of the dry run.
  * @returns The repeated dry run, or an empty one when no switched file is left,
@@ -421,7 +430,6 @@ async function recoverFromFailures(
     errors: Map<string, string>
     diagnostics: Diagnostic[]
     failures: DryFailures
-    related: string[]
     files: DryFile[]
     tests: DryTest[]
   },
@@ -446,7 +454,7 @@ async function recoverFromFailures(
     kind: 'dry-again',
   })
   let again = await runCheckedDry(session, input, {
-    related: kept.map(entry => entry.file),
+    related: input.related.filter(file => !broken.has(file)),
     diagnostics: context.diagnostics,
   })
   let left = findFailures(again.dry)
@@ -473,11 +481,10 @@ async function recoverFromFailures(
  * fails only now is left alone, as in a file that loaded.
  *
  * @param session - Live test runner.
- * @param input - Progress and the directory display paths are relative to.
- * @param check - Failures and tests of the dry run, and the switched files it
- *   ran with.
+ * @param input - Files to relate tests to, progress and the directory display
+ *   paths are relative to.
+ * @param check - Failures and tests of the dry run.
  * @param check.failures - Failing tests and unloaded files of the dry run.
- * @param check.related - Absolute paths of the switched files.
  * @param check.tests - Tests of the dry run.
  * @throws Error - When tests fail without the switched files, or when a test or
  *   test file hangs.
@@ -485,9 +492,9 @@ async function recoverFromFailures(
 async function checkRealFailures(
   session: AdapterSession,
   input: DryPhaseInput,
-  check: { failures: DryFailures; related: string[]; tests: DryTest[] },
+  check: { failures: DryFailures; tests: DryTest[] },
 ): Promise<void> {
-  let { failures, related, tests } = check
+  let { failures, tests } = check
   let { unloaded, failing } = failures
   let failingIds = new Set(failing.map(test => test.id))
   let ranIds = new Set(tests.map(test => test.id))
@@ -503,9 +510,9 @@ async function checkRealFailures(
     session,
     {
       files: listTestFiles([...failing, ...unloaded]),
+      related: input.related,
       instrumented: false,
       repeat: false,
-      related,
     },
     input.root,
   )

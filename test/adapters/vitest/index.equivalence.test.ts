@@ -861,4 +861,53 @@ describe('verdict equivalence', () => {
       ["'kept'", "''", 'Killed'],
     ])
   }, 60_000)
+
+  it('gives a mutant the verdict of the whole run when it runs alone and Vitest relates its test only to another file', async () => {
+    // `test/greet.test.ts` imports `src/service.ts` and mocks `src/api.ts`
+    // with a factory that loads the real module through a helper, so Vitest
+    // relates the test to `src/service.ts` only, which a run of the mutants of
+    // `src/api.ts` alone does not switch.
+    let directory = path.join(equivalenceRoot, 'mocked')
+    let { original, isolated, rows } = await runAllPaths(
+      directory,
+      ['src/api.ts', 'src/service.ts'],
+      { separate: true },
+    )
+    let api = isolated.results.filter(
+      result => result.mutant.file === 'src/api.ts',
+    )
+
+    expect(original).toBe(true)
+    expectAgreement(rows)
+    expect(api.map(result => result.status)).toStrictEqual([
+      'Survived',
+      'Killed',
+    ])
+
+    let options = {
+      builtIns: createBuiltIns('vitest', vitestAdapter()),
+      paths: ['src'],
+      cwd: directory,
+      concurrency: 2,
+      cache: false,
+    }
+    let alone = [
+      await runMutants({ ...options, mutantIds: [api[0]!.mutant.id] }),
+      await runMutants({ ...options, mutantIds: [api[1]!.mutant.id] }),
+    ]
+    let narrow = await runMutants({ ...options, paths: ['src/api.ts'] })
+
+    expect(
+      alone.map(run =>
+        run.results.map(result => [result.mutant.id, result.status]),
+      ),
+    ).toStrictEqual(api.map(result => [[result.mutant.id, result.status]]))
+    expect(alone.flatMap(run => run.diagnostics)).toStrictEqual([])
+    // A run of the path `src/api.ts` relates no other file, so Vitest selects
+    // no test, as the compatibility notes say.
+    expect(narrow.results.map(result => result.status)).toStrictEqual([
+      'NoCoverage',
+      'NoCoverage',
+    ])
+  }, 60_000)
 })

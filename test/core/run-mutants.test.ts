@@ -446,7 +446,7 @@ describe('runMutants', () => {
     expect(fake.calls.batch[0]!.concurrency).toBe(4)
   })
 
-  it('hosts the other pending mutants of the files of the selected mutants in the dry run', async () => {
+  it('hosts every pending mutant of the paths and switches only the files of the selected mutants', async () => {
     let [ratio, ...others] = ids['src/flag.ts']!
     let { result, fake } = await run(
       {
@@ -471,8 +471,100 @@ describe('runMutants', () => {
             .filter(mutant => mutant.status === 'Pending')
             .map(mutant => mutant.id),
         ]),
-    ).toStrictEqual([['src/flag.ts', ids['src/flag.ts']]])
+    ).toStrictEqual([
+      ['src/flag.ts', ids['src/flag.ts']],
+      ['src/math.ts', ids['src/math.ts']],
+    ])
+    expect(
+      fake.context!.files.map(entry => path.relative(root, entry.file)),
+    ).toStrictEqual(['src/flag.ts'])
     expect(fake.calls.isolated.flatMap(call => call.units)).toHaveLength(1)
+  })
+
+  it('relates the dry run of some mutants to every file that a run of all of them switches', async () => {
+    let [add] = ids['src/math.ts']!
+    vi.mocked(readChangedLines).mockResolvedValue({
+      files: new Map([[path.join(root, 'src/math.ts'), new Set([2])]]),
+      base: 'abc123',
+    })
+    let note = path.join(root, 'src/note.ts')
+    await writeFile(note, '// mootant-ignore-file\nexport let note = 1 + 2\n')
+    try {
+      let runs = [
+        await run({ tests: [] }),
+        await run({ tests: [] }, { mutantIds: [add!] }),
+        await run({ tests: [] }, { since: 'main' }),
+      ]
+
+      // A run of every mutant switches neither the Astro component nor the
+      // file whose mutants are all ignored.
+      expect(
+        runs.map(({ fake }) => [
+          fake.context!.files.map(entry => path.relative(root, entry.file)),
+          fake.calls.dry[0]!.related.map(file => path.relative(root, file)),
+        ]),
+      ).toStrictEqual([
+        [
+          ['src/flag.ts', 'src/math.ts'],
+          ['src/flag.ts', 'src/math.ts'],
+        ],
+        [['src/math.ts'], ['src/flag.ts', 'src/math.ts']],
+        [['src/math.ts'], ['src/flag.ts', 'src/math.ts']],
+      ])
+    } finally {
+      await rm(note)
+    }
+  })
+
+  it('relates no dry run to a file whose mutants cannot be hosted, whether its mutants run or not', async () => {
+    let [add] = ids['src/math.ts']!
+    let flag = path.join(root, 'src/flag.ts')
+    vi.mocked(readChangedLines).mockResolvedValue({
+      files: new Map([[path.join(root, 'src/math.ts'), new Set([2])]]),
+      base: 'abc123',
+    })
+    let host = vi.mocked(createSwitchedFiles).getMockImplementation()!
+    vi.mocked(createSwitchedFiles).mockImplementation((files, compilers) => {
+      let built = host(files, compilers)
+      return {
+        diagnostics: [
+          ...built.diagnostics,
+          {
+            message: 'Cannot host the mutants of src/flag.ts.',
+            code: 'instrument-error',
+            file: 'src/flag.ts',
+            severity: 'error',
+            column: null,
+            line: null,
+          },
+        ],
+        switched: built.switched.filter(entry => entry.file !== flag),
+      }
+    })
+    try {
+      let runs = [
+        await run({ tests: [] }),
+        await run({ tests: [] }, { mutantIds: [add!] }),
+        await run({ tests: [] }, { since: 'main' }),
+      ]
+
+      // Only the run that selects the mutants of `src/flag.ts` reports them.
+      expect(
+        runs.map(({ result, fake }) => [
+          fake.context!.files.map(entry => path.relative(root, entry.file)),
+          fake.calls.dry[0]!.related.map(file => path.relative(root, file)),
+          result.diagnostics
+            .filter(diagnostic => diagnostic.code === 'instrument-error')
+            .map(diagnostic => diagnostic.file),
+        ]),
+      ).toStrictEqual([
+        [['src/math.ts'], ['src/math.ts'], ['src/flag.ts']],
+        [['src/math.ts'], ['src/math.ts'], []],
+        [['src/math.ts'], ['src/math.ts'], []],
+      ])
+    } finally {
+      vi.mocked(createSwitchedFiles).mockImplementation(host)
+    }
   })
 
   it('takes paths relative to its directory, runner and settings from the configuration', async () => {

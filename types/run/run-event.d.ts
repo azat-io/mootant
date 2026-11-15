@@ -222,7 +222,7 @@ export type RunEvent =
       kind: 'dry-start'
 
       /**
-       * Mutated files whose related tests run.
+       * Switched files of the dry run.
        */
       files: number
     }

@@ -24,10 +24,11 @@ export interface DryRunRequest {
   instrumented: boolean
 
   /**
-   * Absolute paths of mutated files, a hint of which test files to run when
-   * `files` is null: those that may import them run. An adapter may run more,
-   * such as every test file when it does not know yet what each one imports;
-   * each test file it runs is reported as usual.
+   * Absolute paths of source files with mutants, a hint of which test files to
+   * run when `files` is null: those that may import them run. They include
+   * files the run does not switch, such as the files of mutants it does not
+   * run. An adapter may run more, such as every test file when it does not know
+   * yet what each one imports; each test file it runs is reported as usual.
    */
   related: string[]
 
