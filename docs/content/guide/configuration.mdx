@@ -458,7 +458,13 @@ The time limit while a test file runs with a mutant:
 `factor × duration + constant` milliseconds for its loading and for each of its
 tests, added up, where the durations are how long they took without mutants. A
 mutant that goes over it counts as a timeout only when a second run with twice
-the limit times out too. `{ factor: 3, constant: 250 }` by default.
+the limit times out too. So a mutant that only makes a test slower, such as a
+longer retry delay, gets the verdict of its tests when twice the limit is enough
+for it. One that needs more counts as a timeout, and so as detected in the
+score, even when a plain run of its tests passes in time. Near twice the limit,
+the verdict can change from run to run with the load of the machine. Raise
+`constant` for such a mutant, or ignore it with a
+[comment](/mutators#ignore-mutants). `{ factor: 3, constant: 250 }` by default.
 
 ### `hitLimit`
 

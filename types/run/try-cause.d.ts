@@ -12,9 +12,10 @@
  * - `crash`: the worker died with the mutant active (isolated path);
  * - `hit-limit`: the hit counter stopped a loop or far hotter code (confirmed
  *   with doubled time and `factor × floor` more evaluations);
- * - `time-limit`: a timer fired (confirmed with doubled time);
- * - `hang`: the watchdog stopped a worker stuck with the mutant active (confirmed
- *   like `time-limit`).
+ * - `time-limit`: a timer stopped stuck or far slower code (confirmed with
+ *   doubled time);
+ * - `hang`: the watchdog stopped a worker that was stuck or far slower with the
+ *   mutant active (confirmed like `time-limit`).
  */
 export type TryCause =
   | 'stray-error'

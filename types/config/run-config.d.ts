@@ -10,7 +10,8 @@ export interface RunConfig {
    * a test file and for each test, added up while a test file runs with a
    * mutant, or per test in the batch runs of fast mode. A mutant over it runs
    * again with twice the timeout of its whole test file and counts as a timeout
-   * only when that run times out too. Defaults: factor 3, constant 250.
+   * only when that run times out too, even when it only slows tests that pass
+   * in a plain run. Defaults: factor 3, constant 250.
    */
   timeout?: { constant?: number; factor?: number }
 
