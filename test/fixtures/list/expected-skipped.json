@@ -4996,34 +4996,6 @@
     },
     {
       "by": {
-        "column": 23,
-        "line": 108,
-        "mutator": "string-literal",
-        "id": "4zykfp2jnfys"
-      },
-      "original": ", 'five'",
-      "replacement": "",
-      "heuristic": true,
-      "category": "subsumed",
-      "mutator": "array-element",
-      "reason": "a finer string-literal mutant lies inside the code it removes, and killing that mutant needs a test that observes this code",
-      "column": 21,
-      "start": 2417,
-      "file": "test/fixtures/list/source/typed.ts",
-      "rule": "solitary",
-      "line": 108,
-      "end": 2425,
-      "focus": {
-        "original": "'five'",
-        "replacement": "",
-        "column": 23,
-        "line": 108,
-        "start": 2419,
-        "end": 2425
-      }
-    },
-    {
-      "by": {
         "column": 25,
         "line": 135,
         "mutator": "arithmetic-operator",
@@ -5112,10 +5084,10 @@
       "noise": 24,
       "timeout": 11,
       "owned": 68,
-      "subsumed": 124,
+      "subsumed": 123,
       "duplicate": 1,
       "invalid": 1
     },
-    "totalSkipped": 276
+    "totalSkipped": 275
   }
 }

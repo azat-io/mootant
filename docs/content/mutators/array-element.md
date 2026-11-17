@@ -39,14 +39,18 @@ Each element gets its own mutant, a spread such as `...items` too:
 | `[...items, gift]`          | `[...items]`      |
 | `[item]`                    | `[]`              |
 
-In `recommended`, Mootant doesn't remove an element that has a mutant inside:
-`['card', 'paypal']` gets no removal, because
-[string-literal](/mutators/string-literal) changes both strings. A mutant of
+In `recommended`, Mootant doesn't remove an element that has a mutant inside: in
+`[subtotal * rate, tax]`, it removes `tax` but not `subtotal * rate`, because
+[arithmetic-operator](/mutators/arithmetic-operator) changes it. A mutant of
 [optional-chaining](/mutators/optional-chaining) doesn't count:
-`[user?.coupon, code]` still becomes `[code]`.
+`[user?.coupon, code]` still becomes `[code]`. Neither does the mutant of
+[string-literal](/mutators/string-literal) that turns a whole string element
+into an empty string: `['card', 'paypal']` still becomes `['paypal']`. Other
+mutants inside the element still count, and an empty string `''` gets no
+removal, because string-literal fills it.
 
 With [`coarseMutants`](/guide/configuration#coarsemutants), on in `strict`,
-Mootant removes such elements too: `['card', 'paypal']` → `['paypal']`.
+Mootant removes such elements too: `[subtotal * rate, tax]` → `[tax]`.
 
 ### Put `undefined` into an empty array
 
@@ -133,7 +137,7 @@ explains the categories.
 
 | Reason                                                                                                                  | Example                                          | Rule                            |
 | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------- |
-| Removes code that has a finer mutant inside                                                                             | `['card', 'paypal']` → `['paypal']`              | `solitary`, subsumed            |
+| Removes code that has a finer mutant inside                                                                             | `[subtotal * rate, tax]` → `[tax]`               | `solitary`, subsumed            |
 | A React hook behaves the same with `[undefined]`                                                                        | `[]` → `[undefined]` in `useEffect(load, [])`    | `hook-dependencies`, equivalent |
 | `join('')` writes `undefined` as an empty string                                                                        | `[]` → `[undefined]` in `let parts = []`         | `joined-array`, equivalent      |
 | May keep a loop running forever                                                                                         | `[...box, item]` → `[...box]`                    | `loop-advance`, timeout         |

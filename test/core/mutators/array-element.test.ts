@@ -230,6 +230,138 @@ describe('arrayElement', () => {
     ).toStrictEqual(['function f() { return g([]) } (subsumed solitary)'])
   })
 
+  it('removes each string of a lookup set, whose emptied strings one test of an empty string kills', () => {
+    let source = [
+      "const KEYWORDS = new Set(['if', 'else', 'for'])",
+      'export function isKeyword(word) {',
+      '  return KEYWORDS.has(word)',
+      '}',
+    ].join('\n')
+    let setup = { file: 'example.js' }
+
+    expect(listMutatedSources('array-element', source, setup)).toStrictEqual([
+      source.replace("'if', ", ''),
+      source.replace("'else', ", ''),
+      source.replace(", 'for'", ''),
+    ])
+    expect(listSkipped('array-element', source, setup)).toStrictEqual([])
+  })
+
+  it.each<{ expected: string[]; source: string }>([
+    {
+      expected: ['x = ["b"]', 'x = [`a`]'],
+      source: 'x = [`a`, "b"]',
+    },
+    {
+      expected: [`x = [\`\${b.c}d\`]`, `x = [\`\${a}-b\`]`],
+      source: `x = [\`\${a}-b\`, \`\${b.c}d\`]`,
+    },
+  ])(
+    'removes each string that string-literal empties in $source',
+    ({ expected, source }) => {
+      expect(listMutatedSources('array-element', source)).toStrictEqual(
+        expected,
+      )
+      expect(listSkipped('array-element', source)).toStrictEqual([])
+    },
+  )
+
+  it.each<{ expected: string[]; skipped: string[]; source: string }>([
+    {
+      skipped: ["x = new Set(['a']) (subsumed solitary)"],
+      source: "x = new Set(['', 'a'])",
+      expected: ["x = new Set([''])"],
+    },
+    {
+      skipped: ['x = [a] (subsumed solitary)'],
+      expected: ['x = [``]'],
+      source: 'x = [``, a]',
+    },
+    {
+      skipped: ['x = [a] (subsumed solitary)'],
+      expected: ["x = ['\\\n']"],
+      source: "x = ['\\\n', a]",
+    },
+    {
+      skipped: ['x = [b] (subsumed solitary)'],
+      expected: [`x = [\`\${f()}a\`]`],
+      source: `x = [\`\${f()}a\`, b]`,
+    },
+    {
+      skipped: ['x = [b] (subsumed solitary)'],
+      expected: ['x = [a + 1]'],
+      source: 'x = [a + 1, b]',
+    },
+    {
+      skipped: ['x = [b] (subsumed solitary)'],
+      expected: ["x = ['a' as const]"],
+      source: "x = ['a' as const, b]",
+    },
+  ])(
+    'drops the removal of an element that another mutant changes in $source',
+    ({ expected, skipped, source }) => {
+      expect(listMutatedSources('array-element', source)).toStrictEqual(
+        expected,
+      )
+      expect(
+        listMutatedSources('array-element', source, { skipped: true }),
+      ).toStrictEqual(skipped)
+    },
+  )
+
+  it.each<{ setup: MutatorSetup; source: string; title: string }>([
+    {
+      source: `x = [\`prefix-\${items[0]}\`, other]`,
+      title: 'an index',
+      setup: {},
+    },
+    {
+      setup: { mutators: { 'string-literal': 'off' } },
+      source: `x = [\`prefix-\${items[0]}\`, other]`,
+      title: 'an index without string-literal',
+    },
+    {
+      source: `x = [\`\${user['name']}!\`, other]`,
+      title: 'a key',
+      setup: {},
+    },
+  ])(
+    'counts a mutant of $title inside a template that string-literal empties',
+    ({ source, setup }) => {
+      expect(listMutatedSources('array-element', source, setup)).toStrictEqual([
+        source.replace(', other', ''),
+      ])
+      expect(
+        listMutatedSources('array-element', source, {
+          ...setup,
+          skipped: true,
+        }),
+      ).toStrictEqual(['x = [other] (subsumed solitary)'])
+    },
+  )
+
+  it('removes a string of an array in a Svelte template', () => {
+    let source = [
+      '<script>',
+      '  let { on } = $props()',
+      '</script>',
+      '',
+      "<i class={['card', on && 'on']}></i>",
+    ].join('\n')
+    let setup = { file: 'card.svelte' }
+
+    let literal = "['card', on && 'on']"
+
+    expect(listMutatedSources('array-element', source, setup)).toStrictEqual([
+      source.replace(literal, "([on && 'on'])"),
+    ])
+    expect(
+      listMutatedSources('array-element', source, { ...setup, skipped: true }),
+    ).toStrictEqual([
+      `${source.replace(literal, "(['card'])")} (subsumed solitary)`,
+    ])
+  })
+
   it('keeps the returned value of a local that an only element assigns', () => {
     let source = 'function f() { let x; g([x = load()]); return x }'
 

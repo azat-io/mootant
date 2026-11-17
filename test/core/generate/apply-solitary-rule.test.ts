@@ -38,6 +38,33 @@ const OPTIONAL: RegisteredMutator = {
 }
 
 /**
+ * Built-in mutator that removes array elements.
+ */
+const ARRAY_ELEMENT: RegisteredMutator = {
+  mutator: { meta: { description: 'Array element.' }, create: () => ({}) },
+  id: 'array-element',
+  rank: 3,
+}
+
+/**
+ * Built-in mutator that empties strings.
+ */
+const STRING_LITERAL: RegisteredMutator = {
+  mutator: { meta: { description: 'String literal.' }, create: () => ({}) },
+  id: 'string-literal',
+  rank: 4,
+}
+
+/**
+ * Mutator of a plugin that changes strings.
+ */
+const PLUGIN: RegisteredMutator = {
+  mutator: { meta: { description: 'Plugin.' }, create: () => ({}) },
+  id: 'acme/upper',
+  rank: 5,
+}
+
+/**
  * Rule that marks a candidate as ignored.
  */
 const IGNORE_RULE: IgnoreRule = {
@@ -77,6 +104,11 @@ interface CandidateFields {
   ignored?: boolean
 
   /**
+   * Text written in place of the range; empty when omitted.
+   */
+  text?: string
+
+  /**
    * Start of the replaced node.
    */
   start: number
@@ -105,9 +137,9 @@ function createCandidate(fields: CandidateFields): MutantCandidate {
       null,
     ignoreRule: fields.ignored ? IGNORE_RULE : null,
     registered: fields.registered ?? FINE,
+    text: fields.text ?? '',
     emission: 0,
     scope: null,
-    text: '',
     start,
     end,
   }
@@ -339,6 +371,91 @@ describe('applySolitaryRule', () => {
       applySolitaryRule([coarse, fine, removal].toSorted(compareCandidates))
         .dropped,
     ).toStrictEqual(new Map([[coarse, removal]]))
+  })
+
+  it.each(["''", '""', '``'])(
+    'does not count %s of string-literal over the whole element that array-element removes',
+    text => {
+      let removal = createCandidate({
+        list: { start: 0, end: 20 },
+        registered: ARRAY_ELEMENT,
+        solitary: [[1, 6]],
+        start: 1,
+        end: 8,
+      })
+      let emptied = createCandidate({
+        registered: STRING_LITERAL,
+        start: 1,
+        end: 6,
+        text,
+      })
+
+      expect(apply([removal, emptied])).toStrictEqual([removal, emptied])
+    },
+  )
+
+  it.each<{ registered: RegisteredMutator; inner: CandidateFields }>([
+    {
+      inner: {
+        registered: STRING_LITERAL,
+        text: "'mootant'",
+        start: 1,
+        end: 6,
+      },
+      registered: ARRAY_ELEMENT,
+    },
+    {
+      inner: { registered: PLUGIN, text: "'ABC'", start: 1, end: 6 },
+      registered: ARRAY_ELEMENT,
+    },
+    {
+      inner: { registered: PLUGIN, text: "''", start: 1, end: 6 },
+      registered: ARRAY_ELEMENT,
+    },
+    {
+      inner: { registered: STRING_LITERAL, text: "''", start: 2, end: 5 },
+      registered: ARRAY_ELEMENT,
+    },
+    {
+      inner: { registered: STRING_LITERAL, text: "''", start: 1, end: 6 },
+      registered: COARSE,
+    },
+  ])(
+    'counts any other candidate inside the element, such as $inner.text of $inner.registered.id for $registered.id',
+    ({ registered, inner }) => {
+      let removal = createCandidate({
+        list: { start: 0, end: 20 },
+        solitary: [[1, 6]],
+        registered,
+        start: 1,
+        end: 8,
+      })
+      let finer = createCandidate(inner)
+
+      expect(apply([removal, finer])).toStrictEqual([finer])
+    },
+  )
+
+  it('counts a candidate inside a template that string-literal empties', () => {
+    let removal = createCandidate({
+      list: { start: 0, end: 30 },
+      registered: ARRAY_ELEMENT,
+      solitary: [[1, 20]],
+      start: 1,
+      end: 22,
+    })
+    let emptied = createCandidate({
+      registered: STRING_LITERAL,
+      text: "''",
+      start: 1,
+      end: 20,
+    })
+    let index = createCandidate({ start: 15, end: 16 })
+
+    expect(
+      applySolitaryRule([removal, emptied, index].toSorted(compareCandidates))
+        .dropped,
+    ).toStrictEqual(new Map([[removal, index]]))
   })
 
   it('names the finer candidate that dropped each coarse candidate', () => {

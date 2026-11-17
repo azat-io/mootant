@@ -273,8 +273,8 @@ forced to `true`. `false` by default, `strict` turns it on.
 ### `coarseMutants`
 
 Whether to keep a coarse mutant, such as a removed statement, when a finer
-mutant lies inside it. `recommended` drops such a mutant, since a test that
-kills the finer one already has to observe this code. That is not a proof, so
+mutant lies inside it. `recommended` drops such a mutant when a test that kills
+the finer one is likely to observe this code too. That is not a proof, so
 `strict` keeps it.
 
 ## Plugins

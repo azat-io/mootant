@@ -5,8 +5,8 @@
   "since": null,
   "summary": {
     "totalFiles": 13,
-    "totalMutants": 404,
-    "totalPending": 378,
+    "totalMutants": 405,
+    "totalPending": 379,
     "totalIgnored": 26,
     "totalErrors": 0,
     "totalWarnings": 3
@@ -20,7 +20,7 @@
     {
       "id": "array-element",
       "description": "Removes one element from an array literal, or puts undefined into an empty one.",
-      "mutants": 8
+      "mutants": 9
     },
     {
       "id": "assignment-operator",
@@ -172,7 +172,7 @@
     {
       "file": "test/fixtures/list/source/typed.ts",
       "parsed": true,
-      "mutants": 59
+      "mutants": 60
     },
     {
       "file": "test/fixtures/list/source/widget.svelte",
@@ -9472,6 +9472,36 @@
         "line": 107,
         "column": 1
       }
+    },
+    {
+      "id": "8c1s9y312ape",
+      "mutator": "array-element",
+      "file": "test/fixtures/list/source/typed.ts",
+      "line": 108,
+      "column": 21,
+      "endLine": 108,
+      "endColumn": 29,
+      "start": 2417,
+      "end": 2425,
+      "scope": "five",
+      "kind": "element",
+      "original": ", 'five'",
+      "replacement": "",
+      "before": ["export let five = [5, 'five']"],
+      "after": ["export let five = [5]"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "focus": {
+        "original": "'five'",
+        "replacement": "",
+        "column": 23,
+        "line": 108,
+        "start": 2419,
+        "end": 2425
+      },
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
     },
     {
       "id": "4zykfp2jnfys",

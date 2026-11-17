@@ -202,6 +202,15 @@ describe('returnValue', () => {
     ).toStrictEqual(['compare(a, b) -> undefined'])
   })
 
+  it('counts the string initializer of a returned local', () => {
+    let source = "function f(): string { let label = 'abc'; return label }"
+
+    expect(listMutantTexts('return-value', [source])).toStrictEqual([])
+    expect(listSkipped('return-value', source)).toStrictEqual([
+      "label -> '' (subsumed solitary)",
+    ])
+  })
+
   it('lists a local without an initializer by its writes', () => {
     expect(
       listMutantTexts(

@@ -5,6 +5,11 @@ import { compareTargets } from './compare-targets'
 import { getTarget } from './get-target'
 
 /**
+ * Text of an empty string or template that string-literal writes.
+ */
+const EMPTY_STRING = /^(?:''|""|``)$/u
+
+/**
  * Coarse candidate and one of its solitary ranges, with the state of the rule.
  */
 interface RangeSearch {
@@ -48,13 +53,14 @@ interface SolitaryOutcome {
 /**
  * Drops coarse candidates, such as a removed statement, when a finer candidate
  * lies inside one of their solitary ranges: a test that kills the finer mutant
- * must observe the effect the coarse mutant erases. A finer candidate counts
- * unless its mutator opts out with `countsForSolitary: false`, it is a variant
- * of the same mutator on the same range, it was dropped itself, or it is
- * ignored while the coarse candidate will run. Candidates are placed, ordered
- * and told apart by their targets (see `getTarget`), so the removal of an
- * element lies where its whole literal does. Coarse candidates are decided
- * innermost first.
+ * is likely to observe the effect the coarse mutant erases. A finer candidate
+ * counts unless its mutator opts out with `countsForSolitary: false`, it is a
+ * variant of the same mutator on the same range, it is the empty string that
+ * string-literal writes over a whole element that array-element removes (see
+ * `isEmptiedElement`), it was dropped itself, or it is ignored while the coarse
+ * candidate will run. Candidates are placed, ordered and told apart by their
+ * targets (see `getTarget`), so the removal of an element lies where its whole
+ * literal does. Coarse candidates are decided innermost first.
  *
  * @param candidates - Candidates of one file in canonical order.
  * @returns The candidates that are kept, in canonical order, and the dropped
@@ -112,6 +118,7 @@ function findCountedCandidate(search: RangeSearch): MutantCandidate | null {
       inner !== candidate &&
       getTarget(inner).end <= range.end &&
       !dropped.has(inner) &&
+      !isEmptiedElement(inner, candidate, range) &&
       countsFor(inner, candidate)
     ) {
       return inner
@@ -165,6 +172,36 @@ function findFirstStart(
     }
   }
   return low
+}
+
+/**
+ * Tells whether a finer candidate is the empty string that string-literal
+ * writes over the whole element that a removal of array-element takes out, such
+ * as `'else'` → `''` in `new Set(['if', 'else'])`. A test can kill it without
+ * telling whether the element is in the array: with an empty string as input,
+ * or where an empty string matches every value, as in
+ * `file.endsWith(extension)`. Every other candidate inside the element still
+ * counts, such as a changed index in `${items[0]}`, and so does the string that
+ * string-literal fills, which only a test that finds the empty string in the
+ * array kills.
+ *
+ * @param inner - Candidate inside a solitary range of the coarse candidate.
+ * @param coarse - Coarse candidate being decided.
+ * @param range - Solitary range the candidate lies in.
+ * @returns Whether the candidate empties the removed element.
+ */
+function isEmptiedElement(
+  inner: MutantCandidate,
+  coarse: MutantCandidate,
+  range: SourceRange,
+): boolean {
+  return (
+    coarse.registered.id === 'array-element' &&
+    inner.registered.id === 'string-literal' &&
+    EMPTY_STRING.test(inner.text) &&
+    inner.start === range.start &&
+    inner.end === range.end
+  )
 }
 
 /**
