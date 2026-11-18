@@ -48,8 +48,10 @@ export function installVmSide(input: VmSideInput): void {
   let { channel, install, target } = input
   let { token } = channel
   let unit = channel.unit!
-  // Jest's node environment copies the worker's globals as it loads, the stub
-  // in `__mootant` too, and `install` would keep that as a runtime.
+  /**
+   * Jest's node environment copies the worker's globals as it loads, the stub
+   * in `__mootant` too, and `install` would keep that as a runtime.
+   */
   Reflect.deleteProperty(target, RUNTIME_GLOBAL)
   let runtime = install()
   Object.defineProperty(target, RUNTIME_GLOBAL, {
@@ -58,7 +60,9 @@ export function installVmSide(input: VmSideInput): void {
     value: runtime,
     writable: true,
   })
-  // Jest 30's cleanup of a vm's globals spares what carries this mark.
+  /**
+   * Jest 30's cleanup of a vm's globals spares what carries this mark.
+   */
   Reflect.set(runtime, Symbol.for('$$jest-protect-from-deletion'), true)
 
   let { hit } = runtime
@@ -71,7 +75,9 @@ export function installVmSide(input: VmSideInput): void {
     let active = hit(id)
     if (active && !reached) {
       reached = true
-      // The only durable proof of a reach, so it cannot wait.
+      /**
+       * The only durable proof of a reach, so it cannot wait.
+       */
       channel.write(token, { hits: runtime.hits, kind: 'reached' })
     }
     return active

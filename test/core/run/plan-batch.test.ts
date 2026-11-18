@@ -74,8 +74,10 @@ describe('planBatch', () => {
     )
     state.analysis.loads.delete('/t/a.test.ts')
 
-    // An isolated unit that confirms a timeout of a2 has the doubled time of
-    // loading the file and of all its tests, so its batch try gets that too.
+    /**
+     * An isolated unit that confirms a timeout of a2 has the doubled time of
+     * loading the file and of all its tests, so its batch try gets that too.
+     */
     expect(planBatch(state, [{ mutant: 'm1', test: 'a2' }], 2)).toStrictEqual({
       units: [
         {

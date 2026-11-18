@@ -1,5 +1,5 @@
 import type { TextStyle } from '../../types/cli/text-style'
-import type { Color } from '../terminal/colors'
+import type { Color } from '../terminal/create-colors'
 
 import { getMaxDisplayWidth } from '../terminal/get-max-display-width'
 import { getDisplayWidth } from '../terminal/get-display-width'

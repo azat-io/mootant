@@ -1,4 +1,4 @@
-import type { ColorName, Color } from '../../cli/terminal/colors'
+import type { ColorName, Color } from '../../cli/terminal/create-colors'
 
 /**
  * How text reports look where they are printed.

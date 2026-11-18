@@ -55,14 +55,14 @@ function start(report: HtmlReport = createHtmlReport()): void {
  * Presses a key on an element.
  *
  * @param key - Key name.
- * @param target - Element the key goes to.
- * @param modifiers - Modifier keys held.
+ * @param options - Modifier keys held.
+ * @param options.target - Element the key goes to.
  */
 function press(
   key: string,
-  target: Element = document.body,
-  modifiers: KeyboardEventInit = {},
+  options: { target?: Element } & KeyboardEventInit = {},
 ): void {
+  let { target = document.body, ...modifiers } = options
   target.dispatchEvent(
     new KeyboardEvent('keydown', { ...modifiers, bubbles: true, key }),
   )
@@ -422,7 +422,7 @@ describe('startReport', () => {
     start()
     press('/')
     type(get('#search input') as HTMLInputElement, 'unit')
-    press('Enter', get('#search input'))
+    press('Enter', { target: get('#search input') })
     await settle()
 
     expect(location.hash).toBe('#/tests/1')
@@ -503,29 +503,29 @@ describe('startReport', () => {
 
     expect(text('#search-results')).toContain('cart › unit')
     type(input, 'cart.ts')
-    press('ArrowDown', input)
-    press('ArrowUp', input)
-    press('ArrowUp', input)
+    press('ArrowDown', { target: input })
+    press('ArrowUp', { target: input })
+    press('ArrowUp', { target: input })
 
     expect(
       get('#search-results .result[aria-selected="true"]').getAttribute('href'),
     ).toBe('#/mutant/ignored00001')
-    press('Enter', input)
+    press('Enter', { target: input })
     await settle()
 
     expect(dialog.open).toBe(false)
     expect(location.hash).toBe('#/mutant/ignored00001')
-    press('k', document.body, { metaKey: true })
+    press('k', { metaKey: true })
 
     expect(dialog.open).toBe(true)
     type(input, 'nothing at all')
-    press('Enter', input)
-    press('x', input)
+    press('Enter', { target: input })
+    press('x', { target: input })
     setMarkup(get('#search-results'), '<a class="result" href="#/files">x</a>')
     get('#search-results a').click()
 
     expect(dialog.open).toBe(false)
-    press('k', document.body, { ctrlKey: true })
+    press('k', { ctrlKey: true })
     get('[data-close]').click()
 
     expect(dialog.open).toBe(false)
@@ -565,9 +565,9 @@ describe('startReport', () => {
     await settle()
 
     expect(location.hash).toBe('#/mutant/survived0001')
-    press('j', get('[data-tree-filter]'))
-    press('j', document.body, { altKey: true })
-    press('Escape', document.body)
+    press('j', { target: get('[data-tree-filter]') })
+    press('j', { altKey: true })
+    press('Escape')
 
     expect(location.hash).toBe('#/file/src/cart.ts:4')
     press('Escape')
@@ -608,7 +608,7 @@ describe('startReport', () => {
     toggle.checked = true
     toggle.dispatchEvent(new Event('input', { bubbles: true }))
     toggle.dispatchEvent(new Event('change', { bubbles: true }))
-    press('j', toggle)
+    press('j', { target: toggle })
     await settle()
 
     expect(location.hash).toBe('#/mutant/survived0001')

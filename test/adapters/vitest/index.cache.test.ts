@@ -135,7 +135,9 @@ async function copyFixture(source = fixture): Promise<string> {
     ),
     path.join(root, 'node_modules/vitest'),
   )
-  // Files modified in the millisecond a run starts count as changed during it.
+  /**
+   * Files modified in the millisecond a run starts count as changed during it.
+   */
   await setTimeout(5)
   return root
 }
@@ -234,7 +236,7 @@ function summarizeCachedVerdict(result: MutantResult): string {
   ].join(' | ')
 }
 
-describe('vitest adapter with the cache', () => {
+describe('vitestAdapter', () => {
   afterEach(async () => {
     delete process.env['MOOTANT_LOUD']
     delete process.env['MOOTANT_OTHER']
@@ -292,7 +294,9 @@ describe('vitest adapter with the cache', () => {
     ).toBe(false)
     expect(survivors.length).toBeGreaterThan(0)
     expect(kills.length).toBeGreaterThan(0)
-    // Their other test file loads the changed file, so only that unit runs.
+    /**
+     * Their other test file loads the changed file, so only that unit runs.
+     */
     expect(survivors.every(entry => !entry.cached && entry.tries === 1)).toBe(
       true,
     )
@@ -486,8 +490,10 @@ describe('vitest adapter with the cache', () => {
     expect(cached.result.results.map(summarizeCachedVerdict)).toStrictEqual(
       fresh.result.results.map(summarizeCachedVerdict),
     )
-    // A unit of the changed file per mutant, and the confirmation of the one
-    // that went over the hit limit there.
+    /**
+     * A unit of the changed file per mutant, and the confirmation of the one
+     * that went over the hit limit there.
+     */
     expect(cached.units).toBe(3)
   }, 60_000)
 
@@ -558,8 +564,10 @@ describe('vitest adapter with the cache', () => {
       ran: ['src/price.ts'],
     })
 
-    // The `if (flag)` → `if (false)` mutants load `lib/extra.*`; the first is
-    // in `pickImport`, the second in `pickRequire`.
+    /**
+     * The `if (flag)` → `if (false)` mutants load `lib/extra.*`; the first is
+     * in `pickImport`, the second in `pickRequire`.
+     */
     let loading = first.result.results
       .filter(
         entry =>

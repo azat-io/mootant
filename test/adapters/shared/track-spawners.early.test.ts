@@ -13,7 +13,7 @@ let original = childProcess.execFile
 childProcess.execFile = ((...parameters: Parameters<typeof original>) =>
   Reflect.apply(original, undefined, parameters)) as typeof original
 
-describe('trackSpawners after an early wrapper', () => {
+describe('trackSpawners', () => {
   it('wraps a function a preload put in place of execFile, with no promisified form of its own, and finds nothing promisified early', async () => {
     let names: string[] = []
 

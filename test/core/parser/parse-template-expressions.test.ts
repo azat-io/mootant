@@ -240,6 +240,7 @@ describe('parseTemplateExpressions', () => {
   it('reports an error without a label without an offset', () => {
     let result = parseSync('a.js', '[(b +)];')
     let [error] = result.errors
+    // eslint-disable-next-line typescript/no-unsafe-class-instance-assignment -- The real parseSync returns a plain object too.
     vi.mocked(parseSync).mockReturnValueOnce({
       errors: [{ ...error!, labels: [] }],
       comments: result.comments,

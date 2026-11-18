@@ -19,7 +19,7 @@ import { remarkKillSection } from './docs/plugins/remark-kill-section'
 import { remarkPageLead } from './docs/plugins/remark-page-lead'
 import { rehypeTables } from './docs/plugins/rehype-tables'
 import { reportDemo } from './docs/plugins/report-demo'
-import { colorTheme } from './docs/utils/shiki-theme'
+import { shikiTheme } from './docs/utils/shiki-theme'
 
 let site = 'https://mootant.org'
 
@@ -52,7 +52,7 @@ export default defineConfig({
           matchAlgorithm: 'v3',
         }),
       ],
-      theme: colorTheme,
+      theme: shikiTheme,
     },
   },
   vite: {

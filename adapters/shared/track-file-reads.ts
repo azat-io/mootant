@@ -249,8 +249,11 @@ function wrap(
     }
     let current = slot.receiver
     if (current !== null) {
-      // Reporting never reaches the code it watches: a relative path has no
-      // absolute form once its working directory is gone, and the call decides.
+      /**
+       * Reporting never reaches the code it watches: a relative path has no
+       * absolute form once its working directory is gone, and the call
+       * decides.
+       */
       try {
         let access = getAccess(base, parameters, slot)
         for (let file of access.read) {

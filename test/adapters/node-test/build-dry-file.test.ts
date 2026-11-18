@@ -191,8 +191,10 @@ describe('buildDryFile', () => {
       hits: 0,
     })
 
-    // The test file threw at its top level after registering a test, which
-    // Node started before it reported the error.
+    /**
+     * The test file threw at its top level after registering a test, which Node
+     * started before it reported the error.
+     */
     let thrown = buildDryFile(
       createTestProcessOutcome(
         [

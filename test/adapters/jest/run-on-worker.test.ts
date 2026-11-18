@@ -489,8 +489,10 @@ describe('runOnWorker', { timeout: 30_000 }, () => {
     let out = path.join(directory, 'crossed.jsonl')
     let outcome = await run(pool, {
       deadline: () => {
-        // Main sits in this tick until the record is there, which the script
-        // writes after its message, so the message waits on the channel.
+        /**
+         * Main sits in this tick until the record is there, which the script
+         * writes after its message, so the message waits on the channel.
+         */
         writeFileSync(`${out}.tick`, '')
         while (readFileSync(out, 'utf8') === '') {
           Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5)
@@ -553,10 +555,12 @@ describe('runOnWorker', { timeout: 30_000 }, () => {
       }`,
     )
 
+    /**
+     * Past the deadline only for a tick that comes after the exit, which must
+     * not ask. The time of the record holds the process id.
+     */
     await expect(
       run(pool, {
-        // Past the deadline only for a tick that comes after the exit, which
-        // must not ask. The time of the record holds the process id.
         deadline: ([record]) =>
           record === undefined || isAlive(record.time) ? Infinity : 0,
       }),

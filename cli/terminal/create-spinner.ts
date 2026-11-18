@@ -1,4 +1,4 @@
-import type { ColorName, Color } from './colors'
+import type { ColorName, Color } from './create-colors'
 
 import { isInteractiveTerminal } from './is-interactive-terminal'
 import { isUnicodeSupported } from './is-unicode-supported'

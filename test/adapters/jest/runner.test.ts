@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { JestProjectConfig } from '../../../adapters/jest/types/jest-project-config'
 import type { HostTest } from '../../../adapters/jest/types/host-test'
 
-import MootantHostRunner from '../../../adapters/jest/runner'
+import Runner from '../../../adapters/jest/runner'
 
 /**
  * How `process.connected` was before the tests, put back after each.
@@ -44,7 +44,7 @@ function run(tests: HostTest[]): {
     sent.push(message)
     return true
   })
-  let runner = new MootantHostRunner(GLOBAL_CONFIG)
+  let runner = new Runner(GLOBAL_CONFIG)
   let parked = runner.runTests(tests)
   vi.restoreAllMocks()
   return { listeners, parked, sent }
@@ -93,7 +93,7 @@ function setConnected(value: boolean): void {
   Object.defineProperty(process, 'connected', { configurable: true, value })
 }
 
-describe('mootantHostRunner', () => {
+describe('Runner', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     if (connected === undefined) {
@@ -104,7 +104,7 @@ describe('mootantHostRunner', () => {
   })
 
   it('says it runs serially', () => {
-    let runner = new MootantHostRunner(GLOBAL_CONFIG)
+    let runner = new Runner(GLOBAL_CONFIG)
 
     expect(runner.isSerial).toBe(true)
   })

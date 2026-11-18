@@ -113,7 +113,9 @@ describe('readOutRecords', () => {
     expect(readOutRecords(createVitest(filter), file, decisions)).toStrictEqual(
       records,
     )
-    // Copies of an error and later reads reuse its decision.
+    /**
+     * Copies of an error and later reads reuse its decision.
+     */
     expect(filter).toHaveBeenCalledTimes(2)
     expect(decisions).toStrictEqual(
       new Map([
@@ -178,7 +180,9 @@ describe('readOutRecords', () => {
     expect(readEnd(late, createVitest(filter))).toMatchObject({
       filtered: true,
     })
-    // Without a callback, or when every error is ignored, it decides nothing.
+    /**
+     * Without a callback, or when every error is ignored, it decides nothing.
+     */
     expect(readEnd(tried, createVitest())).toMatchObject({ filtered: false })
     expect(readEnd(tried, createVitest(filter, true))).toMatchObject({
       filtered: false,

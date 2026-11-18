@@ -35,7 +35,7 @@ function getStandIn(index: number): string {
  * the inside of strings and regular expressions included, keeps the color of
  * the text.
  */
-export let colorTheme: ThemeRegistration = {
+export let shikiTheme: ThemeRegistration = {
   ...theme,
   tokenColors: [
     {

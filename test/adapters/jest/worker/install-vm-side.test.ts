@@ -68,19 +68,17 @@ function createChannel(unit: Partial<JestUnit> = {}): {
 /**
  * Sets up a vm with the real runtime.
  *
- * @param unit - What differs from a dry unit.
- * @param target - The vm's global object.
+ * @param options - What differs from a dry unit.
+ * @param options.target - The vm's global object.
  * @returns What was installed.
  */
-function install(
-  unit: Partial<JestUnit> = {},
-  target: FakeTarget = createTarget(),
-): {
+function install(options: { target?: FakeTarget } & Partial<JestUnit> = {}): {
   written: [number, JestRecord][]
   channel: WorkerChannel
   target: FakeTarget
   side: VmSide
 } {
+  let { target = createTarget(), ...unit } = options
   let { written, channel } = createChannel(unit)
   installVmSide({ install: installMutantRuntime, channel, target })
   return { side: channel.vm!, written, channel, target }
@@ -251,7 +249,7 @@ describe('installVmSide', () => {
       target['clearTimeout'] = (handle: unknown) => {
         cleared.push(handle)
       }
-      let { side } = install({}, target)
+      let { side } = install({ target })
       callTimer(target, 'setTimeout')
       side.stopTimers()
       side.stopTimers()
@@ -268,7 +266,7 @@ describe('installVmSide', () => {
       let target = createTarget()
       Reflect.deleteProperty(target, 'setImmediate')
       Reflect.deleteProperty(target, 'clearImmediate')
-      let { side } = install({}, target)
+      let { side } = install({ target })
       let callback = vi.fn()
       callTimer(target, 'setTimeout', callback, 1)
       callTimer(target, 'setInterval', callback, 1)
@@ -282,7 +280,7 @@ describe('installVmSide', () => {
     it('leaves a timer with nothing to clear it as it is, so stopping cannot throw', () => {
       let target = createTarget()
       Reflect.deleteProperty(target, 'clearImmediate')
-      let { side } = install({}, target)
+      let { side } = install({ target })
       callTimer(target, 'setImmediate', () => {})
 
       expect(target['setImmediate']).toBe(setImmediate)
@@ -301,7 +299,7 @@ describe('installVmSide', () => {
         calls.push([this, ...parameters])
         return 'handle'
       }
-      install({}, target)
+      install({ target })
       let holder = {
         start: target['setTimeout'] as (...values: unknown[]) => unknown,
       }
@@ -320,7 +318,7 @@ describe('installVmSide', () => {
       ) {
         cleared.push([this, ...parameters])
       }
-      let { side } = install({}, target)
+      let { side } = install({ target })
       callTimer(target, 'setInterval')
       target['clearInterval'] = () => {
         throw new Error('a test replaced this')
@@ -333,7 +331,7 @@ describe('installVmSide', () => {
     it('keeps the util.promisify.custom of the original', async () => {
       let target = createTarget()
       let custom = Reflect.get(setTimeout, promisify.custom) as unknown
-      install({}, target)
+      install({ target })
       let wrapped = target['setTimeout'] as typeof setTimeout
 
       expect(wrapped).not.toBe(setTimeout)
@@ -357,7 +355,7 @@ describe('installVmSide', () => {
 
       Object.assign(start, { [key]: 'symbol', named: 'string' })
       target['setTimeout'] = start
-      install({}, target)
+      install({ target })
       let wrapped = target['setTimeout'] as (...values: unknown[]) => unknown
 
       expect(Reflect.get(wrapped, key)).toBe('symbol')
@@ -404,7 +402,7 @@ describe('installVmSide', () => {
       let env: Record<string, string> = {}
       let target = createTarget()
       target.process.env = env
-      let { side } = install({}, target)
+      let { side } = install({ target })
       Reflect.set(target.process.env, 'C', '3')
 
       expect(env).toStrictEqual({ C: '3' })

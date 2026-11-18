@@ -119,7 +119,9 @@ async function watchUnit(
   )
   worker.file = input.unit.file
   let sent = Date.now()
-  // A callback, so a closed channel cannot throw or emit; the exit tells.
+  /**
+   * A callback, so a closed channel cannot throw or emit; the exit tells.
+   */
   child.send({ unit: input.unit, type: 'unit' }, () => {})
   let timer = setInterval(() => {
     if (

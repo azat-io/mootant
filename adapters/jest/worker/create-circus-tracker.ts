@@ -173,7 +173,9 @@ export function createCircusTracker(
           runtime.coverage = covers
         }
         write({
-          // Circus takes a timeout of 0 for none.
+          /**
+           * Circus takes a timeout of 0 for none.
+           */
           timeout: (event.test.timeout ?? 0) || state.testTimeout,
           kind: 'open',
           occurrence,

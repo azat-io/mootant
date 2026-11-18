@@ -369,7 +369,9 @@ describe('buildIsolatedFacts', () => {
       ).toMatchObject({ loadError: 'thrown at load', hookError: null })
     })
 
-    // Circus writes `load` first, so only a framework with no events gets here.
+    /**
+     * Circus writes `load` first, so only a framework with no events gets here.
+     */
     it('reads a file with no tests and no load record as a load error', () => {
       expect(
         buildIsolatedFacts(
@@ -1021,7 +1023,9 @@ describe('buildIsolatedFacts', () => {
     ).toMatchObject({ incomplete: 'hang', duration: 60 })
   })
 
-  // A write the disk cut short can take the first line with it.
+  /**
+   * A write the disk cut short can take the first line with it.
+   */
   it('gives zeros to a unit with a reach and no start', () => {
     expect(
       buildIsolatedFacts(

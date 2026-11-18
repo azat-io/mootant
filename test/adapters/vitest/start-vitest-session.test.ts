@@ -187,7 +187,9 @@ describe('startVitestSession', () => {
     expect(handle.vitest).toBe(vitest)
     expect(vitest.config.sequence.sequencer).not.toBe(BaseSequencer)
     expect(installMutantRuntime().coverage).toBe(handle.state.outside)
-    // The pool wraps the forks worker of the project's Vitest.
+    /**
+     * The pool wraps the forks worker of the project's Vitest.
+     */
     expect(handle.state.pool.name).toBe('mootant-forks')
     expect(worker.name).toBe('forks')
 

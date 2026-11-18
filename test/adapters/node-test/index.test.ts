@@ -200,364 +200,163 @@ describe('nodeTestAdapter', () => {
 
     expect(vi.mocked(startNodeTestSession).mock.calls[1]![1]).toStrictEqual({})
   })
-})
 
-describe('node-test adapter', () => {
-  let built: Awaited<ReturnType<typeof buildNodeTestPreload>>
+  describe('dry runs', () => {
+    let built: Awaited<ReturnType<typeof buildNodeTestPreload>>
 
-  beforeAll(async () => {
-    built = await buildNodeTestPreload()
-    preload.path = built.path
-  })
-
-  afterAll(async () => {
-    await built.remove()
-  })
-
-  it('reports the tests of the files that load related modules, and their output', async () => {
-    let root = path.join(fixtures, 'basic')
-    let work = await createWorkDirectory()
-    let output: { file: string | null; text: string }[] = []
-    let session = await nodeTestAdapter({ node }).start({
-      onOutput: (text, file) => {
-        output.push({ file, text })
-      },
-      workDirectory: work.path,
-      concurrency: 2,
-      files: [],
-      root,
+    beforeAll(async () => {
+      built = await buildNodeTestPreload()
+      preload.path = built.path
     })
-    try {
-      let math = path.join(root, 'test/math.test.js')
 
-      expect(session.version).toBe(
-        execFileSync(node, ['-p', 'process.versions.node'], {
-          encoding: 'utf8',
-        }).trim(),
-      )
-      expect(session.workers).toBe(2)
-      expect(session.diagnostics).toStrictEqual([])
-      await expect(session.listTestFiles()).resolves.toContain(math)
+    afterAll(async () => {
+      await built.remove()
+    })
 
-      // The first dry run runs every test file, and reports those that loaded
-      // a related module.
-      let dry = await session.dryRun({
-        related: ['fraction', 'math', 'range', 'track'].map(name =>
-          path.join(root, `src/${name}.js`),
-        ),
-        timeouts: { file: 60_000, test: 60_000 },
-        instrumented: true,
-        repeat: false,
-        files: null,
+    it('reports the tests of the files that load related modules, and their output', async () => {
+      let root = path.join(fixtures, 'basic')
+      let work = await createWorkDirectory()
+      let output: { file: string | null; text: string }[] = []
+      let session = await nodeTestAdapter({ node }).start({
+        onOutput: (text, file) => {
+          output.push({ file, text })
+        },
+        workDirectory: work.path,
+        concurrency: 2,
+        files: [],
+        root,
       })
+      try {
+        let math = path.join(root, 'test/math.test.js')
 
-      expect(
-        dry.files.map(file => [
-          path.relative(root, file.file),
-          file.concurrent,
-          file.loadFailed,
-        ]),
-      ).toStrictEqual([
-        ['test/fraction.test.js', false, false],
-        ['test/math.test.js', false, false],
-        ['test/range.test.js', false, false],
-        ['test/track.test.js', true, false],
-      ])
-      // Subtests are part of the test around them, and a failing todo test
-      // does not fail.
-      expect(
-        dry.tests.map(test => [
-          path.basename(test.file),
-          test.name,
-          test.tries.map(entry => entry.failed),
-        ]),
-      ).toStrictEqual([
-        ['fraction.test.js', 'halves', [false]],
-        ['fraction.test.js', 'rounds thirds', [false]],
-        ['fraction.test.js', 'divides by three', [false]],
-        ['fraction.test.js', 'halves again', [false]],
-        ['math.test.js', 'adds', [false]],
-        ['math.test.js', 'tells positive numbers', [false]],
-        ['math.test.js', 'gives the sign', [false]],
-        ['range.test.js', 'clamp > keeps values in range', [false]],
-        ['track.test.js', 'tracked tasks > first', [false]],
-        ['track.test.js', 'tracked tasks > second', [false]],
-        ['track.test.js', 'ran both at once', [false]],
-      ])
-      expect(
-        output
-          .filter(entry => entry.file === math)
-          .map(entry => entry.text)
-          .join(''),
-      ).toContain('gives the sign')
-      expect(output.every(entry => entry.file?.endsWith('.test.js'))).toBe(true)
-    } finally {
-      await session.close()
-      await work.remove()
-    }
-  }, 60_000)
+        expect(session.version).toBe(
+          execFileSync(node, ['-p', 'process.versions.node'], {
+            encoding: 'utf8',
+          }).trim(),
+        )
+        expect(session.workers).toBe(2)
+        expect(session.diagnostics).toStrictEqual([])
+        await expect(session.listTestFiles()).resolves.toContain(math)
 
-  it('stops on a test file that fails to load without mutants', async () => {
-    await expect(
-      runMutants({
-        builtIns: createBuiltIns('node-test', nodeTestAdapter({ node })),
-        cwd: path.join(fixtures, 'broken'),
-        paths: ['src'],
-        concurrency: 1,
-        cache: false,
-      }),
-    ).rejects.toThrow(
-      'Tests fail without mutants; fix them first (1 test file):\n  test/parse.test.js: fails to load: Missing fixture data',
-    )
-  }, 30_000)
+        /**
+         * The first dry run runs every test file, and reports those that loaded
+         * a related module.
+         */
+        let dry = await session.dryRun({
+          related: ['fraction', 'math', 'range', 'track'].map(name =>
+            path.join(root, `src/${name}.js`),
+          ),
+          timeouts: { file: 60_000, test: 60_000 },
+          instrumented: true,
+          repeat: false,
+          files: null,
+        })
 
-  it('stops on a test that hangs without mutants and names it', async () => {
-    await expect(
-      runMutants({
-        builtIns: createBuiltIns(
-          'node-test',
-          shortenDryRuns(nodeTestAdapter({ node }), { file: 3000, test: 500 }),
-        ),
-        cwd: path.join(fixtures, 'stuck'),
-        paths: ['src'],
-        concurrency: 1,
-        cache: false,
-      }),
-    ).rejects.toThrow(
-      'Tests hang without mutants: "waits forever" in test/wait.test.js',
-    )
-  }, 30_000)
-})
+        expect(
+          dry.files.map(file => [
+            path.relative(root, file.file),
+            file.concurrent,
+            file.loadFailed,
+          ]),
+        ).toStrictEqual([
+          ['test/fraction.test.js', false, false],
+          ['test/math.test.js', false, false],
+          ['test/range.test.js', false, false],
+          ['test/track.test.js', true, false],
+        ])
+        /**
+         * Subtests are part of the test around them, and a failing todo test
+         * does not fail.
+         */
+        expect(
+          dry.tests.map(test => [
+            path.basename(test.file),
+            test.name,
+            test.tries.map(entry => entry.failed),
+          ]),
+        ).toStrictEqual([
+          ['fraction.test.js', 'halves', [false]],
+          ['fraction.test.js', 'rounds thirds', [false]],
+          ['fraction.test.js', 'divides by three', [false]],
+          ['fraction.test.js', 'halves again', [false]],
+          ['math.test.js', 'adds', [false]],
+          ['math.test.js', 'tells positive numbers', [false]],
+          ['math.test.js', 'gives the sign', [false]],
+          ['range.test.js', 'clamp > keeps values in range', [false]],
+          ['track.test.js', 'tracked tasks > first', [false]],
+          ['track.test.js', 'tracked tasks > second', [false]],
+          ['track.test.js', 'ran both at once', [false]],
+        ])
+        expect(
+          output
+            .filter(entry => entry.file === math)
+            .map(entry => entry.text)
+            .join(''),
+        ).toContain('gives the sign')
+        expect(output.every(entry => entry.file?.endsWith('.test.js'))).toBe(
+          true,
+        )
+      } finally {
+        await session.close()
+        await work.remove()
+      }
+    }, 60_000)
 
-describe('node:test verdict equivalence', () => {
-  let built: Awaited<ReturnType<typeof buildNodeTestPreload>>
+    it('stops on a test file that fails to load without mutants', async () => {
+      await expect(
+        runMutants({
+          builtIns: createBuiltIns('node-test', nodeTestAdapter({ node })),
+          cwd: path.join(fixtures, 'broken'),
+          paths: ['src'],
+          concurrency: 1,
+          cache: false,
+        }),
+      ).rejects.toThrow(
+        'Tests fail without mutants; fix them first (1 test file):\n  test/parse.test.js: fails to load: Missing fixture data',
+      )
+    }, 30_000)
 
-  beforeAll(async () => {
-    built = await buildNodeTestPreload()
-    preload.path = built.path
+    it('stops on a test that hangs without mutants and names it', async () => {
+      await expect(
+        runMutants({
+          builtIns: createBuiltIns(
+            'node-test',
+            shortenDryRuns(nodeTestAdapter({ node }), {
+              file: 3000,
+              test: 500,
+            }),
+          ),
+          cwd: path.join(fixtures, 'stuck'),
+          paths: ['src'],
+          concurrency: 1,
+          cache: false,
+        }),
+      ).rejects.toThrow(
+        'Tests hang without mutants: "waits forever" in test/wait.test.js',
+      )
+    }, 30_000)
   })
 
-  afterAll(async () => {
-    await built.remove()
-  })
+  describe('verdict equivalence', () => {
+    let built: Awaited<ReturnType<typeof buildNodeTestPreload>>
 
-  it('lets the tests decide mutants that only make code hotter, as a plain run does', async () => {
-    // Without the memo, the test evaluates mutant sites about two million
-    // times in a few milliseconds, over the hit limit of its process, though a
-    // plain run passes it in time.
-    let { original, result, rows } = await runBothWays(
-      path.join(fixtures, 'hot'),
-      { args: ['--test'], extension: '.js' },
-    )
+    beforeAll(async () => {
+      built = await buildNodeTestPreload()
+      preload.path = built.path
+    })
 
-    expect(original).toBe(true)
-    expect(result.diagnostics).toStrictEqual([])
-    expect(rows).toStrictEqual(
-      rows.map(row => ({ ...row, verdict: row.reference })),
-    )
-    expect(
-      rows.filter(row => row.reference === 'survived').map(row => row.mutant),
-    ).toStrictEqual([
-      'src/fib.js | condition | false',
-      'src/fib.js | statement-removal | ;',
-    ])
-    expect(result.runs).toStrictEqual({ isolated: 2, dry: 1 })
-  }, 60_000)
+    afterAll(async () => {
+      await built.remove()
+    })
 
-  it('agrees with mutants applied by hand', async () => {
-    let { original, result, rows } = await runBothWays(
-      path.join(fixtures, 'basic'),
-      { args: ['--test'], extension: '.js' },
-    )
-
-    expect(original).toBe(true)
-    expect(rows).toStrictEqual(
-      rows.map(row => ({ ...row, verdict: row.reference })),
-    )
-    expect(new Set(rows.map(row => row.reference))).toStrictEqual(
-      new Set(['survived', 'Timeout', 'killed']),
-    )
-    // Only units that hung are reported. Some Node versions end a process
-    // whose test waits on a promise nothing settles, so only the loop of
-    // `pause` hangs on every version.
-    expect(result.diagnostics.map(diagnostic => diagnostic.code)).toStrictEqual(
-      result.diagnostics.map(() => 'worker-hang'),
-    )
-    expect(result.diagnostics.map(diagnostic => diagnostic.file)).toContain(
-      'test/pause.test.js',
-    )
-    expect(result.mode).toBe('isolated')
-    expect(
-      result.results
-        .filter(entry => entry.status === 'Survived')
-        .every(entry => entry.path === 'isolated'),
-    ).toBe(true)
-    expect(
-      pick(result.results, [
-        // A later test sees the state the mutant left, never reaching it.
-        'src/counter.js | assignment-operator | count -= 1',
-        // Only the suite's `after` hook sees what `register` returns, which
-        // its `before` hook reached first; `size` fails the test.
-        'src/registry.js | return-value | 0',
-        // The root `afterEach` of the test file fails.
-        'src/ledger.js | assignment-operator | balance -= amount',
-        // The listener fails after the test returned.
-        "src/announce.js | string-literal | ''",
-        // The test process kills itself.
-        'src/guard.js | condition | true',
-        // The module throws while it loads.
-        'src/schema.js | comparison-operator | true',
-        // Module-level code, reached before the first test.
-        'src/limits.js | arithmetic-operator | 2 / 5',
-        // The second caller loops without awaiting.
-        'src/queue.js | missing-await | busy',
-        // The test loops without reaching the mutant.
-        'src/pause.js | boolean-literal | true',
-        // A failing todo test does not fail the run.
-        'src/fraction.js | arithmetic-operator | value * 3',
-        // The root `after` hook of the test file fails.
-        'src/tally.js | arithmetic-operator | value / 2',
-        // A failing todo test explains the failing exit code.
-        'src/status.js | comparison-operator | value != 10',
-        // Only a test that `only` would leave out fails.
-        'src/solo.js | arithmetic-operator | value / 3',
-        // Only todo tests that a helper module declares fail.
-        'src/backlog.js | arithmetic-operator | points / 2',
-        // The test after them fails too.
-        'src/backlog.js | number-literal | 3',
-        // Tests of a todo suite and subtests of a todo test fail, which fails
-        // the run where Node does not mark them todo too.
-        'src/backlog.js | arithmetic-operator | points * people',
-        // A test that marks itself todo under the mutant fails, in a file
-        // whose dry run had no todo test.
-        'src/deferral.js | comparison-operator | true',
-        // Todo tests throw after they returned, and node:test gives the
-        // errors to them.
-        'src/drift.js | comparison-operator | value != 10',
-        // A suite `before` hook fails next to a failing todo test.
-        'src/gate.js | comparison-operator | false',
-      ]),
-    ).toStrictEqual([
-      "src/announce.js | string-literal | '' | Killed | stray-error | -",
-      'src/backlog.js | arithmetic-operator | points / 2 | Survived | - | -',
-      'src/backlog.js | number-literal | 3 | Killed | assertion | -',
-      (
-        rows.find(
-          row =>
-            row.mutant ===
-            'src/backlog.js | arithmetic-operator | points * people',
-        )!.reference === 'killed'
-      ) ?
-        'src/backlog.js | arithmetic-operator | points * people | Killed | assertion | -'
-      : 'src/backlog.js | arithmetic-operator | points * people | Survived | - | -',
-      'src/counter.js | assignment-operator | count -= 1 | Killed | assertion | -',
-      'src/deferral.js | comparison-operator | true | Survived | - | -',
-      'src/drift.js | comparison-operator | value != 10 | Survived | - | -',
-      'src/fraction.js | arithmetic-operator | value * 3 | Survived | - | -',
-      'src/gate.js | comparison-operator | false | Killed | hook-error | static',
-      'src/guard.js | condition | true | Killed | crash | -',
-      'src/ledger.js | assignment-operator | balance -= amount | Killed | assertion | -',
-      'src/limits.js | arithmetic-operator | 2 / 5 | Killed | assertion | static',
-      'src/pause.js | boolean-literal | true | Timeout | hang | static',
-      'src/queue.js | missing-await | busy | Timeout | hit-limit | -',
-      // Node 22 passes a run whose suite `after` hook fails.
-      major === 22 ?
-        'src/registry.js | return-value | 0 | Survived | - | static'
-      : 'src/registry.js | return-value | 0 | Killed | hook-error | static',
-      'src/registry.js | return-value | 0 | Killed | assertion | -',
-      'src/schema.js | comparison-operator | true | Killed | load-error | static',
-      'src/solo.js | arithmetic-operator | value / 3 | Killed | assertion | -',
-      'src/status.js | comparison-operator | value != 10 | Survived | - | -',
-      'src/tally.js | arithmetic-operator | value / 2 | Killed | hook-error | -',
-    ])
-  }, 120_000)
-
-  it('keeps the names CommonJS exports through descriptors and reexports', async () => {
-    // Node 22.15 to 22.22.2 and 24.0 to 24.11.0 compile these modules past
-    // _compile once a module hook is registered, so their exports must still
-    // come from the original text, and a module outside the switch plan that
-    // they require in a cycle must still run once.
-    let { original, result, rows } = await runBothWays(
-      path.join(fixtures, 'exports'),
-      { args: ['--test'], extension: '.js' },
-    )
-    let decided = rows.filter(row => row.verdict !== 'Ignored')
-
-    expect(original).toBe(true)
-    expect(result.diagnostics).toStrictEqual([])
-    expect(decided).toStrictEqual(
-      decided.map(row => ({ ...row, verdict: row.reference })),
-    )
-    expect(decided).toHaveLength(rows.length - 1)
-  }, 120_000)
-
-  it('never runs a test file twice at once', async () => {
-    // Every unit of the test file uses one fixed file, so two units that ran
-    // at once would kill equivalent mutants.
-    let { original, result, rows } = await runBothWays(
-      path.join(fixtures, 'shared'),
-      { args: ['--test'], extension: '.js' },
-    )
-
-    expect(original).toBe(true)
-    expect(result.diagnostics).toStrictEqual([])
-    expect(rows).toStrictEqual(
-      rows.map(row => ({ ...row, verdict: row.reference })),
-    )
-    expect(
-      rows.filter(row =>
-        [
-          'src/render.js | comparison-operator | count != 1',
-          'src/render.js | arithmetic-operator | count / 2',
-        ].includes(row.mutant),
-      ),
-    ).toStrictEqual([
-      expect.objectContaining({ reference: 'killed' }),
-      expect.objectContaining({ reference: 'survived' }),
-    ])
-  }, 60_000)
-
-  it('agrees with mutants applied by hand in TypeScript, and runs fast mode as the default', async () => {
-    // Node 20 has no type stripping, so the tests load through tsx there,
-    // found from this repository, since the copies of the reference have no
-    // dependencies.
-    let flags =
-      major >= 22 ?
-        ['--experimental-strip-types']
-      : ['--import', import.meta.resolve('tsx')]
-    let options = {
-      command: ['node', '--test', ...flags, 'test/format.test.ts'].join(' '),
-      args: ['--test', ...flags],
-      extension: '.ts',
-    }
-    let root = path.join(fixtures, 'typescript')
-    let isolated = await runBothWays(root, options)
-    let fast = await runBothWays(root, { ...options, fast: true })
-
-    expect(isolated.original).toBe(true)
-    expect(isolated.result.diagnostics).toStrictEqual([])
-    expect(isolated.rows).toStrictEqual(
-      isolated.rows.map(row => ({ ...row, verdict: row.reference })),
-    )
-    expect(new Set(isolated.rows.map(row => row.reference))).toStrictEqual(
-      new Set(['survived', 'killed']),
-    )
-    expect(fast.rows).toStrictEqual(isolated.rows)
-    expect(fast.result.mode).toBe('isolated')
-    expect(fast.events.filter(event => event.kind === 'note')).toStrictEqual([
-      {
-        message:
-          'node-test has no batch mode, so fast mode runs every mutant isolated, as a run without --fast does.',
-        kind: 'note',
-      },
-    ])
-  }, 60_000)
-
-  it.skipIf(major < 22 || (major === 22 && minor < 13))(
-    'agrees with mutants applied by hand in snapshot tests',
-    async () => {
+    it('lets the tests decide mutants that only make code hotter, as a plain run does', async () => {
+      /**
+       * Without the memo, the test evaluates mutant sites about two million
+       * times in a few milliseconds, over the hit limit of its process, though
+       * a plain run passes it in time.
+       */
       let { original, result, rows } = await runBothWays(
-        path.join(fixtures, 'snapshot'),
+        path.join(fixtures, 'hot'),
         { args: ['--test'], extension: '.js' },
       )
 
@@ -566,83 +365,347 @@ describe('node:test verdict equivalence', () => {
       expect(rows).toStrictEqual(
         rows.map(row => ({ ...row, verdict: row.reference })),
       )
+      expect(
+        rows.filter(row => row.reference === 'survived').map(row => row.mutant),
+      ).toStrictEqual([
+        'src/fib.js | condition | false',
+        'src/fib.js | statement-removal | ;',
+      ])
+      expect(result.runs).toStrictEqual({ isolated: 2, dry: 1 })
+    }, 60_000)
+
+    it('agrees with mutants applied by hand', async () => {
+      let { original, result, rows } = await runBothWays(
+        path.join(fixtures, 'basic'),
+        { args: ['--test'], extension: '.js' },
+      )
+
+      expect(original).toBe(true)
+      expect(rows).toStrictEqual(
+        rows.map(row => ({ ...row, verdict: row.reference })),
+      )
       expect(new Set(rows.map(row => row.reference))).toStrictEqual(
+        new Set(['survived', 'Timeout', 'killed']),
+      )
+      /**
+       * Only units that hung are reported. Some Node versions end a process
+       * whose test waits on a promise nothing settles, so only the loop of
+       * `pause` hangs on every version.
+       */
+      expect(
+        result.diagnostics.map(diagnostic => diagnostic.code),
+      ).toStrictEqual(result.diagnostics.map(() => 'worker-hang'))
+      expect(result.diagnostics.map(diagnostic => diagnostic.file)).toContain(
+        'test/pause.test.js',
+      )
+      expect(result.mode).toBe('isolated')
+      expect(
+        result.results
+          .filter(entry => entry.status === 'Survived')
+          .every(entry => entry.path === 'isolated'),
+      ).toBe(true)
+      expect(
+        pick(result.results, [
+          /**
+           * A later test sees the state the mutant left, never reaching it.
+           */
+          'src/counter.js | assignment-operator | count -= 1',
+          /**
+           * Only the suite's `after` hook sees what `register` returns, which
+           * its `before` hook reached first; `size` fails the test.
+           */
+          'src/registry.js | return-value | 0',
+          /**
+           * The root `afterEach` of the test file fails.
+           */
+          'src/ledger.js | assignment-operator | balance -= amount',
+          /**
+           * The listener fails after the test returned.
+           */
+          "src/announce.js | string-literal | ''",
+          /**
+           * The test process kills itself.
+           */
+          'src/guard.js | condition | true',
+          /**
+           * The module throws while it loads.
+           */
+          'src/schema.js | comparison-operator | true',
+          /**
+           * Module-level code, reached before the first test.
+           */
+          'src/limits.js | arithmetic-operator | 2 / 5',
+          /**
+           * The second caller loops without awaiting.
+           */
+          'src/queue.js | missing-await | busy',
+          /**
+           * The test loops without reaching the mutant.
+           */
+          'src/pause.js | boolean-literal | true',
+          /**
+           * A failing todo test does not fail the run.
+           */
+          'src/fraction.js | arithmetic-operator | value * 3',
+          /**
+           * The root `after` hook of the test file fails.
+           */
+          'src/tally.js | arithmetic-operator | value / 2',
+          /**
+           * A failing todo test explains the failing exit code.
+           */
+          'src/status.js | comparison-operator | value != 10',
+          /**
+           * Only a test that `only` would leave out fails.
+           */
+          'src/solo.js | arithmetic-operator | value / 3',
+          /**
+           * Only todo tests that a helper module declares fail.
+           */
+          'src/backlog.js | arithmetic-operator | points / 2',
+          /**
+           * The test after them fails too.
+           */
+          'src/backlog.js | number-literal | 3',
+          /**
+           * Tests of a todo suite and subtests of a todo test fail, which fails
+           * the run where Node does not mark them todo too.
+           */
+          'src/backlog.js | arithmetic-operator | points * people',
+          /**
+           * A test that marks itself todo under the mutant fails, in a file
+           * whose dry run had no todo test.
+           */
+          'src/deferral.js | comparison-operator | true',
+          /**
+           * Todo tests throw after they returned, and node:test gives the
+           * errors to them.
+           */
+          'src/drift.js | comparison-operator | value != 10',
+          /**
+           * A suite `before` hook fails next to a failing todo test.
+           */
+          'src/gate.js | comparison-operator | false',
+        ]),
+      ).toStrictEqual([
+        "src/announce.js | string-literal | '' | Killed | stray-error | -",
+        'src/backlog.js | arithmetic-operator | points / 2 | Survived | - | -',
+        'src/backlog.js | number-literal | 3 | Killed | assertion | -',
+        (
+          rows.find(
+            row =>
+              row.mutant ===
+              'src/backlog.js | arithmetic-operator | points * people',
+          )!.reference === 'killed'
+        ) ?
+          'src/backlog.js | arithmetic-operator | points * people | Killed | assertion | -'
+        : 'src/backlog.js | arithmetic-operator | points * people | Survived | - | -',
+        'src/counter.js | assignment-operator | count -= 1 | Killed | assertion | -',
+        'src/deferral.js | comparison-operator | true | Survived | - | -',
+        'src/drift.js | comparison-operator | value != 10 | Survived | - | -',
+        'src/fraction.js | arithmetic-operator | value * 3 | Survived | - | -',
+        'src/gate.js | comparison-operator | false | Killed | hook-error | static',
+        'src/guard.js | condition | true | Killed | crash | -',
+        'src/ledger.js | assignment-operator | balance -= amount | Killed | assertion | -',
+        'src/limits.js | arithmetic-operator | 2 / 5 | Killed | assertion | static',
+        'src/pause.js | boolean-literal | true | Timeout | hang | static',
+        'src/queue.js | missing-await | busy | Timeout | hit-limit | -',
+        /**
+         * Node 22 passes a run whose suite `after` hook fails.
+         */
+        major === 22 ?
+          'src/registry.js | return-value | 0 | Survived | - | static'
+        : 'src/registry.js | return-value | 0 | Killed | hook-error | static',
+        'src/registry.js | return-value | 0 | Killed | assertion | -',
+        'src/schema.js | comparison-operator | true | Killed | load-error | static',
+        'src/solo.js | arithmetic-operator | value / 3 | Killed | assertion | -',
+        'src/status.js | comparison-operator | value != 10 | Survived | - | -',
+        'src/tally.js | arithmetic-operator | value / 2 | Killed | hook-error | -',
+      ])
+    }, 120_000)
+
+    it('keeps the names CommonJS exports through descriptors and reexports', async () => {
+      /**
+       * Node 22.15 to 22.22.2 and 24.0 to 24.11.0 compile these modules past
+       * _compile once a module hook is registered, so their exports must still
+       * come from the original text, and a module outside the switch plan that
+       * they require in a cycle must still run once.
+       */
+      let { original, result, rows } = await runBothWays(
+        path.join(fixtures, 'exports'),
+        { args: ['--test'], extension: '.js' },
+      )
+      let decided = rows.filter(row => row.verdict !== 'Ignored')
+
+      expect(original).toBe(true)
+      expect(result.diagnostics).toStrictEqual([])
+      expect(decided).toStrictEqual(
+        decided.map(row => ({ ...row, verdict: row.reference })),
+      )
+      expect(decided).toHaveLength(rows.length - 1)
+    }, 120_000)
+
+    it('never runs a test file twice at once', async () => {
+      /**
+       * Every unit of the test file uses one fixed file, so two units that ran
+       * at once would kill equivalent mutants.
+       */
+      let { original, result, rows } = await runBothWays(
+        path.join(fixtures, 'shared'),
+        { args: ['--test'], extension: '.js' },
+      )
+
+      expect(original).toBe(true)
+      expect(result.diagnostics).toStrictEqual([])
+      expect(rows).toStrictEqual(
+        rows.map(row => ({ ...row, verdict: row.reference })),
+      )
+      expect(
+        rows.filter(row =>
+          [
+            'src/render.js | comparison-operator | count != 1',
+            'src/render.js | arithmetic-operator | count / 2',
+          ].includes(row.mutant),
+        ),
+      ).toStrictEqual([
+        expect.objectContaining({ reference: 'killed' }),
+        expect.objectContaining({ reference: 'survived' }),
+      ])
+    }, 60_000)
+
+    it('agrees with mutants applied by hand in TypeScript, and runs fast mode as the default', async () => {
+      /**
+       * Node 20 has no type stripping, so the tests load through tsx there,
+       * found from this repository, since the copies of the reference have no
+       * dependencies.
+       */
+      let flags =
+        major >= 22 ?
+          ['--experimental-strip-types']
+        : ['--import', import.meta.resolve('tsx')]
+      let options = {
+        command: ['node', '--test', ...flags, 'test/format.test.ts'].join(' '),
+        args: ['--test', ...flags],
+        extension: '.ts',
+      }
+      let root = path.join(fixtures, 'typescript')
+      let isolated = await runBothWays(root, options)
+      let fast = await runBothWays(root, { ...options, fast: true })
+
+      expect(isolated.original).toBe(true)
+      expect(isolated.result.diagnostics).toStrictEqual([])
+      expect(isolated.rows).toStrictEqual(
+        isolated.rows.map(row => ({ ...row, verdict: row.reference })),
+      )
+      expect(new Set(isolated.rows.map(row => row.reference))).toStrictEqual(
         new Set(['survived', 'killed']),
       )
-    },
-    60_000,
-  )
+      expect(fast.rows).toStrictEqual(isolated.rows)
+      expect(fast.result.mode).toBe('isolated')
+      expect(fast.events.filter(event => event.kind === 'note')).toStrictEqual([
+        {
+          message:
+            'node-test has no batch mode, so fast mode runs every mutant isolated, as a run without --fast does.',
+          kind: 'note',
+        },
+      ])
+    }, 60_000)
 
-  it('skips only the message mutants of logging calls and runs the rest as by hand', async () => {
-    let directory = path.join(fixtures, 'logging')
-    let { original, result, rows } = await runBothWays(directory, {
-      args: ['--test'],
-      extension: '.js',
-    })
-    let listing = await listMutants({
-      paths: ['src'],
-      cwd: directory,
-      skipped: true,
-    })
-    let { skipped, source } = listing.files[0]!
+    it.skipIf(major < 22 || (major === 22 && minor < 13))(
+      'agrees with mutants applied by hand in snapshot tests',
+      async () => {
+        let { original, result, rows } = await runBothWays(
+          path.join(fixtures, 'snapshot'),
+          { args: ['--test'], extension: '.js' },
+        )
 
-    expect(original).toBe(true)
-    expect(rows).toStrictEqual(
-      rows.map(row => ({ ...row, verdict: row.reference })),
+        expect(original).toBe(true)
+        expect(result.diagnostics).toStrictEqual([])
+        expect(rows).toStrictEqual(
+          rows.map(row => ({ ...row, verdict: row.reference })),
+        )
+        expect(new Set(rows.map(row => row.reference))).toStrictEqual(
+          new Set(['survived', 'killed']),
+        )
+      },
+      60_000,
     )
-    // Texts of messages and removals of global console calls with plain
-    // arguments are skipped, and never run.
-    expect(
-      skipped
-        .filter(entry => entry.rule === 'log-message')
-        .map(entry => [
-          source!.slice(entry.start, entry.end),
-          entry.replacement,
+
+    it('skips only the message mutants of logging calls and runs the rest as by hand', async () => {
+      let directory = path.join(fixtures, 'logging')
+      let { original, result, rows } = await runBothWays(directory, {
+        args: ['--test'],
+        extension: '.js',
+      })
+      let listing = await listMutants({
+        paths: ['src'],
+        cwd: directory,
+        skipped: true,
+      })
+      let { skipped, source } = listing.files[0]!
+
+      expect(original).toBe(true)
+      expect(rows).toStrictEqual(
+        rows.map(row => ({ ...row, verdict: row.reference })),
+      )
+      /**
+       * Texts of messages and removals of global console calls with plain
+       * arguments are skipped, and never run.
+       */
+      expect(
+        skipped
+          .filter(entry => entry.rule === 'log-message')
+          .map(entry => [
+            source!.slice(entry.start, entry.end),
+            entry.replacement,
+          ]),
+      ).toStrictEqual([
+        ["'skipped'", "''"],
+        ["console.warn('done')", ';'],
+        ["'done'", "''"],
+        ["'sent'", "''"],
+        ["'done'", "''"],
+        ['console.error()', ';'],
+        ["'ready'", "''"],
+      ])
+      /**
+       * The rest runs like other code: the branch of a template, removals whose
+       * argument or receiver throws, `?.`, format directives, also escaped, and
+       * the messages of a `log` function the file declares and of a `console`
+       * parameter, and the removal of a call of a parameter that may be null.
+       */
+      expect(
+        result.results.map(entry => [
+          source!.slice(entry.mutant.start, entry.mutant.end),
+          entry.mutant.replacement,
+          entry.status,
         ]),
-    ).toStrictEqual([
-      ["'skipped'", "''"],
-      ["console.warn('done')", ';'],
-      ["'done'", "''"],
-      ["'sent'", "''"],
-      ["'done'", "''"],
-      ['console.error()', ';'],
-      ["'ready'", "''"],
-    ])
-    // The rest runs like other code: the branch of a template, removals whose
-    // argument or receiver throws, `?.`, format directives, also escaped, and
-    // the messages of a `log` function the file declares and of a `console`
-    // parameter, and the removal of a call of a parameter that may be null.
-    expect(
-      result.results.map(entry => [
-        source!.slice(entry.mutant.start, entry.mutant.end),
-        entry.mutant.replacement,
-        entry.status,
-      ]),
-    ).toStrictEqual([
-      [
-        `\`found \${count} \${count === 1 ? 'entry' : 'entries'}\``,
-        `\`\${count}\${count === 1 ? 'entry' : 'entries'}\``,
-        'Killed',
-      ],
-      ['count === 1', 'count <= 1', 'Survived'],
-      ['count === 1', 'count >= 1', 'Killed'],
-      ['count === 1', 'false', 'Survived'],
-      ["'entry'", "''", 'NoCoverage'],
-      ["'entries'", "''", 'Killed'],
-      ["console.warn('skipped', reason)", ';', 'Survived'],
-      ['reason.length', '0', 'Killed'],
-      ['console.log(user.name)', ';', 'Killed'],
-      ["context.logger.info('sent')", ';', 'Killed'],
-      ["logger?.info('done')", "logger.info('done')", 'Killed'],
-      ["logger?.info('done')", ';', 'Survived'],
-      ["'finished'", "''", 'Killed'],
-      ["'%j'", "''", 'Killed'],
-      ['`\\x25j`', '``', 'Killed'],
-      ['[]', '[undefined]', 'Killed'],
-      ['entries.push(text)', ';', 'Killed'],
-      ["'built'", "''", 'Killed'],
-      ["logger.info('ready')", ';', 'Killed'],
-      ["'kept'", "''", 'Killed'],
-    ])
-  }, 60_000)
+      ).toStrictEqual([
+        [
+          `\`found \${count} \${count === 1 ? 'entry' : 'entries'}\``,
+          `\`\${count}\${count === 1 ? 'entry' : 'entries'}\``,
+          'Killed',
+        ],
+        ['count === 1', 'count <= 1', 'Survived'],
+        ['count === 1', 'count >= 1', 'Killed'],
+        ['count === 1', 'false', 'Survived'],
+        ["'entry'", "''", 'NoCoverage'],
+        ["'entries'", "''", 'Killed'],
+        ["console.warn('skipped', reason)", ';', 'Survived'],
+        ['reason.length', '0', 'Killed'],
+        ['console.log(user.name)', ';', 'Killed'],
+        ["context.logger.info('sent')", ';', 'Killed'],
+        ["logger?.info('done')", "logger.info('done')", 'Killed'],
+        ["logger?.info('done')", ';', 'Survived'],
+        ["'finished'", "''", 'Killed'],
+        ["'%j'", "''", 'Killed'],
+        ['`\\x25j`', '``', 'Killed'],
+        ['[]', '[undefined]', 'Killed'],
+        ['entries.push(text)', ';', 'Killed'],
+        ["'built'", "''", 'Killed'],
+        ["logger.info('ready')", ';', 'Killed'],
+        ["'kept'", "''", 'Killed'],
+      ])
+    }, 60_000)
+  })
 })

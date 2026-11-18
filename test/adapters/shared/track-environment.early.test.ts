@@ -17,7 +17,7 @@ let early = {
   exec: Reflect.apply(promisify, undefined, [childProcess.exec]) as object,
 }
 
-describe('trackEnvironment after an early promisify', () => {
+describe('trackEnvironment', () => {
   it('wraps a function that names itself as its promisified form once', async () => {
     expect(Reflect.get(early.execFile, promisify.custom)).toBe(early.execFile)
     expect(Reflect.get(early.exec, promisify.custom)).toBe(early.exec)

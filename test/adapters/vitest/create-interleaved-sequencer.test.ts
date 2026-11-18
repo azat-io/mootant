@@ -70,7 +70,7 @@ function createSpecification(
 describe('createInterleavedSequencer', () => {
   it('takes the units of each test file in turns after sorting', async () => {
     let Sequencer = createInterleavedSequencer(ReversingSequencer)
-    let sequencer = new Sequencer({} as Vitest)
+    let sequencer = new Sequencer({} as never)
     let a0 = createSpecification('', '/a.test.ts', 0)
     let a1 = createSpecification('', '/a.test.ts', 1)
     let a2 = createSpecification('', '/a.test.ts', 2)

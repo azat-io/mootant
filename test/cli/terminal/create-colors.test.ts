@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { isColorSupported, createColors } from '../../../cli/terminal/colors'
+import {
+  isColorSupported,
+  createColors,
+} from '../../../cli/terminal/create-colors'
 
 /**
  * A Linux process without color settings whose output is not a terminal, which

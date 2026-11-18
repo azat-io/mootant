@@ -1,7 +1,7 @@
 import type { TextStyle } from '../../types/cli/text-style'
 
+import { isColorSupported, createColors } from './create-colors'
 import { isUnicodeSupported } from './is-unicode-supported'
-import { isColorSupported, createColors } from './colors'
 
 /**
  * Width assumed for a terminal that does not report one.

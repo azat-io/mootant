@@ -20,7 +20,7 @@ let valueKinds = new Set([
   'null',
 ])
 
-describe('wELL_KNOWN_CALLS', () => {
+describe('WELL_KNOWN_CALLS', () => {
   it.each([...WELL_KNOWN_CALLS])(
     'maps %s to valid sorted kinds',
     (_key, kinds) => {

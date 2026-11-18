@@ -29,18 +29,21 @@ let root = ''
  * `m1`, and records that `m1` survived it.
  *
  * @param world - Changes to the simulated project.
- * @param stored - Entries and inputs of the cache file.
  * @param run - How the run goes.
+ * @param run.stored - Entries and inputs of the cache file; empty by default.
  * @param run.started - Start of the run; by default no file changed during it.
  * @param run.incremental - Whether the run is incremental; false by default.
  * @returns Cache of the run, the state's mutant `m1` and its test file key.
  */
 async function prepare(
-  world: Partial<FakeWorld> = {},
-  stored: StoredCache = { entries: new Map(), inputs: new Map() },
-  run: { incremental?: boolean; started?: number } = {},
+  world: Partial<FakeWorld>,
+  run: { incremental?: boolean; stored?: StoredCache; started?: number } = {},
 ): Promise<RunCache | null> {
-  let { started = Number.POSITIVE_INFINITY, incremental = false } = run
+  let {
+    stored = { entries: new Map(), inputs: new Map() },
+    started = Number.POSITIVE_INFINITY,
+    incremental = false,
+  } = run
   let file = path.join(root, 'a.test.ts')
   let { session, state, fake } = await createTestRun(
     {
@@ -111,11 +114,10 @@ async function reuses(
     { tests: [{ covers: ['m1'], id: 'a1', file }] },
     { mutants: ['m1'], isolate: true },
   )
-  let second = await prepare(
-    world,
-    { entries: first.entries, inputs: first.inputs },
-    { incremental },
-  )
+  let second = await prepare(world, {
+    stored: { entries: first.entries, inputs: first.inputs },
+    incremental,
+  })
   return second!.lookupUnit(state.mutants.get('m1')!, file) === 'survived'
 }
 
@@ -132,7 +134,7 @@ describe('prepareRunCache', () => {
   })
 
   it('reuses evidence while nothing changed', async () => {
-    let first = await prepare()
+    let first = await prepare({})
 
     expect(first!.entries.size).toBe(1)
     await expect(reuses(first!)).resolves.toBe(true)
@@ -162,7 +164,7 @@ describe('prepareRunCache', () => {
     ['the package file', 'package.json'],
     ['a tsconfig file', 'tsconfig.build.json'],
   ])('reuses nothing after a change of %s', async (_name, name) => {
-    let first = await prepare()
+    let first = await prepare({})
     await writeFile(path.join(root, name), `changed ${name}`)
 
     await expect(reuses(first!)).resolves.toBe(false)
@@ -192,7 +194,7 @@ describe('prepareRunCache', () => {
   it('reuses evidence with extra inputs while their files are unchanged', async () => {
     let extra = path.join(root, 'extra.json')
     await writeFile(extra, 'one')
-    let first = await prepare()
+    let first = await prepare({})
     let hash = createHash('sha256').update('one').digest('hex')
     let stored = {
       entries: new Map(
@@ -262,7 +264,6 @@ describe('prepareRunCache', () => {
             { covers: ['m1'], id: 'b1', file: b },
           ],
         },
-        undefined,
         { started: Date.now() + 1 },
       )
 
@@ -272,7 +273,6 @@ describe('prepareRunCache', () => {
 
       let modified = await prepare(
         { files: [{ dependencies: [a], modified: [a], file: a }] },
-        undefined,
         { started: Date.now() + 1 },
       )
 
@@ -280,9 +280,7 @@ describe('prepareRunCache', () => {
 
       await utimes(config, future, future)
 
-      await expect(
-        prepare({}, undefined, { started: Date.now() + 1 }),
-      ).resolves.toBeNull()
+      await expect(prepare({}, { started: Date.now() + 1 })).resolves.toBeNull()
     } finally {
       await utimes(a, now, now)
       await utimes(config, now, now)

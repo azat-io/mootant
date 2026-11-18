@@ -156,7 +156,7 @@ async function changeFile(
   await setTimeout(5)
 }
 
-describe('jest adapter with the cache', { timeout: 300_000 }, () => {
+describe('jestAdapter', { timeout: 300_000 }, () => {
   beforeEach(clearVariables)
 
   afterEach(cleanUp)
@@ -241,7 +241,9 @@ describe('jest adapter with the cache', { timeout: 300_000 }, () => {
     ).toBe(false)
     expect(survivors.length).toBeGreaterThan(0)
     expect(kills.length).toBeGreaterThan(0)
-    // Their other test file loads the changed file, so only that unit runs.
+    /**
+     * Their other test file loads the changed file, so only that unit runs.
+     */
     expect(survivors.every(entry => !entry.cached && entry.tries === 1)).toBe(
       true,
     )

@@ -138,14 +138,18 @@ describe('runPlan', () => {
       'b /a.test.ts',
     ])
     expect(seen).toStrictEqual([2, 1, 0])
-    // The unit marked done counts as it ends, with its facts; the claimed
-    // unit without a mark counts once the run is over.
+    /**
+     * The unit marked done counts as it ends, with its facts; the claimed unit
+     * without a mark counts once the run is over.
+     */
     expect(onUnitEnd.mock.calls).toStrictEqual([
       [{ unit: 1, facts }],
       [{ unit: 0 }],
     ])
-    // The unit marked done reads its records as the run goes on, and the
-    // read after the run reuses what was decided of its unhandled error.
+    /**
+     * The unit marked done reads its records as the run goes on, and the read
+     * after the run reuses what was decided of its unhandled error.
+     */
     expect(describeUnit.mock.calls).toStrictEqual([
       [1, { records: [read], hung: null, pid: 13 }],
     ])

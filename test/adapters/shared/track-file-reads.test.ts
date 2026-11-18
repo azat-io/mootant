@@ -326,7 +326,10 @@ describe('trackFileReads', () => {
     let calls = spies.map(spy => spy.mock.calls.length)
     vi.restoreAllMocks()
     syncBuiltinESMExports()
-    // Apart, as `fs.realpathSync`, which this listing needs, reads `path.resolve`.
+    /**
+     * Apart, as `fs.realpathSync`, which this listing needs, reads
+     * `path.resolve`.
+     */
     let join = vi.spyOn(path, 'join')
     fs.opendirSync(tree, { recursive: true }).closeSync()
     calls.push(join.mock.calls.length)

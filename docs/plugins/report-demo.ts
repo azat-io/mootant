@@ -77,7 +77,9 @@ export function reportDemo(): AstroIntegration {
     try {
       await previous
     } catch {
-      // The request of that attempt got its error.
+      /**
+       * The request of that attempt got its error.
+       */
     }
     try {
       return await createReport()

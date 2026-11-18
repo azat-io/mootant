@@ -129,9 +129,7 @@ describe('vitestAdapter', () => {
 
     expect(startVitestSession).toHaveBeenLastCalledWith(context, {})
   })
-})
 
-describe('vitest adapter', () => {
   it('runs every mutant of a project isolated by default', async () => {
     let result = await runMutants({
       builtIns: createBuiltIns('vitest', vitestAdapter()),
@@ -143,7 +141,9 @@ describe('vitest adapter', () => {
 
     expect(result.mode).toBe('isolated')
     expect(result.diagnostics).toStrictEqual([])
-    // The timeout of `settle` is confirmed in a second isolated run.
+    /**
+     * The timeout of `settle` is confirmed in a second isolated run.
+     */
     expect(result.runs).toStrictEqual({ isolated: 2, dry: 1 })
     expect(result.results.map(summarizeVerdict).toSorted()).toStrictEqual(
       [
@@ -202,13 +202,19 @@ describe('vitest adapter', () => {
     })
     expect(result.results.map(summarizeVerdict).toSorted()).toStrictEqual(
       [
-        // An aroundEach teardown assertion fails after the try.
+        /**
+         * An aroundEach teardown assertion fails after the try.
+         */
         'src/around.ts | arithmetic-operator | value / 2 | Killed | batch | - | assertion',
         'src/around.ts | number-literal | 3 | Killed | batch | - | assertion',
-        // An afterAll assertion fails after every test passed.
+        /**
+         * An afterAll assertion fails after every test passed.
+         */
         'src/collect.ts | arithmetic-operator | value / 3 | Killed | isolated | doubtful | hook-error',
         'src/collect.ts | number-literal | 4 | Killed | isolated | doubtful | hook-error',
-        // A test that does not reach the mutant sees the state it left.
+        /**
+         * A test that does not reach the mutant sees the state it left.
+         */
         'src/counter.ts | assignment-operator | count -= 1 | Killed | isolated | batch-survivor | assertion',
         'src/counter.ts | number-literal | 1 | Survived | isolated | static | -',
         'src/counter.ts | number-literal | 2 | Survived | isolated | batch-survivor | -',
@@ -228,7 +234,9 @@ describe('vitest adapter', () => {
         'src/ready.ts | boolean-literal | true | Survived | isolated | static | -',
         'src/ready.ts | return-value | false | Killed | batch | - | assertion',
         'src/ready.ts | return-value | true | Survived | isolated | batch-survivor | -',
-        // The control try before it left the flag set; a fresh module did not.
+        /**
+         * The control try before it left the flag set; a fresh module did not.
+         */
         'src/ready.ts | statement-removal | ; | Killed | isolated | batch-survivor | assertion',
         'src/settle.ts | condition | false | Timeout | batch | - | time-limit',
         'src/settle.ts | condition | true | Survived | isolated | batch-survivor | -',
@@ -248,31 +256,41 @@ describe('vitest adapter', () => {
 
   it.each([
     {
-      // A plain run fails on both errors.
+      /**
+       * A plain run fails on both errors.
+       */
       messages: ['listener is not a function', 'settled late'],
       config: 'vitest.config.ts',
       ...COUNTED_VERDICTS,
     },
     {
-      // The filter drops only errors of ResizeObserver.
+      /**
+       * The filter drops only errors of ResizeObserver.
+       */
       messages: ['listener is not a function', 'settled late'],
       config: 'vitest.keep.ts',
       ...COUNTED_VERDICTS,
     },
     {
-      // A plain run prints both errors and passes.
+      /**
+       * A plain run prints both errors and passes.
+       */
       config: 'vitest.ignore.ts',
       ...IGNORED_VERDICTS,
       messages: [],
     },
     {
-      // The filter drops both errors, so a plain run prints none and passes.
+      /**
+       * The filter drops both errors, so a plain run prints none and passes.
+       */
       config: 'vitest.drop.ts',
       ...IGNORED_VERDICTS,
       messages: [],
     },
     {
-      // The filter drops only the error of the listener.
+      /**
+       * The filter drops only the error of the listener.
+       */
       fast: [
         'src/events.ts | comparison-operator | false | Killed | isolated | doubtful | stray-error',
         'src/events.ts | condition | true | Survived | isolated | batch-survivor | -',
@@ -346,7 +364,10 @@ describe('vitest adapter', () => {
 
       await expect(session.listTestFiles()).resolves.toContain(probe)
 
-      // Every test file depends on the Vitest configuration, so all of them run.
+      /**
+       * Every test file depends on the Vitest configuration, so all of them
+       * run.
+       */
       let dry = await session.dryRun({
         related: [path.join(runnerRoot, 'vitest.config.ts')],
         timeouts: { file: 60_000, test: 60_000 },

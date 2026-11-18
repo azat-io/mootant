@@ -6,7 +6,7 @@ import type { HostTest } from './types/host-test'
  * The host's `--runner`. Jest loads it once it has read its configuration,
  * built the haste map and run global setup.
  */
-export default class MootantHostRunner {
+export default class Runner {
   /**
    * Parks Jest until mootant asks to close or goes away.
    */

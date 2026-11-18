@@ -191,7 +191,7 @@ function describeDiagnostic(diagnostic: Diagnostic): string {
   return [diagnostic.code, diagnostic.file, diagnostic.line].join(' | ')
 }
 
-describe('verdict equivalence', () => {
+describe('vitestAdapter', () => {
   it('agrees with mutants applied by hand in the default and fast modes', async () => {
     let { original, isolated, fast, rows } = await runAllPaths(
       equivalenceRoot,
@@ -199,9 +199,11 @@ describe('verdict equivalence', () => {
     )
 
     expect(original).toBe(true)
-    // Counting and collecting tests fail when each test runs twice, so in
-    // fast mode their files are unrepeatable: a plain run of Vitest passes
-    // them. The default mode tries each test once.
+    /**
+     * Counting and collecting tests fail when each test runs twice, so in fast
+     * mode their files are unrepeatable: a plain run of Vitest passes them. The
+     * default mode tries each test once.
+     */
     expect(fast.diagnostics.map(describeDiagnostic)).toStrictEqual([
       'unrepeatable-test | test/collect.test.ts | 11',
       'unrepeatable-test | test/collect.test.ts | 15',
@@ -222,19 +224,33 @@ describe('verdict equivalence', () => {
     expect(
       rows.filter(row =>
         [
-          // A later test sees the state the mutant left, never reaching it.
+          /**
+           * A later test sees the state the mutant left, never reaching it.
+           */
           'src/counter.ts | assignment-operator | count -= 1',
-          // The test passes on its retry, as in a plain run.
+          /**
+           * The test passes on its retry, as in a plain run.
+           */
           'src/threshold.ts | number-literal | 2',
-          // The control try before it left the flag set.
+          /**
+           * The control try before it left the flag set.
+           */
           'src/ready.ts | statement-removal | ;',
-          // The afterAll assertion fails after every test passed.
+          /**
+           * The afterAll assertion fails after every test passed.
+           */
           'src/collect.ts | number-literal | 4',
-          // An aroundEach teardown assertion fails after the try.
+          /**
+           * An aroundEach teardown assertion fails after the try.
+           */
           'src/around.ts | number-literal | 3',
-          // Only the try that builds the table reaches the mutant.
+          /**
+           * Only the try that builds the table reaches the mutant.
+           */
           'src/lazy.ts | number-literal | 3',
-          // The test repeats itself with Vitest's own `repeats`.
+          /**
+           * The test repeats itself with Vitest's own `repeats`.
+           */
           'src/tick.ts | number-literal | 1',
           'src/tick.ts | number-literal | 2',
         ].includes(row.mutant),
@@ -252,8 +268,10 @@ describe('verdict equivalence', () => {
       path.join(equivalenceRoot, 'stale'),
       ['src/read.ts'],
     )
-    // Without its reset the function returns what the last call left: 0 on
-    // a fresh module, as by hand, but 1 after a control try of a batch run.
+    /**
+     * Without its reset the function returns what the last call left: 0 on a
+     * fresh module, as by hand, but 1 after a control try of a batch run.
+     */
     let stale = 'src/read.ts | statement-removal | ;'
 
     expect(original).toBe(true)
@@ -282,9 +300,11 @@ describe('verdict equivalence', () => {
   }, 60_000)
 
   it('lets the tests decide mutants that only make code hotter, as a plain run does', async () => {
-    // Without the memo, the test evaluates mutant sites about two million
-    // times in a few milliseconds: over the hit limit of its unit, though a
-    // plain run passes it in time.
+    /**
+     * Without the memo, the test evaluates mutant sites about two million times
+     * in a few milliseconds: over the hit limit of its unit, though a plain run
+     * passes it in time.
+     */
     let { original, isolated, fast, rows } = await runAllPaths(
       path.join(equivalenceRoot, 'hot'),
       ['src/fib.ts'],
@@ -301,9 +321,11 @@ describe('verdict equivalence', () => {
     ])
     expect(isolated.runs).toStrictEqual({ isolated: 2, dry: 1 })
     expect(fast.runs).toStrictEqual({ isolated: 2, batch: 1, dry: 1 })
-    // In fast mode the missing check goes over the limit of its batch try
-    // too, while the missing store runs isolated from the start, as the second
-    // dry try finds the memo the first one filled.
+    /**
+     * In fast mode the missing check goes over the limit of its batch try too,
+     * while the missing store runs isolated from the start, as the second dry
+     * try finds the memo the first one filled.
+     */
     expect(
       fast.results
         .filter(result => result.status === 'Survived')
@@ -315,9 +337,11 @@ describe('verdict equivalence', () => {
   }, 60_000)
 
   it('lets the tests decide mutants that only make a test slower, as a plain run does', async () => {
-    // Without the quick path the first test waits a second: over twice its
-    // own time limit, but within the time limit of its whole test file, which
-    // an isolated unit has. The confirmation of its batch try gets twice that.
+    /**
+     * Without the quick path the first test waits a second: over twice its own
+     * time limit, but within the time limit of its whole test file, which an
+     * isolated unit has. The confirmation of its batch try gets twice that.
+     */
     let { original, isolated, fast, rows } = await runAllPaths(
       path.join(equivalenceRoot, 'wait'),
       ['src/settle.ts'],
@@ -336,10 +360,12 @@ describe('verdict equivalence', () => {
   }, 60_000)
 
   it('counts errors of worker-scoped fixture cleanup against the mutant', async () => {
-    // Only the cleanup of a worker-scoped fixture, after the test file ran,
-    // sees the mutants of `release`. The fixture holds a fixed port until
-    // then, so a unit that started before the worker of the unit before it
-    // was gone would fail to listen.
+    /**
+     * Only the cleanup of a worker-scoped fixture, after the test file ran,
+     * sees the mutants of `release`. The fixture holds a fixed port until then,
+     * so a unit that started before the worker of the unit before it was gone
+     * would fail to listen.
+     */
     let { original, isolated, rows } = await runAllPaths(
       path.join(equivalenceRoot, 'teardown'),
       ['src/pool.ts'],
@@ -359,8 +385,10 @@ describe('verdict equivalence', () => {
   }, 60_000)
 
   it('counts errors of the environment teardown against the mutant', async () => {
-    // Only the environment's teardown, after the worker-scoped fixtures were
-    // cleaned up, checks the resources the test left open or closed twice.
+    /**
+     * Only the environment's teardown, after the worker-scoped fixtures were
+     * cleaned up, checks the resources the test left open or closed twice.
+     */
     let { original, isolated, fast, rows } = await runAllPaths(
       path.join(equivalenceRoot, 'environment'),
       ['src/pool.ts'],
@@ -392,8 +420,10 @@ describe('verdict equivalence', () => {
   }, 60_000)
 
   it('stops a worker whose environment teardown hangs with a mutant', async () => {
-    // The environment's teardown waits for every resource to close, so it
-    // never ends when the mutant leaves one open.
+    /**
+     * The environment's teardown waits for every resource to close, so it never
+     * ends when the mutant leaves one open.
+     */
     let started = performance.now()
     let result = await runMutants({
       builtIns: createBuiltIns('vitest', vitestAdapter()),
@@ -403,8 +433,10 @@ describe('verdict equivalence', () => {
       cache: false,
     })
 
-    // Vitest stops waiting for a killed worker's answer only after a minute,
-    // at the latest when the session closes.
+    /**
+     * Vitest stops waiting for a killed worker's answer only after a minute, at
+     * the latest when the session closes.
+     */
     expect(performance.now() - started).toBeLessThan(40_000)
 
     expect(
@@ -417,7 +449,9 @@ describe('verdict equivalence', () => {
       [';', 'Timeout', 'hang'],
       ['1', 'Timeout', 'hang'],
     ])
-    // Each mutant hangs again when its timeout is confirmed.
+    /**
+     * Each mutant hangs again when its timeout is confirmed.
+     */
     expect(new Set(result.diagnostics.map(describeDiagnostic))).toStrictEqual(
       new Set(['worker-hang | test/pool.test.ts | ']),
     )
@@ -436,8 +470,10 @@ describe('verdict equivalence', () => {
   }, 30_000)
 
   it('keeps concurrent tests concurrent by default, and warns that fast mode does not', async () => {
-    // Two concurrent tests take an async lock; only overlapping calls wait on
-    // it, so running them one at a time misses three mutants.
+    /**
+     * Two concurrent tests take an async lock; only overlapping calls wait on
+     * it, so running them one at a time misses three mutants.
+     */
     let { original, isolated, fast, rows } = await runAllPaths(
       path.join(equivalenceRoot, 'concurrent'),
       ['src/lock.ts'],
@@ -457,7 +493,9 @@ describe('verdict equivalence', () => {
             (row.isolated === 'Timeout' && row.reference === 'killed'),
         ),
     ).toBe(true)
-    // An endless synchronous loop only the second caller enters.
+    /**
+     * An endless synchronous loop only the second caller enters.
+     */
     expect(hangs.map(row => [row.mutant, row.isolated])).toContainEqual([
       waits,
       'Timeout',
@@ -467,7 +505,9 @@ describe('verdict equivalence', () => {
         row => row.mutant === 'src/lock.ts | comparison-operator | false',
       ),
     ).toMatchObject({ reference: 'killed', isolated: 'killed' })
-    // The sequential dry run of fast mode never makes the second caller wait.
+    /**
+     * The sequential dry run of fast mode never makes the second caller wait.
+     */
     expect(rows.find(row => row.mutant === waits)?.fast).toBe('survived')
     expect(
       fast.diagnostics.map(diagnostic => [diagnostic.code, diagnostic.file]),
@@ -507,8 +547,10 @@ describe('verdict equivalence', () => {
   }, 30_000)
 
   it('never runs a test file twice at once', async () => {
-    // Every unit of the test file uses one fixed file, so two units that ran
-    // at once would kill equivalent mutants or let a mutant survive.
+    /**
+     * Every unit of the test file uses one fixed file, so two units that ran at
+     * once would kill equivalent mutants or let a mutant survive.
+     */
     let { original, isolated, fast, rows } = await runAllPaths(
       path.join(equivalenceRoot, 'shared'),
       ['src/render.ts'],
@@ -547,10 +589,12 @@ describe('verdict equivalence', () => {
   }, 30_000)
 
   it('agrees with mutants applied by hand in Vue components and templates', async () => {
-    // Scripts reach the Vue plugin in every form: inlined into the component
-    // module, as the `?vue&type=script` request of a `tsx` script, and as an
-    // external `<script src>` file. The card and the buttons are mounted in a
-    // DOM, where their event handlers run.
+    /**
+     * Scripts reach the Vue plugin in every form: inlined into the component
+     * module, as the `?vue&type=script` request of a `tsx` script, and as an
+     * external `<script src>` file. The card and the buttons are mounted in a
+     * DOM, where their event handlers run.
+     */
     let { original, isolated, fast, rows } = await runAllPaths(
       path.join(equivalenceRoot, 'vue'),
       [
@@ -590,9 +634,11 @@ describe('verdict equivalence', () => {
         'src/price.ts',
       ]),
     )
-    // Template mutants are switched and attributed to the tests that render
-    // them: the `v-if` branch renders only after the clicks, and each handler
-    // runs only in the test that clicks its button.
+    /**
+     * Template mutants are switched and attributed to the tests that render
+     * them: the `v-if` branch renders only after the clicks, and each handler
+     * runs only in the test that clicks its button.
+     */
     let names = new Map(isolated.tests.map(test => [test.id, test.name]))
     let coverage = new Map(
       isolated.results
@@ -625,9 +671,11 @@ describe('verdict equivalence', () => {
         'lists the items without the skipped one',
       ],
     ])
-    // No template mutant of the buttons is an Error: the rejected save still
-    // reaches the error handler, the function handler compiles, and the
-    // guard of its second statement leaves the condition whole.
+    /**
+     * No template mutant of the buttons is an Error: the rejected save still
+     * reaches the error handler, the function handler compiles, and the guard
+     * of its second statement leaves the condition whole.
+     */
     expect(
       isolated.results
         .filter(
@@ -647,16 +695,20 @@ describe('verdict equivalence', () => {
       'count += 1 Killed',
       '2 Killed',
     ])
-    // The compiler hoists the defaults of `withDefaults` out of `setup`, so
-    // the mutant runs while the component module loads.
+    /**
+     * The compiler hoists the defaults of `withDefaults` out of `setup`, so the
+     * mutant runs while the component module loads.
+     */
     expect(
       isolated.results.find(
         result =>
           describeMutant(result) === 'src/counter.vue | number-literal | 2',
       ),
     ).toMatchObject({ isolatedBecause: 'static', status: 'Killed' })
-    // The compiler reads the model name as written, so only the labels of
-    // the toggle are emptied.
+    /**
+     * The compiler reads the model name as written, so only the labels of the
+     * toggle are emptied.
+     */
     expect(
       rows.filter(row => row.mutant === "src/toggle.vue | string-literal | ''"),
     ).toHaveLength(2)
@@ -696,8 +748,10 @@ describe('verdict equivalence', () => {
         'src/badge.svelte',
       ]),
     )
-    // Template mutants are switched and attributed to the tests that render
-    // them: each branch of the `{#if}` renders in one test only.
+    /**
+     * Template mutants are switched and attributed to the tests that render
+     * them: each branch of the `{#if}` renders in one test only.
+     */
     let names = new Map(isolated.tests.map(test => [test.id, test.name]))
     let coverage = new Map(
       isolated.results
@@ -729,7 +783,9 @@ describe('verdict equivalence', () => {
       'Killed',
       ['draws a star per point'],
     ])
-    // Svelte accepts the rune only at the top level of the constructor.
+    /**
+     * Svelte accepts the rune only at the top level of the constructor.
+     */
     expect(
       rows.filter(row =>
         row.mutant.startsWith('src/tally.svelte.ts | statement-removal'),
@@ -738,11 +794,13 @@ describe('verdict equivalence', () => {
   }, 60_000)
 
   it('runs the test file named after the module first, takes its verdict first, and stops a unit at its first kill', async () => {
-    // `test/scale.test.ts` is named after `src/scale.ts` but is the slowest
-    // file; `test/cheap.test.ts` imports it directly and kills nothing;
-    // `test/format.test.ts` reaches it through `src/format.ts`. The second
-    // test of `test/scale.test.ts` loops for every mutant its first test
-    // kills, so a unit that went on after the kill would time out.
+    /**
+     * `test/scale.test.ts` is named after `src/scale.ts` but is the slowest
+     * file; `test/cheap.test.ts` imports it directly and kills nothing;
+     * `test/format.test.ts` reaches it through `src/format.ts`. The second test
+     * of `test/scale.test.ts` loops for every mutant its first test kills, so a
+     * unit that went on after the kill would time out.
+     */
     let rounds = path.join(equivalenceRoot, 'rounds')
     let result = await runMutants({
       builtIns: createBuiltIns('vitest', vitestAdapter()),
@@ -774,15 +832,19 @@ describe('verdict equivalence', () => {
         .filter(entry => entry.status === 'Killed' && entry !== unit)
         .map(() => ['doubles', 'test/scale.test.ts', 'assertion', 1]),
     )
-    // The cheaper files reach the static mutant too, but the first round
-    // takes only the file named after the module, which kills it.
+    /**
+     * The cheaper files reach the static mutant too, but the first round takes
+     * only the file named after the module, which kills it.
+     */
     expect(unit).toMatchObject({
       isolatedBecause: 'static',
       status: 'Killed',
       tries: 1,
     })
     expect(path.relative(rounds, unit.killedIn!)).toBe('test/scale.test.ts')
-    // A survivor runs every file that reaches it, one more in each round.
+    /**
+     * A survivor runs every file that reaches it, one more in each round.
+     */
     expect(survivors.length).toBeGreaterThan(0)
     expect(survivors.every(entry => entry.tries === 3)).toBe(true)
     expect(result.runs.isolated).toBe(3)
@@ -797,9 +859,11 @@ describe('verdict equivalence', () => {
       cache: false,
     })
 
-    // A plain Vitest run fails with the first three: the global setup
-    // provides the port the test checks. Mootant cannot switch code in the
-    // main process, so it reports no verdict rather than NoCoverage.
+    /**
+     * A plain Vitest run fails with the first three: the global setup provides
+     * the port the test checks. Mootant cannot switch code in the main process,
+     * so it reports no verdict rather than NoCoverage.
+     */
     expect(
       result.results.map(entry => [entry.mutant.replacement, entry.status]),
     ).toStrictEqual([
@@ -827,8 +891,10 @@ describe('verdict equivalence', () => {
 
     expect(original).toBe(true)
     expectAgreement(rows)
-    // Texts of messages and removals of global console calls with plain
-    // arguments are skipped, and never run.
+    /**
+     * Texts of messages and removals of global console calls with plain
+     * arguments are skipped, and never run.
+     */
     expect(
       skipped
         .filter(entry => entry.rule === 'log-message')
@@ -845,10 +911,12 @@ describe('verdict equivalence', () => {
       ['console.error()', ';'],
       ["'ready'", "''"],
     ])
-    // The rest runs like other code: the branch of a template, removals whose
-    // argument or receiver throws, `?.`, format directives, also escaped, and
-    // the messages of a `log` function the file declares and of a `console`
-    // parameter, and the removal of a call of a parameter that may be null.
+    /**
+     * The rest runs like other code: the branch of a template, removals whose
+     * argument or receiver throws, `?.`, format directives, also escaped, and
+     * the messages of a `log` function the file declares and of a `console`
+     * parameter, and the removal of a call of a parameter that may be null.
+     */
     expect(
       isolated.results.map(result => [
         source!.slice(result.mutant.start, result.mutant.end),
@@ -884,10 +952,12 @@ describe('verdict equivalence', () => {
   }, 60_000)
 
   it('gives a mutant the verdict of the whole run when it runs alone and Vitest relates its test only to another file', async () => {
-    // `test/greet.test.ts` imports `src/service.ts` and mocks `src/api.ts`
-    // with a factory that loads the real module through a helper, so Vitest
-    // relates the test to `src/service.ts` only, which a run of the mutants of
-    // `src/api.ts` alone does not switch.
+    /**
+     * `test/greet.test.ts` imports `src/service.ts` and mocks `src/api.ts` with
+     * a factory that loads the real module through a helper, so Vitest relates
+     * the test to `src/service.ts` only, which a run of the mutants of
+     * `src/api.ts` alone does not switch.
+     */
     let directory = path.join(equivalenceRoot, 'mocked')
     let { original, isolated, rows } = await runAllPaths(
       directory,
@@ -924,8 +994,10 @@ describe('verdict equivalence', () => {
       ),
     ).toStrictEqual(api.map(result => [[result.mutant.id, result.status]]))
     expect(alone.flatMap(run => run.diagnostics)).toStrictEqual([])
-    // A run of the path `src/api.ts` relates no other file, so Vitest selects
-    // no test, as the compatibility notes say.
+    /**
+     * A run of the path `src/api.ts` relates no other file, so Vitest selects
+     * no test, as the compatibility notes say.
+     */
     expect(narrow.results.map(result => result.status)).toStrictEqual([
       'NoCoverage',
       'NoCoverage',

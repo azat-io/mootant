@@ -4,7 +4,7 @@ import { installMutantRuntime } from '../../../core/runtime/install-mutant-runti
 import { RUNTIME_SYMBOL_KEY } from '../../../core/runtime/runtime-symbol-key'
 import { getSiteSyntax } from '../../../core/instrument/get-site-syntax'
 
-describe('rUNTIME_SYMBOL_KEY', () => {
+describe('RUNTIME_SYMBOL_KEY', () => {
   it('names the symbol that template checks and the runtime share', () => {
     let runtime = installMutantRuntime()
 

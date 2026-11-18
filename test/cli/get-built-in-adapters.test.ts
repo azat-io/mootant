@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { scoreNodeTest } from '../../adapters/node-test/score-node-test'
+import { getBuiltInAdapters } from '../../cli/get-built-in-adapters'
 import { detectVitest } from '../../adapters/vitest/detect-vitest'
-import { getBuiltInAdapters } from '../../cli/built-in-adapters'
 import { scoreJest } from '../../adapters/jest/score-jest'
 
 vi.mock(import('../../adapters/vitest/detect-vitest'))

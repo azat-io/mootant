@@ -53,7 +53,9 @@ describe('readUnitInputs', () => {
         { dependencies: null, environment: [], filtered: false },
       ),
     ).resolves.toBeNull()
-    // What `onUnhandledError` depends on is out of sight.
+    /**
+     * What `onUnhandledError` depends on is out of sight.
+     */
     await expect(
       readUnitInputs(
         handle,

@@ -5,7 +5,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { isInteractiveTerminal } from '../../../cli/terminal/is-interactive-terminal'
 import { isUnicodeSupported } from '../../../cli/terminal/is-unicode-supported'
 import { createSpinner } from '../../../cli/terminal/create-spinner'
-import { createColors } from '../../../cli/terminal/colors'
+import { createColors } from '../../../cli/terminal/create-colors'
 
 vi.mock(import('../../../cli/terminal/is-interactive-terminal'))
 vi.mock(import('../../../cli/terminal/is-unicode-supported'))

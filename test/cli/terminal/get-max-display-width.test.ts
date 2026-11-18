@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { getMaxDisplayWidth } from '../../../cli/terminal/get-max-display-width'
-import { createColors } from '../../../cli/terminal/colors'
+import { createColors } from '../../../cli/terminal/create-colors'
 
 describe('getMaxDisplayWidth', () => {
   it('finds the widest text, counting wide characters as two and colors as none', () => {

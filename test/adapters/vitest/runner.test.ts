@@ -33,7 +33,7 @@ import type { IsolatedUnit } from '../../../types/adapter/isolated-plan'
 
 import { getFileHash } from '../../../adapters/vitest/worker/get-file-hash'
 import { readOutRecords } from '../../../adapters/vitest/read-out-records'
-import MootantRunner from '../../../adapters/vitest/runner'
+import Runner from '../../../adapters/vitest/runner'
 
 /**
  * Tracing helper of a Vitest worker, which runs every step of the worker.
@@ -134,7 +134,7 @@ let options: VitestWorkerOptions
  * @param task - Fake test; the runner sets its repeats.
  */
 async function simulateTest(
-  runner: MootantRunner,
+  runner: Runner,
   file: RunnerTestFile,
   task: RunnerTestCase,
 ): Promise<void> {
@@ -190,7 +190,7 @@ async function simulateTest(
  * @returns Whether the attempt skipped the test, which ends it.
  */
 async function simulateRepeat(
-  runner: MootantRunner,
+  runner: Runner,
   around: AroundHook[],
   test: RunnerTestCase,
 ): Promise<boolean> {
@@ -242,14 +242,14 @@ function createRunner(
   name?: string,
 ): {
   config: SerializedConfig
-  runner: MootantRunner
+  runner: Runner
 } {
   let config: SerializedConfig = {
     experimental: { viteModuleRunner: true },
     hookTimeout,
     name,
   } as never
-  let runner = new MootantRunner(config)
+  let runner = new Runner(config)
   let state = Reflect.get(runner, 'workerState') as {
     onCleanup(listener: () => unknown): void
   }
@@ -268,7 +268,7 @@ function createRunner(
  * @param tasks - Tests and suites to run.
  */
 async function runTasks(
-  runner: MootantRunner,
+  runner: Runner,
   file: RunnerTestFile,
   tasks: RunnerTask[],
 ): Promise<void> {
@@ -400,7 +400,7 @@ function getHooks(
  * @param load - What loading the file does.
  */
 async function collectAndRun(
-  runner: MootantRunner,
+  runner: Runner,
   file: RunnerTestFile,
   load: () => void = () => {},
 ): Promise<void> {
@@ -527,29 +527,13 @@ function createSuite(
  * @param load - What loading the file does.
  */
 async function runFile(
-  runner: MootantRunner,
+  runner: Runner,
   file: RunnerTestFile,
   load: () => void = () => {},
 ): Promise<void> {
   runner.onCleanupWorkerContext!(() => {})
   await collectAndRun(runner, file, load)
   await tearDownWorker()
-}
-
-/**
- * Creates a runner for the current options in a `vmForks` pool, where Vitest
- * hands the runner no cleanup of the worker-scoped fixtures.
- *
- * @returns Runner without `onCleanupWorkerContext`.
- */
-function createVmRunner(): MootantRunner {
-  let { pool } = workerState.ctx
-  workerState.ctx.pool = 'vmForks'
-  try {
-    return createRunner().runner
-  } finally {
-    workerState.ctx.pool = pool
-  }
 }
 
 /**
@@ -567,6 +551,22 @@ function setOptions(mode: VitestWorkerOptions['mode'], repeat = false): void {
     directory,
     repeat,
     mode,
+  }
+}
+
+/**
+ * Creates a runner for the current options in a `vmForks` pool, where Vitest
+ * hands the runner no cleanup of the worker-scoped fixtures.
+ *
+ * @returns Runner without `onCleanupWorkerContext`.
+ */
+function createVmRunner(): Runner {
+  let { pool } = workerState.ctx
+  workerState.ctx.pool = 'vmForks'
+  try {
+    return createRunner().runner
+  } finally {
+    workerState.ctx.pool = pool
   }
 }
 
@@ -609,7 +609,7 @@ function getRuntime(): MutantRuntime {
   return Reflect.get(globalThis, '__mootant') as MutantRuntime
 }
 
-describe('mootantRunner', () => {
+describe('Runner', () => {
   let hash = getFileHash(FILE, '')
 
   beforeEach(async () => {
@@ -1022,8 +1022,10 @@ describe('mootantRunner', () => {
     let records = await readRecords()
 
     expect(config.hookTimeout).toBe(ISOLATED_UNIT.limits.timeout)
-    // A failure before the mutant was reached proves nothing, so the unit
-    // goes on; the kill of `c` skips what has not started.
+    /**
+     * A failure before the mutant was reached proves nothing, so the unit goes
+     * on; the kill of `c` skips what has not started.
+     */
     expect(tests.map(task => task.mode)).toStrictEqual([
       'run',
       'run',
@@ -1493,8 +1495,10 @@ describe('mootantRunner', () => {
       true,
       true,
     ])
-    // The later end of the running attempts, less the time since it began,
-    // which a busy machine can stretch to hundreds of milliseconds.
+    /**
+     * The later end of the running attempts, less the time since it began,
+     * which a busy machine can stretch to hundreds of milliseconds.
+     */
     expect(beats.map(beat => [beat.test, beat.budget])).toStrictEqual([
       ['a', expect.closeTo(6050, -3)],
       ['b', expect.closeTo(2050, -3)],

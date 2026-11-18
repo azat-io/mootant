@@ -80,7 +80,7 @@ describe('createMootantPlugin', () => {
   it('configures every project', () => {
     let { context, state } = setup()
     let plugin = createMootantPlugin(context, state)
-    let project = {} as TestProject
+    let project = {} as never
     let hook = plugin.configureVitest as (context: {
       project: TestProject
     }) => void

@@ -167,7 +167,9 @@ describe('readDryRun', () => {
       new Set(['/t/a.test.ts\0b']),
     )
 
-    // Only project b failed when its tests ran twice.
+    /**
+     * Only project b failed when its tests ran twice.
+     */
     expect(analysis.unrepeatable).toStrictEqual(new Set(['b1']))
     expect(analysis.fileTests).toStrictEqual(
       new Map([

@@ -81,7 +81,7 @@ let log: RunnerLog = { contexts: [], globals: [], runs: [], ids: [] }
  * @returns What a unit gets.
  */
 function createWorker(
-  script: RunnerScript = givesNoTests,
+  script: RunnerScript,
   fields: Partial<UnitWorker> = {},
 ): UnitWorker {
   let project: BootedProject = {
@@ -324,7 +324,7 @@ describe('runUnit', () => {
   })
 
   it('runs the test file with the project through Jest in serial mode', async () => {
-    let worker = createWorker()
+    let worker = createWorker(givesNoTests)
     let unit = createUnit()
     await runUnit(unit, worker)
     let [tests, watcher, options] = log.runs[0]!
@@ -350,14 +350,14 @@ describe('runUnit', () => {
   })
 
   it('sets JEST_WORKER_ID synchronously after runTests is called', async () => {
-    await runUnit(createUnit(), createWorker())
+    await runUnit(createUnit(), createWorker(givesNoTests))
 
     expect(log.ids).toStrictEqual(['3'])
     expect(env['JEST_WORKER_ID']).toBe('3')
   })
 
   it('keeps the wrapped configuration per plan', async () => {
-    let worker = createWorker()
+    let worker = createWorker(givesNoTests)
     await runUnit(createUnit({ plan: '/plans/1/plan.json' }), worker)
     await runUnit(createUnit({ plan: '/plans/1/plan.json' }), worker)
     await runUnit(createUnit({ plan: '/plans/2/plan.json' }), worker)
@@ -371,7 +371,7 @@ describe('runUnit', () => {
   })
 
   it('makes a global copy that picks the console of the unit, and never updates snapshots', async () => {
-    let worker = createWorker()
+    let worker = createWorker(givesNoTests)
     await runUnit(createUnit({ console: 'stream' }), worker)
     await runUnit(createUnit({ console: 'buffer', mutant: 'm' }), worker)
     await runUnit(createUnit({ console: 'none', mutant: 'm' }), worker)
@@ -513,7 +513,7 @@ describe('runUnit', () => {
 
   it('writes finish for a file with no tests', async () => {
     let unit = createUnit()
-    await runUnit(unit, createWorker())
+    await runUnit(unit, createWorker(givesNoTests))
 
     expect(readFinish(unit)).toMatchObject({
       message: 'Your test suite must contain at least one test.',
@@ -649,7 +649,7 @@ describe('runUnit', () => {
   })
 
   it('makes a stale event the last unit, and clears the flag for the next', async () => {
-    let worker = createWorker()
+    let worker = createWorker(givesNoTests)
     worker.TestRunner = createRunnerClass(runner => {
       worker.flags.stale = true
       givesNoTests(runner)
@@ -664,7 +664,7 @@ describe('runUnit', () => {
   })
 
   it('makes a unit that ends with a transform unsettled the last unit, and not one whose transform settled first', async () => {
-    let worker = createWorker()
+    let worker = createWorker(givesNoTests)
     worker.TestRunner = createRunnerClass(runner => {
       worker.calls.unsettled = 1
       givesNoTests(runner)
@@ -723,7 +723,7 @@ describe('runUnit', () => {
   })
 
   it('clears the marks of the unit, whether or not its vm got set up', async () => {
-    let worker = createWorker()
+    let worker = createWorker(givesNoTests)
     await runUnit(createUnit(), worker)
 
     expect(worker.clearPerformance).toHaveBeenCalledExactlyOnceWith()

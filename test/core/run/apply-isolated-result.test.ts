@@ -240,7 +240,9 @@ describe('applyIsolatedResult', () => {
       },
     )
 
-    // The raised limit may have held: a teardown can hang after the hot code.
+    /**
+     * The raised limit may have held: a teardown can hang after the hot code.
+     */
     expect(state.mutants.get('looped')!.verdict).toMatchObject({
       status: 'Timeout',
       cause: 'hang',

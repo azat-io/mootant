@@ -1,6 +1,6 @@
 import type { MarkedGrapheme, MarkedDiff } from './mark-diff'
 import type { TextStyle } from '../../types/cli/text-style'
-import type { Color } from '../terminal/colors'
+import type { Color } from '../terminal/create-colors'
 
 import {
   getGraphemeWidth,

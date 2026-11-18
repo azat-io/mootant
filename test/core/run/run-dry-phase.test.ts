@@ -30,8 +30,10 @@ const RELATED = ['/src/a.ts', '/src/b.ts', '/src/c.ts']
  * switched.
  *
  * @param world - Simulated project.
- * @param repeat - Whether every test is tried twice, as in fast mode.
- * @param options - Where the phase reports and what it relates tests to.
+ * @param options - How the phase runs, where it reports and what it relates
+ *   tests to.
+ * @param options.repeat - Whether every test is tried twice, as in fast mode;
+ *   true when omitted.
  * @param options.progress - Receives the reasons of dry runs that run again,
  *   and the other events as JSON.
  * @param options.related - Files to relate tests to; the switched files when
@@ -40,15 +42,14 @@ const RELATED = ['/src/a.ts', '/src/b.ts', '/src/c.ts']
  */
 async function run(
   world: FakeWorld,
-  repeat = true,
-  options: { progress?: string[]; related?: string[] } = {},
+  options: { progress?: string[]; related?: string[]; repeat?: boolean } = {},
 ): Promise<{
   phase: Awaited<ReturnType<typeof runDryPhase>>
   switched: SwitchedFile[]
   progress: string[]
   fake: FakeAdapter
 }> {
-  let { related = Object.keys(SOURCES), progress = [] } = options
+  let { related = Object.keys(SOURCES), progress = [], repeat = true } = options
   let fake = createFakeAdapter(world)
   let switched: SwitchedFile[] = Object.entries(SOURCES).map(([file, ids]) => ({
     switched: ids.map(id => `hit("${id}")`).join(';'),
@@ -237,7 +238,7 @@ describe('runDryPhase', () => {
     }
     let progress: string[] = []
 
-    await expect(run(world, true, { progress })).rejects.toThrow(
+    await expect(run(world, { progress })).rejects.toThrow(
       [
         'Tests fail without mutants; fix them first (11 tests, 1 test file):',
         '  t/a.test.ts: fails to load: unknown error',
@@ -385,7 +386,6 @@ describe('runDryPhase', () => {
           { file: '/t/c.test.ts', id: 'c1' },
         ],
       },
-      true,
       { related: RELATED },
     )
 
@@ -418,7 +418,7 @@ describe('runDryPhase', () => {
           { file: '/t/b.test.ts', dry: 'repeated', covers: ['b1'], id: 't2' },
         ],
       },
-      false,
+      { repeat: false },
     )
 
     expect(progress).toStrictEqual([
@@ -543,7 +543,6 @@ describe('runDryPhase', () => {
         }),
         tests: [{ file: '/t/a.test.ts', id: 't1' }],
       },
-      true,
       { related: RELATED },
     )
     let broken =
@@ -595,7 +594,7 @@ describe('runDryPhase', () => {
           { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
         ],
       },
-      false,
+      { repeat: false },
     )
     let broken =
       "Tests that depend on src/b.ts fail only with mootant's switched files, such as t/b.test.ts, which fails outside its tests (Cannot access 'globalThis' before initialization); its mutants are not run."
@@ -662,7 +661,7 @@ describe('runDryPhase', () => {
           { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
         ],
       },
-      false,
+      { repeat: false },
     )
 
     expect(phase.runs).toBe(4)
@@ -696,7 +695,7 @@ describe('runDryPhase', () => {
           { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
         ],
       },
-      false,
+      { repeat: false },
     )
 
     expect(progress.at(-1)).toBe(
@@ -747,7 +746,7 @@ describe('runDryPhase', () => {
           { file: '/t/c.test.ts', id: 't3' },
         ],
       },
-      false,
+      { repeat: false },
     )
 
     expect(phase.runs).toBe(3)
@@ -801,8 +800,7 @@ describe('runDryPhase', () => {
             { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
           ],
         },
-        false,
-        { progress },
+        { repeat: false, progress },
       ),
     ).rejects.toThrow(
       'Tests fail without mutants; fix them first (1 test):\n  t/b.test.ts > t2: PORT is not set',
@@ -850,7 +848,7 @@ describe('runDryPhase', () => {
           { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
         ],
       },
-      false,
+      { repeat: false },
     )
 
     expect(phase.runs).toBe(4)
@@ -878,7 +876,7 @@ describe('runDryPhase', () => {
             { file: '/t/a.test.ts', covers: ['a1'], dry: 'broken', id: 't1' },
           ],
         },
-        false,
+        { repeat: false },
       ),
     ).rejects.toThrow(
       'Tests fail without mutants; fix them first (1 test file):\n  t/a.test.ts: fails to load: Port in use',
@@ -911,7 +909,7 @@ describe('runDryPhase', () => {
           { file: '/t/b.test.ts', covers: ['b1'], id: 't2', line: 7 },
         ],
       },
-      false,
+      { repeat: false },
     )
 
     expect(progress).toStrictEqual([
@@ -979,7 +977,7 @@ describe('runDryPhase', () => {
           { file: '/t/b.test.ts', covers: ['b1'], id: 't2' },
         ],
       },
-      false,
+      { repeat: false },
     )
 
     expect(progress).toStrictEqual([
@@ -1161,7 +1159,6 @@ describe('runDryPhase', () => {
           ],
           files: [{ file: '/t/a.test.ts', loadCovers: ['a1'] }],
         },
-        true,
         { progress },
       ),
     ).rejects.toThrow('Tests still fail')

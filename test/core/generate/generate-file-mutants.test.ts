@@ -4655,8 +4655,10 @@ describe('generateFileMutants', () => {
     ({ preset, lines, file }) => {
       let source = lines.join('\n')
       let statements = getStatementStarts(file, source)
-      // The fingerprint covers the scripts; template mutants are hosted by
-      // the compile test of instrumentFile.
+      /**
+       * The fingerprint covers the scripts; template mutants are hosted by the
+       * compile test of instrumentFile.
+       */
       let hosted = generateMutants(source, {
         settings: { templates: false },
         preset,
@@ -4761,98 +4763,98 @@ describe('generateFileMutants', () => {
       })
     },
   )
-})
 
-describe('generateFileMutants on non-runtime code', () => {
-  it.each(
-    NON_RUNTIME_SNIPPETS.flatMap(snippet =>
-      ['recommended', 'strict'].map(preset => ({ ...snippet, preset })),
-    ),
-  )('runs every mutator without errors ($file, $preset)', snippet => {
-    expect(() =>
-      generateMutants(snippet.lines.join('\n'), {
-        preset: snippet.preset,
-        file: snippet.file,
-      }),
-    ).not.toThrow()
-  })
-})
-
-describe('runProgram', () => {
-  it.each([
-    [
-      'function f(items) { return items }',
-      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:*.arguments[0]}}',
-    ],
-    [
-      'function f(items) { return [...items] }',
-      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:["a"]}}',
-    ],
-    [
-      'function f(items) { items.pop() }',
-      '{arguments:@.arguments[@.arguments[0][]],events:[["returned"]],result:{value:undefined:undefined}}',
-    ],
-    [
-      'function f(items) { items[0] = items.at(0) }',
-      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:undefined:undefined}}',
-    ],
-    ['function f() { for (;;) {} }', 'hung'],
-    ['async function f() { await null; for (;;) {} }', 'hung'],
-    [
-      'function f() { return new Promise(() => {}) }',
-      '{arguments:@.arguments[@.arguments[0]["a"]],events:[],result:{pending:boolean:true}}',
-    ],
-    [
-      "async function f() { settle('a'); run() }",
-      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["run"],["returned"],["settled","a"]],result:{value:undefined:undefined}}',
-    ],
-    [
-      "function f() { void (async () => { await settle('a'); await settle('b'); save() })() }",
-      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"],["settled","a"],["settled","b"],["save"]],result:{value:undefined:undefined}}',
-    ],
-    [
-      "async function f() { try { await fail('a') } catch (error) { return error.message } }",
-      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["failed","a"],["returned"]],result:{value:"a"}}',
-    ],
-    [
-      "function f() { throw new Error('no') }",
-      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{thrown:"no"}}',
-    ],
-    [
-      'function f() { let list = []; Object.defineProperty(list, 0, { get: () => run(), enumerable: true }); return list }',
-      '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:[<get>]}}',
-    ],
-  ])('observes %s', async (source, expected) => {
-    await expect(
-      runProgram(source, 'example.js', [[['a']]]),
-    ).resolves.toStrictEqual([expected])
-  })
-
-  it('tells a replaced object from the one that existed before the run', async () => {
-    let input = [[{ items: ['a'] }]]
-    let [replaced] = await runProgram(
-      'function f(box) { box.items = box.items.filter(() => true) }',
-      'example.js',
-      input,
-    )
-    let [kept] = await runProgram(
-      'function f(box) { box.items = box.items }',
-      'example.js',
-      input,
-    )
-
-    expect(replaced).not.toBe(kept)
-  })
-
-  it('observes the reads of a getter without calling it when describing', async () => {
-    await expect(
-      runProgram(
-        'function f(user) { return user.name + user.name }',
-        'example.js',
-        [[createReader({ name: 'a' })]],
+  describe('on non-runtime code', () => {
+    it.each(
+      NON_RUNTIME_SNIPPETS.flatMap(snippet =>
+        ['recommended', 'strict'].map(preset => ({ ...snippet, preset })),
       ),
-    ).resolves.toStrictEqual([
-      '{arguments:@.arguments[@.arguments[0]{name:<get>}],events:[["read","name"],["read","name"],["returned"]],result:{value:"aa"}}',
-    ])
+    )('runs every mutator without errors ($file, $preset)', snippet => {
+      expect(() =>
+        generateMutants(snippet.lines.join('\n'), {
+          preset: snippet.preset,
+          file: snippet.file,
+        }),
+      ).not.toThrow()
+    })
+  })
+
+  describe('runProgram', () => {
+    it.each([
+      [
+        'function f(items) { return items }',
+        '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:*.arguments[0]}}',
+      ],
+      [
+        'function f(items) { return [...items] }',
+        '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:["a"]}}',
+      ],
+      [
+        'function f(items) { items.pop() }',
+        '{arguments:@.arguments[@.arguments[0][]],events:[["returned"]],result:{value:undefined:undefined}}',
+      ],
+      [
+        'function f(items) { items[0] = items.at(0) }',
+        '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:undefined:undefined}}',
+      ],
+      ['function f() { for (;;) {} }', 'hung'],
+      ['async function f() { await null; for (;;) {} }', 'hung'],
+      [
+        'function f() { return new Promise(() => {}) }',
+        '{arguments:@.arguments[@.arguments[0]["a"]],events:[],result:{pending:boolean:true}}',
+      ],
+      [
+        "async function f() { settle('a'); run() }",
+        '{arguments:@.arguments[@.arguments[0]["a"]],events:[["run"],["returned"],["settled","a"]],result:{value:undefined:undefined}}',
+      ],
+      [
+        "function f() { void (async () => { await settle('a'); await settle('b'); save() })() }",
+        '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"],["settled","a"],["settled","b"],["save"]],result:{value:undefined:undefined}}',
+      ],
+      [
+        "async function f() { try { await fail('a') } catch (error) { return error.message } }",
+        '{arguments:@.arguments[@.arguments[0]["a"]],events:[["failed","a"],["returned"]],result:{value:"a"}}',
+      ],
+      [
+        "function f() { throw new Error('no') }",
+        '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{thrown:"no"}}',
+      ],
+      [
+        'function f() { let list = []; Object.defineProperty(list, 0, { get: () => run(), enumerable: true }); return list }',
+        '{arguments:@.arguments[@.arguments[0]["a"]],events:[["returned"]],result:{value:[<get>]}}',
+      ],
+    ])('observes %s', async (source, expected) => {
+      await expect(
+        runProgram(source, 'example.js', [[['a']]]),
+      ).resolves.toStrictEqual([expected])
+    })
+
+    it('tells a replaced object from the one that existed before the run', async () => {
+      let input = [[{ items: ['a'] }]]
+      let [replaced] = await runProgram(
+        'function f(box) { box.items = box.items.filter(() => true) }',
+        'example.js',
+        input,
+      )
+      let [kept] = await runProgram(
+        'function f(box) { box.items = box.items }',
+        'example.js',
+        input,
+      )
+
+      expect(replaced).not.toBe(kept)
+    })
+
+    it('observes the reads of a getter without calling it when describing', async () => {
+      await expect(
+        runProgram(
+          'function f(user) { return user.name + user.name }',
+          'example.js',
+          [[createReader({ name: 'a' })]],
+        ),
+      ).resolves.toStrictEqual([
+        '{arguments:@.arguments[@.arguments[0]{name:<get>}],events:[["read","name"],["read","name"],["returned"]],result:{value:"aa"}}',
+      ])
+    })
   })
 })

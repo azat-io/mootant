@@ -4,7 +4,7 @@ import { installMutantRuntime } from '../../../core/runtime/install-mutant-runti
 import { getSiteSyntax } from '../../../core/instrument/get-site-syntax'
 import { RUNTIME_GLOBAL } from '../../../core/runtime/runtime-global'
 
-describe('rUNTIME_GLOBAL', () => {
+describe('RUNTIME_GLOBAL', () => {
   it('names the global that site checks and the runtime share', () => {
     let runtime = installMutantRuntime()
 

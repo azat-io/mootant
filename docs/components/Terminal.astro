@@ -1,7 +1,7 @@
 ---
 import { Code } from 'astro:components'
 
-import { colorTheme } from '../utils/shiki-theme'
+import { shikiTheme } from '../utils/shiki-theme'
 
 interface Props {
   columns?: number
@@ -18,7 +18,7 @@ let { class: className, columns = 63, output, ...props } = Astro.props
   {...props}
 >
   <Code
-    theme={colorTheme}
+    theme={shikiTheme}
     code={output}
     class="code"
     lang="ansi"

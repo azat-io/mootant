@@ -23,8 +23,8 @@ function check(source: string, component = false): 'length' | 'first' | null {
 
 describe('getMatchResultUse', () => {
   it('stops at the whole result, which a test can tell apart', () => {
-    expect('ab'.match(/^a/u)).not.toStrictEqual('ab'.match(/^a/gu))
-    expect('ab'.match(/^a/u)).not.toEqual('ab'.match(/^a/gu))
+    expect(/^a/u.exec('ab')).not.toStrictEqual('ab'.match(/^a/gu))
+    expect(/^a/u.exec('ab')).not.toEqual('ab'.match(/^a/gu))
     expect(check('x = s.match(a)')).toBeNull()
   })
 

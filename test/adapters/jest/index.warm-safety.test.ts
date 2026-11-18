@@ -32,15 +32,25 @@ vi.mock(
  * read: survived.
  */
 const IN_BAND_ONLY = [
-  // A timer ends the process after its file ended.
+  /**
+   * A timer ends the process after its file ended.
+   */
   ['src/exit-leaves.js | boolean-literal | true', 'killed'],
-  // An interval keeps the process from ending.
+  /**
+   * An interval keeps the process from ending.
+   */
   ['src/interval-leaves.js | boolean-literal | true', 'Timeout'],
-  // A server keeps the process from ending.
+  /**
+   * A server keeps the process from ending.
+   */
   ['src/port-leaves.js | boolean-literal | true', 'Timeout'],
-  // A rejection comes after its file ended, with no test to fail.
+  /**
+   * A rejection comes after its file ended, with no test to fail.
+   */
   ['src/rejection-leaves.js | boolean-literal | true', 'killed'],
-  // A timer throws after its file ended, with no test to fail.
+  /**
+   * A timer throws after its file ended, with no test to fail.
+   */
   ['src/timer-leaves.js | boolean-literal | true', 'killed'],
 ]
 
@@ -92,44 +102,53 @@ function checkLeftovers(
   expect(listForked().filter(pid => isAlive(pid))).toStrictEqual([])
 }
 
-describe.each(majors)('jest warm safety on Jest %i', major => {
-  beforeEach(clearVariables)
+describe('jestAdapter', () => {
+  describe.each(majors)('warm safety on Jest %i', major => {
+    beforeEach(clearVariables)
 
-  afterEach(cleanUp)
+    afterEach(cleanUp)
 
-  /**
-   * Verdicts by hand of the `leftovers` fixture, once the first test made them.
-   */
-  let reference: Awaited<ReturnType<typeof runReference>> | undefined
+    /**
+     * Verdicts by hand of the `leftovers` fixture, once the first test made
+     * them.
+     */
+    let reference: Awaited<ReturnType<typeof runReference>> | undefined
 
-  it.each([{ concurrency: 1 }, { concurrency: 2 }])(
-    'keeps what a test leaves from every later verdict, with concurrency $concurrency',
-    { timeout: 600_000 },
-    async ({ concurrency }) => {
-      let run = await runJestBothWays(await createProject('leftovers', major), {
-        ...(reference && { reference }),
-        concurrency,
-      })
-      reference ??= run.reference
+    it.each([{ concurrency: 1 }, { concurrency: 2 }])(
+      'keeps what a test leaves from every later verdict, with concurrency $concurrency',
+      { timeout: 600_000 },
+      async ({ concurrency }) => {
+        let run = await runJestBothWays(
+          await createProject('leftovers', major),
+          {
+            ...(reference && { reference }),
+            concurrency,
+          },
+        )
+        reference ??= run.reference
 
-      checkLeftovers(run)
-    },
-  )
+        checkLeftovers(run)
+      },
+    )
 
-  it(
-    'gives the same verdicts with fresh workers, on a fork per unit',
-    { timeout: 600_000 },
-    async () => {
-      let run = await runJestBothWays(await createProject('leftovers', major), {
-        adapter: jestAdapter({ freshWorkers: true }),
-        ...(reference && { reference }),
-      })
-      reference ??= run.reference
+    it(
+      'gives the same verdicts with fresh workers, on a fork per unit',
+      { timeout: 600_000 },
+      async () => {
+        let run = await runJestBothWays(
+          await createProject('leftovers', major),
+          {
+            adapter: jestAdapter({ freshWorkers: true }),
+            ...(reference && { reference }),
+          },
+        )
+        reference ??= run.reference
 
-      checkLeftovers(run)
-      expect(vi.mocked(fork).mock.calls).toHaveLength(
-        1 + vi.mocked(runOnWorker).mock.calls.length,
-      )
-    },
-  )
+        checkLeftovers(run)
+        expect(vi.mocked(fork).mock.calls).toHaveLength(
+          1 + vi.mocked(runOnWorker).mock.calls.length,
+        )
+      },
+    )
+  })
 })

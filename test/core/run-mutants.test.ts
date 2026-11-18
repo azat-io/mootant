@@ -496,8 +496,10 @@ describe('runMutants', () => {
         await run({ tests: [] }, { since: 'main' }),
       ]
 
-      // A run of every mutant switches neither the Astro component nor the
-      // file whose mutants are all ignored.
+      /**
+       * A run of every mutant switches neither the Astro component nor the file
+       * whose mutants are all ignored.
+       */
       expect(
         runs.map(({ fake }) => [
           fake.context!.files.map(entry => path.relative(root, entry.file)),
@@ -548,7 +550,9 @@ describe('runMutants', () => {
         await run({ tests: [] }, { since: 'main' }),
       ]
 
-      // Only the run that selects the mutants of `src/flag.ts` reports them.
+      /**
+       * Only the run that selects the mutants of `src/flag.ts` reports them.
+       */
       expect(
         runs.map(({ result, fake }) => [
           fake.context!.files.map(entry => path.relative(root, entry.file)),

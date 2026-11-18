@@ -1,6 +1,6 @@
 import type { TextStyle } from '../../types/cli/text-style'
 
-import { createColors } from '../../cli/terminal/colors'
+import { createColors } from '../../cli/terminal/create-colors'
 
 /**
  * Creates the style of a text report for tests: no colors, no width limit and

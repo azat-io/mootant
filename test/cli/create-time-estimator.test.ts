@@ -71,9 +71,11 @@ function repeat(count: number, value: number): number[] {
 
 describe('createTimeEstimator', () => {
   it('stays within about twice the time left on recorded rounds', () => {
-    // The node:test round ends with one test file alone for 150 s, whose last
-    // units run twice as long per millisecond of their cost as its first ones,
-    // which nothing that ended tells.
+    /**
+     * The node:test round ends with one test file alone for 150 s, whose last
+     * units run twice as long per millisecond of their cost as its first ones,
+     * which nothing that ended tells.
+     */
     for (let [name, low, high, step] of [
       ['node-test-round', 0.5, 2, 40_000],
       ['vitest-round', 1, 2.1, 8000],
@@ -96,9 +98,11 @@ describe('createTimeEstimator', () => {
   })
 
   it('keeps a batch run with one oversized unit near its time left', () => {
-    // Batch costs count every try of every mutant, so the unit expected to
-    // take 34 s ran 5 s: the durations of the units that ended tell, and the
-    // time its chain ran already counts.
+    /**
+     * Batch costs count every try of every mutant, so the unit expected to take
+     * 34 s ran 5 s: the durations of the units that ended tell, and the time
+     * its chain ran already counts.
+     */
     let samples = replayTrace('vitest-batch-round', 100)
 
     expect(samples.length).toBeGreaterThan(10)
@@ -217,8 +221,10 @@ describe('createTimeEstimator', () => {
       estimator.end({ duration: null, unit }, time)
     }
 
-    // The unit of the second chain started with the one that ended counts as
-    // half done.
+    /**
+     * The unit of the second chain started with the one that ended counts as
+     * half done.
+     */
     expect(estimator.left(3000)).toBeCloseTo(2000 + (3 * 500) / 5.5, 6)
   })
 

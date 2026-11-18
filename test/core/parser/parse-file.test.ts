@@ -165,6 +165,7 @@ describe('parseFile', () => {
   it('keeps an error without a label of a block that accepts a top-level return', () => {
     let result = parseSync('a.ts', 'return 1')
     let [error] = result.errors
+    // eslint-disable-next-line typescript/no-unsafe-class-instance-assignment -- The real parseSync returns a plain object too.
     vi.mocked(parseSync).mockReturnValueOnce({
       errors: [{ ...error!, labels: [] }],
       comments: result.comments,
@@ -381,6 +382,7 @@ describe('parseFile', () => {
   it('reports an error without a label without a position', () => {
     let result = parseSync('a.ts', 'let a = (1')
     let [error] = result.errors
+    // eslint-disable-next-line typescript/no-unsafe-class-instance-assignment -- The real parseSync returns a plain object too.
     vi.mocked(parseSync).mockReturnValueOnce({
       errors: [{ ...error!, labels: [] }],
       comments: result.comments,

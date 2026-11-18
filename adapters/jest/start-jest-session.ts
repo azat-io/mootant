@@ -207,7 +207,9 @@ export async function startJestSession(
     void pool.close()
     throw error
   })()
-  // Nothing may be listening when the host dies between two runs.
+  /**
+   * Nothing may be listening when the host dies between two runs.
+   */
   void died.catch(() => {})
 
   /**

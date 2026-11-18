@@ -232,8 +232,10 @@ export function createTryTracker(options: TrackerOptions): TryTracker {
 
   return {
     open(context) {
-      // `fullName` exists from Node 20.16 and 22.3 on, which the version check
-      // guarantees.
+      /**
+       * `fullName` exists from Node 20.16 and 22.3 on, which the version check
+       * guarantees.
+       */
       let name = context.fullName
       if (running.some(entry => name.startsWith(`${entry.name} > `))) {
         return

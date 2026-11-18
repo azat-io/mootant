@@ -234,6 +234,7 @@ function createDirent(
   path: string,
   kind: StoredEntry['kind'],
 ): Dirent {
+  // eslint-disable-next-line typescript/no-unsafe-class-instance-assignment -- A plain object stands in for the directory entry.
   return {
     ...describeEntry(kind),
     isSymbolicLink: () => kind === 'symlink',
@@ -254,7 +255,7 @@ function describeEntry(kind: StoredEntry['kind']): Stats {
     isDirectory: () => kind === 'directory' || kind === 'unreadable-directory',
     isFile: () => kind === 'file' || kind === 'unreadable-file',
     isSymbolicLink: () => false,
-  } as Stats
+  } as never
 }
 
 /**

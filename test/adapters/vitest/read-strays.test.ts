@@ -79,7 +79,9 @@ describe('readStrays', () => {
     expect(
       readStrays(createVitest(false, filter), strays, new Map()),
     ).toStrictEqual(['kept', 'other'])
-    // An aggregate error stays one error, as in Vitest.
+    /**
+     * An aggregate error stays one error, as in Vitest.
+     */
     expect(filter.mock.calls).toStrictEqual([
       [{ type: 'Uncaught Exception', code: 'ECONNRESET', message: 'dropped' }],
       [{ type: 'Unhandled Rejection', message: 'kept' }],
@@ -140,8 +142,10 @@ describe('readStrays', () => {
       [{ message: 'text' }, 'Unhandled Rejection'],
     ])
 
-    // A plain run reports what the callback threw as a new unhandled
-    // rejection, and the first call that returns decides.
+    /**
+     * A plain run reports what the callback threw as a new unhandled rejection,
+     * and the first call that returns decides.
+     */
     expect(
       readStrays(createVitest(false, filter), strays, new Map()),
     ).toStrictEqual(['no message', 'third', 'thrown text'])
@@ -193,8 +197,10 @@ describe('readStrays', () => {
       [{ message: 'holds a function' }, 'Uncaught Exception'],
     ])
 
-    // A plain object keeps its fields on the way back, an error keeps only its
-    // message and stack, and a value that cannot be sent stops a plain run.
+    /**
+     * A plain object keeps its fields on the way back, an error keeps only its
+     * message and stack, and a value that cannot be sent stops a plain run.
+     */
     expect(
       readStrays(createVitest(false, filter), strays, new Map()),
     ).toStrictEqual([

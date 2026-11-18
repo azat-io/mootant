@@ -509,9 +509,11 @@ export function createTransformerFactory(input: TransformerFactoryInput): {
       if (real === null) {
         return wrap(identity, undefined, plan)
       }
-      // A clone, since `@swc/jest` changes its options in place: that changes
-      // the project copy and every worker's second unit misses Jest's in-memory
-      // transforms.
+      /**
+       * A clone, since `@swc/jest` changes its options in place: that changes
+       * the project copy and every worker's second unit misses Jest's in-memory
+       * transforms.
+       */
       let clone = structuredClone(realConfig)
       let handed =
         TS_JEST_PATH.test(real) ?

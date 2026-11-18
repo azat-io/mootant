@@ -16,7 +16,9 @@ export function createEnvironmentProxy(
   target: object,
   state: EnvironmentProxyState,
 ): object {
-  // A test's fake timers replace the global after this.
+  /**
+   * A test's fake timers replace the global after this.
+   */
   let schedule = queueMicrotask
   /**
    * Reports a variable read by its name.

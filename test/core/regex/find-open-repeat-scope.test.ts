@@ -93,7 +93,9 @@ function testTexts(pattern: string): boolean[] {
 describe('findOpenRepeatScope', () => {
   describe('in a pattern', () => {
     it.each([
-      // Nothing before it.
+      /**
+       * Nothing before it.
+       */
       String.raw`\d+(?=%)`,
       String.raw`\d+%`,
       String.raw`\d{2,3}%`,
@@ -102,19 +104,27 @@ describe('findOpenRepeatScope', () => {
       'a+?b',
       String.raw`\d+$`,
       String.raw`\d+\b`,
-      // Nothing after it.
+      /**
+       * Nothing after it.
+       */
       String.raw`%\d+`,
       String.raw`^\d+`,
       String.raw`\b\d+`,
       String.raw`(?<=%)\d+`,
       'ba{2,3}',
-      // Both.
+      /**
+       * Both.
+       */
       String.raw`\d+`,
       'a{1,}',
-      // Only optional elements after it.
+      /**
+       * Only optional elements after it.
+       */
       String.raw`%\d+a?`,
       String.raw`%\d+a*b{0,2}`,
-      // Through groups and other alternatives.
+      /**
+       * Through groups and other alternatives.
+       */
       String.raw`(\d+)%`,
       String.raw`(?:\d+)%`,
       String.raw`(?:\d+|x)%`,
@@ -158,7 +168,9 @@ describe('findOpenRepeatScope', () => {
     )
 
     it.each([
-      // Something required on both sides.
+      /**
+       * Something required on both sides.
+       */
       String.raw`^\d+$`,
       String.raw`a\d+%`,
       String.raw`^\d+%`,
@@ -193,19 +205,25 @@ describe('findOpenRepeatScope', () => {
 
   describe('in a lookaround', () => {
     it.each([
-      // The end of a lookahead.
+      /**
+       * The end of a lookahead.
+       */
       String.raw`b(?=\d+)`,
       String.raw`b(?!\d+)`,
       String.raw`b(?=a\d+)`,
       String.raw`b(?=a\d+%?)`,
       String.raw`b(?=(?:x|\d+))`,
       String.raw`b(?=a(?:\d+))%?`,
-      // The start of a lookbehind, which matches backward.
+      /**
+       * The start of a lookbehind, which matches backward.
+       */
       String.raw`(?<=\d+)b`,
       String.raw`(?<!\d+)b`,
       String.raw`(?<=\d+a)b`,
       String.raw`(?<=(?:x|\d+)a)b`,
-      // Under another quantifier, since the lookaround starts at one place.
+      /**
+       * Under another quantifier, since the lookaround starts at one place.
+       */
       String.raw`(?:b(?=\d+))+`,
     ])('does not change what %s matches', pattern => {
       let node = findQuantifiers(pattern).find(
@@ -233,7 +251,9 @@ describe('findOpenRepeatScope', () => {
     })
 
     it.each([
-      // Something required beyond it.
+      /**
+       * Something required beyond it.
+       */
       String.raw`b(?=\d+%)`,
       String.raw`b(?!\d+%)`,
       String.raw`(?<=a\d+)b`,

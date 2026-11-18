@@ -122,7 +122,9 @@ describe('keepTransformReads', () => {
     await mkdir(source)
     await writeFile(tsconfig, '{}\n')
     let long = new Date('2000-01-01')
-    // Linux stamps files by a coarse clock, which can be behind Date.now().
+    /**
+     * Linux stamps files by a coarse clock, which can be behind Date.now().
+     */
     let late = new Date(started + 1000)
     await utimes(source, long, long)
     await utimes(changed, late, late)

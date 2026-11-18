@@ -77,14 +77,14 @@ let closes: (() => Promise<unknown>)[] = []
  *
  * @param root - Root of the project.
  * @param options - Options of the adapter.
- * @param context - What differs from the default context.
+ * @param options.context - What differs from the default context.
  * @returns The session.
  */
 async function start(
   root: string,
-  options: JestAdapterOptions = {},
-  context: Partial<AdapterContext> = {},
+  options: { context?: Partial<AdapterContext> } & JestAdapterOptions = {},
 ): ReturnType<typeof startJestSession> {
+  let { context, ...adapterOptions } = options
   let workDirectory = await mkdtemp(path.join(tmpdir(), 'mootant-work-'))
   directories.push(workDirectory)
   let session = await startJestSession(
@@ -98,7 +98,7 @@ async function start(
       root,
       ...context,
     },
-    options,
+    adapterOptions,
   )
   closes.push(session.close)
   return session
@@ -186,7 +186,7 @@ describe('startJestSession', { timeout: 60_000 }, () => {
       await writeFile(path.join(root, '__mocks__/fake.js'), '')
       let workDirectory = await mkdtemp(path.join(tmpdir(), 'mootant-work-'))
       directories.push(workDirectory)
-      let session = await start(root, {}, { workDirectory })
+      let session = await start(root, { context: { workDirectory } })
       let pid = readHostPid()
       let host = await readHost()
 
@@ -285,11 +285,10 @@ describe('startJestSession', { timeout: 60_000 }, () => {
       let root = await createProject(major)
       let workDirectory = await mkdtemp(path.join(tmpdir(), 'mootant-work-'))
       directories.push(workDirectory)
-      let session = await start(
-        root,
-        { env: { FROM_OPTIONS: '1' } },
-        { workDirectory },
-      )
+      let session = await start(root, {
+        context: { workDirectory },
+        env: { FROM_OPTIONS: '1' },
+      })
       let inputs = await session.cacheInputs!()
       let host = await readHost()
       let saved = JSON.parse(
@@ -345,7 +344,7 @@ describe('startJestSession', { timeout: 60_000 }, () => {
       )
       let workDirectory = await mkdtemp(path.join(tmpdir(), 'mootant-work-'))
       directories.push(workDirectory)
-      await start(root, {}, { workDirectory })
+      await start(root, { context: { workDirectory } })
       let saved = JSON.parse(
         await readFile(path.join(workDirectory, 'jest/session.json'), 'utf8'),
       ) as { globalConfig: Record<string, unknown> }
@@ -465,11 +464,9 @@ describe('startJestSession', { timeout: 60_000 }, () => {
         path.join(root, 'global-setup.js'),
         `module.exports = () => { console.log('no one reads this') }`,
       )
-      let session = await start(
-        root,
-        {},
-        { onOutput: undefined, concurrency: 2 },
-      )
+      let session = await start(root, {
+        context: { onOutput: undefined, concurrency: 2 },
+      })
 
       expect(session.workers).toBe(2)
       expect(vi.mocked(createWorkerPool).mock.lastCall![0].size).toBe(2)
@@ -485,7 +482,10 @@ describe('startJestSession', { timeout: 60_000 }, () => {
             console.log('workers', globalConfig.maxWorkers)
           }`,
         )
-        let session = await start(root, { command }, { concurrency: 2 })
+        let session = await start(root, {
+          context: { concurrency: 2 },
+          command,
+        })
 
         expect(session.workers).toBe(2)
         expect(vi.mocked(createWorkerPool).mock.lastCall![0].size).toBe(2)
@@ -540,11 +540,10 @@ describe('startJestSession', { timeout: 60_000 }, () => {
             testEnvironment: 'node',
           }`,
         )
-        return start(
-          root,
-          { command: input.command },
-          { concurrency: input.concurrency },
-        )
+        return start(root, {
+          context: { concurrency: input.concurrency },
+          command: input.command,
+        })
       }
 
       /**
@@ -757,7 +756,7 @@ describe('startJestSession', { timeout: 60_000 }, () => {
             return new Promise(() => {})
           })`,
         )
-        let session = await start(root, {}, { concurrency: 1 })
+        let session = await start(root, { context: { concurrency: 1 } })
         await session.dryRun(createRequest(file))
         await session.dryRun(createRequest(dying))
         await session.dryRun(createRequest(file))
@@ -900,19 +899,16 @@ describe('startJestSession', { timeout: 60_000 }, () => {
         })`,
       )
       let chunks: [string, string | null][] = []
-      let session = await start(
-        root,
-        {
-          command:
-            "TEMPLATE='$HOME' node --stack-size=500 node_modules/jest/bin/jest.js",
-          env: { FROM_OPTIONS: 'options' },
-        },
-        {
+      let session = await start(root, {
+        context: {
           onOutput: (text, from) => {
             chunks.push([text, from])
           },
         },
-      )
+        command:
+          "TEMPLATE='$HOME' node --stack-size=500 node_modules/jest/bin/jest.js",
+        env: { FROM_OPTIONS: 'options' },
+      })
       let dry = await session.dryRun({
         timeouts: { file: 60_000, test: 60_000 },
         files: [{ project: '', file }],
@@ -1280,15 +1276,13 @@ describe('startJestSession', { timeout: 60_000 }, () => {
         module.exports = { testEnvironment: 'node' }`,
       )
       let chunks: [string, string | null][] = []
-      let session = await start(
-        root,
-        {},
-        {
+      let session = await start(root, {
+        context: {
           onOutput: (text, file) => {
             chunks.push([text, file])
           },
         },
-      )
+      })
 
       expect(chunks[0]).toStrictEqual(['from show config\n', null])
       expect(session.version).toMatch(/^30\./u)

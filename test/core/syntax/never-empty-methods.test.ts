@@ -37,7 +37,7 @@ let calls: Record<string, (() => string)[]> = {
   toISOString: [() => epoch.toISOString()],
 }
 
-describe('nEVER_EMPTY_METHODS', () => {
+describe('NEVER_EMPTY_METHODS', () => {
   it('lists the date and number formatters', () => {
     expect([...NEVER_EMPTY_METHODS].toSorted()).toStrictEqual(
       Object.keys(calls).toSorted(),

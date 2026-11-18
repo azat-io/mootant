@@ -189,8 +189,10 @@ export async function runUnit(
     { isInterrupted: () => false },
     { serial: true },
   )
-  // `TestRunner` forces 1 at the start of its async function, and the
-  // environment copies `process.env` later, so a test sees the slot.
+  /**
+   * `TestRunner` forces 1 at the start of its async function, and the
+   * environment copies `process.env` later, so a test sees the slot.
+   */
   target.env['JEST_WORKER_ID'] = worker.slot
   await running
   BufferedConsole.write = write
@@ -251,7 +253,9 @@ function closeVmSide(
   side.stopTimers()
   dead.add(side.realmError)
   side.close()
-  // A dry side holds a `Set`, whose type on the runtime says only `add`.
+  /**
+   * A dry side holds a `Set`, whose type on the runtime says only `add`.
+   */
   let coverage = side.runtime.coverage as Set<string> | null
   return {
     covers: [...(coverage ?? [])].toSorted(compareCodeUnits),

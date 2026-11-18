@@ -231,7 +231,7 @@ let clock = captureClock()
  * code listens for itself is left to that code (`interceptStrays`); the main
  * process decides which of the recorded errors count (`readStrays`).
  */
-export default class MootantRunner extends TestRunner {
+export default class Runner extends TestRunner {
   /**
    * Coverage the runtime writes to while several tries of a dry run overlap:
    * each site counts for every one of them.
@@ -991,7 +991,9 @@ export default class MootantRunner extends TestRunner {
     if (current === null || current.timedOut) {
       this.startTry(record)
     } else if (retries > current.retries) {
-      // Vitest retries only after an attempt that added an error.
+      /**
+       * Vitest retries only after an attempt that added an error.
+       */
       current.attempt = test.result!.errors!.length
       current.state = undefined
       current.retries = retries

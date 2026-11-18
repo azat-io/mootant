@@ -25,18 +25,18 @@ const TESTED: SkipNote = { rule: 'unused-repeat', reason: 'tested' }
  * Lists the changed patterns of a pattern.
  *
  * @param pattern - Pattern of a literal.
- * @param flags - Flags of the literal.
  * @param options - Options over the defaults.
+ * @param options.flags - Flags of the literal.
  * @returns Each changed pattern, with the rule of its skip if any.
  */
 function collect(
   pattern: string,
-  flags = '',
-  options: Partial<RegexPatternOptions> = {},
+  options: Partial<RegexPatternOptions> & { flags?: string } = {},
 ): string[] {
+  let { flags = '', ...overrides } = options
   return collectPatternChanges(
     { tree: parseRegexPattern(pattern, flags)!, flags },
-    { ...DEFAULTS, ...options },
+    { ...DEFAULTS, ...overrides },
     null,
   ).map(
     change =>
@@ -67,12 +67,12 @@ describe('collectPatternChanges', () => {
 
   it('leaves `.` and a property of strings alone', () => {
     expect(
-      collect(String.raw`.\p{RGI_Emoji}`, 'v', { negations: true }),
+      collect(String.raw`.\p{RGI_Emoji}`, { negations: true, flags: 'v' }),
     ).toStrictEqual(['.[^]'])
   })
 
   it('escapes the characters of a narrowed range', () => {
-    expect(collect('[ -~]', '', { classMembers: true })).toStrictEqual([
+    expect(collect('[ -~]', { classMembers: true })).toStrictEqual([
       '[^]',
       String.raw`[\u0021-~]`,
       String.raw`[ -\u007D]`,
@@ -80,7 +80,7 @@ describe('collectPatternChanges', () => {
   })
 
   it('narrows a lazy quantifier and keeps it lazy', () => {
-    expect(collect('a+?', '', { quantifiers: true })).toStrictEqual([
+    expect(collect('a+?', { quantifiers: true })).toStrictEqual([
       'a',
       'a*?',
       'a{2,}?',
@@ -271,12 +271,16 @@ describe('collectPatternChanges', () => {
   })
 
   it('widens only the outer class of a nested expression class', () => {
-    expect(collect(String.raw`[[\w--\d]x]`, 'v')).toStrictEqual(['[^]'])
+    expect(collect(String.raw`[[\w--\d]x]`, { flags: 'v' })).toStrictEqual([
+      '[^]',
+    ])
   })
 
   it('widens a class of any character that also holds strings', () => {
-    expect(collect(String.raw`[\s\S\q{}]`, 'v')).toStrictEqual(['[^]'])
-    expect(collect(String.raw`[\s\S]`, 'v')).toStrictEqual([
+    expect(collect(String.raw`[\s\S\q{}]`, { flags: 'v' })).toStrictEqual([
+      '[^]',
+    ])
+    expect(collect(String.raw`[\s\S]`, { flags: 'v' })).toStrictEqual([
       '[^] (any-character)',
     ])
   })

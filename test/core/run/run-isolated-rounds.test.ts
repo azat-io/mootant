@@ -107,8 +107,10 @@ describe('runIsolatedRounds', () => {
 
     await runIsolatedRounds(session, state)
 
-    // The test spends its second, as in a slow hook, without evaluating a
-    // site, which leaves the room of the confirmation as it is.
+    /**
+     * The test spends its second, as in a slow hook, without evaluating a site,
+     * which leaves the room of the confirmation as it is.
+     */
     expect(
       fake.calls.isolated.map(plan =>
         plan.units.map(unit => [unit.mutant, unit.limits]),
@@ -175,7 +177,9 @@ describe('runIsolatedRounds', () => {
 
     await runIsolatedRounds(session, state)
 
-    // Its doubled time lets the test reach hot code past its wait.
+    /**
+     * Its doubled time lets the test reach hot code past its wait.
+     */
     expect(
       fake.calls.isolated.map(plan => plan.units.map(unit => unit.limits)),
     ).toStrictEqual([
