@@ -208,7 +208,8 @@ function getReplacements(
  * Decides whether a boolean constant of a returned value is skipped (catalog
  * 4.14): the owner of the result emits the constant (O19), the returned
  * comparison always has it (see `getComparisonSkip`), or a mutant that will run
- * moves the result, or a value assigned to its local, toward it (R6).
+ * moves the result, or a value assigned to its local that only the `return`
+ * reads (see `getAssignedValues`), toward it (R6).
  *
  * @param target - Returned value, through parentheses.
  * @param value - Constant written in place of the value.
@@ -402,6 +403,35 @@ function isArrayFill(
 }
 
 /**
+ * Lists the other sources of a returned local's value (catalog 4.14, R6): the
+ * initializer and the right sides of the `=` writes in the same function, when
+ * other code only assigns the local (see `isOnlyAssigned`), since a test can
+ * otherwise kill a mutant in them without checking the returned value. A write
+ * whose value other code reads, such as the test of an `if`, is no source
+ * either, nor is a chained initializer, `let ok = other = x`, or one that a
+ * destructuring pattern takes apart, even with one name.
+ *
+ * @param value - Returned expression, through wrappers.
+ * @param context - Mutator context of the file.
+ * @returns The source expressions.
+ */
+function getAssignedValues(value: Node, context: MutatorContext): Node[] {
+  let binding =
+    value.type === 'Identifier' ? getLocalBinding(value, context) : null
+  if (!binding || !isOnlyAssigned(value, binding, context)) {
+    return []
+  }
+  let { syntax } = context
+  let { id } = binding.declaration as VariableDeclarator
+  return getLocalRanges(value, context).flatMap((range): Node[] => {
+    if (range.type !== 'AssignmentExpression') {
+      return id === binding.identifier ? [range] : []
+    }
+    return syntax.isResultUnused(range) ? [range.right] : []
+  })
+}
+
+/**
  * Tells whether an expression is a call of `Promise.resolve`, wrappers of the
  * callee and of `Promise` included, with at most one argument.
  *
@@ -547,6 +577,36 @@ function resolvesWith(
 }
 
 /**
+ * Tells whether every reference of a returned local other than the returned
+ * identifier is the target of an `=` write, through parentheses and TypeScript
+ * wrappers, wherever the write is. Every other reference counts as a read, in
+ * this function or a nested one: a compound write such as `||=` reads the
+ * local, and an update, a destructuring pattern and a loop head are counted
+ * too.
+ *
+ * @param returned - Returned identifier.
+ * @param binding - Binding of the local.
+ * @param context - Mutator context of the file.
+ * @returns Whether other code only assigns the local.
+ */
+function isOnlyAssigned(
+  returned: Node,
+  binding: Binding,
+  context: MutatorContext,
+): boolean {
+  let targets = new Set(
+    binding.writes.flatMap(write =>
+      write.type === 'AssignmentExpression' && write.operator === '=' ?
+        [context.syntax.unwrapExpression(write.left)]
+      : [],
+    ),
+  )
+  return binding.references.every(
+    reference => reference === returned || targets.has(reference),
+  )
+}
+
+/**
  * Tells whether evaluating an expression has an effect that a `void` function's
  * default would remove: a call, `new`, `await`, assignment, update, `delete`,
  * tagged template or `yield`, also as an element of a sequence or as a call in
@@ -615,26 +675,6 @@ function getPromiseDefaults(
   return resolvedDefaults[kind.promise]
     .filter(item => !resolvesWith(value, item.value, context))
     .map(item => ({ text: `Promise.resolve(${item.text})`, value: {} }))
-}
-
-/**
- * Lists the other sources of a returned local's value (catalog 4.14, R6): the
- * initializer and the right sides of the `=` writes in the same function. Other
- * writes are listed whole; no mutant moves them toward a constant.
- *
- * @param value - Returned expression, through wrappers.
- * @param context - Mutator context of the file.
- * @returns The source expressions.
- */
-function getAssignedValues(value: Node, context: MutatorContext): Node[] {
-  if (value.type !== 'Identifier') {
-    return []
-  }
-  return getLocalRanges(value, context).map(range =>
-    range.type === 'AssignmentExpression' && range.operator === '=' ?
-      range.right
-    : range,
-  )
 }
 
 /**

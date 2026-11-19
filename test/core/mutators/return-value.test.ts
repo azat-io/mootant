@@ -679,9 +679,23 @@ describe('returnValue', () => {
   it.each([
     'function f(a: number): boolean { let ok = check(); if (a) ok = a > 2; return ok }',
     'function f(ok: boolean): boolean { const label = ok ? true : false; return label }',
-    'function k(a: number) { let ok = false; console.log((ok = a > 1)); return ok }',
+    'function f(a: number, c: boolean): boolean { let ok = check(); if (c) (ok as boolean) = a > 2; return ok }',
+    'function f(a: number, items: number[]): boolean { let ok = a > 2; items.forEach(() => { ok = false }); return ok }',
+    'function f(a: number, b: number, log: (ok: boolean) => void): boolean { let ok = a > 2; if (b) log((ok = b > 1)); return ok }',
+    'function f(c: boolean, pair: [boolean, number], a: number, report: (n: number) => void): boolean { let [ok, n] = pair; if (c) ok = a > 2; report(n); return ok }',
   ])('skips the boolean constants moved through a local in %s', code => {
     expect(listMutantTexts('return-value', [code])).toStrictEqual([])
+  })
+
+  it('skips the boolean constants of a returned local that only the return reads', () => {
+    let source =
+      'function f(a: number, b: boolean): boolean { let ok = a > 0 && b; return ok }'
+
+    expect(listMutantTexts('return-value', [source])).toStrictEqual([])
+    expect(listSkipped('return-value', source)).toStrictEqual([
+      'ok -> true (subsumed R6)',
+      'ok -> false (subsumed R6)',
+    ])
   })
 
   it('keeps the boolean constants of a local with a compound write', () => {
@@ -691,6 +705,112 @@ describe('returnValue', () => {
       ]),
     ).toStrictEqual(['ok -> true', 'ok -> false'])
   })
+
+  it('keeps the boolean constants of a returned local that a branch also reads', () => {
+    let lines = [
+      'export function validate(input, report) {',
+      '  let ok = input.length > 2 && input.length < 10',
+      '  if (!ok) {',
+      "    report('invalid')",
+      '  }',
+      '  return ok',
+      '}',
+    ]
+
+    expect(
+      listMutantTexts('return-value', lines, { file: 'example.js' }),
+    ).toStrictEqual(['ok -> true', 'ok -> false'])
+    expect(
+      listSkipped('return-value', lines.join('\n'), { file: 'example.js' }),
+    ).toStrictEqual([])
+  })
+
+  it.each([
+    {
+      code: 'function f(a: number, notify: (ok: boolean) => void): boolean { let ok = a > 2; notify(ok); return ok }',
+      expected: ['ok -> true', 'ok -> false'],
+    },
+    {
+      code: 'function f(a: number, report: () => void): boolean { let ok: boolean; ok = a > 2; if (!ok) report(); return ok }',
+      expected: ['ok -> true', 'ok -> false'],
+    },
+    {
+      code: 'function f(a: number, items: number[], use: (item: number, ok: boolean) => void): boolean { let ok = a > 2; items.forEach(item => { use(item, ok) }); return ok }',
+      expected: ['ok -> true', 'ok -> false'],
+    },
+    {
+      code: 'function f(a: number, b: boolean): boolean { let ok = a > 2; if (b) return ok; return ok }',
+      expected: ['ok -> true', 'ok -> false', 'ok -> true', 'ok -> false'],
+    },
+    {
+      code: 'function f(a: number): boolean { let ok = a > 2; console.log(ok); return ok }',
+      expected: ['ok -> true', 'ok -> false'],
+    },
+    {
+      code: 'function f(a: number, report: () => void): boolean { let ok: boolean; if ((ok = a > 2)) report(); return ok }',
+      expected: ['ok -> true', 'ok -> false'],
+    },
+  ])(
+    'keeps the boolean constants of a returned local that other code reads in $code',
+    ({ expected, code }) => {
+      expect(listMutantTexts('return-value', [code])).toStrictEqual(expected)
+    },
+  )
+
+  it.each([
+    {
+      code: 'function f(a: number, save: () => boolean): boolean { let ok = a > 2; ok &&= save(); return ok }',
+      title: 'the target of a logical assignment',
+    },
+    {
+      code: 'function f(a: number): boolean { let ok = false; [ok] = [a > 2]; return ok }',
+      title: 'a destructuring write',
+    },
+    {
+      code: [
+        'declare function dec(value: unknown): any',
+        'function k(a: number): boolean { let ok = a > 1; class A { @dec(ok) m() {} } return ok }',
+      ].join('\n'),
+      title: 'a reference outside the runtime tree',
+    },
+    {
+      code: 'function f(a: number, b: boolean): boolean { let ok = a > 2; if (b) ok = !ok; return ok }',
+      title: 'the value of its own write',
+    },
+  ])('counts $title as a read of a returned boolean local', ({ code }) => {
+    expect(listMutantTexts('return-value', [code])).toStrictEqual([
+      'ok -> true',
+      'ok -> false',
+    ])
+  })
+
+  it.each([
+    {
+      code: 'function k(a: number) { let ok = false; console.log((ok = a > 1)); return ok }',
+      title: 'a write whose value other code reads',
+      expected: ['ok -> false'],
+    },
+    {
+      code: 'function f(a: number, use: (other: boolean) => void): boolean { let other: boolean; let ok = other = a > 2; use(other); return ok }',
+      title: 'an initializer that is itself an assignment',
+      expected: ['ok -> true', 'ok -> false'],
+    },
+    {
+      code: "function f(items: boolean[][], c: boolean, report: (v: unknown) => void) { return items.filter(item => { let [ok, second] = c ? '' : item; report(second); return ok }) }",
+      title: 'the initializer of a destructuring pattern',
+      expected: ['ok -> true', 'ok -> false'],
+    },
+    {
+      code: "function f(items: boolean[][], c: boolean) { return items.filter(item => { let [ok] = c ? '' : item; return ok }) }",
+      title: 'the initializer of a destructuring pattern with one name',
+      expected: ['ok -> true', 'ok -> false'],
+    },
+  ])(
+    'does not count $title as a source of a returned boolean local',
+    ({ expected, code }) => {
+      expect(listMutantTexts('return-value', [code])).toStrictEqual(expected)
+    },
+  )
 
   it.each<{ setup: MutatorSetup; code: string }>([
     {

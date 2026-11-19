@@ -183,6 +183,9 @@ Changes that come back:
   setting, on in `strict`.
 - `solitary` and `R6`, when the other mutant doesn't run, for example because
   its mutator is off.
+- `R6` for a returned variable, when other code also uses it, such as
+  `if (free)` before `return free`. A statement `free = …` that only assigns it
+  is not a use.
 - `logging-call`, when [`loggers`](/guide/configuration#loggers) leaves out the
   logger.
 
