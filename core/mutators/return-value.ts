@@ -1,4 +1,9 @@
-import type { VariableDeclarator, CallExpression, Node } from 'oxc-parser'
+import type {
+  VariableDeclarator,
+  MemberExpression,
+  CallExpression,
+  Node,
+} from 'oxc-parser'
 
 import type {
   ReturnValueKind,
@@ -45,6 +50,17 @@ interface ReturnDefault {
  * ranges of a returned value.
  */
 let localKinds = new Set<Binding['kind']>(['const', 'let', 'var'])
+
+/**
+ * Operators of the assignments that read their target to decide whether the
+ * right side runs.
+ */
+let logicalAssignments = new Set(['&&=', '??=', '||='])
+
+/**
+ * Array methods that only add their arguments to the array.
+ */
+let fillMethods = new Set(['unshift', 'push'])
 
 /**
  * Expression types that have an effect, which a `void` function's default
@@ -168,7 +184,7 @@ function getReplacements(
   }
   let callback = getCallbackResult(target, context)
   let solitary =
-    kind === 'boolean' ? null : [target, ...getLocalRanges(value, context)]
+    kind === 'boolean' ? null : [target, ...getSolitaryRanges(value, context)]
   return defaults.map(item => {
     let replacement: Replacement =
       solitary ?
@@ -276,6 +292,47 @@ function getDefaults(
 }
 
 /**
+ * Tells whether a reference of a returned local may let a test see its value.
+ * Every reference may, in this function or a nested one, except the target of
+ * an update or an assignment whose result is unused, such as `count++` on its
+ * own line, and the receiver of a call that only fills the array the local
+ * holds (see `isArrayFill`). The target of a logical assignment, such as `||=`,
+ * reads the local, since the local decides whether the right side runs. A
+ * reference outside the runtime tree, such as the argument of `import()`, reads
+ * the local too.
+ *
+ * @param reference - Identifier that refers to the local.
+ * @param binding - Binding of the local.
+ * @param context - Mutator context of the file.
+ * @returns Whether the reference may show the local's value.
+ */
+function isRead(
+  reference: Node,
+  binding: Binding,
+  context: MutatorContext,
+): boolean {
+  let { syntax } = context
+  if (!syntax.isRuntimeNode(reference)) {
+    return true
+  }
+  let { parent, key } = syntax.getContextSlot(reference)
+  switch (parent?.type) {
+    case 'AssignmentExpression':
+      return (
+        key !== 'left' ||
+        logicalAssignments.has(parent.operator) ||
+        !syntax.isResultUnused(parent)
+      )
+    case 'MemberExpression':
+      return key !== 'object' || !isArrayFill(parent, binding, context)
+    case 'UpdateExpression':
+      return !syntax.isResultUnused(parent)
+    default:
+      return true
+  }
+}
+
+/**
  * Tells whether the argument of a `Promise.resolve` call is the given default:
  * `undefined` is the undeclared name or `void` of a literal, `null` the `null`
  * literal, `[]` an empty array literal, and any other default a literal of that
@@ -309,6 +366,42 @@ function isResolvedValue(
 }
 
 /**
+ * Tells whether a member of a returned local only adds elements to the array
+ * the local always holds: the member is `push` or `unshift`, not computed, and
+ * called with the result unused, and the initializer of the local, never
+ * written, is an array literal, through parentheses and TypeScript wrappers.
+ * The methods of arrays are assumed not to be patched.
+ *
+ * @param member - Member expression whose object is the local.
+ * @param binding - Binding of the local.
+ * @param context - Mutator context of the file.
+ * @returns Whether the call only fills the array.
+ */
+function isArrayFill(
+  member: MemberExpression,
+  binding: Binding,
+  context: MutatorContext,
+): boolean {
+  let { syntax } = context
+  let { init } = binding.declaration as VariableDeclarator
+  if (
+    !init ||
+    member.computed ||
+    binding.writes.length > 0 ||
+    !fillMethods.has(member.property.name) ||
+    syntax.unwrapExpression(init).type !== 'ArrayExpression'
+  ) {
+    return false
+  }
+  let call = syntax.getContextSlot(member)
+  return (
+    call.key === 'callee' &&
+    call.parent?.type === 'CallExpression' &&
+    syntax.isResultUnused(call.parent)
+  )
+}
+
+/**
  * Tells whether an expression is a call of `Promise.resolve`, wrappers of the
  * callee and of `Promise` included, with at most one argument.
  *
@@ -337,10 +430,10 @@ function isPromiseResolveCall(
 }
 
 /**
- * Lists the extra solitary ranges of a returned value (catalog 2.6): the
- * initializer of a returned local, or of the root of a returned member chain,
- * and its writes in the same function. Writes outside the runtime tree, such as
- * in the arguments of a logging call, are never mutated and are left out.
+ * Lists the initializer of a returned local, or of the root of a returned
+ * member chain, and its writes in the same function (catalog 2.6, 4.14). Writes
+ * outside the runtime tree, such as in a decorator, are never mutated and are
+ * left out.
  *
  * @param value - Returned expression, through wrappers.
  * @param context - Mutator context of the file.
@@ -388,6 +481,34 @@ function getLocalBinding(value: Node, context: MutatorContext): Binding | null {
     ) ?
       binding
     : null
+}
+
+/**
+ * Lists the extra solitary ranges of a returned value (catalog 2.6): the
+ * initializer and the writes of a returned local (see `getLocalRanges`). There
+ * are none when a reference of the local other than the returned identifier, or
+ * the root of a returned member chain, is a read (see `isRead`), since a test
+ * can then kill a mutant in them without checking the returned value, or when a
+ * destructuring pattern declares the local, even with one name, since its
+ * initializer may give other names their values.
+ *
+ * @param value - Returned expression, through wrappers.
+ * @param context - Mutator context of the file.
+ * @returns The initializer and the writes, or none.
+ */
+function getSolitaryRanges(value: Node, context: MutatorContext): Node[] {
+  let binding = getLocalBinding(value, context)
+  let root = getMemberRoot(value)
+  if (
+    binding &&
+    ((binding.declaration as VariableDeclarator).id !== binding.identifier ||
+      binding.references.some(
+        reference => reference !== root && isRead(reference, binding, context),
+      ))
+  ) {
+    return []
+  }
+  return getLocalRanges(value, context)
 }
 
 /**

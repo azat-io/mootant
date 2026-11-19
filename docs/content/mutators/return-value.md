@@ -85,7 +85,9 @@ In `recommended`, a returned value with a finer mutant inside, such as
 `price * quantity`, gets no mutant of this mutator, unless it is a boolean. The
 same goes for a returned local variable, or a property of it, when its initial
 value or a later assignment holds a finer mutant, such as `sum` after
-`let sum = 0`.
+`let sum = 0`. Any other use of the variable, such as `notify(sum)`, brings
+`sum` → `0` back. A statement that only assigns it, such as `sum += price`,
+doesn't, nor does `push()` or `unshift()` on the array literal it starts as.
 
 This skip rests on a guess: a test that catches `price / quantity` also catches
 `0`. The guess can fail: for a function that sums a list, a test with an empty

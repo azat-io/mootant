@@ -679,6 +679,7 @@ describe('returnValue', () => {
   it.each([
     'function f(a: number): boolean { let ok = check(); if (a) ok = a > 2; return ok }',
     'function f(ok: boolean): boolean { const label = ok ? true : false; return label }',
+    'function k(a: number) { let ok = false; console.log((ok = a > 1)); return ok }',
   ])('skips the boolean constants moved through a local in %s', code => {
     expect(listMutantTexts('return-value', [code])).toStrictEqual([])
   })
@@ -795,12 +796,11 @@ describe('returnValue', () => {
       expected: ['cfg.url -> undefined'],
     },
     {
-      code: 'function run(ts: (() => void)[]) { let done = 0; for (const t of ts) { t(); console.log(++done) } return done }',
-      expected: [],
-    },
-    {
-      code: 'function k(a: number) { let ok = false; console.log((ok = a > 1)); return ok }',
-      expected: [],
+      code: [
+        'declare function dec(value: unknown): any',
+        'function k(a: number): boolean { let ok = false; class A { @dec((ok = a > 1)) m() {} } return ok }',
+      ].join('\n'),
+      expected: ['ok -> false'],
     },
   ])(
     'leaves names and writes outside the runtime tree out in $code',
@@ -885,6 +885,176 @@ describe('returnValue', () => {
       expect(listMutantTexts('return-value', lines, setup)).toStrictEqual(
         expected,
       )
+    },
+  )
+
+  it('keeps the default of a returned local that a callback also reads', () => {
+    let lines = [
+      'export function processAll(items, onItem) {',
+      '  let count = 0',
+      '  for (let item of items) {',
+      '    count++',
+      '    onItem(item, count)',
+      '  }',
+      '  return count',
+      '}',
+    ]
+
+    expect(
+      listMutantTexts('return-value', lines, { file: 'example.js' }),
+    ).toStrictEqual(['count -> 0'])
+    expect(
+      listSkipped('return-value', lines.join('\n'), { file: 'example.js' }),
+    ).toStrictEqual([])
+  })
+
+  it.each<{ expected: string[]; file?: string; code: string }>([
+    {
+      code: 'function f(items, onItem) { let count = 0; for (let item of items) onItem(item, ++count); return count }',
+      expected: ['count -> 0'],
+    },
+    {
+      code: 'function f(items, onItem) { let count = 0; items.forEach(item => { count++; onItem(item, count) }); return count }',
+      expected: ['count -> 0'],
+    },
+    {
+      code: 'function f(items, flag) { let count = 0; for (let item of items) count++; if (flag) return count; return count }',
+      expected: ['count -> 0', 'count -> 0'],
+    },
+    {
+      code: 'function f(items, onMany) { let count = 0; for (let item of items) count++; if (count > 9) onMany(); return count }',
+      expected: ['count -> 0'],
+    },
+    {
+      code: 'function f(items, box) { let count = 0; for (let item of items) count++; box.total = count; return count }',
+      expected: ['count -> 0'],
+    },
+    {
+      code: 'function run(ts: (() => void)[]) { let done = 0; for (const t of ts) { t(); console.log(++done) } return done }',
+      expected: ['done -> 0'],
+      file: 'example.ts',
+    },
+    {
+      code: 'async function f(onItem) { const r = await load(); onItem(r); return r.hits }',
+      expected: ['r.hits -> undefined'],
+    },
+    {
+      code: "async function f() { let path = './plugin.js'; await import(path); return path }",
+      expected: ["path -> ''"],
+    },
+    {
+      code: "function f(items, onItem) { let last = ''; for (let item of items) onItem((last = item.name.trim())); return last }",
+      expected: ["last -> ''"],
+    },
+    {
+      code: 'function f(items, warn) { let count = 0; for (let item of items) count++; count ||= warn(); return count }',
+      expected: ['count -> undefined'],
+    },
+    {
+      code: 'function f(groups, key, x) { let list = groups.get(key) ?? []; list.push(x); return list }',
+      expected: ['list -> undefined'],
+    },
+  ])(
+    'keeps the default of a returned local that other code reads in $code',
+    ({ file = 'example.js', expected, code }) => {
+      expect(listMutantTexts('return-value', [code], { file })).toStrictEqual(
+        expected,
+      )
+    },
+  )
+
+  it.each([
+    {
+      code: 'async function f(api, id) { let { data, error } = await api.get(id); if (error) throw error; return data }',
+      expected: ['data -> undefined'],
+    },
+    {
+      code: 'async function f() { let [first] = await load(); return first }',
+      expected: ['first -> undefined'],
+    },
+  ])(
+    'keeps the default of a returned local that a destructuring pattern declares in $code',
+    ({ expected, code }) => {
+      expect(
+        listMutantTexts('return-value', [code], { file: 'example.js' }),
+      ).toStrictEqual(expected)
+    },
+  )
+
+  it.each([
+    {
+      code: 'function f(xs) { let paths = []; let size = 0; for (let x of xs) size = paths.push(x); return paths }',
+      title: 'a push whose result is used',
+      expected: ['paths -> []'],
+    },
+    {
+      code: 'function f(xs, reset) { let paths = []; if (reset) paths = []; for (let x of xs) paths.push(x); return paths }',
+      title: 'a push into a local that is also written',
+      expected: ['paths -> []'],
+    },
+    {
+      code: "function f(xs) { let paths = []; for (let x of xs) paths['push'](x); return paths }",
+      expected: ['paths -> []'],
+      title: 'a computed push',
+    },
+    {
+      code: 'function f(xs) { let paths = []; for (let x of xs) paths.splice(0, 0, x); return paths }',
+      title: 'another call on the local',
+      expected: ['paths -> []'],
+    },
+    {
+      code: 'function f(xs, run) { let paths = []; run(paths.push); return paths }',
+      title: 'a push that is not called',
+      expected: ['paths -> []'],
+    },
+    {
+      code: "function f(name) { let label = name.trim(); label ||= 'anon'; return label }",
+      title: 'the target of a logical assignment',
+      expected: ["label -> ''"],
+    },
+    {
+      code: "function f(text) { let node = document.createElement('li'); node.textContent = text; return node }",
+      expected: ['node -> undefined'],
+      title: 'a write of its member',
+    },
+    {
+      code: 'function f(xs) { let sum = 0; for (let x of xs) sum = sum + x; return sum }',
+      title: 'the value of its own write',
+      expected: ['sum -> undefined'],
+    },
+    {
+      code: 'function f(items) { let count = 0; items.forEach(() => count++); return count }',
+      title: 'a write that a forEach callback returns',
+      expected: ['count -> 0'],
+    },
+  ])('counts $title as a read of a returned local', ({ expected, code }) => {
+    expect(
+      listMutantTexts('return-value', [code], { file: 'example.js' }),
+    ).toStrictEqual(expected)
+  })
+
+  it.each([
+    'function f(xs) { let count = 0; for (let x of xs) count++; return count }',
+    'function f(items) { let count = 0; items.forEach(item => { count += item }); return count }',
+  ])(
+    'skips the default of a returned local that other code only writes in %s',
+    code => {
+      expect(
+        listSkipped('return-value', code, { file: 'example.js' }),
+      ).toStrictEqual(['count -> 0 (subsumed solitary)'])
+    },
+  )
+
+  it.each([
+    'function f(xs) { let paths = []; for (let x of xs) paths.push(x); return paths }',
+    'function f(xs) { let paths = []; xs.forEach(x => { (paths).unshift(x) }); return paths }',
+    'function f(xs) { let paths = /** @type {string[]} */ ([]); for (let x of xs) paths.push(x); return paths }',
+  ])(
+    'skips the default of a returned local that other code only fills in %s',
+    code => {
+      expect(
+        listSkipped('return-value', code, { file: 'example.js' }),
+      ).toStrictEqual(['paths -> [] (subsumed solitary)'])
     },
   )
 

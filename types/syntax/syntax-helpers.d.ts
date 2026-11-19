@@ -266,8 +266,8 @@ export interface SyntaxHelpers {
 
   /**
    * Whether the node is part of the runtime tree of the file. Scope analysis
-   * also sees nodes outside it, such as ambient declarations and the arguments
-   * of logging calls, which the tree-bound helpers do not accept.
+   * also sees nodes outside it, such as ambient declarations and module
+   * specifiers, which the tree-bound helpers do not accept.
    */
   isRuntimeNode(node: Node): boolean
 
