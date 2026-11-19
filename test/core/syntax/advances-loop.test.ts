@@ -159,6 +159,45 @@ describe('advancesLoop', () => {
       type: 'UpdateExpression',
       text: 'i++',
     },
+    {
+      source: 'while (element.firstChild) { element.firstChild.remove() }',
+      text: 'element.firstChild.remove()',
+      type: 'ExpressionStatement',
+    },
+    {
+      source: 'while (this.tasks.length > 0) { this.tasks.shift()() }',
+      text: 'this.tasks.shift()()',
+      type: 'ExpressionStatement',
+    },
+    {
+      source: 'while (state.stack.length) { visit(state.stack.pop()) }',
+      text: 'visit(state.stack.pop())',
+      type: 'ExpressionStatement',
+    },
+    {
+      source:
+        'while (state.pending.length > 0) { handle(state.pending.pop()) }',
+      text: 'handle(state.pending.pop())',
+      type: 'ExpressionStatement',
+    },
+    {
+      source:
+        'while (match) { depth++; value = match.body.trim(); match = parse(value) }',
+      text: 'value = match.body.trim();',
+      type: 'ExpressionStatement',
+    },
+    {
+      source:
+        'while (!this.tokenizer.endOfFile()) { token = this.tokenizer.nextToken(); this.handle(token) }',
+      text: 'token = this.tokenizer.nextToken();',
+      type: 'ExpressionStatement',
+    },
+    {
+      source:
+        'while (queue.length > 0) { for (let i = 0; i < size; i++) { handle(queue.shift()) } }',
+      text: 'handle(queue.shift())',
+      type: 'ExpressionStatement',
+    },
   ] as const)('accepts $text in $source', ({ source, type, text }) => {
     let { find, tree } = createTestFile(source)
 

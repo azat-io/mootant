@@ -678,6 +678,87 @@ describe('statementRemoval', () => {
     ).toStrictEqual(['handle(queue.shift()) -> ;'])
   })
 
+  it.each<[string, string]>([
+    [
+      'while (queue.length > 0) { handle(queue.shift()) }',
+      'handle(queue.shift()) -> ; (timeout loop-advance)',
+    ],
+    [
+      'while (element.firstChild) { element.firstChild.remove() }',
+      'element.firstChild.remove() -> ; (timeout loop-advance)',
+    ],
+    [
+      'class Tasks { flush() { while (this.tasks.length > 0) { this.tasks.shift()() } } }',
+      'this.tasks.shift()() -> ; (timeout loop-advance)',
+    ],
+    [
+      'while (state.stack.length) { visit(state.stack.pop()) }',
+      'visit(state.stack.pop()) -> ; (timeout loop-advance)',
+    ],
+    [
+      'while (state.pending.length > 0) { handle(state.pending.pop()) }',
+      'handle(state.pending.pop()) -> ; (timeout loop-advance)',
+    ],
+    [
+      'while (match) { depth++; value = match.body.trim(); match = parse(value) }',
+      'value = match.body.trim(); -> ; (timeout loop-advance)',
+    ],
+    [
+      'class Parser { parse() { while (!this.tokenizer.endOfFile()) { token = this.tokenizer.nextToken(); this.handle(token) } } }',
+      'token = this.tokenizer.nextToken(); -> ; (timeout loop-advance)',
+    ],
+    [
+      'while (queue.length > 0) { for (let i = 0; i < size; i++) { handle(queue.shift()) } }',
+      'handle(queue.shift()) -> ; (timeout loop-advance)',
+    ],
+    [
+      'function take(queue, limit = Infinity) { for (let i = 0; i < limit && queue.length > 0; i++) { handle(queue.shift()) } }',
+      'handle(queue.shift()) -> ; (timeout loop-advance)',
+    ],
+    [
+      'for (let i = 0; i < list.length; i++) { if (bad(list[i])) { list.splice(i, 1); i-- } }',
+      'list.splice(i, 1); -> ; (timeout loop-advance)',
+    ],
+    [
+      'for (let i = 0; i < nodes.length; i++) { if (bad(nodes[i])) { nodes[i].remove(); i-- } }',
+      'nodes[i].remove(); -> ; (timeout loop-advance)',
+    ],
+  ])(
+    'keeps the removal of a call that a loop needs to the timeouts setting in %s',
+    (source, expected) => {
+      expect(
+        listSkipped('statement-removal', source, { file: 'example.js' }),
+      ).toContain(expected)
+    },
+  )
+
+  it('keeps a call on a name that a while loop tests to the timeouts setting', () => {
+    let push = 'bytes.push(Number.parseInt(text.slice(index, index + 2), 16))'
+
+    /*
+     * Only the method name tells `text.slice` from a `queue.shift()` that the
+     * loop needs, so the call stays a loop advance. The push holds finer
+     * mutants, so `recommended` drops it as solitary with timeouts on too.
+     */
+    expect(
+      listSkipped(
+        'statement-removal',
+        [
+          'export function decode(text) {',
+          '  let bytes = []',
+          '  let index = 0',
+          '  while (index < text.length) {',
+          `    ${push}`,
+          '    index += 2',
+          '  }',
+          '  return bytes',
+          '}',
+        ].join('\n'),
+        { file: 'example.js' },
+      ),
+    ).toContain(`${push} -> ; (timeout loop-advance)`)
+  })
+
   it.each<{ setup: MutatorSetup; expected: string[] }>([
     { expected: ['query.filter(isEven) -> ;'], setup: {} },
     {
