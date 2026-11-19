@@ -1,4 +1,4 @@
-import type { AssignmentExpression, Node } from 'oxc-parser'
+import type { AssignmentExpression } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { InferredType } from '../../types/hints/inferred-type'
@@ -8,15 +8,14 @@ import type { LiteralValue } from './shared/get-literal-value'
 import type { SkipNote } from '../../types/mutant/skip-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
+import { getCanonicalFalsyDefault } from './shared/get-canonical-falsy-default'
 import { distinguishesNullishSwap } from './shared/distinguishes-nullish-swap'
-import { isCanonicalFalsy } from './shared/is-canonical-falsy'
 import { isAlwaysNullish } from './shared/is-always-nullish'
 import { getLiteralValue } from './shared/get-literal-value'
 import { isAlwaysTruthy } from './shared/is-always-truthy'
 import { isNumericPair } from './shared/is-numeric-pair'
 import { isNumberType } from './shared/is-number-type'
 import { mayBeNullish } from './shared/may-be-nullish'
-import { getTypeView } from './shared/get-type-view'
 
 /**
  * Options of the assignment-operator mutator.
@@ -154,7 +153,7 @@ function getLogicalVariants(
         rule: 'typed-constant',
       }
     : null
-  let guard = getGuardSkip(leftType, right)
+  let guard = getGuardSkip(node, leftType, context)
   let nullishSwap: SkipNote = {
     reason:
       '??= and ||= differ here only on falsy values that the nullishSwap option does not count, such as the value itself',
@@ -252,6 +251,43 @@ function getSwapSkip(
 }
 
 /**
+ * Decides whether the truth of the target cannot change the result of a `&&=`
+ * or `||=` (catalog 4.3, EQ): the target is always truthy, or the assigned
+ * value is the only falsy value of the target, which for a number needs a lower
+ * bound that rules out `NaN` (see `getCanonicalFalsyDefault`). Then `a &&= b`
+ * equals `a = b`, and `a ||= b` equals `a`.
+ *
+ * @param node - Assignment with `&&=` or `||=`.
+ * @param target - Type of the assignment target.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip of the variant that ignores the guard,
+ *   or null when that variant is emitted.
+ */
+function getGuardSkip(
+  node: AssignmentExpression,
+  target: InferredType,
+  context: MutatorContext,
+): SkipNote | null {
+  if (isAlwaysTruthy(target)) {
+    return {
+      reason:
+        'the type hints make the target always truthy, so its truth never changes the result',
+      rule: 'typed-constant',
+    }
+  }
+  let falsyDefault = getCanonicalFalsyDefault(node.left, node.right, context)
+  return (
+    falsyDefault && {
+      reason:
+        falsyDefault.because === null ?
+          "the assigned value is the only falsy value of the target's type, so the target's truth never changes the result"
+        : `the assigned value is the only falsy value of the target, which is never NaN (${falsyDefault.because}), so the target's truth never changes the result`,
+      rule: 'canonical-falsy-default',
+    }
+  )
+}
+
+/**
  * Builds the mutants of a compound assignment (catalog 4.3): the swap of an
  * arithmetic or bitwise operator, or the variants of a logical assignment, each
  * with its skip.
@@ -278,38 +314,6 @@ function getReplacements(
       : sourceCode.replaceOperator(node, operator)
     return skip ? { text, skip, node } : { text, node }
   })
-}
-
-/**
- * Decides whether the truth of the target cannot change the result of a `&&=`
- * or `||=` (catalog 4.3, EQ): the target is always truthy, or it is never
- * nullish and the assigned value is the only falsy value of its type. Then `a
- * &&= b` equals `a = b`, and `a ||= b` equals `a`.
- *
- * @param target - Type of the assignment target.
- * @param right - Assigned value.
- * @returns Rule and reason of the skip of the variant that ignores the guard,
- *   or null when that variant is emitted.
- */
-function getGuardSkip(target: InferredType, right: Node): SkipNote | null {
-  if (isAlwaysTruthy(target)) {
-    return {
-      reason:
-        'the type hints make the target always truthy, so its truth never changes the result',
-      rule: 'typed-constant',
-    }
-  }
-  if (
-    !mayBeNullish(target) &&
-    isCanonicalFalsy(getTypeView(target).type, right)
-  ) {
-    return {
-      reason:
-        "the assigned value is the only falsy value of the target's type, so the target's truth never changes the result",
-      rule: 'canonical-falsy-default',
-    }
-  }
-  return null
 }
 
 /**

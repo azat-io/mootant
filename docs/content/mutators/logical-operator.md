@@ -196,24 +196,24 @@ Mootant leaves out these changes. `npx mootant list src --skipped` shows them
 with the category and the rule; [Skipped changes](/mutators#skipped-changes)
 explains the categories.
 
-| Reason                                                                                                   | Example                                                            | Rule                                  |
-| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------- |
-| Another mutant inside gives this result on some inputs                                                   | `quantity > 0 && inStock` → `inStock`                              | `R2`, subsumed                        |
-| This mutator swaps `\|\|` and `??` instead                                                               | `name \|\| 'Guest'` → `name`                                       | `swap-subsumes-drop`, subsumed        |
-| Type of the left side decides the result                                                                 | `cart && cart.items` → `cart.items` for `cart: Cart`               | `typed-constant`, equivalent          |
-| Type hints say the left side is never `null` or `undefined`                                              | `name ?? 'Untitled'` → `name` for `name: string`                   | `never-nullish`, equivalent           |
-| Default is the type's only falsy value, `NaN` aside                                                      | `note \|\| ''` → `note` for `note: string`                         | `canonical-falsy-default`, equivalent |
-| `??` and `\|\|` likely give the same result                                                              | `discount ?? 0` → `discount \|\| 0` for a `number`                 | `nullish-swap`, noise                 |
-| Falsy default where only truth counts                                                                    | `coupon?.active ?? false` → `coupon?.active` in `if (…)`           | `falsy-default`, equivalent           |
-| A side is always true or always false                                                                    | `typeof sku === 'string' && sku.length > 0` → `sku.length > 0`     | `fixed-operand`, equivalent           |
-| Only turns `null` into `undefined`, or back                                                              | `gift ?? null` → `gift`                                            | `nullish-normalization`, noise        |
-| May keep a loop running forever                                                                          | `finished \|\| failed` → `failed` in `done = finished \|\| failed` | `loop-advance`, timeout               |
-| Makes a loop condition always true                                                                       | `hasMore \|\| retrying` → `true` in `while (…)`                    | `loop-running`, timeout               |
-| Same change as a [condition](/mutators/condition) or [boolean-literal](/mutators/boolean-literal) mutant | `showBadge ?? true` → `true` in `if (…)`                           | `O15`, owned                          |
-| Left side is falsy only when `null` or `undefined`                                                       | `price?.toFixed(2) ?? 'free'` → `price?.toFixed(2) \|\| 'free'`    | `never-falsy`, equivalent             |
-| [method-call](/mutators/method-call) removes the `sort()` call instead                                   | `a.featured && !b.featured` → `false` in a `sort` callback         | `O12`, owned                          |
-| Ends the loop at once, as [condition](/mutators/condition) does                                          | `isEmpty \|\| failed` → `true` in `if (…) break`                   | `O13`, owned                          |
-| Same code as another mutant                                                                              | `isAdmin \|\| isAdmin` → `isAdmin`                                 | `duplicate`, duplicate                |
+| Reason                                                                                                            | Example                                                            | Rule                                  |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------- |
+| Another mutant inside gives this result on some inputs                                                            | `quantity > 0 && inStock` → `inStock`                              | `R2`, subsumed                        |
+| This mutator swaps `\|\|` and `??` instead                                                                        | `name \|\| 'Guest'` → `name`                                       | `swap-subsumes-drop`, subsumed        |
+| Type of the left side decides the result                                                                          | `cart && cart.items` → `cart.items` for `cart: Cart`               | `typed-constant`, equivalent          |
+| Type hints say the left side is never `null` or `undefined`                                                       | `name ?? 'Untitled'` → `name` for `name: string`                   | `never-nullish`, equivalent           |
+| Default is the type's only falsy value; a number needs a lower limit, such as 0 for a `length`, to rule out `NaN` | `note \|\| ''` → `note` for `note: string`                         | `canonical-falsy-default`, equivalent |
+| `??` and `\|\|` likely give the same result                                                                       | `discount ?? 0` → `discount \|\| 0` for a `number`                 | `nullish-swap`, noise                 |
+| Falsy default where only truth counts                                                                             | `coupon?.active ?? false` → `coupon?.active` in `if (…)`           | `falsy-default`, equivalent           |
+| A side is always true or always false                                                                             | `typeof sku === 'string' && sku.length > 0` → `sku.length > 0`     | `fixed-operand`, equivalent           |
+| Only turns `null` into `undefined`, or back                                                                       | `gift ?? null` → `gift`                                            | `nullish-normalization`, noise        |
+| May keep a loop running forever                                                                                   | `finished \|\| failed` → `failed` in `done = finished \|\| failed` | `loop-advance`, timeout               |
+| Makes a loop condition always true                                                                                | `hasMore \|\| retrying` → `true` in `while (…)`                    | `loop-running`, timeout               |
+| Same change as a [condition](/mutators/condition) or [boolean-literal](/mutators/boolean-literal) mutant          | `showBadge ?? true` → `true` in `if (…)`                           | `O15`, owned                          |
+| Left side is falsy only when `null` or `undefined`                                                                | `price?.toFixed(2) ?? 'free'` → `price?.toFixed(2) \|\| 'free'`    | `never-falsy`, equivalent             |
+| [method-call](/mutators/method-call) removes the `sort()` call instead                                            | `a.featured && !b.featured` → `false` in a `sort` callback         | `O12`, owned                          |
+| Ends the loop at once, as [condition](/mutators/condition) does                                                   | `isEmpty \|\| failed` → `true` in `if (…) break`                   | `O13`, owned                          |
+| Same code as another mutant                                                                                       | `isAdmin \|\| isAdmin` → `isAdmin`                                 | `duplicate`, duplicate                |
 
 Changes that come back:
 

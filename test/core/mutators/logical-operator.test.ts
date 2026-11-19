@@ -296,7 +296,7 @@ describe('logicalOperator', () => {
       source: ['function f(count: number) {', '  x = count && 0', '}'].join(
         '\n',
       ),
-      expected: ['count && 0 -> count'],
+      expected: ['count && 0 -> 0', 'count && 0 -> count'],
       file: 'example.ts',
     },
     {
@@ -868,4 +868,92 @@ describe('logicalOperator', () => {
       expect(listSkipped('logical-operator', source)).toStrictEqual(skipped)
     },
   )
+
+  it.each<{ expected: string[]; source: string; file: string }>([
+    {
+      source: [
+        'export function guard(done, total, text) {',
+        '  return done / total || 0',
+        '}',
+      ].join('\n'),
+      expected: ['done / total || 0 -> 0', 'done / total || 0 -> done / total'],
+      file: 'example.js',
+    },
+    {
+      source: [
+        'export function guard(done, total, text) {',
+        '  return Number(text) || 0',
+        '}',
+      ].join('\n'),
+      expected: ['Number(text) || 0 -> 0', 'Number(text) || 0 -> Number(text)'],
+      file: 'example.js',
+    },
+    {
+      source: 'export function guard(text) { return +text || 0 }',
+      expected: ['+text || 0 -> 0', '+text || 0 -> +text'],
+      file: 'example.js',
+    },
+    {
+      source: 'export function guard(a, b) { return a % b || 0 }',
+      expected: ['a % b || 0 -> 0', 'a % b || 0 -> a % b'],
+      file: 'example.js',
+    },
+    {
+      expected: ['done / total && 0 -> 0', 'done / total && 0 -> done / total'],
+      source: 'export function guard(done, total) { return done / total && 0 }',
+      file: 'example.js',
+    },
+    {
+      source: ['function f(count: number) {', '  x = count || 0', '}'].join(
+        '\n',
+      ),
+      expected: ['count || 0 -> 0', 'count || 0 -> count'],
+      file: 'example.ts',
+    },
+  ])(
+    'keeps both drops of $source, whose left side may be NaN',
+    ({ expected, source, file }) => {
+      expect(mutate(source, { file })).toStrictEqual(expected)
+      expect(listSkipped('logical-operator', source, { file })).toStrictEqual(
+        [],
+      )
+    },
+  )
+
+  it.each<{ expected: string[]; skipped: string[]; source: string }>([
+    {
+      skipped: [
+        'list.length || 0 -> list.length (equivalent canonical-falsy-default)',
+      ],
+      source: 'function f(list: string[]) { x = list.length || 0 }',
+      expected: ['list.length || 0 -> 0'],
+    },
+    {
+      skipped: ['list.length && 0 -> 0 (equivalent canonical-falsy-default)'],
+      source: 'function f(list: string[]) { x = list.length && 0 }',
+      expected: ['list.length && 0 -> list.length'],
+    },
+    {
+      skipped: ['v || 0n -> v (equivalent canonical-falsy-default)'],
+      source: 'function f(v: bigint) { x = v || 0n }',
+      expected: ['v || 0n -> 0n'],
+    },
+  ])(
+    'skips the drop when the right side is the only falsy value of the left side in $source',
+    ({ expected, skipped, source }) => {
+      expect(mutate(source)).toStrictEqual(expected)
+      expect(listSkipped('logical-operator', source)).toStrictEqual(skipped)
+    },
+  )
+
+  it('keeps both drops of a length that an optional chain may leave undefined', () => {
+    let source =
+      'function f(items?: string[]) { x = (items?.length as number) || 0 }'
+
+    expect(mutate(source)).toStrictEqual([
+      '(items?.length as number) || 0 -> 0',
+      '(items?.length as number) || 0 -> (items?.length as number)',
+    ])
+    expect(listSkipped('logical-operator', source)).toStrictEqual([])
+  })
 })

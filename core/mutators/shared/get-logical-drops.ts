@@ -4,10 +4,9 @@ import type { Replacement } from '../../../types/mutator/replacement'
 import type { SkipNote } from '../../../types/mutant/skip-note'
 import type { RunContext } from './create-run-context'
 
+import { getCanonicalFalsyDefault } from './get-canonical-falsy-default'
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
-import { hasDefinedFalsyValue } from './has-defined-falsy-value'
 import { getNullishSwapSkip } from './get-nullish-swap-skip'
-import { isCanonicalFalsy } from './is-canonical-falsy'
 import { isBooleanValued } from './is-boolean-valued'
 import { isAlwaysNullish } from './is-always-nullish'
 import { hasPolarMutant } from './has-polar-mutant'
@@ -16,7 +15,6 @@ import { getFixedTruth } from './get-fixed-truth'
 import { isBooleanMode } from './is-boolean-mode'
 import { mayBeBoolean } from './may-be-boolean'
 import { mayBeNullish } from './may-be-nullish'
-import { getTypeView } from './get-type-view'
 
 /**
  * Operand drops of a `&&` or `||` that logical-operator emits.
@@ -49,14 +47,14 @@ export interface LogicalDrops {
 /**
  * Decides the drops of a `&&` or `||` (catalog 4.8, emissions 1 and 2): each
  * operand is dropped unless it is a same-operator group, the drop is equivalent
- * by the types or by fixed operands, or the polarity rule finds a running
- * mutant that subsumes it. In value mode a `||` whose left side may be nullish
- * gets the nullish swap instead of the drop of its right operand when `??` and
- * `||` differ, which they never do, under every `nullishSwap` mode, when the
- * left side is never falsy unless nullish (see `getNeverFalsyFact`). Drops and
- * swaps that are not emitted are returned with their rule. The plan is pure:
- * the polarity rule of other mutators reads it without running
- * logical-operator.
+ * by the types (see `getCanonicalFalsyDefault`) or by fixed operands, or the
+ * polarity rule finds a running mutant that subsumes it. In value mode a `||`
+ * whose left side may be nullish gets the nullish swap instead of the drop of
+ * its right operand when `??` and `||` differ, which they never do, under every
+ * `nullishSwap` mode, when the left side is never falsy unless nullish (see
+ * `getNeverFalsyFact`). Drops and swaps that are not emitted are returned with
+ * their rule. The plan is pure: the polarity rule of other mutators reads it
+ * without running logical-operator.
  *
  * @param node - `&&` or `||` expression of the runtime tree.
  * @param context - Mutator context with the test of mutants that will run.
@@ -78,17 +76,16 @@ export function getLogicalDrops(
   let fixedLeft = fixedApplies ? getFixedTruth(left, context) : null
   let fixedRight = fixedApplies ? getFixedTruth(right, context) : null
   let leftType = hints.getType(left)
-  let keepsFalsyDefault =
-    hasDefinedFalsyValue(leftType) &&
-    !mayBeNullish(leftType) &&
-    isCanonicalFalsy(getTypeView(leftType).type, right)
+  let falsyDefault = getCanonicalFalsyDefault(left, right, context)
   let candidate = { mutator: 'logical-operator', node }
   let skipped: Replacement[] = []
   let identityName = identity ? 'truthy' : 'falsy'
   let absorbingName = identity ? 'falsy' : 'truthy'
-  let falsyDefaultNote: SkipNote = {
+  let falsyDefaultNote: SkipNote | null = falsyDefault && {
     reason:
-      "the right operand is the only falsy value of the left operand's type, so the result is the same",
+      falsyDefault.because === null ?
+        "the right operand is the only falsy value of the left operand's type, so the result is the same"
+      : `the right operand is the only falsy value of the left operand, which is never NaN (${falsyDefault.because}), so the result is the same`,
     rule: 'canonical-falsy-default',
   }
 
@@ -116,7 +113,7 @@ export function getLogicalDrops(
         rule: 'typed-constant',
       }
     }
-    if (identity && keepsFalsyDefault) {
+    if (identity && falsyDefaultNote) {
       return falsyDefaultNote
     }
     if (
@@ -155,7 +152,7 @@ export function getLogicalDrops(
         rule: 'typed-constant',
       }
     }
-    if (!identity && keepsFalsyDefault) {
+    if (!identity && falsyDefaultNote) {
       return falsyDefaultNote
     }
     return null

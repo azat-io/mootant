@@ -1286,6 +1286,20 @@ const IDIOMS: Idiom[] = [
   },
   {
     lines: [
+      'function f(done: number, total: number) {',
+      '  return done / total || 0',
+      '}',
+    ],
+    inputs: [
+      [1, 2],
+      [0, 5],
+      [0, 0],
+    ],
+    name: 'an || default that replaces NaN',
+    file: 'example.ts',
+  },
+  {
+    lines: [
       'function f(answer: string) {',
       "  const yes = answer.toLowerCase() === 'yes'",
       '  return yes',

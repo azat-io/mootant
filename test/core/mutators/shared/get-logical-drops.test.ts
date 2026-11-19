@@ -308,6 +308,26 @@ describe('getLogicalDrops', () => {
       group: "title && ''",
     },
     {
+      source: 'function f(list: string[]) { x = list.length || 0 }',
+      expected: [['list.length', 'canonical-falsy-default']],
+      group: 'list.length || 0',
+    },
+    {
+      source: 'function f(list: string[]) { x = list.length && 0 }',
+      expected: [['0', 'canonical-falsy-default']],
+      group: 'list.length && 0',
+    },
+    {
+      source: 'function f(count: number) { x = count || 0 }',
+      group: 'count || 0',
+      expected: [],
+    },
+    {
+      source: 'function f(count: number) { x = count && 0 }',
+      group: 'count && 0',
+      expected: [],
+    },
+    {
       source: 'function f(a, b) { if (b && a > 0) run() }',
       expected: [['b', 'R2']],
       group: 'b && a > 0',
@@ -360,6 +380,30 @@ describe('getLogicalDrops', () => {
 
     expect(skipped.map(replacement => replacement.skip!.reason)).toEqual([
       'the left side is never falsy when defined (`toFixed` never returns an empty string), so || and ?? agree',
+    ])
+  })
+
+  it.each<{ expected: string; source: string }>([
+    {
+      expected:
+        "the right operand is the only falsy value of the left operand's type, so the result is the same",
+      source: "function f(title: string) { x = title || '' }",
+    },
+    {
+      expected:
+        'the right operand is the only falsy value of the left operand, which is never NaN (a length is never negative), so the result is the same',
+      source: 'function f(list: string[]) { x = list.length || 0 }',
+    },
+  ])('explains the falsy default of $source', ({ expected, source }) => {
+    let { context, find } = createTestContext(source)
+    let { skipped } = getLogicalDrops(
+      find('LogicalExpression'),
+      createRunContext(context),
+      'distinguishing',
+    )
+
+    expect(skipped.map(replacement => replacement.skip!.reason)).toEqual([
+      expected,
     ])
   })
 })

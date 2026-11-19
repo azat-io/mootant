@@ -169,17 +169,17 @@ Mootant leaves out these changes. `npx mootant list src --skipped` shows them
 with the category and the rule; [Skipped changes](/mutators#skipped-changes)
 explains the categories.
 
-| Reason                                                   | Example                                    | Rule                                  |
-| -------------------------------------------------------- | ------------------------------------------ | ------------------------------------- |
-| May join strings, where `-=` gives `NaN`                 | `name += size` → `name -= size`            | `non-numeric-plus`, noise             |
-| May keep a loop running forever                          | `packed += perBox` → `packed -= perBox`    | `loop-advance`, timeout               |
-| This mutator swaps `??=` and `\|\|=` instead             | `shipping ??= 5` → `shipping = 5`          | `swap-subsumes-drop`, subsumed        |
-| `??=` and `\|\|=` likely give the same result            | `fee ??= 0` → `fee \|\|= 0` for a `number` | `nullish-swap`, noise                 |
-| Type hints say the target is never `null` or `undefined` | `options ??= {}` → `options`               | `never-nullish`, equivalent           |
-| Type hints make the target always truthy                 | `items \|\|= []` → `items`                 | `typed-constant`, equivalent          |
-| Default is the type's only falsy value, `NaN` aside      | `coupon \|\|= ''` → `coupon`               | `canonical-falsy-default`, equivalent |
-| 0 on the right of a number gives the same result         | `total += 0` → `total -= 0`                | `numeric-identity`, equivalent        |
-| 1 or -1 on the right gives the same result               | `amount *= -1` → `amount /= -1`            | `identity-operand`, equivalent        |
+| Reason                                                                                                            | Example                                    | Rule                                  |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------- |
+| May join strings, where `-=` gives `NaN`                                                                          | `name += size` → `name -= size`            | `non-numeric-plus`, noise             |
+| May keep a loop running forever                                                                                   | `packed += perBox` → `packed -= perBox`    | `loop-advance`, timeout               |
+| This mutator swaps `??=` and `\|\|=` instead                                                                      | `shipping ??= 5` → `shipping = 5`          | `swap-subsumes-drop`, subsumed        |
+| `??=` and `\|\|=` likely give the same result                                                                     | `fee ??= 0` → `fee \|\|= 0` for a `number` | `nullish-swap`, noise                 |
+| Type hints say the target is never `null` or `undefined`                                                          | `options ??= {}` → `options`               | `never-nullish`, equivalent           |
+| Type hints make the target always truthy                                                                          | `items \|\|= []` → `items`                 | `typed-constant`, equivalent          |
+| Default is the type's only falsy value; a number needs a lower limit, such as 0 for a `length`, to rule out `NaN` | `coupon \|\|= ''` → `coupon`               | `canonical-falsy-default`, equivalent |
+| 0 on the right of a number gives the same result                                                                  | `total += 0` → `total -= 0`                | `numeric-identity`, equivalent        |
+| 1 or -1 on the right gives the same result                                                                        | `amount *= -1` → `amount /= -1`            | `identity-operand`, equivalent        |
 
 The [`timeouts`](/guide/configuration#timeouts) setting brings back
 `loop-advance`, and [`nullishSwap`](#nullishswap) set to `'always'` brings back

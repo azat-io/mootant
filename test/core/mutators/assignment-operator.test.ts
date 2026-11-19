@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-candidates'
 
+import { generateCandidates } from '../../helpers/generate-candidates'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
 
@@ -296,5 +297,87 @@ describe('assignmentOperator', () => {
     ],
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('assignment-operator', source)).toStrictEqual(expected)
+  })
+
+  it.each<{
+    parameters: string
+    skipped: string[]
+    operator: string
+    file: string
+  }>([
+    {
+      parameters: 'done: number, total: number',
+      file: 'example.ts',
+      operator: '||=',
+      skipped: [],
+    },
+    {
+      parameters: 'done: number, total: number',
+      file: 'example.ts',
+      operator: '&&=',
+      skipped: [],
+    },
+    {
+      skipped: ['value ||= 0 -> value ??= 0 (noise nullish-swap)'],
+      parameters: 'done, total',
+      file: 'example.js',
+      operator: '||=',
+    },
+    {
+      parameters: 'done, total',
+      file: 'example.js',
+      operator: '&&=',
+      skipped: [],
+    },
+  ])(
+    'keeps the guard of a target that may be NaN with $operator in $file',
+    ({ parameters, operator, skipped, file }) => {
+      let source = [
+        `export function f(${parameters}) {`,
+        '  let value = done / total',
+        `  value ${operator} 0`,
+        '  return value',
+        '}',
+      ].join('\n')
+
+      expect(
+        runMutator('assignment-operator', source, { file }).map(
+          mutant => mutant.replacement,
+        ),
+      ).toEqual(['value = 0', 'value'])
+      expect(
+        listSkipped('assignment-operator', source, { file }),
+      ).toStrictEqual(skipped)
+    },
+  )
+
+  it.each<[string, string, string]>([
+    [
+      'declare let c: boolean; c ||= false',
+      'c ||= false',
+      "the assigned value is the only falsy value of the target's type, so the target's truth never changes the result",
+    ],
+    [
+      'declare let list: string[]; list.length ||= 0',
+      'list.length ||= 0',
+      "the assigned value is the only falsy value of the target, which is never NaN (a length is never negative), so the target's truth never changes the result",
+    ],
+    [
+      'declare let list: string[]; list.length &&= 0',
+      'list.length &&= 0',
+      "the assigned value is the only falsy value of the target, which is never NaN (a length is never negative), so the target's truth never changes the result",
+    ],
+  ])('explains the skipped guard of %s', (source, original, reason) => {
+    let { skipped } = generateCandidates(source)
+
+    expect(
+      skipped
+        .filter(candidate => candidate.mutator === 'assignment-operator')
+        .map(candidate => [
+          source.slice(candidate.start, candidate.end),
+          candidate.rule,
+          candidate.reason,
+        ]),
+    ).toStrictEqual([[original, 'canonical-falsy-default', reason]])
   })
 })
