@@ -508,5 +508,231 @@ describe('listMutants', () => {
         false,
       )
     })
+
+    /**
+     * Commits a file of the app, changes it and lists `src` of the app with
+     * `--since HEAD` and skipped candidates, and without `--since`. Gives each
+     * mutant as its id and its change: the line of its start, its mutator, its
+     * original text and its replacement.
+     *
+     * @param file - Path of the file in `app/src`.
+     * @param before - Committed lines of the file.
+     * @param after - Lines of the file after the change.
+     * @returns Mutants with `--since` and without it, and the changes of the
+     *   skipped candidates with `--since`, each with its rule.
+     */
+    async function listChange(
+      file: string,
+      before: string[],
+      after: string[],
+    ): Promise<{
+      since: { change: string; id: string }[]
+      all: { change: string; id: string }[]
+      skipped: string[]
+    }> {
+      let { write, git } = repository
+      await write(`app/src/${file}`, [...before, ''].join('\n'))
+      git('add', '.')
+      git('commit', '--quiet', '-m', 'before')
+      await write(`app/src/${file}`, [...after, ''].join('\n'))
+      let cwd = path.join(repository.root, 'app')
+      let [changed, all] = await Promise.all([
+        listMutants({ paths: ['src'], since: 'HEAD', skipped: true, cwd }),
+        listMutants({ paths: ['src'], cwd }),
+      ])
+      /**
+       * Describes the mutants and skipped candidates of the changed file.
+       *
+       * @param result - Listing of `src`.
+       * @returns Mutants with their ids, and skipped candidates with their
+       *   rules.
+       */
+      function describeListing(
+        result: Awaited<ReturnType<typeof listMutants>>,
+      ): { mutants: { change: string; id: string }[]; skipped: string[] } {
+        let listed = result.files.find(entry => entry.file === `src/${file}`)!
+        let source = listed.source!
+        /**
+         * Describes the change of a mutant or a skipped candidate.
+         *
+         * @param entry - Mutant or skipped candidate.
+         * @returns Its line, mutator, original text and replacement.
+         */
+        function describeChange(entry: {
+          replacement: string
+          mutator: string
+          start: number
+          end: number
+        }): string {
+          let line = source.slice(0, entry.start).split('\n').length
+          return `${line} ${entry.mutator} ${source.slice(entry.start, entry.end)} -> ${entry.replacement}`
+        }
+        return {
+          mutants: listed.mutants.map(mutant => ({
+            change: describeChange(mutant),
+            id: mutant.id,
+          })),
+          skipped: listed.skipped.map(
+            candidate => `${describeChange(candidate)} ${candidate.rule}`,
+          ),
+        }
+      }
+      let selected = describeListing(changed)
+      return {
+        all: describeListing(all).mutants,
+        skipped: selected.skipped,
+        since: selected.mutants,
+      }
+    }
+
+    it('lists the mutants of the owner of a change on a changed line, with their ids', async () => {
+      let { skipped, since, all } = await listChange(
+        'access.js',
+        [
+          'export function open(user, door) {',
+          '  if (user.isAdmin) {',
+          '    door.unlock(user)',
+          '  }',
+          '}',
+        ],
+        [
+          'export function open(user, door) {',
+          '  if (user.isAdmin) {',
+          '    door.open(user)',
+          '  }',
+          '}',
+        ],
+      )
+
+      /**
+       * The removal of the call is owned by condition's `false`, and the skip
+       * does not tell condition's two mutants apart.
+       */
+      expect(since.map(mutant => mutant.change)).toStrictEqual([
+        '2 condition user.isAdmin -> true',
+        '2 condition user.isAdmin -> false',
+      ])
+      expect(all).toStrictEqual(expect.arrayContaining(since))
+      expect(skipped).toStrictEqual([
+        '3 statement-removal door.open(user) -> ; O19',
+      ])
+    })
+
+    it('lists the mutants a subsumed change on a changed line is left to, with their ids', async () => {
+      let { skipped, since, all } = await listChange(
+        'collect.js',
+        [
+          'export function collect(changed, file, time, since) {',
+          '  if (time >= since) {',
+          '    changed.add(file)',
+          '  }',
+          '}',
+        ],
+        [
+          'export function collect(changed, file, time, since) {',
+          '  if (time >= since) {',
+          '    changed.add(file);',
+          '  }',
+          '}',
+        ],
+      )
+
+      expect(since.map(mutant => mutant.change)).toStrictEqual([
+        '2 comparison-operator time >= since -> time > since',
+        '2 comparison-operator time >= since -> time == since',
+        '2 comparison-operator time >= since -> true',
+      ])
+      expect(all).toStrictEqual(expect.arrayContaining(since))
+      expect(skipped).toStrictEqual([
+        '3 statement-removal changed.add(file); -> ; R4',
+      ])
+    })
+
+    it('lists the finer mutant a coarse change on a changed line is left to, with its id', async () => {
+      let before = [
+        'export function countActive(items) {',
+        '  let count = 0',
+        '  for (let item of items) {',
+        '    if (item.active) {',
+        '      count += 1',
+        '    }',
+        '  }',
+        '  return count',
+        '}',
+      ]
+      let { skipped, since, all } = await listChange(
+        'count.js',
+        before,
+        before.with(7, '  return count;'),
+      )
+
+      expect(since.map(mutant => mutant.change)).toStrictEqual([
+        '2 number-literal 0 -> 1',
+      ])
+      expect(skipped).toStrictEqual(['8 return-value count -> 0 solitary'])
+      expect(all).toStrictEqual(expect.arrayContaining(since))
+    })
+
+    it('follows a skip through the duplicate it names to the mutant that runs, with its id', async () => {
+      let app = path.join(repository.root, 'app')
+      let negation: Plugin = {
+        mutators: {
+          'negate-false': {
+            create: () => ({
+              UnaryExpression(node) {
+                return (
+                    node.argument.type === 'Literal' &&
+                      node.argument.value === false
+                  ) ?
+                    [{ text: '!true', node }]
+                  : []
+              },
+            }),
+            meta: { description: 'Negates true instead of false.' },
+          },
+        },
+      }
+      vi.mocked(loadConfig).mockResolvedValue({
+        config: {
+          mutators: { 'acme/negate-false': 'on' },
+          plugins: { acme: negation },
+        },
+        file: path.join(app, 'mootant.config.js'),
+        directory: app,
+      })
+      try {
+        let { skipped, since, all } = await listChange(
+          'door.js',
+          [
+            'export function open(door) {',
+            '  if (!false) {',
+            '    door.close()',
+            '  }',
+            '}',
+          ],
+          [
+            'export function open(door) {',
+            '  if (!false) {',
+            '    door.open()',
+            '  }',
+            '}',
+          ],
+        )
+
+        /**
+         * The removal is owned by boolean-literal's `true`, which duplicates
+         * the plugin's mutant.
+         */
+        expect(since.map(mutant => mutant.change)).toStrictEqual([
+          '2 acme/negate-false !false -> !true',
+        ])
+        expect(skipped).toStrictEqual([
+          '3 statement-removal door.open() -> ; O19',
+        ])
+        expect(all).toStrictEqual(expect.arrayContaining(since))
+      } finally {
+        vi.mocked(loadConfig).mockReset()
+      }
+    })
   })
 })

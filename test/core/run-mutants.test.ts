@@ -761,6 +761,67 @@ describe('runMutants', () => {
     ).rejects.toThrow('Unknown mutant id "zzzzzzzzzzzz".')
   })
 
+  it('runs the mutants that skipped changes on changed lines are left to, as list lists them', async () => {
+    let access = path.join(root, 'src/access.ts')
+    await writeFile(
+      access,
+      [
+        'export function open(user: { isAdmin: boolean }, door: { open(): void }): void {',
+        '  if (user.isAdmin) {',
+        '    door.open()',
+        '  }',
+        '}',
+        '',
+      ].join('\n'),
+    )
+    vi.mocked(readChangedLines).mockResolvedValue({
+      files: new Map([[access, new Set([3])]]),
+      base: 'abc123',
+    })
+    vi.mocked(loadConfig).mockResolvedValue(null)
+    try {
+      let listed = await listMutants({
+        paths: ['src'],
+        since: 'main',
+        cwd: root,
+      })
+      let owners = listed.files.flatMap(file =>
+        file.mutants.map(mutant => mutant.id),
+      )
+      let file = path.join(root, 'test/access.test.ts')
+      let world: FakeWorld = {
+        tests: [{ covers: owners, id: 'access', kills: {}, file }],
+        files: [{ file }],
+      }
+
+      let { result } = await run(world, { since: 'main' })
+      let { result: pinned } = await run(world, {
+        mutantIds: [owners[1]!],
+        since: 'main',
+      })
+
+      expect(
+        listed.files.flatMap(entry =>
+          entry.mutants.map(mutant => [mutant.mutator, mutant.replacement]),
+        ),
+      ).toStrictEqual([
+        ['condition', 'true'],
+        ['condition', 'false'],
+      ])
+      expect(
+        result.results.map(verdict => [verdict.mutant.id, verdict.status]),
+      ).toStrictEqual(owners.map(id => [id, 'Survived']))
+      expect(
+        result.files.map(entry => [entry.file, entry.skipped]),
+      ).toStrictEqual([['src/access.ts', []]])
+      expect(pinned.results.map(verdict => verdict.mutant.id)).toStrictEqual([
+        owners[1],
+      ])
+    } finally {
+      await rm(access)
+    }
+  })
+
   it.each([
     { mode: 'isolated', fast: false },
     { mode: 'fast', fast: true },

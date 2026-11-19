@@ -34,7 +34,8 @@ interface ListMutantsOptions {
 
   /**
    * Git revision given with `--since`: only mutants on lines changed since its
-   * merge base with `HEAD` are listed.
+   * merge base with `HEAD` are listed, and the mutants that skipped candidates
+   * on those lines are left to.
    */
   since?: string
 
@@ -49,10 +50,11 @@ interface ListMutantsOptions {
  * and its plugins, resolves the presets, expands the paths with display paths
  * relative to the project root, reads every file and generates its mutants one
  * file at a time. A file that cannot be read or parsed is reported and the
- * others are still listed. Skipped candidates are collected only on request and
- * never change the mutants. With `--since`, only the mutants and skipped
- * candidates on lines changed since the merge base of the revision and `HEAD`
- * are listed, and only the changed files.
+ * others are still listed. Skipped candidates are listed only on request. With
+ * `--since`, only the mutants and skipped candidates on lines changed since the
+ * merge base of the revision and `HEAD` are listed, with the mutants that those
+ * skipped candidates are left to, and only the changed files (see
+ * `selectChangedMutants`).
  *
  * @param options - Paths, configuration, preset and working directory of the
  *   run.
@@ -73,19 +75,21 @@ export async function listMutants(
       null
     : await readChangedLines(root, options.since)
   let { diagnostics, files } = await listFileMutants({
+    skipped: skipped || changes !== null,
     paths: options.paths,
     cwd: options.cwd,
     knownMutatorIds,
     settings,
     mutators,
-    skipped,
     root,
   })
   return {
+    files:
+      changes === null ? files : (
+        selectChangedMutants(files, changes.files, skipped)
+      ),
     since:
       changes === null ? null : { ref: options.since!, base: changes.base },
-    files:
-      changes === null ? files : selectChangedMutants(files, changes.files),
     diagnostics,
     mutators,
     skipped,

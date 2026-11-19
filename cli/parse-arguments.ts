@@ -25,7 +25,8 @@ Options:
                        (default: recommended)
   --since <ref>        Only mutants on lines changed since the merge base of
                        <ref> and HEAD, uncommitted changes and untracked files
-                       included
+                       included, and the mutants their skipped changes are
+                       left to
   --json               Print the report as JSON; for run, only the mutants to
                        act on (survived, no coverage, error), each with its
                        likeliest test files and one covering test

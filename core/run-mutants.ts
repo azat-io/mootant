@@ -115,7 +115,8 @@ interface RunMutantsOptions {
 
   /**
    * Git revision given with `--since`: only mutants on lines changed since its
-   * merge base with `HEAD` run.
+   * merge base with `HEAD` run, and the mutants that skipped candidates on
+   * those lines are left to.
    */
   since?: string
 
@@ -155,14 +156,15 @@ interface RunMutantsOptions {
  * warning that counts the mutants whose cached evidence only their region
  * matched, and the evidence of the run is saved after it, unless it has error
  * diagnostics. With `--since`, only the mutants on lines changed since the
- * merge base of the revision and `HEAD` run, and when there are none the test
- * runner does not start. With `--since` or `--mutant`, the dry run still
- * relates tests to the same files as a run of every mutant, not only to the
- * files of the mutants that run. A run that writes an HTML report also lists
- * the candidates its mutators skipped. The adapter is closed and the work
- * directory removed whatever happens; what the adapter tells of its close, such
- * as a global teardown that failed, joins the diagnostics of a run that went
- * through, after its cache was saved.
+ * merge base of the revision and `HEAD` run, with the mutants that skipped
+ * candidates on those lines are left to (see `selectChangedMutants`), and when
+ * there are none the test runner does not start. With `--since` or `--mutant`,
+ * the dry run still relates tests to the same files as a run of every mutant,
+ * not only to the files of the mutants that run. A run that writes an HTML
+ * report also lists the candidates its mutators skipped. The adapter is closed
+ * and the work directory removed whatever happens; what the adapter tells of
+ * its close, such as a global teardown that failed, joins the diagnostics of a
+ * run that went through, after its cache was saved.
  *
  * @param options - Paths, configuration, adapters and run settings.
  * @returns Verdicts, diagnostics and timings, before they are formatted.
@@ -195,12 +197,12 @@ export async function runMutants(
   let since: SinceRevision | null =
     changes === null ? null : { ref: options.since!, base: changes.base }
   let listing = await listFileMutants({
+    skipped: html !== null || changes !== null,
     knownMutatorIds: setup.knownMutatorIds,
     cwd: fromConfig ? root : options.cwd,
     regions: runSettings.cache,
     settings: setup.settings,
     mutators: setup.mutators,
-    skipped: html !== null,
     paths,
     root,
   })
@@ -208,7 +210,7 @@ export async function runMutants(
     changed:
       changes === null ?
         listing.files
-      : selectChangedMutants(listing.files, changes.files),
+      : selectChangedMutants(listing.files, changes.files, html !== null),
     ids: options.mutantIds,
     listed: listing.files,
     since,
@@ -643,15 +645,15 @@ function reportFastLimits(input: {
  * the same with and without `--since`.
  *
  * @param selection - What to select from.
- * @param selection.changed - Listed files with only the mutants on changed
- *   lines with `--since`, or every listed file.
+ * @param selection.changed - Listed files with only the mutants `--since`
+ *   selects, or every listed file.
  * @param selection.ids - Ids or unique id prefixes to keep, or undefined or
  *   empty to keep every mutant.
  * @param selection.listed - Every listed file.
  * @param selection.since - Revision of `--since`, or null.
  * @returns Files with the selected mutants.
  * @throws Error - When an id or id prefix does not name exactly one listed
- *   mutant, or names one that is not on a changed line.
+ *   mutant, or names one that `--since` does not select.
  */
 function selectMutants(selection: {
   since: SinceRevision | null

@@ -100,6 +100,7 @@ describe('selectChangedMutants', () => {
     let [selected] = selectChangedMutants(
       [file],
       new Map([['/repo/src/a.ts', new Set([3])]]),
+      true,
     )
 
     expect(selected!.mutants.map(mutant => mutant.id)).toStrictEqual([
@@ -129,7 +130,197 @@ describe('selectChangedMutants', () => {
           ['/repo/src/gone.ts', new Set([1])],
           ['/repo/src/new.ts', 'all'],
         ]),
+        true,
       ),
     ).toStrictEqual([untracked, unreadable])
+  })
+
+  it('keeps the mutants that skipped candidates on changed lines are left to, on any line', () => {
+    let file = createFile('/repo/src/a.ts', SOURCE, {
+      onLine: [offset('3'), offset('3') + 1],
+    })
+    file.mutants.push(
+      createMutant({ end: offset('1') + 1, start: offset('1'), id: 'named' }),
+      createMutant({
+        end: offset('4') + 1,
+        mutator: 'condition',
+        replacement: 'true',
+        start: offset('4'),
+        id: 'owner',
+      }),
+      createMutant({
+        end: offset('4') + 1,
+        mutator: 'condition',
+        replacement: 'false',
+        start: offset('4'),
+        id: 'sibling',
+      }),
+      createMutant({
+        mutator: 'number-literal',
+        end: offset('4') + 1,
+        start: offset('4'),
+        id: 'otherMutator',
+      }),
+      createMutant({
+        focus: { start: offset('let b'), end: offset('2') + 1, text: '' },
+        list: { start: offset('let a'), end: offset('2') + 1 },
+        mutator: 'array-element',
+        start: offset('1') + 1,
+        end: offset('2') + 1,
+        kind: 'element',
+        id: 'element',
+      }),
+      createMutant({
+        end: offset('2') + 1,
+        start: offset('2'),
+        id: 'unselected',
+      }),
+    )
+    file.skipped = [
+      {
+        ...createSkipped(offset('let b'), offset('let b') + 1),
+        by: {
+          mutator: 'arithmetic-operator',
+          start: offset('2'),
+          id: 'unselected',
+        },
+      },
+      createSkipped(offset('let c'), offset('let c') + 1),
+      {
+        ...createSkipped(offset('let c'), offset('let c') + 1),
+        by: { mutator: 'arithmetic-operator', start: offset('1'), id: 'named' },
+      },
+      {
+        ...createSkipped(offset('3'), offset('3') + 1),
+        by: { mutator: 'condition', start: offset('4'), id: null },
+      },
+      {
+        ...createSkipped(offset('3'), offset('3') + 1),
+        by: { mutator: 'array-element', start: offset('let b'), id: null },
+      },
+    ]
+
+    let [selected] = selectChangedMutants(
+      [file],
+      new Map([['/repo/src/a.ts', new Set([3])]]),
+      true,
+    )
+
+    expect(selected!.mutants.map(mutant => mutant.id)).toStrictEqual([
+      'onLine',
+      'named',
+      'owner',
+      'sibling',
+      'element',
+    ])
+    expect(selected!.skipped).toStrictEqual(file.skipped.slice(1))
+  })
+
+  it('follows the skipped candidates a skip names, on any line, to the mutants they are left to', () => {
+    let file = createFile('/repo/src/a.ts', SOURCE, {})
+    file.mutants = [
+      createMutant({
+        end: offset('let a') + 1,
+        start: offset('let a'),
+        mutator: 'acme/flip',
+        id: 'plugin',
+      }),
+      createMutant({
+        end: offset('1') + 1,
+        mutator: 'condition',
+        start: offset('1'),
+        id: 'unrelated',
+      }),
+      createMutant({ end: offset('2') + 1, start: offset('2'), id: 'element' }),
+      createMutant({
+        mutator: 'comparison-operator',
+        end: offset('let d') + 1,
+        start: offset('let d'),
+        id: 'comparison',
+      }),
+    ]
+    file.skipped = [
+      {
+        ...createSkipped(offset('1'), offset('1') + 1),
+        by: { start: offset('let a'), mutator: 'acme/flip', id: 'plugin' },
+        mutator: 'boolean-literal',
+      },
+      {
+        ...createSkipped(offset('1') + 1, offset('2') + 1),
+        by: {
+          mutator: 'arithmetic-operator',
+          start: offset('2'),
+          id: 'element',
+        },
+        focus: { start: offset('let b'), end: offset('2') + 1, text: '' },
+        mutator: 'array-element',
+        kind: 'element',
+      },
+      {
+        ...createSkipped(offset('3'), offset('3') + 1),
+        by: { mutator: 'boolean-literal', start: offset('1'), id: null },
+      },
+      {
+        ...createSkipped(offset('3'), offset('3') + 1),
+        by: { mutator: 'array-element', start: offset('let b'), id: null },
+      },
+      {
+        ...createSkipped(offset('3'), offset('3') + 1),
+        by: { mutator: 'condition', start: offset('4'), id: null },
+      },
+      {
+        ...createSkipped(offset('4'), offset('4') + 1),
+        by: {
+          mutator: 'comparison-operator',
+          start: offset('let d'),
+          id: null,
+        },
+        mutator: 'condition',
+      },
+      {
+        ...createSkipped(offset('4'), offset('4') + 1),
+        mutator: 'condition',
+      },
+      {
+        ...createSkipped(offset('let d'), offset('let d') + 1),
+        by: { mutator: 'condition', start: offset('4'), id: null },
+        mutator: 'comparison-operator',
+      },
+    ]
+
+    let [selected] = selectChangedMutants(
+      [file],
+      new Map([['/repo/src/a.ts', new Set([3])]]),
+      false,
+    )
+
+    expect(selected!.mutants.map(mutant => mutant.id)).toStrictEqual([
+      'plugin',
+      'element',
+      'comparison',
+    ])
+  })
+
+  it('drops the skipped candidates unless they are listed', () => {
+    let changed = createFile('/repo/src/a.ts', SOURCE, { a: [0, 1] })
+    changed.skipped[0]!.by = { mutator: 'condition', start: 20, id: null }
+    let untracked = createFile('/repo/src/new.ts', SOURCE, { b: [0, 1] })
+    let unreadable = createFile('/repo/src/gone.ts', null, {})
+
+    expect(
+      selectChangedMutants(
+        [changed, untracked, unreadable],
+        new Map<string, ReadonlySet<number> | 'all'>([
+          ['/repo/src/gone.ts', new Set([1])],
+          ['/repo/src/a.ts', new Set([1])],
+          ['/repo/src/new.ts', 'all'],
+        ]),
+        false,
+      ),
+    ).toStrictEqual([
+      { ...changed, skipped: [] },
+      { ...untracked, skipped: [] },
+      unreadable,
+    ])
   })
 })
