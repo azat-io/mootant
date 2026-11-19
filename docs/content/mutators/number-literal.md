@@ -130,26 +130,26 @@ Mootant leaves out these changes. `npx mootant list src --skipped` shows them
 with the category and the rule; [Skipped changes](/mutators#skipped-changes)
 explains the categories.
 
-| Reason                                                                                                | Example                                                   | Rule                          |
-| ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------- |
-| Literal in a comparison, left to [comparison-operator](/mutators/comparison-operator)                 | `10` → `11` in `quantity >= 10`                           | `O4`, subsumed                |
-| [comparison-operator](/mutators/comparison-operator) moves the number by one instead                  | `10` → `11` in `quantity > 10`                            | `shifted-literal`, owned      |
-| Delay of a timer, made of literals                                                                    | `1000` → `1001` in `setTimeout(run, 1000)`                | `timer-delay`, noise          |
-| Value of a `case` label                                                                               | `1` → `2` in `case 1:`                                    | `case-label`, noise           |
-| Same result as a `true` or `false` of another mutator                                                 | `1` → `2` in `express ? 1 : 2`                            | `O19`, owned                  |
-| Copies the other branch, as [comparison-operator](/mutators/comparison-operator) does at the boundary | `1` → `2` in `quantity > 6 ? 2 : 1`                       | `R5`, subsumed                |
-| Same sign, and `sort()` reads only the sign                                                           | `1` → `2` in `a.price > b.price ? 1 : -1`                 | `comparator-sign`, equivalent |
-| [method-call](/mutators/method-call) removes the `slice()` call instead                               | `-1` → `0` in `sku.slice(-1)`                             | `O18`, owned                  |
-| [method-call](/mutators/method-call) removes the `slice()` call, which also gives every item          | `-1` → `0` in `items.slice(-1)`                           | `slice-copy`, subsumed        |
-| Operand of `void`, whose value is always `undefined`                                                  | `0` → `1` in `void 0`                                     | `void-operand`, equivalent    |
-| Side of `&&` or `\|\|`, left to [logical-operator](/mutators/logical-operator)                        | `0` → `1` in `filter(product => product.stock \|\| 0)`    | `O3`, owned                   |
-| Key of an object or a class                                                                           | `1` → `2` in `{ [1]: 'Standard' }`                        | `property-key`, noise         |
-| Same truth value in a condition                                                                       | `1` → `2` in `while (1)`                                  | `same-truth`, equivalent      |
-| Makes a loop condition always true                                                                    | `0` → `1` in `do { … } while (0)`                         | `loop-running`, timeout       |
-| May keep a loop running forever                                                                       | `0` → `1` in `attempts = 0` inside `while (attempts > 0)` | `loop-advance`, timeout       |
-| [method-call](/mutators/method-call) removes the `sort()` call instead                                | `-1` → `0` in `return -1`                                 | `O12`, owned                  |
-| [logical-operator](/mutators/logical-operator) drops the default instead                              | `-1` → `0` in `stock \|\| -1`                             | `O16`, owned                  |
-| [logical-operator](/mutators/logical-operator) swaps `\|\|` for `??` instead                          | `-1` → `0` in `limit \|\| -1`                             | `R7`, subsumed                |
+| Reason                                                                                                                       | Example                                                   | Rule                          |
+| ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------- |
+| Literal in a comparison, left to [comparison-operator](/mutators/comparison-operator)                                        | `10` → `11` in `quantity >= 10`                           | `O4`, subsumed                |
+| [comparison-operator](/mutators/comparison-operator) moves the number by one instead                                         | `10` → `11` in `quantity > 10`                            | `shifted-literal`, owned      |
+| Delay of a timer, made of literals                                                                                           | `1000` → `1001` in `setTimeout(run, 1000)`                | `timer-delay`, noise          |
+| Value of a `case` label                                                                                                      | `1` → `2` in `case 1:`                                    | `case-label`, noise           |
+| Same result as a `true` or `false` of another mutator, for a condition without an effect                                     | `1` → `2` in `express ? 1 : 2`                            | `O19`, owned                  |
+| Copies the other branch, as [comparison-operator](/mutators/comparison-operator) does at the boundary, with the same effects | `1` → `2` in `quantity > 6 ? 2 : 1`                       | `R5`, subsumed                |
+| Same sign, and `sort()` reads only the sign                                                                                  | `1` → `2` in `a.price > b.price ? 1 : -1`                 | `comparator-sign`, equivalent |
+| [method-call](/mutators/method-call) removes the `slice()` call instead                                                      | `-1` → `0` in `sku.slice(-1)`                             | `O18`, owned                  |
+| [method-call](/mutators/method-call) removes the `slice()` call, which also gives every item                                 | `-1` → `0` in `items.slice(-1)`                           | `slice-copy`, subsumed        |
+| Operand of `void`, whose value is always `undefined`                                                                         | `0` → `1` in `void 0`                                     | `void-operand`, equivalent    |
+| Side of `&&` or `\|\|`, left to [logical-operator](/mutators/logical-operator)                                               | `0` → `1` in `filter(product => product.stock \|\| 0)`    | `O3`, owned                   |
+| Key of an object or a class                                                                                                  | `1` → `2` in `{ [1]: 'Standard' }`                        | `property-key`, noise         |
+| Same truth value in a condition                                                                                              | `1` → `2` in `while (1)`                                  | `same-truth`, equivalent      |
+| Makes a loop condition always true                                                                                           | `0` → `1` in `do { … } while (0)`                         | `loop-running`, timeout       |
+| May keep a loop running forever                                                                                              | `0` → `1` in `attempts = 0` inside `while (attempts > 0)` | `loop-advance`, timeout       |
+| [method-call](/mutators/method-call) removes the `sort()` call instead                                                       | `-1` → `0` in `return -1`                                 | `O12`, owned                  |
+| [logical-operator](/mutators/logical-operator) drops the default instead                                                     | `-1` → `0` in `stock \|\| -1`                             | `O16`, owned                  |
+| [logical-operator](/mutators/logical-operator) swaps `\|\|` for `??` instead                                                 | `-1` → `0` in `limit \|\| -1`                             | `R7`, subsumed                |
 
 The [`timeouts`](/guide/configuration#timeouts) setting brings back
 `loop-running` and `loop-advance`, and [`caseTests`](#casetests) brings back

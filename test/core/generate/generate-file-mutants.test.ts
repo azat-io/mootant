@@ -1459,6 +1459,22 @@ const IDIOMS: Idiom[] = [
     inputs: [[]],
   },
   {
+    lines: [
+      'function take(items: string[], item: string) {',
+      '  let index = items.indexOf(item)',
+      '  if (index === -1) return false',
+      '  items.splice(index, 1)',
+      '  return true',
+      '}',
+      'function f(items: string[], item: string) {',
+      '  if (take(items, item)) save(item)',
+      '}',
+    ],
+    inputs: combine([[], ['a'], ['a', 'b']], ['a', 'c']),
+    name: 'a then-branch under a splicing call',
+    file: 'example.ts',
+  },
+  {
     lines: ['function f(count: number) {', '  count++', '  return count', '}'],
     inputs: NUMBERS.map(value => [value]),
     name: 'an update statement',
@@ -1533,6 +1549,11 @@ const IDIOMS: Idiom[] = [
       '  return n',
       '}',
     ],
+    gaps: {
+      duplicates: [
+        'comparison-operator (await count(n)) === 0 -> false | statement-removal stop() -> ;',
+      ],
+    },
     name: 'an awaited number in a comparison',
     inputs: NUMBERS.map(value => [value]),
     file: 'example.ts',

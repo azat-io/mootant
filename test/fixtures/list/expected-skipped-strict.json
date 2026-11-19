@@ -1087,26 +1087,6 @@
     },
     {
       "by": {
-        "column": 9,
-        "line": 63,
-        "mutator": "comparison-operator",
-        "id": null
-      },
-      "original": "break",
-      "replacement": ";",
-      "heuristic": false,
-      "category": "owned",
-      "mutator": "statement-removal",
-      "reason": "removing the whole then-branch forces the test to false, as comparison-operator does",
-      "column": 29,
-      "start": 3098,
-      "file": "test/fixtures/list/source/catalog.ts",
-      "rule": "O19",
-      "line": 63,
-      "end": 3103
-    },
-    {
-      "by": {
         "column": 7,
         "line": 69,
         "mutator": "logical-operator",
@@ -1454,7 +1434,7 @@
       },
       "original": "run()",
       "replacement": ";",
-      "heuristic": false,
+      "heuristic": true,
       "category": "owned",
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, as condition does",
@@ -1464,26 +1444,6 @@
       "rule": "O19",
       "line": 88,
       "end": 4526
-    },
-    {
-      "by": {
-        "column": 7,
-        "line": 94,
-        "mutator": "condition",
-        "id": null
-      },
-      "original": "run()",
-      "replacement": ";",
-      "heuristic": false,
-      "category": "owned",
-      "mutator": "statement-removal",
-      "reason": "removing the whole then-branch forces the test to false, as condition does",
-      "column": 25,
-      "start": 4790,
-      "file": "test/fixtures/list/source/catalog.ts",
-      "rule": "O19",
-      "line": 94,
-      "end": 4795
     },
     {
       "by": null,
@@ -1709,7 +1669,7 @@
       },
       "original": "run()",
       "replacement": ";",
-      "heuristic": false,
+      "heuristic": true,
       "category": "owned",
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, as condition does",
@@ -2686,26 +2646,6 @@
       "end": 10789
     },
     {
-      "by": {
-        "column": 7,
-        "line": 250,
-        "mutator": "comparison-operator",
-        "id": null
-      },
-      "original": "stop()",
-      "replacement": ";",
-      "heuristic": false,
-      "category": "owned",
-      "mutator": "statement-removal",
-      "reason": "removing the whole then-branch forces the test to false, as comparison-operator does",
-      "column": 30,
-      "start": 10791,
-      "file": "test/fixtures/list/source/catalog.ts",
-      "rule": "O19",
-      "line": 250,
-      "end": 10797
-    },
-    {
       "by": null,
       "original": "await api.get(id)",
       "replacement": "api.get(id)",
@@ -3616,11 +3556,11 @@
       "equivalent": 45,
       "noise": 16,
       "timeout": 0,
-      "owned": 71,
+      "owned": 68,
       "subsumed": 66,
       "duplicate": 1,
       "invalid": 1
     },
-    "totalSkipped": 200
+    "totalSkipped": 197
   }
 }

@@ -324,6 +324,48 @@ describe('getTowardMutant', () => {
     },
   )
 
+  it.each<[string, string | null]>([
+    ['if (x > 1) f()', 'comparison-operator x > 1'],
+    ['if (x) f()', 'condition x'],
+    ['if (map.delete(key)) f()', null],
+    ['if (counter.next() === 3) f()', null],
+    ['if (tries++ >= limit) f()', 'comparison-operator tries++ >= limit'],
+    ['if (x > 1 && map.delete(key)) f()', null],
+    ['if (map.delete(key) && x > 1) f()', 'comparison-operator x > 1'],
+    ['if (queue.shift() && ready) f()', null],
+    ['if (a || map.delete(key)) f()', null],
+    ['if (map.delete(key) || a) f()', 'logical-operator map.delete(key) || a'],
+    ['if (ready ? map.delete(key) : false) f()', null],
+    ['if (map.delete(key) && (ready ? x > 1 : false)) f()', 'condition ready'],
+    ['function g(e: string | undefined) { if (a && (e ?? load())) f() }', null],
+    [
+      'function g(e: string | undefined) { if (a && (e ?? y)) f() }',
+      'logical-operator e ?? y',
+    ],
+  ])(
+    'moves %s toward false while it keeps every effect: %s',
+    (source, expected) => {
+      let { context, find } = createTestContext(source)
+      let decision = find('IfStatement').test
+      let site = getTowardMutant(
+        {
+          candidate: {
+            mutator: 'statement-removal',
+            node: find('IfStatement'),
+          },
+          value: false,
+          decision,
+        },
+        createRunContext(context),
+        true,
+      )
+
+      expect(
+        site && `${site.mutator} ${context.sourceCode.getText(site.node)}`,
+      ).toBe(expected)
+    },
+  )
+
   it.each<[string, boolean]>([
     [
       [

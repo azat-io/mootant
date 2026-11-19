@@ -5,8 +5,8 @@
   "since": null,
   "summary": {
     "totalFiles": 13,
-    "totalMutants": 481,
-    "totalPending": 454,
+    "totalMutants": 484,
+    "totalPending": 457,
     "totalIgnored": 27,
     "totalErrors": 0,
     "totalWarnings": 3
@@ -95,7 +95,7 @@
     {
       "id": "statement-removal",
       "description": "Removes one statement with an effect: a call, assignment, delete, throw, early return or case break.",
-      "mutants": 52
+      "mutants": 55
     },
     {
       "id": "string-literal",
@@ -122,7 +122,7 @@
     {
       "file": "test/fixtures/list/source/catalog.ts",
       "parsed": true,
-      "mutants": 259
+      "mutants": 262
     },
     {
       "file": "test/fixtures/list/source/component.tsx",
@@ -2662,6 +2662,28 @@
       "ignoredBy": null
     },
     {
+      "id": "s3698sd4ygh4",
+      "mutator": "statement-removal",
+      "file": "test/fixtures/list/source/catalog.ts",
+      "line": 63,
+      "column": 29,
+      "endLine": 63,
+      "endColumn": 34,
+      "start": 3098,
+      "end": 3103,
+      "scope": "conditions",
+      "kind": "block",
+      "original": "break",
+      "replacement": ";",
+      "before": ["    if (++attempts > limit) break"],
+      "after": ["    if (++attempts > limit) ;"],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
       "id": "g7ncv9jwa28n",
       "mutator": "condition",
       "file": "test/fixtures/list/source/catalog.ts",
@@ -3662,6 +3684,32 @@
       ],
       "after": [
         "  if (exists(id)) run() // a promise is always truthy, but the await removal still calls exists"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "ccq6f0f1p31e",
+      "mutator": "statement-removal",
+      "file": "test/fixtures/list/source/catalog.ts",
+      "line": 94,
+      "column": 25,
+      "endLine": 94,
+      "endColumn": 30,
+      "start": 4790,
+      "end": 4795,
+      "scope": "awaits",
+      "kind": "block",
+      "original": "run()",
+      "replacement": ";",
+      "before": [
+        "  if (await exists(id)) run() // a promise is always truthy, but the await removal still calls exists"
+      ],
+      "after": [
+        "  if (await exists(id)) ; // a promise is always truthy, but the await removal still calls exists"
       ],
       "cutStart": 0,
       "cutEnd": 0,
@@ -6777,6 +6825,32 @@
       ],
       "cutStart": 0,
       "cutEnd": 3,
+      "status": "Pending",
+      "reason": null,
+      "ignoredBy": null
+    },
+    {
+      "id": "0w1dj2482s7b",
+      "mutator": "statement-removal",
+      "file": "test/fixtures/list/source/catalog.ts",
+      "line": 250,
+      "column": 30,
+      "endLine": 250,
+      "endColumn": 36,
+      "start": 10791,
+      "end": 10797,
+      "scope": "search",
+      "kind": "block",
+      "original": "stop()",
+      "replacement": ";",
+      "before": [
+        "  if ((await count()) === 0) stop() // a promise never equals 0: the comparison's false owns the removed await"
+      ],
+      "after": [
+        "  if ((await count()) === 0) ; // a promise never equals 0: the comparison's false owns the removed await"
+      ],
+      "cutStart": 0,
+      "cutEnd": 0,
       "status": "Pending",
       "reason": null,
       "ignoredBy": null

@@ -24,7 +24,9 @@ import { isAndOr } from './is-and-or'
  * enabled and without ignore comments: condition's constant, a comparison's
  * constant, a group constant, or the flip of a literal. A candidate with the
  * behavior of that decision forced to the value is then the same mutant under
- * another name and is skipped statically.
+ * another name and is skipped statically. The constant skips every effect of
+ * the decision, so a candidate that still evaluates the decision is that mutant
+ * only when the decision has no effect, which the caller checks.
  *
  * @param node - Decision: a test, a returned value or a node inside one.
  * @param value - Truth value the candidate forces the decision to.

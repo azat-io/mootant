@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-candidates'
 
+import { generateCandidates } from '../../helpers/generate-candidates'
 import { listMutantTexts } from '../../helpers/list-mutant-texts'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
@@ -221,6 +222,67 @@ describe('statementRemoval', () => {
       runMutator('statement-removal', lines.join('\n'), setup),
     ).toMatchObject([{ original: 'save(x)', status: 'Pending' }])
   })
+
+  it('removes the then-branch of a test with an effect', () => {
+    let lines = [
+      'export function remove(map, key, onRemove) {',
+      '  if (map.delete(key)) {',
+      '    onRemove(key)',
+      '  }',
+      '}',
+    ]
+
+    expect(
+      listMutantTexts('statement-removal', lines, { file: 'example.js' }),
+    ).toStrictEqual(['onRemove(key) -> ;'])
+    expect(
+      listSkipped('statement-removal', lines.join('\n'), {
+        file: 'example.js',
+      }),
+    ).toStrictEqual([])
+  })
+
+  it.each([
+    'if (x > 1 && map.delete(key)) onRemove(key)',
+    'if (queue.shift() && ready) onRemove(key)',
+    'if (ready ? map.delete(key) : false) onRemove(key)',
+    'if (!it.next().done) onRemove(key)',
+    'if (counter.next() === 3) onRemove(key)',
+    'if (isValid(key)) onRemove(key)',
+    'if (cache.get(key)) onRemove(key)',
+    'if (map.delete(key) && seen.has(key)) onRemove(key)',
+    'let last = RegExp.$1; if (/(a)/.test(key)) onRemove(key)',
+    'async function f() { if (await exists(key)) onRemove(key) }',
+  ])('removes the then-branch of a test with an effect in %s', source => {
+    expect(listMutantTexts('statement-removal', [source])).toStrictEqual([
+      'onRemove(key) -> ;',
+    ])
+  })
+
+  it.each<[string, string, boolean]>([
+    ['if (order.coupon) applyCoupon(order)', 'O19', false],
+    ['if (seen.has(order.id)) applyCoupon(order)', 'O19', true],
+    ['if (items.some(item => item.sale)) applyCoupon(order)', 'O19', true],
+    ['if (/^vip/u.test(order.code)) applyCoupon(order)', 'O19', true],
+    ['if (x > 1) applyCoupon(order)', 'R4', false],
+    ['if (tries++ >= limit) applyCoupon(order)', 'R4', false],
+    ['if (seen.has(order.id) && x > 1) applyCoupon(order)', 'R4', false],
+    ['if (x > 1 && seen.has(order.id)) applyCoupon(order)', 'R4', true],
+  ])(
+    'skips the then-branch of %s as %s, a guess: %s',
+    (source, rule, heuristic) => {
+      let { skipped } = generateCandidates(source)
+
+      expect(
+        skipped
+          .filter(candidate => candidate.mutator === 'statement-removal')
+          .map(candidate => ({
+            heuristic: candidate.heuristic,
+            rule: candidate.rule,
+          })),
+      ).toStrictEqual([{ heuristic, rule }])
+    },
+  )
 
   it.each([
     'return',
@@ -699,6 +761,16 @@ describe('statementRemoval', () => {
     ],
     ['lbl: go()', ['go() -> ; (invalid invalid-target)']],
     ['if (x > 1) go()', ['go() -> ; (subsumed R4)']],
+    ['if (tries++ >= limit) stop()', ['stop() -> ; (subsumed R4)']],
+    [
+      'if (map.delete(key) && x > 1) onRemove(key)',
+      ['onRemove(key) -> ; (subsumed R4)'],
+    ],
+    ['if (x > 1 && map.delete(key)) onRemove(key)', []],
+    [
+      'if (order.coupon) applyCoupon(order)',
+      ['applyCoupon(order) -> ; (owned O19)'],
+    ],
     [
       'function f() { if (x) return false; return false }',
       [

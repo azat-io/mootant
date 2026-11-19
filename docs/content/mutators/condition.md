@@ -111,10 +111,11 @@ if (import.meta.env.DEV) {
 ```
 
 Turning this mutator off or ignoring it doesn't bring back the changes that rule
-`O19` skips: changes of other mutators that do the same as its `true` or
-`false`. For example, [statement-removal](/mutators/statement-removal) still
-doesn't remove `applyCoupon(order)` in `if (order.coupon) applyCoupon(order)`,
-so that line gets no mutant at all.
+`O19` skips: changes of other mutators that do the same as its `true` or `false`
+on a condition without an effect. For example,
+[statement-removal](/mutators/statement-removal) still doesn't remove
+`applyCoupon(order)` in `if (order.coupon) applyCoupon(order)`, so that line
+gets no mutant at all.
 
 This mutator has no options.
 

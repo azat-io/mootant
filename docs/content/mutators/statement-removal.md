@@ -85,8 +85,10 @@ Mootant never removes a whole `if`, loop or block, a declaration, such as
 
 - The only statement of an `if` without `else`, such as the `throw` in
   `if (!coupon) throw new Error('No coupon')`: another mutant already makes the
-  test `false`. For `if (order.total > 100) addGift(order)`, the removal comes
-  back when [comparison-operator](/mutators/comparison-operator) and
+  test `false`. The removal stays when that mutant would skip an effect of the
+  test, such as the call in `if (reserve(sku))`. For
+  `if (order.total > 100) addGift(order)`, the removal comes back when
+  [comparison-operator](/mutators/comparison-operator) and
   [condition](/mutators/condition) are off.
 - In `recommended`, a statement with a finer mutant inside, such as `count++`,
   `await save(order)` or `return 0`, unless it is a plain `=` assignment.
@@ -199,20 +201,20 @@ Mootant leaves out these changes. `npx mootant list src --skipped` shows them
 with the category and the rule; [Skipped changes](/mutators#skipped-changes)
 explains the categories.
 
-| Reason                                                    | Example                                               | Rule                             |
-| --------------------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
-| Removes code that has a finer mutant inside               | `stock.set(sku, left - 1)` → `;`                      | `solitary`, subsumed             |
-| Same result as a `true` or `false` of another mutator     | `applyCoupon(order)` → `;` in `if (order.coupon)`     | `O19`, owned                     |
-| Another mutant makes the `if` test `false` on some inputs | `addGift(order)` → `;` in `if (order.total > 100)`    | `R4`, subsumed                   |
-| Text of a log message, such as in `console.log()`         | `console.log('Order saved')` → `;`                    | `log-message`, noise             |
-| Last `return` of no value, `undefined` or `null`          | `return null` → `;`                                   | `tail-return`, equivalent        |
-| Falls through only to the end or a `break`                | `break` → `;` in the last case                        | `fall-through-break`, equivalent |
-| May keep a loop running forever                           | `ship(queue.shift())` → `;` in `while (queue.length)` | `loop-advance`, timeout          |
-| Last `return false`: only `false` becomes `undefined`     | `return false` → `;`                                  | `tail-return-false`, noise       |
-| Only waits for a timer delay                              | `await setTimeout(500)` → `;`                         | `timer-delay`, noise             |
-| `continue` that ends the loop body anyway                 | `continue` → `;`                                      | `loop-end`, equivalent           |
-| Mootant can't switch a mutant on here                     | `total = price * quantity` → `;` in `$:`              | `invalid-target`, invalid        |
-| Read by the Vue or Svelte compiler as written             | `defineProps(['price'])` → `;`                        | `compiler-macro`, invalid        |
+| Reason                                                                              | Example                                               | Rule                             |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
+| Removes code that has a finer mutant inside                                         | `stock.set(sku, left - 1)` → `;`                      | `solitary`, subsumed             |
+| Same result as a `true` or `false` of another mutator, for a test without an effect | `applyCoupon(order)` → `;` in `if (order.coupon)`     | `O19`, owned                     |
+| Another mutant makes the `if` test `false` on some inputs, with the same effects    | `addGift(order)` → `;` in `if (order.total > 100)`    | `R4`, subsumed                   |
+| Text of a log message, such as in `console.log()`                                   | `console.log('Order saved')` → `;`                    | `log-message`, noise             |
+| Last `return` of no value, `undefined` or `null`                                    | `return null` → `;`                                   | `tail-return`, equivalent        |
+| Falls through only to the end or a `break`                                          | `break` → `;` in the last case                        | `fall-through-break`, equivalent |
+| May keep a loop running forever                                                     | `ship(queue.shift())` → `;` in `while (queue.length)` | `loop-advance`, timeout          |
+| Last `return false`: only `false` becomes `undefined`                               | `return false` → `;`                                  | `tail-return-false`, noise       |
+| Only waits for a timer delay                                                        | `await setTimeout(500)` → `;`                         | `timer-delay`, noise             |
+| `continue` that ends the loop body anyway                                           | `continue` → `;`                                      | `loop-end`, equivalent           |
+| Mootant can't switch a mutant on here                                               | `total = price * quantity` → `;` in `$:`              | `invalid-target`, invalid        |
+| Read by the Vue or Svelte compiler as written                                       | `defineProps(['price'])` → `;`                        | `compiler-macro`, invalid        |
 
 Changes that come back:
 

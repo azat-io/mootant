@@ -75,6 +75,56 @@ describe('getBranchCopySkip', () => {
       value: '',
     },
     {
+      source: "x = map.delete(key) ? 'removed' : ''",
+      text: "'removed'",
+      type: 'Literal',
+      expected: null,
+      value: '',
+    },
+    {
+      source: 'x = map.delete(key) ? true : false',
+      type: 'Literal',
+      expected: null,
+      text: 'true',
+      value: false,
+    },
+    {
+      source: 'function f() { if (map.delete(key)) return true; return false }',
+      type: 'Literal',
+      expected: null,
+      text: 'false',
+      value: true,
+    },
+    {
+      source: "x = seen.has(key) ? 'seen' : ''",
+      type: 'Literal',
+      expected: 'O19',
+      text: "'seen'",
+      value: '',
+    },
+    {
+      source: 'function f(x: number) { y = x >= 5 && map.delete(key) ? 0 : 1 }',
+      type: 'Literal',
+      expected: null,
+      text: '0',
+      value: 1,
+    },
+    {
+      source: 'function f(x: number) { y = map.delete(key) && x >= 5 ? 0 : 1 }',
+      type: 'Literal',
+      expected: 'R5',
+      text: '0',
+      value: 1,
+    },
+    {
+      source:
+        'function f(x: number) { y = x >= 5 && list.includes(x) ? 0 : 1 }',
+      type: 'Literal',
+      expected: 'R5',
+      text: '0',
+      value: 1,
+    },
+    {
       source: "function f() { if (ok) { return 'yes' } else { return '' } }",
       type: 'Literal',
       expected: 'O19',
@@ -101,6 +151,42 @@ describe('getBranchCopySkip', () => {
       expected: 'R5',
       text: 'false',
       value: true,
+    },
+    {
+      source: 'function f(ok) { if (ok ? map.delete(key) : false) {} }',
+      type: 'Literal',
+      expected: null,
+      text: 'false',
+      value: true,
+    },
+    {
+      source: 'function f(ok) { if (ok ? seen.has(key) : false) {} }',
+      type: 'Literal',
+      expected: 'R5',
+      text: 'false',
+      value: true,
+    },
+    {
+      source: 'function f(a) { if (seen.has(key) ? a : false) {} }',
+      type: 'Literal',
+      expected: 'R5',
+      text: 'false',
+      value: true,
+    },
+    {
+      source: 'function f(a) { if (map.delete(key) ? a : false) {} }',
+      type: 'Literal',
+      expected: null,
+      text: 'false',
+      value: true,
+    },
+    {
+      source:
+        'function f(x: number): boolean { return x > 0 ? true : m.delete(k) && s.has(k) }',
+      type: 'Literal',
+      expected: null,
+      text: 'true',
+      value: false,
     },
     {
       source: 'function f(ok, a): boolean { return ok ? a : false }',
@@ -195,6 +281,70 @@ describe('getBranchCopySkip', () => {
       )?.rule ?? null,
     ).toBe(expected)
   })
+
+  it.each<{
+    value: LiteralValue
+    heuristic: boolean
+    source: string
+    text: string
+  }>([
+    {
+      source: "x = active ? 'on' : ''",
+      heuristic: false,
+      text: "'on'",
+      value: '',
+    },
+    {
+      source: "x = seen.has(key) ? 'seen' : ''",
+      heuristic: true,
+      text: "'seen'",
+      value: '',
+    },
+    {
+      source: 'function f(x: number) { y = map.delete(key) && x >= 5 ? 0 : 1 }',
+      heuristic: false,
+      text: '0',
+      value: 1,
+    },
+    {
+      source:
+        'function f(x: number) { y = x >= 5 && list.includes(x) ? 0 : 1 }',
+      heuristic: true,
+      text: '0',
+      value: 1,
+    },
+    {
+      source: 'function f(ok, a) { if (ok ? a : false) {} }',
+      heuristic: false,
+      text: 'false',
+      value: true,
+    },
+    {
+      source: 'function f(ok) { if (ok ? seen.has(key) : false) {} }',
+      heuristic: true,
+      text: 'false',
+      value: true,
+    },
+    {
+      source: 'function f(a) { if (seen.has(key) ? a : false) {} }',
+      heuristic: true,
+      text: 'false',
+      value: true,
+    },
+  ])(
+    'marks the skip in $source as a guess only when it rests on a method name',
+    ({ heuristic, source, value, text }) => {
+      let { context, find } = createTestContext(source)
+
+      expect(
+        getBranchCopySkip(
+          find('Literal', text),
+          { value },
+          createRunContext(context),
+        )?.heuristic ?? false,
+      ).toBe(heuristic)
+    },
+  )
 
   it('keeps a flip whose test the owner moves nowhere', () => {
     let { context, find } = createTestContext(

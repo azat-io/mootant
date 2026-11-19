@@ -122,27 +122,27 @@ Mootant leaves out these changes. `npx mootant list src --skipped` shows them
 with the category and the rule; [Skipped changes](/mutators#skipped-changes)
 explains the categories.
 
-| Reason                                                                                                | Example                                                      | Rule                        |
-| ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------- |
-| Text of an error message, such as in `new Error()`                                                    | `'Stock cannot be negative'` → `''`                          | `error-message`, noise      |
-| Text of a log message, such as in `console.log()`                                                     | `'Cart saved'` → `''`                                        | `log-message`, noise        |
-| Literal in a comparison, left to [comparison-operator](/mutators/comparison-operator)                 | `'paid'` → `''` in `status === 'paid'`                       | `O4`, subsumed              |
-| Quoted value of a JSX attribute                                                                       | `"badge"` → `""` in `className="badge"`                      | `jsx-attribute`, noise      |
-| Empty key gives a fixed result, as another mutator does                                               | `'GIFT-'` → `''` in `if (code.startsWith('GIFT-'))`          | `O8`, owned                 |
-| Same result as a `true` or `false` of another mutator                                                 | `'Sale'` → `''` in `sale ? 'Sale' : ''`                      | `O19`, owned                |
-| Copies the other branch, as [comparison-operator](/mutators/comparison-operator) does at the boundary | `'Free'` → `''` in `total >= 50 ? 'Free' : ''`               | `R5`, subsumed              |
-| Value of a `case` label                                                                               | `'paid'` → `''` in `case 'paid':`                            | `case-label`, noise         |
-| Key of an object or a class                                                                           | `'X-Cart-Id'` → `''` in `{ ['X-Cart-Id']: cartId }`          | `property-key`, noise       |
-| Text of a tagged template, which its tag reads                                                        | `` `color: ${value}` `` → `` `${value}` ``                   | `tagged-template`, noise    |
-| [logical-operator](/mutators/logical-operator) drops the default instead                              | `'Unnamed'` → `''` in `name \|\| 'Unnamed'`                  | `O16`, owned                |
-| [logical-operator](/mutators/logical-operator) swaps `\|\|` for `??` instead                          | `'Guest'` → `''` in `name \|\| 'Guest'` with `name?: string` | `R7`, subsumed              |
-| Pattern or flags of `RegExp`, left to the regex mutators                                              | `'^SALE-'` → `''` in `new RegExp('^SALE-')`                  | `regex-argument`, noise     |
-| Read by the Vue or Svelte compiler as written                                                         | `'title'` → `''` in `defineProps(['title'])`                 | `compiler-macro`, invalid   |
-| Same code as another mutant                                                                           | `` `/cart/${id}` `` → `''`                                   | `duplicate`, duplicate      |
-| Side of `&&` or `\|\|`, left to [logical-operator](/mutators/logical-operator)                        | `'owner'` → `''` in `role === 'admin' \|\| 'owner'`          | `O3`, owned                 |
-| Description of a `Symbol()`                                                                           | `'cart'` → `''` in `Symbol('cart')`                          | `symbol-description`, noise |
-| String that stands alone as a statement                                                               | `'use client'` → `''` after an `import`                      | `bare-string`, noise        |
-| May keep a loop running forever                                                                       | `'done'` → `''` in `state = 'done'`                          | `loop-advance`, timeout     |
+| Reason                                                                                                                       | Example                                                      | Rule                        |
+| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------- |
+| Text of an error message, such as in `new Error()`                                                                           | `'Stock cannot be negative'` → `''`                          | `error-message`, noise      |
+| Text of a log message, such as in `console.log()`                                                                            | `'Cart saved'` → `''`                                        | `log-message`, noise        |
+| Literal in a comparison, left to [comparison-operator](/mutators/comparison-operator)                                        | `'paid'` → `''` in `status === 'paid'`                       | `O4`, subsumed              |
+| Quoted value of a JSX attribute                                                                                              | `"badge"` → `""` in `className="badge"`                      | `jsx-attribute`, noise      |
+| Empty key gives a fixed result, as another mutator does                                                                      | `'GIFT-'` → `''` in `if (code.startsWith('GIFT-'))`          | `O8`, owned                 |
+| Same result as a `true` or `false` of another mutator, for a condition without an effect                                     | `'Sale'` → `''` in `sale ? 'Sale' : ''`                      | `O19`, owned                |
+| Copies the other branch, as [comparison-operator](/mutators/comparison-operator) does at the boundary, with the same effects | `'Free'` → `''` in `total >= 50 ? 'Free' : ''`               | `R5`, subsumed              |
+| Value of a `case` label                                                                                                      | `'paid'` → `''` in `case 'paid':`                            | `case-label`, noise         |
+| Key of an object or a class                                                                                                  | `'X-Cart-Id'` → `''` in `{ ['X-Cart-Id']: cartId }`          | `property-key`, noise       |
+| Text of a tagged template, which its tag reads                                                                               | `` `color: ${value}` `` → `` `${value}` ``                   | `tagged-template`, noise    |
+| [logical-operator](/mutators/logical-operator) drops the default instead                                                     | `'Unnamed'` → `''` in `name \|\| 'Unnamed'`                  | `O16`, owned                |
+| [logical-operator](/mutators/logical-operator) swaps `\|\|` for `??` instead                                                 | `'Guest'` → `''` in `name \|\| 'Guest'` with `name?: string` | `R7`, subsumed              |
+| Pattern or flags of `RegExp`, left to the regex mutators                                                                     | `'^SALE-'` → `''` in `new RegExp('^SALE-')`                  | `regex-argument`, noise     |
+| Read by the Vue or Svelte compiler as written                                                                                | `'title'` → `''` in `defineProps(['title'])`                 | `compiler-macro`, invalid   |
+| Same code as another mutant                                                                                                  | `` `/cart/${id}` `` → `''`                                   | `duplicate`, duplicate      |
+| Side of `&&` or `\|\|`, left to [logical-operator](/mutators/logical-operator)                                               | `'owner'` → `''` in `role === 'admin' \|\| 'owner'`          | `O3`, owned                 |
+| Description of a `Symbol()`                                                                                                  | `'cart'` → `''` in `Symbol('cart')`                          | `symbol-description`, noise |
+| String that stands alone as a statement                                                                                      | `'use client'` → `''` after an `import`                      | `bare-string`, noise        |
+| May keep a loop running forever                                                                                              | `'done'` → `''` in `state = 'done'`                          | `loop-advance`, timeout     |
 
 Changes that come back:
 

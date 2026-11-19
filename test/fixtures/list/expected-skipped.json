@@ -1705,7 +1705,7 @@
       },
       "original": "run()",
       "replacement": ";",
-      "heuristic": false,
+      "heuristic": true,
       "category": "owned",
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, as condition does",
@@ -1735,26 +1735,6 @@
       "rule": "solitary",
       "line": 93,
       "end": 4707
-    },
-    {
-      "by": {
-        "column": 7,
-        "line": 94,
-        "mutator": "condition",
-        "id": null
-      },
-      "original": "run()",
-      "replacement": ";",
-      "heuristic": false,
-      "category": "owned",
-      "mutator": "statement-removal",
-      "reason": "removing the whole then-branch forces the test to false, as condition does",
-      "column": 25,
-      "start": 4790,
-      "file": "test/fixtures/list/source/catalog.ts",
-      "rule": "O19",
-      "line": 94,
-      "end": 4795
     },
     {
       "by": null,
@@ -2088,7 +2068,7 @@
       },
       "original": "run()",
       "replacement": ";",
-      "heuristic": false,
+      "heuristic": true,
       "category": "owned",
       "mutator": "statement-removal",
       "reason": "removing the whole then-branch forces the test to false, as condition does",
@@ -3193,26 +3173,6 @@
       "rule": "O4",
       "line": 250,
       "end": 10789
-    },
-    {
-      "by": {
-        "column": 7,
-        "line": 250,
-        "mutator": "comparison-operator",
-        "id": null
-      },
-      "original": "stop()",
-      "replacement": ";",
-      "heuristic": false,
-      "category": "owned",
-      "mutator": "statement-removal",
-      "reason": "removing the whole then-branch forces the test to false, as comparison-operator does",
-      "column": 30,
-      "start": 10791,
-      "file": "test/fixtures/list/source/catalog.ts",
-      "rule": "O19",
-      "line": 250,
-      "end": 10797
     },
     {
       "by": null,
@@ -5083,11 +5043,11 @@
       "equivalent": 47,
       "noise": 24,
       "timeout": 11,
-      "owned": 68,
+      "owned": 66,
       "subsumed": 123,
       "duplicate": 1,
       "invalid": 1
     },
-    "totalSkipped": 275
+    "totalSkipped": 273
   }
 }

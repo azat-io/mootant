@@ -13,10 +13,9 @@ import type { Replacement } from '../../types/mutator/replacement'
 import type { SkipNote } from '../../types/mutant/skip-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
+import { getForcedTestJustifier } from './shared/get-forced-test-justifier'
 import { isPlainReturnValue } from './shared/is-plain-return-value'
-import { getOwnerConstant } from './shared/get-owner-constant'
 import { createRunContext } from './shared/create-run-context'
-import { getTowardMutant } from './shared/get-toward-mutant'
 import { isTailPosition } from './shared/is-tail-position'
 import { isEffectFree } from '../syntax/is-effect-free'
 import { isTimerWait } from './shared/is-timer-wait'
@@ -74,9 +73,10 @@ let loopTypes = new Set<Node['type'] | undefined>([
  * labeled `break` and `yield` statements are removed too. The removal is
  * solitary (2.6), except for a plain assignment; it is skipped for the body of
  * a label, for the whole then-branch of an `if` whose test its owner forces to
- * `false` (O19) or a mutant moves toward `false` (R4), for a statement that
- * advances a loop while timeouts are off, and for a statement that only waits
- * for a promise timer. Skipped mutants follow as skipped replacements.
+ * `false` while the test has no effect (O19), or a mutant moves toward `false`
+ * while keeping every effect of the test (R4), for a statement that advances a
+ * loop while timeouts are off, and for a statement that only waits for a
+ * promise timer. Skipped mutants follow as skipped replacements.
  */
 export let statementRemoval: Mutator<StatementRemovalOptions> = {
   create(context) {
@@ -142,8 +142,9 @@ export let statementRemoval: Mutator<StatementRemovalOptions> = {
 /**
  * Decides whether a statement is the whole then-branch of an `if` without
  * `else` whose removal another mutant covers (catalog 4.15): removing it forces
- * the test to `false`, which the test's owner emits (O19, static) or a mutant
- * that will run moves the test toward (R4).
+ * the test to `false` while the test still runs, as the test's owner does for a
+ * test without effects (O19, static) or a mutant that will run and keeps every
+ * effect of the test does on some inputs (R4); see `getForcedTestJustifier`.
  *
  * @param node - Statement to remove.
  * @param context - Mutator context of the file.
@@ -161,30 +162,28 @@ function getForcedThenSkip(
   if (parent?.type !== 'IfStatement' || parent.alternate) {
     return null
   }
-  let test = syntax.unwrapParentheses(parent.test)
-  let owner = getOwnerConstant(test, false, context)
-  if (owner) {
-    return {
-      reason: `removing the whole then-branch forces the test to false, as ${owner.mutator} does`,
-      rule: 'O19',
-      by: owner,
-    }
-  }
-  let toward = getTowardMutant(
+  let found = getForcedTestJustifier(
     {
+      decision: syntax.unwrapParentheses(parent.test),
       candidate: { mutator: context.id, node },
-      decision: test,
       value: false,
     },
     createRunContext(context),
+    true,
   )
-  return toward ?
-      {
-        reason: `removing the whole then-branch forces the test to false, as ${toward.mutator} does on some inputs`,
-        by: toward,
-        rule: 'R4',
-      }
-    : null
+  if (!found) {
+    return null
+  }
+  let { heuristic, owned, by } = found
+  return {
+    reason:
+      owned ?
+        `removing the whole then-branch forces the test to false, as ${by.mutator} does`
+      : `removing the whole then-branch forces the test to false, as ${by.mutator} does on some inputs`,
+    ...(heuristic && { heuristic }),
+    rule: owned ? 'O19' : 'R4',
+    by,
+  }
 }
 
 /**

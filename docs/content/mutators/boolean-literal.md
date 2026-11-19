@@ -36,9 +36,10 @@ Each `true` becomes `false`, and each `false` becomes `true`:
 | `while (true)`                      | `while (false)`                     |
 
 Mootant leaves alone a literal in a comparison, such as `true` in
-`inStock === true`. It also leaves alone the two results of one condition, as in
-`inStock ? true : false` or in `if (inStock) { return true }` before
-`return false`; see [Skipped changes](#skipped-changes).
+`inStock === true`. It also leaves alone the two results of one condition
+without an effect, as in `inStock ? true : false` or in
+`if (inStock) { return true }` before `return false`; see
+[Skipped changes](#skipped-changes).
 
 ## Kill a surviving mutant
 
@@ -98,17 +99,17 @@ Mootant leaves out these changes. `npx mootant list src --skipped` shows them
 with the category and the rule; [Skipped changes](/mutators#skipped-changes)
 explains the categories.
 
-| Reason                                                                                | Example                                                                     | Rule                       |
-| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------- |
-| Same result as a `true` or `false` of another mutator                                 | `true` → `false` in `inStock ? true : false`                                | `O19`, owned               |
-| Literal in a comparison, left to [comparison-operator](/mutators/comparison-operator) | `true` → `false` in `inStock === true`                                      | `O4`, subsumed             |
-| Left to a finer mutant of the condition                                               | `true` → `false` in `price < 10 ? true : false`                             | `R5`, subsumed             |
-| May keep a loop running forever                                                       | `true` → `false` in `paid = true` inside `while (!paid)`                    | `loop-advance`, timeout    |
-| Side of `&&` or `\|\|`, left to [logical-operator](/mutators/logical-operator)        | `false` → `true` in `if (vip \|\| false)`                                   | `O3`, owned                |
-| Makes a loop condition always true                                                    | `false` → `true` in `do { send() } while (false)`                           | `loop-running`, timeout    |
-| [logical-operator](/mutators/logical-operator) swaps `\|\|` for `??` instead          | `true` → `false` in `let send = receipt \|\| true` with `receipt?: boolean` | `R7`, subsumed             |
-| [method-call](/mutators/method-call) removes the `sort()` call instead                | `true` → `false` in a `sort` comparator                                     | `O12`, owned               |
-| Operand of `void`, whose value is always `undefined`                                  | `true` → `false` in `void true`                                             | `void-operand`, equivalent |
+| Reason                                                                                   | Example                                                                     | Rule                       |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------- |
+| Same result as a `true` or `false` of another mutator, for a condition without an effect | `true` → `false` in `inStock ? true : false`                                | `O19`, owned               |
+| Literal in a comparison, left to [comparison-operator](/mutators/comparison-operator)    | `true` → `false` in `inStock === true`                                      | `O4`, subsumed             |
+| Left to a finer mutant of the condition, with the same effects                           | `true` → `false` in `price < 10 ? true : false`                             | `R5`, subsumed             |
+| May keep a loop running forever                                                          | `true` → `false` in `paid = true` inside `while (!paid)`                    | `loop-advance`, timeout    |
+| Side of `&&` or `\|\|`, left to [logical-operator](/mutators/logical-operator)           | `false` → `true` in `if (vip \|\| false)`                                   | `O3`, owned                |
+| Makes a loop condition always true                                                       | `false` → `true` in `do { send() } while (false)`                           | `loop-running`, timeout    |
+| [logical-operator](/mutators/logical-operator) swaps `\|\|` for `??` instead             | `true` → `false` in `let send = receipt \|\| true` with `receipt?: boolean` | `R7`, subsumed             |
+| [method-call](/mutators/method-call) removes the `sort()` call instead                   | `true` → `false` in a `sort` comparator                                     | `O12`, owned               |
+| Operand of `void`, whose value is always `undefined`                                     | `true` → `false` in `void true`                                             | `void-operand`, equivalent |
 
 The [`timeouts`](/guide/configuration#timeouts) setting, on in `strict`, brings
 back `loop-advance` and `loop-running`. `O4`, `R5` and `R7` come back when the
