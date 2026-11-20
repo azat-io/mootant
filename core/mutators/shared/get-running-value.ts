@@ -18,9 +18,9 @@ import { isAndOr } from './is-and-or'
 export interface RunningValue {
   /**
    * Loop whose continuation the node decides; for an exit test that leaves
-   * several loops that run forever, the innermost one. The jump leaves all of
-   * them at once, so the innermost loop runs only once and code of the outer
-   * loops never runs between two checks of the test.
+   * several loops that run forever, the innermost one, whose body runs between
+   * two checks of the test unless something else leaves it. Whether the value
+   * keeps each of these loops running forever is left to `getEndlessValue`.
    */
   loop: DoWhileStatement | WhileStatement | ForStatement
 
@@ -36,7 +36,8 @@ export interface RunningValue {
  * the opposite of the parent's under `!`, and the parent's in an operand of a
  * `&&` or `||` in boolean mode. A node has one exactly when it is in a loop
  * condition (`LT`). A mutant that makes the node equal its running value
- * everywhere keeps the loop running forever.
+ * everywhere keeps the loop running unless something else ends it, such as
+ * another exit of the loop (see `getEndlessValue`).
  *
  * @param node - Node of the runtime tree.
  * @param context - Mutator context of the file.

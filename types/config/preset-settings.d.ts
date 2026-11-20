@@ -36,8 +36,8 @@ export interface PresetSettings {
   templates: boolean
 
   /**
-   * Whether mutants that only a timeout can kill are emitted, such as a loop
-   * test forced to `true`. False unless a preset turns it on.
+   * Whether mutants that may cause timeouts are emitted, such as a loop test
+   * forced to `true`. False unless a preset turns it on.
    */
   timeouts: boolean
 }

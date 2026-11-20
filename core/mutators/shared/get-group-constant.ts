@@ -9,7 +9,7 @@ import { getLoopRunningSkip } from './get-loop-running-skip'
 import { NO_OP_CALLBACK_SKIP } from './no-op-callback-skip'
 import { getLeaveNowValue } from './get-leave-now-value'
 import { isBooleanValued } from './is-boolean-valued'
-import { getRunningValue } from './get-running-value'
+import { getEndlessValue } from './get-endless-value'
 import { hasPolarMutant } from './has-polar-mutant'
 import { getNegationTop } from './get-negation-top'
 import { LEAVE_NOW_SKIP } from './leave-now-skip'
@@ -38,10 +38,10 @@ export interface GroupConstant {
  * root that is not an operand, through `!`, of another `&&` or `||`, unless a
  * running mutant inside the group moves it only toward that constant. In
  * boolean mode the constant is also skipped when fixed operands already give
- * it, when it is the loop's running value or a first exit test's leave-now
- * constant; in value mode the group must be constant-eligible. In both modes
- * the constant is skipped when it makes a no-op callback. A skipped constant
- * comes with its rule.
+ * it, when it may keep the loop running forever (see `getEndlessValue`) or when
+ * it is a first exit test's leave-now constant; in value mode the group must be
+ * constant-eligible. In both modes the constant is skipped when it makes a
+ * no-op callback. A skipped constant comes with its rule.
  *
  * @param node - `&&` or `||` expression of the runtime tree.
  * @param context - Mutator context with the test of mutants that will run.
@@ -78,7 +78,7 @@ export function getGroupConstant(
     }
   } else if (
     !context.settings.timeouts &&
-    getRunningValue(node, context)?.value === absorbing
+    getEndlessValue(node, context) === absorbing
   ) {
     skip = getLoopRunningSkip(absorbing)
   } else if (getLeaveNowValue(node, context) === absorbing) {

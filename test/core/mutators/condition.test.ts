@@ -273,6 +273,114 @@ describe('condition', () => {
     expect(mutate('while (!done) step()')).toStrictEqual(['!done -> false'])
   })
 
+  it.each<{ expected: string[]; source: string }>([
+    {
+      source: 'function f() { while (true) { if (a) break; if (b) return } }',
+      expected: ['a -> false', 'b -> true', 'b -> false'],
+    },
+    {
+      source: 'function f() { while (true) { if (a) break; else return } }',
+      expected: ['a -> false'],
+    },
+    {
+      source: 'while (true) { if (a) break; if (b) throw error }',
+      expected: ['a -> false', 'b -> true', 'b -> false'],
+    },
+    {
+      source:
+        'while (true) { if (a) break; try { if (b) throw error } finally {} }',
+      expected: ['a -> false', 'b -> true', 'b -> false'],
+    },
+    {
+      source:
+        'x: for (const item of items) { while (true) { if (a) break; if (b) continue x } }',
+      expected: ['a -> false', 'b -> true', 'b -> false'],
+    },
+    {
+      source:
+        'function f() { while (true) { while (true) { if (a) return 1; if (b) break } } }',
+      expected: ['a -> true', 'b -> true', 'b -> false'],
+    },
+    {
+      source:
+        'function f() { while (true) { if (b) break; while (true) { if (a) return 1 } } }',
+      expected: ['b -> false', 'a -> true'],
+    },
+    {
+      source:
+        'while (true) { if (a) break; try { if (b) throw error } catch {} }',
+      expected: ['b -> true', 'b -> false'],
+    },
+    {
+      source: 'while (true) { if (a) break; if (b) continue }',
+      expected: ['b -> true', 'b -> false'],
+    },
+    {
+      source: 'while (true) { if (a) break; for (const item of items) break }',
+      expected: [],
+    },
+  ])(
+    'emits false for an exit test only when another exit can leave its loops in $source',
+    ({ expected, source }) => {
+      expect(mutate(source)).toStrictEqual(expected)
+    },
+  )
+
+  it('emits false for an exit test of a walk that has two exits', () => {
+    let source = [
+      'export function findRoot(node) {',
+      '  let current = node',
+      '  for (;;) {',
+      '    if (current.isRoot) {',
+      '      break',
+      '    }',
+      '    if (current.parent === null) {',
+      '      break',
+      '    }',
+      '    current = current.parent',
+      '  }',
+      '  return current',
+      '}',
+    ].join('\n')
+
+    expect(mutate(source, { file: 'example.js' })).toContain(
+      'current.isRoot -> false',
+    )
+    expect(
+      listSkipped('condition', source, { file: 'example.js' }),
+    ).toStrictEqual([
+      'current.isRoot -> true (owned O13)',
+      'current.parent === null -> true (owned O1)',
+      'current.parent === null -> false (owned O1)',
+    ])
+  })
+
+  it.each<{ skipped: string[]; source: string }>([
+    {
+      source:
+        'function f() { for (;;) { for (;;) { if (a()) return 1; if (b()) break } } }',
+      skipped: ['a() -> false (timeout loop-running)'],
+    },
+    {
+      skipped: ['a -> true (owned O13)', 'a -> false (timeout loop-running)'],
+      source: 'for (;;) { if (a) break; switch (k) { case 1: break } }',
+    },
+    {
+      skipped: ['a -> true (owned O13)', 'a -> false (timeout loop-running)'],
+      source: 'for (;;) { if (a) break; run(() => { return 1 }) }',
+    },
+    {
+      skipped: [
+        'current.parent !== null -> true (timeout loop-running)',
+        'current.parent !== null -> false (owned O1)',
+      ],
+      source:
+        'while (current.parent !== null) { if (current.isRoot) break; current = current.parent }',
+    },
+  ])('keeps the loop-running skip of $source', ({ skipped, source }) => {
+    expect(listSkipped('condition', source)).toStrictEqual(skipped)
+  })
+
   it.each<{ expected: string[]; source: string; file: string }>([
     {
       source: [

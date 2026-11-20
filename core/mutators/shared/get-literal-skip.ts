@@ -12,7 +12,7 @@ import { getBranchCopySkip } from './get-branch-copy-skip'
 import { getLiteralMutator } from './get-literal-mutator'
 import { getShiftedLiteral } from './get-shifted-literal'
 import { getOrDefaultSkip } from './get-or-default-skip'
-import { getRunningValue } from './get-running-value'
+import { getEndlessValue } from './get-endless-value'
 import { getNegationTop } from './get-negation-top'
 import { isVoidOperand } from './is-void-operand'
 
@@ -38,12 +38,12 @@ interface LiteralSkipQuery {
  * operand of a comparison (shifted-literal, O4; see `getComparisonOperandSkip`)
  * or of a boolean-mode `&&` or `||` (O3) or, whose change is invisible, of
  * `void` (EQ), a string is an error message (NOISE), a boolean or number change
- * gives a loop its running value unless the `timeouts` setting is on (TIMEOUT),
- * the change copies the other branch of a branch pair (O19, R5), makes a no-op
- * callback (O12) or empties a `||` default (O16, R7). A template with
- * expressions, which changes only its text, is checked against the first four
- * and the branch copy. The rules of the literal's own mutator are checked right
- * after the operand and error message rules.
+ * may keep a loop running forever (see `getEndlessValue`) unless the `timeouts`
+ * setting is on (TIMEOUT), the change copies the other branch of a branch pair
+ * (O19, R5), makes a no-op callback (O12) or empties a `||` default (O16, R7).
+ * A template with expressions, which changes only its text, is checked against
+ * the first four and the branch copy. The rules of the literal's own mutator
+ * are checked right after the operand and error message rules.
  *
  * @param node - Literal that a literal mutator would replace.
  * @param query - Change of the literal and the rules of its own mutator.
@@ -98,7 +98,7 @@ export function getLiteralSkip(
   if (
     mutator !== 'string-literal' &&
     !context.settings.timeouts &&
-    getRunningValue(node, context)?.value === Boolean(value)
+    getEndlessValue(node, context) === Boolean(value)
   ) {
     return {
       reason: 'the new value may keep the loop running forever',

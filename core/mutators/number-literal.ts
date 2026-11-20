@@ -35,7 +35,7 @@ let identityMethods = new Set(['substr', 'slice'])
  * `-` applied directly to one, gets its value plus one (T7). Comparison
  * operands, boolean-mode operands, `void` operands, keys and (unless the
  * `caseTests` option is set) case labels are skipped, and so are changes that
- * keep the truth value in a boolean context, that only a timeout can kill, that
+ * keep the truth value in a boolean context, that may cause a timeout, that
  * keep the sign of a sort comparator's result, or that another mutant owns or
  * subsumes (branch pairs, no-op callbacks, emptied `||` defaults, `slice(-1)`).
  * A skipped change follows as a skipped replacement. Timer delays are skipped

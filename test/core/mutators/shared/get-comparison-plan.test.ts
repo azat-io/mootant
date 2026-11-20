@@ -442,7 +442,7 @@ describe('getComparisonPlan', () => {
     [
       'for (;;) { if (a === b) break; if (a > 9) return; a++ }',
       'a === b',
-      ['a <= b', 'a >= b'],
+      ['a <= b', 'a >= b', 'false'],
     ],
     [
       'for (;;) { step(); if (a === b) break }',

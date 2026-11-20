@@ -39,8 +39,10 @@ Mootant forces these conditions to `true` or `false`:
 
 A loop test also becomes `true` with the
 [`timeouts`](/guide/configuration#timeouts) setting, on in `strict`, since
-`true` may keep the loop running forever. The same goes for `false` in an `if`
-that leaves an endless loop, such as `if (done) break` in `while (true)`.
+`true` may keep the loop running forever, whatever else can end the loop.
+`false` in an `if` that leaves an endless loop, such as `if (done) break` in
+`while (true)`, also needs the setting, unless another `break`, `continue`,
+`return` or `throw` can leave each endless loop that the `if` leaves.
 
 A comparison, a `&&` or `||` group or a literal, also with `!` in front, gets no
 mutant of this mutator, and neither does a `!` on a side of `&&` or `||`. Their

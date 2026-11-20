@@ -25,6 +25,7 @@ import { getShiftedLiteral } from './get-shifted-literal'
 import { getLeaveNowValue } from './get-leave-now-value'
 import { getRootName } from '../../syntax/get-root-name'
 import { getRunningValue } from './get-running-value'
+import { getEndlessValue } from './get-endless-value'
 import { getLiteralValue } from './get-literal-value'
 import { isFunction } from '../../syntax/is-function'
 import { isNumberLiteral } from './is-number-literal'
@@ -304,13 +305,13 @@ export function getComparisonPlan(
   let shift = getShift(node, context)
   let boundedOperand = getBoundedOperand(node, context)
   let impossible = getImpossibleRegions(boundedOperand, 0)
-  let running = settings.timeouts ? null : getRunningValue(node, context)
-  let valueSkips = getValueSkips(node, context, running)
+  let endless = settings.timeouts ? null : getEndlessValue(node, context)
+  let valueSkips = getValueSkips(node, context, endless)
   let constantSkips = new Map([
     ...valueSkips,
     ...getOwnedConstants(node, context),
   ])
-  let operatorSkips = getOperatorSkips(node, context, running)
+  let operatorSkips = getOperatorSkips(node, context, endless)
   let minMax = isMinMaxIdiom(node, context)
   let boundedSkips: BoundedSkips = {
     guard: boundedOperand?.bound.guards?.has(node) ?? false,
@@ -415,23 +416,25 @@ export function getComparisonPlan(
 /**
  * Finds the swaps of a comparison that are skipped by their operator, with the
  * rule of each: the relational swap that a one-way counter makes equivalent in
- * a loop condition, the `!=` or `==` swap that keeps a loop running, and the
- * `!=` and `==` swaps of a relational comparison of two operands hinted to be
- * objects, which compare references. A loop rule wins over the reference rule.
+ * a loop condition, the `!=` or `==` swap that may keep a loop running forever,
+ * and the `!=` and `==` swaps of a relational comparison of two operands hinted
+ * to be objects, which compare references. A loop rule wins over the reference
+ * rule.
  *
  * @param node - Comparison.
  * @param context - Mutator context of the file.
- * @param running - Running value of the comparison, or null.
+ * @param endless - Value of the comparison that may keep its loop running
+ *   forever (see `getEndlessValue`), or null.
  * @returns The skip of each skipped operator.
  */
 function getOperatorSkips(
   node: PrivateInExpression | BinaryExpression,
   context: MutatorContext,
-  running: RunningValue | null,
+  endless: boolean | null,
 ): Map<string | null, SkipNote> {
   let operatorSkips = new Map<string | null, SkipNote>([
     [
-      getCounterEntry(node, context, running),
+      getCounterEntry(node, context),
       {
         reason:
           'the loop moves the counter one way, keeps the bound and has no other exit, so this form ends the loop at the same point',
@@ -439,8 +442,8 @@ function getOperatorSkips(
       },
     ],
   ])
-  if (running) {
-    operatorSkips.set(running.value ? '!=' : '==', {
+  if (endless !== null) {
+    operatorSkips.set(endless ? '!=' : '==', {
       reason:
         'a counter that steps over the bound may keep the loop running forever',
       rule: 'loop-running',
@@ -520,19 +523,20 @@ function getDirections(
 
 /**
  * Finds the constants of a comparison that are skipped by their value, with the
- * rule of each: a value the type hints prove, the leave-now constant of a first
- * exit test, the value that keeps a loop running and a constant that makes a
- * no-op callback. The first rule that applies to a value wins.
+ * rule of each: the leave-now constant of a first exit test, the value that may
+ * keep a loop running forever, a value the type hints prove and a constant that
+ * makes a no-op callback. The first rule that applies to a value wins.
  *
  * @param node - Comparison.
  * @param context - Mutator context of the file.
- * @param running - Running value of the comparison, or null.
+ * @param endless - Value of the comparison that may keep its loop running
+ *   forever (see `getEndlessValue`), or null.
  * @returns The skip of each skipped value.
  */
 function getValueSkips(
   node: PrivateInExpression | BinaryExpression,
   context: MutatorContext,
-  running: RunningValue | null,
+  endless: boolean | null,
 ): Map<boolean, SkipNote> {
   let proven = getProvenComparisonValue(node, context)
   let leaveNow = getLeaveNowValue(node, context)
@@ -540,13 +544,13 @@ function getValueSkips(
   for (let value of [true, false]) {
     let note: SkipNote | null = null
     switch (value) {
-      case running?.value: {
-        note = getLoopRunningSkip(value)
+      case leaveNow: {
+        note = LEAVE_NOW_SKIP
 
         break
       }
-      case leaveNow: {
-        note = LEAVE_NOW_SKIP
+      case endless: {
+        note = getLoopRunningSkip(value)
 
         break
       }
@@ -579,18 +583,18 @@ function getValueSkips(
  * rules out calls too: a call may throw, or change an operand where the loop
  * does not show it. A counter that starts past the bound or steps over it then
  * keeps the original loop running forever, so the entry differs only on runs
- * that never end.
+ * that never end. With the `timeouts` setting on, no entry is skipped.
  *
  * @param node - Comparison.
  * @param context - Mutator context of the file.
- * @param running - Running value of the comparison, or null.
  * @returns The operator of the entry to skip, or null.
  */
 function getCounterEntry(
   node: PrivateInExpression | BinaryExpression,
   context: MutatorContext,
-  running: RunningValue | null,
 ): string | null {
+  let running =
+    context.settings.timeouts ? null : getRunningValue(node, context)
   let expected = running?.value ? ['!==', '!='] : ['===', '==']
   if (!running || !expected.includes(node.operator)) {
     return null

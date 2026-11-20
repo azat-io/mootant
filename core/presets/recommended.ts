@@ -4,8 +4,8 @@ import { DEFAULT_LOGGERS } from './default-loggers'
 
 /**
  * Default preset: every built-in mutator with its default options, without
- * mutants that only a timeout can kill, and the usual loggers, whose message
- * texts are not mutated.
+ * mutants that may cause timeouts, and the usual loggers, whose message texts
+ * are not mutated.
  */
 export let recommended: Preset = {
   mutators: {

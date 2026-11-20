@@ -12,8 +12,9 @@ import { getLiteralSkip } from './shared/get-literal-skip'
  * boolean-valued branch, when the test's owner emits that constant (O19) or a
  * mutant that will run moves the test toward it (R5); the right operand of a
  * value-mode `L || true` with a nullable boolean `L` while the `??` swap will
- * run (R7); and a flip toward the running value of a loop unless the `timeouts`
- * setting is on (TIMEOUT). A skipped flip follows as a skipped replacement.
+ * run (R7); and a flip that may keep a loop running forever (see
+ * `getEndlessValue`) unless the `timeouts` setting is on (TIMEOUT). A skipped
+ * flip follows as a skipped replacement.
  */
 export let booleanLiteral: Mutator = {
   create(context) {

@@ -442,6 +442,80 @@ describe('comparisonOperator', () => {
     ])
   })
 
+  it.each<{ expected: string[]; source: string }>([
+    {
+      source: [
+        'export function findRoot(node) {',
+        '  let current = node',
+        '  for (;;) {',
+        '    if (current.isRoot) {',
+        '      break',
+        '    }',
+        '    if (current.parent === null) {',
+        '      break',
+        '    }',
+        '    current = current.parent',
+        '  }',
+        '  return current',
+        '}',
+      ].join('\n'),
+      expected: [
+        'current.parent === null -> true',
+        'current.parent === null -> false',
+      ],
+    },
+    {
+      source: [
+        'for (;;) {',
+        '  if (i >= n || done) break',
+        '  i += 2',
+        '}',
+      ].join('\n'),
+      expected: ['i >= n -> i > n', 'i >= n -> i == n'],
+    },
+    {
+      source: [
+        'function f() {',
+        '  for (;;) {',
+        '    if (i >= n) break',
+        '    if (stop) return',
+        '    i += 2',
+        '  }',
+        '}',
+      ].join('\n'),
+      expected: ['i >= n -> i > n', 'i >= n -> i == n'],
+    },
+    {
+      source: [
+        'for (;;) {',
+        '  if (i >= n && ready) break',
+        '  i += 2',
+        '}',
+      ].join('\n'),
+      expected: ['i >= n -> i > n'],
+    },
+  ])(
+    'skips the timeout entries of the exit test in $source only when no other exit leaves the loop',
+    ({ expected, source }) => {
+      expect(mutate(source, { file: 'example.js' })).toStrictEqual(expected)
+    },
+  )
+
+  it('skips true for a loop test even when a break can end the loop', () => {
+    let source = [
+      'function f(current) {',
+      '  while (current.parent !== null) {',
+      '    if (current.isRoot) break',
+      '    current = current.parent',
+      '  }',
+      '}',
+    ].join('\n')
+
+    expect(mutate(source, { file: 'example.js' })).toStrictEqual([
+      'current.parent !== null -> false',
+    ])
+  })
+
   it.each<{ expected: string[]; source: string; file: string }>([
     {
       source: [

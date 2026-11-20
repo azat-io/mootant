@@ -824,6 +824,11 @@ describe('logicalOperator', () => {
     ],
     ['while (a || b) step()', ['a || b -> true (timeout loop-running)']],
     [
+      'for (;;) { if (a && b) break }',
+      ['a && b -> false (timeout loop-running)'],
+    ],
+    ['function f() { for (;;) { if (a && b) break; if (c) return } }', []],
+    [
       'function f(o, d?: Date) { const quiet = o.quiet ?? false; if (quiet) run(); x = d?.toISOString() ?? null }',
       [
         'o.quiet ?? false -> o.quiet || false (equivalent falsy-default)',

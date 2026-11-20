@@ -310,6 +310,8 @@ describe('booleanLiteral', () => {
         'false -> true (timeout loop-running)',
       ],
     ],
+    ['for (;;) { if (true) break }', ['true -> false (timeout loop-running)']],
+    ['function f() { for (;;) { if (true) break; if (c) return } }', []],
   ])('lists the skipped mutants of %s', (source, expected) => {
     expect(listSkipped('boolean-literal', source)).toStrictEqual(expected)
   })

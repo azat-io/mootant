@@ -17,7 +17,7 @@ import { getLiteralMutator } from './get-literal-mutator'
 import { getOwnedConstants } from './get-owned-constants'
 import { getLeaveNowValue } from './get-leave-now-value'
 import { isAlwaysNullish } from './is-always-nullish'
-import { getRunningValue } from './get-running-value'
+import { getEndlessValue } from './get-endless-value'
 import { getLiteralValue } from './get-literal-value'
 import { getLiteralSkip } from './get-literal-skip'
 import { isAlwaysTruthy } from './is-always-truthy'
@@ -54,14 +54,15 @@ interface ConstantFacts {
   subsumed: readonly NullishDirection[]
 
   /**
-   * Value of the node that keeps a loop running, unless timeouts are allowed.
-   */
-  running: undefined | boolean
-
-  /**
    * Value that makes a first exit test leave its loop at once, or null.
    */
   leaveNow: boolean | null
+
+  /**
+   * Value of the node that may keep its loop running forever, unless timeouts
+   * are allowed.
+   */
+  endless: boolean | null
 
   /**
    * Value the type hints give the node, or null.
@@ -82,14 +83,14 @@ interface ConstantFacts {
  * other mutators own. A comparison keeps a constant only when
  * comparison-operator neither emits it nor will run a mutant that subsumes it
  * (see `getComparisonConstantSkip`). `true` and `false` are then emitted except
- * the constant the types already give, the loop's running value, a constant
- * that a running directional mutant of a `??` test subsumes, the leave-now
- * constant of a first exit test, and a constant that makes a no-op callback.
- * The constants that are not emitted on such a node are returned with their
- * rule, and so are the constants of the top of a `!` chain that is an operand
- * of `&&` or `||` which logical-operator owns (O3); its other constants are not
- * candidates. The plan is pure: the redundancy and ownership rules read it
- * without running condition.
+ * the constant the types already give, a value that may keep the loop running
+ * forever (see `getEndlessValue`), a constant that a running directional mutant
+ * of a `??` test subsumes, the leave-now constant of a first exit test, and a
+ * constant that makes a no-op callback. The constants that are not emitted on
+ * such a node are returned with their rule, and so are the constants of the top
+ * of a `!` chain that is an operand of `&&` or `||` which logical-operator owns
+ * (O3); its other constants are not candidates. The plan is pure: the
+ * redundancy and ownership rules read it without running condition.
  *
  * @param node - Node of the runtime tree.
  * @param context - Mutator context with the test of mutants that will run.
@@ -157,8 +158,8 @@ export function getConditionConstants(
   } else if (isAlwaysNullish(type)) {
     fixed = negated
   }
-  let running =
-    context.settings.timeouts ? null : getRunningValue(node, context)
+  let endless =
+    context.settings.timeouts ? null : getEndlessValue(node, context)
   let subsumed =
     inner.type === 'LogicalExpression' ?
       getNullishDirections(inner, { mutator: 'condition', node }, context).map(
@@ -176,9 +177,9 @@ export function getConditionConstants(
         )) ??
       getConstantSkip(value, {
         noOp: () => isNoOpCallbackConstant(node, value, context),
-        running: running?.value,
         subsumed,
         leaveNow,
+        endless,
         fixed,
       })
     if (note) {
@@ -300,7 +301,7 @@ function getConstantSkip(
       rule: 'typed-constant',
     }
   }
-  if (value === facts.running) {
+  if (value === facts.endless) {
     return getLoopRunningSkip(value)
   }
   if (value === facts.leaveNow) {

@@ -28,7 +28,7 @@ interface CollectSetup {
   expressions?: TemplateExpression[]
 
   /**
-   * Whether mutants that only a timeout can kill are kept.
+   * Whether mutants that may cause timeouts are kept.
    */
   timeouts?: boolean
 
