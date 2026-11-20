@@ -142,12 +142,12 @@ export default defineConfig({
 
 <PresetStats />
 
-|                                     | `recommended`, the default | `strict` |
-| ----------------------------------- | -------------------------- | -------- |
-| Built-in mutators                   | All 20                     | All 20   |
-| [Mutator options](#mutator-options) | Defaults                   | All on   |
-| Mutants that may cause timeouts     | Left out                   | Added    |
-| Coarse mutants                      | Dropped                    | Kept     |
+|                                     | `recommended`, the default | `strict`                |
+| ----------------------------------- | -------------------------- | ----------------------- |
+| Built-in mutators                   | All 20                     | All 20                  |
+| [Mutator options](#mutator-options) | Defaults                   | All but `jsxAttributes` |
+| Mutants that may cause timeouts     | Left out                   | Added                   |
+| Coarse mutants                      | Dropped                    | Kept                    |
 
 `--preset` replaces `extends` for one run, while the `mutators` and `settings`
 of the configuration still apply:
@@ -181,9 +181,10 @@ the defaults of the mutator, not over the options of the preset. With `strict`,
 
 ### Mutator options
 
-The options are `false` by default, and `strict` turns all of them on.
-`nullishSwap` is `'distinguishing'` by default, and `strict` sets it to
-`'always'`.
+The options are `false` by default, and `strict` turns all of them on but
+[`jsxAttributes`](/mutators/string-literal#jsxattributes), which can change what
+some code does with no mutant on. `nullishSwap` is `'distinguishing'` by
+default, and `strict` sets it to `'always'`.
 
 | Mutator                                                | Option                 | What it does                                                                                                                                                                                         |
 | ------------------------------------------------------ | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -200,6 +201,7 @@ The options are `false` by default, and `strict` turns all of them on.
 | [`regex-pattern`](/mutators/regex-pattern)             | `quantifiers`          | Narrows a quantifier, such as `x+` to `x` or `x*` to `x?`, and moves its bounds by one                                                                                                               |
 | [`statement-removal`](/mutators/statement-removal)     | `jumps`                | Removes `continue`, `yield` and the `break` of a loop or a label                                                                                                                                     |
 | [`string-literal`](/mutators/string-literal)           | `caseTests`            | Mutates strings in `case` labels                                                                                                                                                                     |
+| [`string-literal`](/mutators/string-literal)           | `jsxAttributes`        | Mutates quoted JSX attribute values, except those of `className`, `class`, `style`, `data-testid` and those whose meaning braces would change, such as `disabled=""`                                 |
 
 ## Settings
 

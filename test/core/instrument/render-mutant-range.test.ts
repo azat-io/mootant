@@ -111,6 +111,40 @@ describe('renderMutantRange', () => {
     ])
   })
 
+  it('hosts a quoted JSX attribute value in braces', () => {
+    let [range] = groupMutantRanges([
+      createMutant({ replacement: '""', start: 5, end: 8 }),
+    ])
+
+    expect(
+      renderMutantRange(range!, '<a b="c" />', {
+        attributeValues: new Set([5]),
+        statementStarts: new Map(),
+      }),
+    ).toBe(`{(${check('m1')} ? ("") : ("c"))}`)
+  })
+
+  it('hosts a quoted JSX attribute value in braces inside the host around it', () => {
+    let [range] = groupMutantRanges([
+      createMutant({
+        replacement: 'undefined',
+        id: 'outer',
+        start: 0,
+        end: 11,
+      }),
+      createMutant({ replacement: '""', id: 'inner', start: 5, end: 8 }),
+    ])
+
+    expect(
+      renderMutantRange(range!, '<a b="c" />', {
+        attributeValues: new Set([5]),
+        statementStarts: new Map(),
+      }),
+    ).toBe(
+      `(${check('outer')} ? (undefined) : (<a b={(${check('inner')} ? ("") : ("c"))} />))`,
+    )
+  })
+
   it('hosts nested ranges in the original branch', () => {
     let source = 'a.trim().length === 0'
     let [range] = groupMutantRanges([

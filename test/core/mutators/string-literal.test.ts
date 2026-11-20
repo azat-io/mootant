@@ -2,9 +2,31 @@ import { describe, expect, it } from 'vitest'
 
 import type { MutatorSetup } from '../../helpers/generate-candidates'
 
+import { generateCandidates } from '../../helpers/generate-candidates'
 import { formatMutant } from '../../helpers/format-mutant'
 import { listSkipped } from '../../helpers/list-skipped'
 import { runMutator } from '../../helpers/run-mutator'
+
+/**
+ * Setup of a run with the `jsxAttributes` option of string-literal.
+ */
+const JSX_ATTRIBUTES: MutatorSetup = {
+  mutators: { 'string-literal': ['on', { jsxAttributes: true }] },
+}
+
+/**
+ * Login form whose quoted attribute values change what it does.
+ */
+const LOGIN_FORM = [
+  'export function Login() {',
+  '  return (',
+  '    <form>',
+  '      <input type="password" aria-label="Password" />',
+  '      <a href="/reset">Reset</a>',
+  '    </form>',
+  '  )',
+  '}',
+].join('\n')
 
 /**
  * Lists the mutants of string-literal for a snippet.
@@ -316,6 +338,86 @@ describe('stringLiteral', () => {
     ])
   })
 
+  it('mutates quoted JSX attribute values with jsxAttributes', () => {
+    expect(
+      mutate(LOGIN_FORM, { ...JSX_ATTRIBUTES, file: 'example.jsx' }),
+    ).toStrictEqual(['"password" -> ""', '"Password" -> ""', '"/reset" -> ""'])
+  })
+
+  it('keeps quoted JSX attribute values skipped in strict', () => {
+    expect(
+      listSkipped('string-literal', LOGIN_FORM, {
+        file: 'example.jsx',
+        preset: 'strict',
+      }),
+    ).toStrictEqual([
+      '"password" -> "" (noise jsx-attribute)',
+      '"Password" -> "" (noise jsx-attribute)',
+      '"/reset" -> "" (noise jsx-attribute)',
+    ])
+  })
+
+  it.each<[string, string[]]>([
+    ['x = <a href="" />', ['"" -> "mootant"']],
+    ["x = <a title='Cart' />", ["'Cart' -> ''"]],
+    ['x = <a href="/search?q=a&page=2" />', ['"/search?q=a&page=2" -> ""']],
+    [
+      'x = <img alt="Logo" src="/logo.svg" />',
+      ['"Logo" -> ""', '"/logo.svg" -> ""'],
+    ],
+    ['x = <input placeholder="Email" />', ['"Email" -> ""']],
+    [
+      'x = <label htmlFor="email" id="label" />',
+      ['"email" -> ""', '"label" -> ""'],
+    ],
+    ['x = <li data-state="open" />', ['"open" -> ""']],
+    ['x = <use xlink:href="#icon" />', ['"#icon" -> ""']],
+    ['x = <path d="M0 0" fill="none" />', ['"M0 0" -> ""', '"none" -> ""']],
+    ['x = <Menu.Item key="logout" />', ['"logout" -> ""']],
+    ['x = <Button variant="primary" />', ['"primary" -> ""']],
+    [
+      'x = <Button disabled="disabled" value="x" />',
+      ['"disabled" -> ""', '"x" -> ""'],
+    ],
+  ])(
+    'mutates the quoted JSX attribute value of %s with jsxAttributes',
+    (source, expected) => {
+      expect(
+        mutate(source, { ...JSX_ATTRIBUTES, file: 'example.tsx' }),
+      ).toStrictEqual(expected)
+    },
+  )
+
+  it('ignores a quoted JSX attribute value under an ignore comment with jsxAttributes', () => {
+    let source = [
+      'x = (',
+      '  <a',
+      '    // mootant-ignore-next-line string-literal',
+      '    href="/reset"',
+      '  />',
+      ')',
+    ].join('\n')
+
+    expect(
+      runMutator('string-literal', source, {
+        ...JSX_ATTRIBUTES,
+        file: 'example.tsx',
+      }).map(mutant => mutant.status),
+    ).toStrictEqual(['Ignored'])
+  })
+
+  it('drops the coarse return of a component for its quoted JSX attribute values with jsxAttributes', () => {
+    expect(
+      listSkipped(
+        'return-value',
+        'function Field() { return <input type="password" /> }',
+        { ...JSX_ATTRIBUTES, file: 'example.tsx' },
+      ),
+    ).toStrictEqual([
+      '<input type="password" /> -> undefined (subsumed solitary)',
+    ])
+  })
+
   it.each<{ setup: MutatorSetup; expected: string[]; source: string }>([
     {
       setup: { mutators: { condition: 'off' } },
@@ -389,6 +491,166 @@ describe('stringLiteral', () => {
       }),
     ).toStrictEqual(['"x" -> "" (noise jsx-attribute)'])
   })
+
+  it.each<[string, string[]]>([
+    [
+      'x = <b className="badge" class="tag" style="color: red" data-testid="badge" />',
+      [
+        '"badge" -> "" (noise jsx-attribute)',
+        '"tag" -> "" (noise jsx-attribute)',
+        '"color: red" -> "" (noise jsx-attribute)',
+        '"badge" -> "" (noise jsx-attribute)',
+      ],
+    ],
+    ['x = <Button className="wide" />', ['"wide" -> "" (noise jsx-attribute)']],
+    ['x = <p className="a\n  b" />', ['"a\n  b" -> "" (noise jsx-attribute)']],
+    [
+      'x = <button disabled="disabled" />',
+      ['"disabled" -> "" (invalid invalid-target)'],
+    ],
+    [
+      'x = <input value="x" readOnly="" checked="" />',
+      [
+        '"x" -> "" (invalid invalid-target)',
+        '"" -> "mootant" (invalid invalid-target)',
+        '"" -> "mootant" (invalid invalid-target)',
+      ],
+    ],
+    [
+      'x = <input autoFocus="true" />',
+      ['"true" -> "" (invalid invalid-target)'],
+    ],
+    ['x = <my-input label="x" />', ['"x" -> "" (invalid invalid-target)']],
+    [
+      'x = <button bool:disabled="0" />',
+      ['"0" -> "" (invalid invalid-target)'],
+    ],
+    [
+      'x = <button onclick="save()" />',
+      ['"save()" -> "" (invalid invalid-target)'],
+    ],
+    ['x = <input ref="field" />', ['"field" -> "" (invalid invalid-target)']],
+    ['x = <ul classList="a" />', ['"a" -> "" (invalid invalid-target)']],
+    [
+      'x = <div innerHTML="<b>x</b>" />',
+      ['"<b>x</b>" -> "" (invalid invalid-target)'],
+    ],
+    [
+      'x = <button is="fancy-button" title="x" />',
+      [
+        '"fancy-button" -> "" (invalid invalid-target)',
+        '"x" -> "" (invalid invalid-target)',
+      ],
+    ],
+    [
+      String.raw`x = <input pattern="\d+" />`,
+      [String.raw`"\d+" -> "" (invalid invalid-target)`],
+    ],
+    [
+      'x = <a title="a &amp; b" />',
+      ['"a &amp; b" -> "" (invalid invalid-target)'],
+    ],
+    ['x = <a title="a\n  b" />', ['"a\n  b" -> "" (invalid invalid-target)']],
+    ['x = <a title="a\tb" />', ['"a\tb" -> "" (invalid invalid-target)']],
+  ])(
+    'lists the skipped quoted JSX attribute values of %s with jsxAttributes',
+    (source, expected) => {
+      expect(
+        listSkipped('string-literal', source, {
+          ...JSX_ATTRIBUTES,
+          file: 'example.tsx',
+        }),
+      ).toStrictEqual(expected)
+    },
+  )
+
+  it('lists a quoted JSX attribute value with a backslash as noise without jsxAttributes', () => {
+    expect(
+      listSkipped('string-literal', String.raw`x = <input pattern="\d+" />`, {
+        file: 'example.tsx',
+      }),
+    ).toStrictEqual([String.raw`"\d+" -> "" (noise jsx-attribute)`])
+  })
+
+  it.each<{ heuristic: boolean; source: string; reason: string; rule: string }>(
+    [
+      {
+        reason: 'it only changes the class of an element',
+        source: 'x = <a className="badge" />',
+        rule: 'jsx-attribute',
+        heuristic: true,
+      },
+      {
+        reason: 'it only changes the class of an element',
+        source: 'x = <a class="tag" />',
+        rule: 'jsx-attribute',
+        heuristic: true,
+      },
+      {
+        reason: 'it only changes the style of an element',
+        source: 'x = <a style="color: red" />',
+        rule: 'jsx-attribute',
+        heuristic: true,
+      },
+      {
+        reason: 'it only changes the test id of an element',
+        source: 'x = <a data-testid="row" />',
+        rule: 'jsx-attribute',
+        heuristic: true,
+      },
+      {
+        reason:
+          "Mootant cannot switch a mutant on for a quoted JSX attribute value that a compiler such as Solid's reads another way once it is in braces",
+        source: 'x = <button disabled="disabled" />',
+        rule: 'invalid-target',
+        heuristic: true,
+      },
+      {
+        reason:
+          'Mootant cannot switch a mutant on for a quoted JSX attribute value with a backslash, a control character such as a line break, or a character reference',
+        source: 'x = <a title="a &amp; b" />',
+        rule: 'invalid-target',
+        heuristic: false,
+      },
+    ],
+  )(
+    'explains the skipped quoted JSX attribute value of $source with jsxAttributes',
+    ({ heuristic, source, reason, rule }) => {
+      let { skipped } = generateCandidates(source, {
+        ...JSX_ATTRIBUTES,
+        file: 'example.tsx',
+      })
+
+      expect(
+        skipped
+          .filter(candidate => candidate.mutator === 'string-literal')
+          .map(candidate => [
+            candidate.rule,
+            candidate.reason,
+            candidate.heuristic,
+          ]),
+      ).toStrictEqual([[rule, reason, heuristic]])
+    },
+  )
+
+  it.each<{ setup: MutatorSetup; heuristic: boolean }>([
+    { setup: JSX_ATTRIBUTES, heuristic: true },
+    { heuristic: false, setup: {} },
+  ])(
+    'marks the skip of a class name with $setup as heuristic: $heuristic',
+    ({ heuristic, setup }) => {
+      let { skipped } = generateCandidates('x = <a className="badge" />', {
+        ...setup,
+        file: 'example.tsx',
+      })
+
+      expect(
+        skipped
+          .filter(candidate => candidate.mutator === 'string-literal')
+          .map(candidate => candidate.heuristic),
+      ).toStrictEqual([heuristic])
+    },
+  )
   it.each<[string, string[]]>([
     [
       "x = new RegExp('^a', 'g')",

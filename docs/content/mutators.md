@@ -117,3 +117,5 @@ Other forms of the comment:
 - Without mutator names, a comment ignores the mutants of every mutator.
 - In a Svelte or Vue template, write an HTML comment:
   `<!-- mootant-ignore-next-line -->`.
+- Between JSX elements, write the comment in braces:
+  `{/* mootant-ignore-next-line */}`.

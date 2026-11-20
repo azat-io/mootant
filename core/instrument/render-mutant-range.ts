@@ -17,6 +17,11 @@ interface Placement {
   statementStarts: ReadonlyMap<number, string>
 
   /**
+   * Offsets where quoted JSX attribute values start, whose hosts need braces.
+   */
+  attributeValues: ReadonlySet<number>
+
+  /**
    * How the code of the group reaches the mutant runtime.
    */
   syntax: SiteSyntax
@@ -44,13 +49,17 @@ type RemovalMutant = Extract<Mutant, { kind: 'property' | 'element' }>
  * runs the literal as written, with the nested hosts in it, and otherwise a
  * copy of the literal that leaves the active element out (see `renderCopy`). An
  * expression group or a group of removals that starts a statement of a
- * statement list gets the guard of that statement in front.
+ * statement list gets the guard of that statement in front. An expression group
+ * at a quoted JSX attribute value is hosted in braces, where a conditional
+ * expression may stand for the value.
  *
  * @param range - Group to render.
  * @param source - Text of the file the mutants belong to.
  * @param context - Where the group sits.
  * @param context.statementStarts - Guards by the offsets where the expression
  *   statements of statement lists start (see `findStatementStarts`).
+ * @param context.attributeValues - Offsets where quoted JSX attribute values
+ *   start (see `findAttributeValues`); none when omitted.
  * @param context.syntax - How the code reaches the mutant runtime; the syntax
  *   of script code when omitted.
  * @returns Text that replaces the range in the switched file.
@@ -60,10 +69,12 @@ export function renderMutantRange(
   source: string,
   context: {
     statementStarts: ReadonlyMap<number, string>
+    attributeValues?: ReadonlySet<number>
     syntax?: SiteSyntax
   },
 ): string {
   return renderRange(range, source, {
+    attributeValues: context.attributeValues ?? new Set(),
     syntax: context.syntax ?? getSiteSyntax(false),
     statementStarts: context.statementStarts,
     guarded: true,
@@ -75,8 +86,8 @@ export function renderMutantRange(
  *
  * @param range - Group to render.
  * @param source - Text of the file the mutants belong to.
- * @param placement - Statement starts, runtime syntax and whether a guard may
- *   precede the host.
+ * @param placement - Statement starts, quoted attribute values, runtime syntax
+ *   and whether a guard may precede the host.
  * @returns Text that replaces the range.
  */
 function renderRange(
@@ -84,7 +95,7 @@ function renderRange(
   source: string,
   placement: Placement,
 ): string {
-  let { statementStarts, guarded, syntax } = placement
+  let { attributeValues, statementStarts, guarded, syntax } = placement
   let { runtime, quote } = syntax
   let original = ''
   let cursor = range.start
@@ -92,6 +103,7 @@ function renderRange(
     original += source.slice(cursor, child.start)
     original += renderRange(child, source, {
       guarded: range.kind === 'block' || child.start !== range.start,
+      attributeValues,
       statementStarts,
       syntax,
     })
@@ -115,7 +127,8 @@ function renderRange(
     mutant =>
       `${runtime}?.hit(${quote(mutant.id)}) ? ${renderBranch(mutant.replacement)} : `,
   )
-  return `${guard}(${branches.join('')}${renderBranch(original)})`
+  let host = `${guard}(${branches.join('')}${renderBranch(original)})`
+  return attributeValues.has(range.start) ? `{${host}}` : host
 }
 
 /**

@@ -642,6 +642,31 @@ describe('collectCandidates', () => {
     ).toStrictEqual([['invalid-target', '']])
   })
 
+  it('hosts a quoted JSX attribute value only where braces keep its meaning', () => {
+    let source =
+      'x = <button disabled="disabled" class="a  b" onclick="save()" title="Save" />'
+    let { diagnostics, candidates } = collect(
+      [source],
+      [
+        activate('first', 0, () => ({
+          Literal: node => [{ text: '""', node }],
+        })),
+      ],
+      { file: 'example.tsx' },
+    )
+
+    expect(
+      candidates.map(candidate => source.slice(candidate.start, candidate.end)),
+    ).toStrictEqual(['"Save"'])
+    expect(diagnostics.map(diagnostic => diagnostic.message)).toStrictEqual(
+      Array.from(
+        { length: 3 },
+        () =>
+          'Mutator "first" cannot replace a Literal node in a position where Mootant cannot switch a mutant on.',
+      ),
+    )
+  })
+
   it('lists an invalid replacement and a loop-advance value as skipped', () => {
     let { skipped } = collect(
       ['let x = 1', 'while (!done) {', '  done = check()', '}'],

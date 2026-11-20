@@ -40,7 +40,9 @@ let chainElementTypes = new Set([
  * shorthand property values, method values, `delete` operands, `typeof`
  * identifiers, template parts of tagged templates, callee or tag expressions
  * that carry `this`, short-circuiting elements of optional chains, JSX
- * attribute values and JSX children are rejected.
+ * attribute values and JSX children are rejected. A quoted attribute value may
+ * still be replaced with a plain string, which the switch hosts in braces (see
+ * `validateReplacement`).
  *
  * @param tree - Runtime tree of the file.
  * @param node - Node of the runtime tree.

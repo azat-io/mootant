@@ -3,6 +3,7 @@ import type { Mutant } from '../../types/mutant/mutant'
 
 import { getComponentFramework } from '../parser/get-component-framework'
 import { scanScriptBlocks } from '../parser/scan-script-blocks'
+import { findAttributeValues } from './find-attribute-values'
 import { findStatementStarts } from './find-statement-starts'
 import { groupMutantRanges } from './group-mutant-ranges'
 import { renderMutantRange } from './render-mutant-range'
@@ -40,8 +41,9 @@ interface InstrumentFileInput {
  * its mutants. Mutants of one range share a host; nested ranges are hosted
  * inside the original branch of the outer one. The removals of the elements or
  * members of one array or object literal share a host around the literal. A
- * mutant in the template of a Vue component, outside its script blocks, reaches
- * the runtime through `Math`. No source map is made.
+ * mutant of a quoted JSX attribute value is hosted in braces. A mutant in the
+ * template of a Vue component, outside its script blocks, reaches the runtime
+ * through `Math`. No source map is made.
  *
  * @param input - File name, text, mutants and template compilers.
  * @returns The switched text, or the text as is when there are no mutants.
@@ -55,6 +57,7 @@ export function instrumentFile(input: InstrumentFileInput): string {
   }
   let ranges = groupMutantRanges(mutants)
   let statementStarts = findStatementStarts(file, source, compilers)
+  let attributeValues = findAttributeValues(file, source)
   let vue = getComponentFramework(file) === 'vue'
   let scripts = vue ? scanScriptBlocks(source, 'vue') : []
   let switched = ''
@@ -68,6 +71,7 @@ export function instrumentFile(input: InstrumentFileInput): string {
     switched += source.slice(cursor, range.start)
     switched += renderMutantRange(range, source, {
       syntax: getSiteSyntax(template),
+      attributeValues,
       statementStarts,
     })
     cursor = range.end

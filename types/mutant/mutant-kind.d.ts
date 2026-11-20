@@ -3,7 +3,8 @@
  * file:
  *
  * - `expression`: a conditional expression around the replaced expression; the
- *   replacement is written inside parentheses.
+ *   replacement is written inside parentheses, and in place of a quoted JSX
+ *   attribute value inside braces around them, as in `type={("")}`.
  * - `block`: an `if`/`else` around the replaced statement; the replacement is
  *   written inside braces.
  * - `element`: the removal of an element of an array literal, hosted with the

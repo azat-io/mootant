@@ -43,7 +43,7 @@ describe('validateReplacement', () => {
   ])('rejects a focus $place', ({ focus }) => {
     let { find, tree } = createTestFile('x = /ab/')
 
-    expect(validateReplacement(tree, find('Literal'), focus)).toBe(
+    expect(validateReplacement(tree, find('Literal'), { focus })).toBe(
       'returned a focus outside the node it replaces.',
     )
   })
@@ -53,11 +53,57 @@ describe('validateReplacement', () => {
 
     expect(
       validateReplacement(tree, find('Literal'), {
-        start: 5,
-        text: '',
-        end: 6,
+        focus: { start: 5, text: '', end: 6 },
       }),
     ).toBeNull()
+  })
+
+  it.each([
+    { source: '<a b="c" />', text: '""' },
+    { source: "<a b='' />", text: "'mootant'" },
+    { source: '<a b:c="d" />', text: `'say "hi"'` },
+  ])(
+    'accepts $text in place of the quoted JSX attribute value of $source',
+    ({ source, text }) => {
+      let { find, tree } = createTestFile(source, 'example.tsx')
+
+      expect(validateReplacement(tree, find('Literal'), { text })).toBeNull()
+    },
+  )
+
+  it.each([
+    { source: '<a b="c" />', text: undefined },
+    { source: '<a b="c" />', text: 'null' },
+    { source: '<a b="c" />', text: '("")' },
+    { source: '<a b="c" />', text: '"a &amp; b"' },
+    { source: String.raw`<a b="\d" />`, text: '""' },
+    { source: '<a b="c &amp; d" />', text: '""' },
+    { source: '<a b="c\nd" />', text: '""' },
+    { source: '<button disabled="disabled" />', text: '""' },
+    { source: '<my-input label="x" />', text: '""' },
+    { source: '<a bool:hidden="0" />', text: '""' },
+    { source: '<button onclick="save()" />', text: '""' },
+    { source: '<b class="a  b" />', text: '""' },
+    { source: '<input ref="field" />', text: '""' },
+  ])(
+    'rejects $text in place of the quoted JSX attribute value of $source',
+    ({ source, text }) => {
+      let { find, tree } = createTestFile(source, 'example.tsx')
+
+      expect(validateReplacement(tree, find('Literal'), { text })).toBe(
+        'cannot replace a Literal node in a position where Mootant cannot switch a mutant on.',
+      )
+    },
+  )
+
+  it('rejects a JSX element as the value of a JSX attribute', () => {
+    let { find, tree } = createTestFile('<a b=<c /> />', 'example.tsx')
+
+    expect(
+      validateReplacement(tree, find('JSXElement', '<c />'), { text: '""' }),
+    ).toBe(
+      'cannot replace a JSXElement node in a position where Mootant cannot switch a mutant on.',
+    )
   })
 
   it.each([

@@ -50,9 +50,10 @@ export interface ListReportMutant extends ListReportDiff {
 
   /**
    * How the mutant will be switched on, and so how to apply it: wrap the
-   * replacement in parentheses for `expression`, in braces for `block`, and
-   * write it as is for `element` and `property`, which remove an array element
-   * or an object member with its comma.
+   * replacement in parentheses for `expression`, and these in braces in place
+   * of a quoted JSX attribute value, as in `type={("")}`; in braces for
+   * `block`; and write it as is for `element` and `property`, which remove an
+   * array element or an object member with its comma.
    */
   kind: MutantKind
 

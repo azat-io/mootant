@@ -7,6 +7,8 @@ import { createContext, runInContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
 import { readFile } from 'node:fs/promises'
 
+import type { MutatorSetup } from '../../helpers/generate-candidates'
+
 import { installMutantRuntime } from '../../../core/runtime/install-mutant-runtime'
 import { getSyntaxFingerprint } from '../../helpers/get-syntax-fingerprint'
 import { instrumentFile } from '../../../core/instrument/instrument-file'
@@ -23,7 +25,12 @@ import { runProgram } from '../../helpers/run-program'
  * Programs whose mutants share ranges, nest, start statements and remove
  * statements, with the inputs of `f`.
  */
-const PROGRAMS: { inputs: unknown[][]; lines: string[]; file: string }[] = [
+const PROGRAMS: {
+  mutators?: MutatorSetup['mutators']
+  inputs: unknown[][]
+  lines: string[]
+  file: string
+}[] = [
   {
     lines: [
       String.raw`let word = /\b[a-z]{2}/gi`,
@@ -252,6 +259,29 @@ const PROGRAMS: { inputs: unknown[][]; lines: string[]; file: string }[] = [
     ],
     inputs: [[0], ['a']],
     file: 'example.ts',
+  },
+  {
+    lines: [
+      'let h = (type, props, ...children) => ({ type, props, children })',
+      'function f(label, rest) {',
+      '  return (',
+      '    <form method="post" className="form">',
+      String.raw`      <input type="password" name="secret" aria-label={label} pattern="\d+" />`,
+      `      <a href="" title="a &amp; b" data-quote='say "hi"' {...rest}>`,
+      '        x',
+      '      </a>',
+      `      <b title="?a=1&b=2" lang="a${String.fromCodePoint(0xa0)}b${String.fromCodePoint(0x20_28)}c" />`,
+      '      <use xlink:href="#icon" />',
+      '    </form>',
+      '  )',
+      '}',
+    ],
+    inputs: [
+      ['Password', {}],
+      ['', { title: 'rest' }],
+    ],
+    mutators: { 'string-literal': ['on', { jsxAttributes: true }] },
+    file: 'example.jsx',
   },
 ]
 
@@ -662,6 +692,70 @@ describe('instrumentFile', () => {
     },
   )
 
+  it('hosts the mutants of quoted JSX attribute values in braces in a text that parses', () => {
+    let source = [
+      'export function Field({ ok }: { ok: boolean }) {',
+      '  return (',
+      '    <label htmlFor="email" xlink:title="Email">',
+      '      <Input type="email" variant="primary" />',
+      '      {ok && <b title="Done" />}',
+      '    </label>',
+      '  )',
+      '}',
+    ].join('\n')
+    let file = 'field.tsx'
+    let mutants = generateMutants(source, {
+      mutators: { 'string-literal': ['on', { jsxAttributes: true }] },
+      file,
+    })
+    let switched = instrumentFile({ mutants, source, file })
+    let sites = [
+      ...switched.matchAll(/\?\.hit(?:Any)?\((?<ids>\[[^\]]*\]|[^)]*)\)/gu),
+    ].flatMap(site => [...site.groups!['ids']!.matchAll(/\w+/gu)])
+
+    expect(
+      mutants
+        .filter(mutant => mutant.mutator === 'string-literal')
+        .map(mutant => source.slice(mutant.start, mutant.end)),
+    ).toStrictEqual(['"email"', '"Email"', '"email"', '"primary"', '"Done"'])
+    expect(getSyntaxFingerprint(file, switched)).not.toBeNull()
+    expect(sites.map(site => site[0]).toSorted(compareCodeUnits)).toStrictEqual(
+      mutants.map(mutant => mutant.id).toSorted(compareCodeUnits),
+    )
+    expect(switched).toContain('<b title={(globalThis.__mootant?.hit(')
+  })
+
+  it('hosts quoted JSX attribute values in braces inside the hosts of removals and statements', () => {
+    let source = [
+      '#!/usr/bin/env node',
+      'let items = [<li key="a" title="x" />, <li key="b" />]',
+      'show(<a href="/home" />)',
+    ].join('\n')
+    let file = 'items.js'
+    let mutants = generateMutants(source, {
+      mutators: { 'string-literal': ['on', { jsxAttributes: true }] },
+      preset: 'strict',
+      file,
+    })
+    let switched = instrumentFile({ mutants, source, file })
+    let sites = [
+      ...switched.matchAll(/\?\.hit(?:Any)?\((?<ids>\[[^\]]*\]|[^)]*)\)/gu),
+    ].flatMap(site => [...site.groups!['ids']!.matchAll(/\w+/gu)])
+
+    expect(new Set(mutants.map(mutant => mutant.kind))).toStrictEqual(
+      new Set(['expression', 'element', 'block']),
+    )
+    expect(
+      mutants
+        .filter(mutant => mutant.mutator === 'string-literal')
+        .map(mutant => source.slice(mutant.start, mutant.end)),
+    ).toStrictEqual(['"a"', '"x"', '"b"', '"/home"'])
+    expect(getSyntaxFingerprint(file, switched)).not.toBeNull()
+    expect(sites.map(site => site[0]).toSorted(compareCodeUnits)).toStrictEqual(
+      mutants.map(mutant => mutant.id).toSorted(compareCodeUnits),
+    )
+  })
+
   it.each([
     {
       lines: [
@@ -780,9 +874,9 @@ describe('instrumentFile', () => {
     ),
   )(
     'switches $lines.1 under $preset like each mutant applied alone',
-    async ({ preset, inputs, lines, file }) => {
+    async ({ mutators, preset, inputs, lines, file }) => {
       let source = lines.join('\n')
-      let mutants = generateMutants(source, { preset, file })
+      let mutants = generateMutants(source, { mutators, preset, file })
       let switched = instrumentFile({ mutants, source, file })
       let original = await runProgram(source, file, inputs)
       let expected = await Promise.all(

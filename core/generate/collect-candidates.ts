@@ -400,7 +400,7 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
     let violation =
       empty ?
         `returned an empty text for a ${target.type} node; only an element of an array literal or a member of an object literal is removed with an empty text.`
-      : validateReplacement(tree, target, change.focus)
+      : validateReplacement(tree, target, change)
     if (violation !== null) {
       diagnostics.push(
         createMutatorError(

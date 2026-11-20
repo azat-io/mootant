@@ -192,7 +192,9 @@ export interface SyntaxHelpers {
 
   /**
    * Whether a replacement may stand in place of the node: an expression whose
-   * value is read and that the mutant switch can wrap.
+   * value is read and that the mutant switch can wrap. A quoted JSX attribute
+   * value is not one, though a plain string may replace it (see
+   * `Replacement.node`).
    */
   isValuePosition(node: Node): boolean
 

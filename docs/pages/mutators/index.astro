@@ -38,8 +38,8 @@ let mutators = (await getCollection('mutators')).toSorted(
   <p>
     Mootant has 20 built-in mutators, and both
     <a href="/guide/configuration#presets">presets</a> turn all of them on.
-    <code>strict</code> also turns on all mutator options, the mutants that may
-    cause timeouts and the
+    <code>strict</code> also turns on all mutator options but
+    <code>jsxAttributes</code>, the mutants that may cause timeouts and the
     <a href="/guide/configuration#coarsemutants">coarse mutants</a> that
     <code>recommended</code> drops.
   </p>

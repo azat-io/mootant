@@ -21,10 +21,11 @@ let queue: Promise<unknown> = Promise.resolve()
 /**
  * Runs a program that declares a function `f` on every input, the way the
  * catalog's differential run executes an idiom and each of its mutants (12.6).
- * TypeScript is stripped first. Each input runs in a fresh instance of the
- * program in a worker thread, so a run that hangs, even after an `await`, is
- * ended without stopping the tests; its output is `hung`. The output of an
- * input describes, with reference identity:
+ * TypeScript is stripped first, and JSX becomes calls of `h`, which a program
+ * with JSX declares. Each input runs in a fresh instance of the program in a
+ * worker thread, so a run that hangs, even after an `await`, is ended without
+ * stopping the tests; its output is `hung`. The output of an input describes,
+ * with reference identity:
  *
  * - The arguments after the run, with the objects that existed before it marked,
  *   so changes to the inputs and replaced objects count.
@@ -55,7 +56,9 @@ export async function runProgram(
   file: string,
   inputs: unknown[][],
 ): Promise<string[]> {
-  let { code } = await transformWithOxc(source, file)
+  let { code } = await transformWithOxc(source, file, {
+    jsx: { runtime: 'classic', pragma: 'h' },
+  })
   let previous = queue
   let runs = (async () => {
     await previous

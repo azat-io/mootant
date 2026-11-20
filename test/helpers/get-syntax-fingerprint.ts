@@ -16,7 +16,8 @@ let skippedKeys = new Set(['range', 'start', 'raw', 'end'])
  * exactly when they have the same tree, the measure of the catalog's no-op and
  * syntactic distinctness checks (12.1). An expression mutant hosted in
  * parentheses, with or without the `;` of the hosting rule, keeps the
- * fingerprint of the same replacement written without them.
+ * fingerprint of the same replacement written without them; one hosted in
+ * braces at a quoted JSX attribute value does not.
  *
  * @param file - File name, whose extension selects the language; every script
  *   block of a component file is a program of its own.

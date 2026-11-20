@@ -1,10 +1,18 @@
-import type { TemplateLiteral, StringLiteral, Node } from 'oxc-parser'
+import type {
+  JSXOpeningElement,
+  TemplateLiteral,
+  StringLiteral,
+  JSXAttribute,
+  Node,
+} from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
 import type { SkipNote } from '../../types/mutant/skip-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
+import { isBraceSensitiveAttribute } from '../syntax/is-brace-sensitive-attribute'
+import { isPlainAttributeString } from '../text/is-plain-attribute-string'
 import { readRegexArgument } from '../regex/read-regex-argument'
 import { createRunContext } from './shared/create-run-context'
 import { isLookupPosition } from './shared/is-lookup-position'
@@ -17,6 +25,15 @@ import { isReadChain } from '../syntax/is-read-chain'
  */
 interface StringLiteralOptions {
   /**
+   * Whether quoted JSX attribute values are mutated, apart from those of
+   * `className`, `class`, `style` and `data-testid`, those of attributes whose
+   * meaning braces would change, such as `disabled` and `onclick` (see
+   * `isBraceSensitiveAttribute`), and those with a backslash, a control
+   * character or a character reference.
+   */
+  jsxAttributes: boolean
+
+  /**
    * Whether strings in `case` labels are mutated.
    */
   caseTests: boolean
@@ -26,6 +43,18 @@ interface StringLiteralOptions {
  * Text written into an empty string or template.
  */
 const FILLER = 'mootant'
+
+/**
+ * What the quoted values of these JSX attributes change, by attribute name. The
+ * `jsxAttributes` option leaves them alone: a class or a style only changes how
+ * an element looks, and a test id only how a test finds it.
+ */
+let skippedAttributes = new Map([
+  ['data-testid', 'test id'],
+  ['className', 'class'],
+  ['class', 'class'],
+  ['style', 'style'],
+])
 
 /**
  * Methods whose first argument is a lookup key.
@@ -52,11 +81,13 @@ let lookupMethods = new Set([
  * glued together are rarely a value of their own; other expressions are kept,
  * and so are those of a tagged template, which a string cannot replace. Keys,
  * comparison, boolean-mode and `void` operands, `Symbol` descriptions, error
- * messages, lookup keys whose call is only tested, JSX attribute strings, the
- * pattern and flags of `RegExp` calls the regex mutators read, bare string
- * statements, tagged templates, templates without static text and (unless the
- * `caseTests` option is set) case labels are skipped, and so are mutants that
- * another mutant owns or subsumes (branch pairs, no-op callbacks, emptied `||`
+ * messages, lookup keys whose call is only tested, quoted JSX attribute values
+ * (with the `jsxAttributes` option, only those of `className`, `class`, `style`
+ * and `data-testid` and those whose meaning braces would change), the pattern
+ * and flags of `RegExp` calls the regex mutators read, bare string statements,
+ * tagged templates, templates without static text and (unless the `caseTests`
+ * option is set) case labels are skipped, and so are mutants that another
+ * mutant owns or subsumes (branch pairs, no-op callbacks, emptied `||`
  * defaults). A skipped change follows as a skipped replacement; a template
  * without static text has nothing to change.
  */
@@ -106,7 +137,7 @@ export let stringLiteral: Mutator<StringLiteralOptions> = {
   meta: {
     description:
       'Empties a string or the static text of a template literal, or fills an empty one.',
-    defaultOptions: { caseTests: false },
+    defaultOptions: { jsxAttributes: false, caseTests: false },
   },
 }
 
@@ -129,9 +160,10 @@ interface StringChange {
 /**
  * Decides whether string-literal skips the change of a string (catalog 4.16):
  * tagged templates, keys, case labels unless the `caseTests` option is set,
- * bare string statements, JSX attribute strings, `Symbol` descriptions, the
- * arguments of `RegExp` calls the regex mutators read, the rules all literal
- * mutators share, and an emptied lookup key whose call is only tested (O8).
+ * bare string statements, quoted JSX attribute values (see `getAttributeSkip`),
+ * `Symbol` descriptions, the arguments of `RegExp` calls the regex mutators
+ * read, the rules all literal mutators share, and an emptied lookup key whose
+ * call is only tested (O8).
  *
  * @param node - String literal or template literal.
  * @param change - New text and value.
@@ -167,11 +199,12 @@ function getStringSkip(
       rule: 'bare-string',
     }
   }
-  if (parent?.type === 'JSXAttribute') {
-    return {
-      reason: 'it only changes the quoted value of a JSX attribute',
-      rule: 'jsx-attribute',
-    }
+  let attributeSkip =
+    parent?.type === 'JSXAttribute' ?
+      getAttributeSkip(parent, node, context)
+    : null
+  if (attributeSkip) {
+    return attributeSkip
   }
   if (
     parent?.type === 'CallExpression' &&
@@ -207,6 +240,62 @@ function getStringSkip(
     return null
   }
   return getLiteralSkip(node, { change: { value }, getOwnSkip }, runContext)
+}
+
+/**
+ * Decides whether string-literal skips the change of a quoted JSX attribute
+ * value. Without the `jsxAttributes` option it skips every one. With the option
+ * it skips the values of `className`, `class`, `style` and `data-testid`, by a
+ * guess from the name that they only change how an element looks or how a test
+ * finds it, and the values whose meaning the mutant switch would change by
+ * moving them into braces: those a compiler may then read another way (see
+ * `isBraceSensitiveAttribute`), a guess about the compiler that reads the file,
+ * and those whose text JSX and JavaScript read differently (see
+ * `isPlainAttributeString`).
+ *
+ * @param attribute - Attribute whose value the change replaces.
+ * @param node - Quoted value of the attribute.
+ * @param context - Mutator context of the file.
+ * @returns Rule and reason of the skip, or null when the value is mutated.
+ */
+function getAttributeSkip(
+  attribute: JSXAttribute,
+  node: TemplateLiteral | StringLiteral,
+  context: MutatorContext<StringLiteralOptions>,
+): SkipNote | null {
+  if (!context.options.jsxAttributes) {
+    return {
+      reason: 'it only changes the quoted value of a JSX attribute',
+      rule: 'jsx-attribute',
+    }
+  }
+  let { name } = attribute
+  let part =
+    name.type === 'JSXIdentifier' ? skippedAttributes.get(name.name) : undefined
+  if (part !== undefined) {
+    return {
+      reason: `it only changes the ${part} of an element`,
+      rule: 'jsx-attribute',
+      heuristic: true,
+    }
+  }
+  let element = context.sourceCode.getParent(attribute) as JSXOpeningElement
+  if (isBraceSensitiveAttribute(attribute, element)) {
+    return {
+      reason:
+        "Mootant cannot switch a mutant on for a quoted JSX attribute value that a compiler such as Solid's reads another way once it is in braces",
+      rule: 'invalid-target',
+      heuristic: true,
+    }
+  }
+  if (!isPlainAttributeString(context.sourceCode.getText(node))) {
+    return {
+      reason:
+        'Mootant cannot switch a mutant on for a quoted JSX attribute value with a backslash, a control character such as a line break, or a character reference',
+      rule: 'invalid-target',
+    }
+  }
+  return null
 }
 
 /**

@@ -40,9 +40,16 @@ export interface Replacement {
 
   /**
    * Node whose whole range, from `node.start` to `node.end`, is replaced: an
-   * expression in a value position or a statement of the runtime tree. With an
-   * empty text, an element of an array literal or a member of an object literal
-   * is removed with its comma instead.
+   * expression in a value position or a statement of the runtime tree. A quoted
+   * JSX attribute value is replaced too when it and the text are string
+   * literals without a backslash, a control character or a character reference,
+   * and a compiler such as Solid's reads the attribute the same way in braces,
+   * where Mootant hosts it: not for `value`, a boolean attribute, a name that
+   * starts with `on`, `ref`, `children`, `class`, `className`, `classList`,
+   * `style`, `innerHTML`, `innerText`, `textContent`, or an attribute of a
+   * custom element or of Solid's namespaces, such as `bool:`. With an empty
+   * text, an element of an array literal or a member of an object literal is
+   * removed with its comma instead.
    */
   node: Node
 }

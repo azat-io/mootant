@@ -3,7 +3,9 @@ import type { Preset } from '../../types/config/preset'
 /**
  * Recommended preset with the noisier options of the built-in mutators, the
  * mutants that only a timeout can kill and the coarse mutants that the solitary
- * rule would drop.
+ * rule would drop. It leaves string-literal's `jsxAttributes` off: the braces
+ * that host a quoted JSX attribute value can change what Solid or a macro does
+ * with no mutant on.
  */
 export let strict: Preset = {
   mutators: {
