@@ -4,6 +4,7 @@ import path from 'node:path'
 
 import { listTsconfigFiles } from '../shared/list-tsconfig-files'
 import { compareCodeUnits } from '../../core/compare-code-units'
+import { isVirtualModule } from './is-virtual-module'
 import { getModuleFile } from './get-module-file'
 
 /**
@@ -21,7 +22,8 @@ interface GraphNode {
   transformResult: unknown
 
   /**
-   * File of the module, or null for a virtual one.
+   * File of the module, which is its id without the query or hash for a module
+   * Vite resolved, a virtual one too, or null when Vite knows none.
    */
   file: string | null
 
@@ -59,9 +61,10 @@ interface GraphEnvironment {
  * dynamic imports that did not run, with all they import: modules that were
  * never transformed are transformed first, so their imports are known. Each
  * directory of those files adds the `tsconfig.json` files that may decide how
- * Vite transforms it (`listTsconfigFiles`). Virtual modules and files under
- * `node_modules`, which the lockfile stands for, are left out; the test file
- * itself is always in.
+ * Vite transforms it (`listTsconfigFiles`). Virtual modules (`isVirtualModule`)
+ * are followed but not listed, so the files plugins watch for them are in;
+ * files under `node_modules`, which the lockfile stands for, are left out with
+ * what they import. The test file itself is always in.
  *
  * @param input - Test file, its project and what its worker reported.
  * @param input.project - Project the test file ran in.
@@ -85,15 +88,16 @@ export async function collectDependencies(input: {
   }
   let files = new Set([input.file])
   /**
-   * Adds a file when it is a real project file.
+   * Tells whether to follow the imports of a module, those of a project file or
+   * of a virtual module, and adds the file of a project file.
    *
    * @param candidate - Module id or path.
-   * @returns Whether the file is a project file.
+   * @returns Whether to follow the imports of the module.
    */
-  function add(candidate: string): boolean {
+  function follow(candidate: string): boolean {
     let file = getModuleFile(candidate)
     if (file === null) {
-      return false
+      return isVirtualModule(candidate)
     }
     files.add(file)
     return true
@@ -103,8 +107,9 @@ export async function collectDependencies(input: {
   )
   let seen = new Set<GraphNode>()
   /**
-   * Adds the project modules a module imports, transforming it first when it
-   * was never transformed, and then what they import.
+   * Follows the imports of a module, transforming it first when it was never
+   * transformed: adds the project files among them, then what they and the
+   * virtual modules among them import.
    *
    * @param node - Module, already seen.
    * @param environment - Environment of its module graph.
@@ -120,7 +125,7 @@ export async function collectDependencies(input: {
     }
     let next = [...node.importedModules].filter(
       imported =>
-        !seen.has(imported) && add(imported.file ?? imported.id ?? ''),
+        !seen.has(imported) && follow(imported.file ?? imported.id ?? ''),
     )
     for (let imported of next) {
       seen.add(imported)
@@ -129,7 +134,7 @@ export async function collectDependencies(input: {
   }
   let roots: Promise<void>[] = []
   for (let id of reported) {
-    if (!add(id)) {
+    if (!follow(id)) {
       continue
     }
     for (let environment of environments) {

@@ -358,7 +358,10 @@ same. `true` by default. `--no-cache` and `--cache` set it for one run.
 
 After changes that only child processes, workers or the network see, delete that
 directory: `--no-cache` runs every mutant again but does not update the saved
-verdicts.
+verdicts. Do the same after changes of a file that only a Vite plugin reads to
+build a module, unless the plugin calls `this.addWatchFile()` for the file as it
+loads or transforms the module, and the id of the module has neither `.json` nor
+`.map` at its end or right before a `?`.
 
 ### `incremental`
 

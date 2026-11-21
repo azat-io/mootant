@@ -64,12 +64,12 @@ function createEnvironment(
  *
  * @param id - Resolved id, or null for a module without one.
  * @param transformed - Whether the module was transformed.
- * @returns Module without imports; a module whose id is not an absolute path
- *   has no file.
+ * @returns Module without imports, whose file is its id without the query or
+ *   hash, as Vite sets it for a virtual module too.
  */
 function createNode(id: string | null, transformed = true): FakeNode {
   return {
-    file: id?.startsWith('/') === true ? id.replace(/\?.*$/u, '') : null,
+    file: id?.replace(/[#?].*$/u, '') ?? null,
     transformResult: transformed ? {} : null,
     importedModules: new Set(),
     url: `url:${id}`,
@@ -181,6 +181,146 @@ describe('collectDependencies', () => {
       [lazy.url, broken.url, deep.url].toSorted(),
     )
     expect(other.transformed).toStrictEqual([])
+  })
+
+  it.each(['\0virtual:limits', 'virtual:limits'])(
+    'follows the virtual module %s without listing it',
+    async id => {
+      let file = path.join(root, 'test/a.test.ts')
+      let test = createNode(file)
+      let virtual = createNode(id)
+      let watched = createNode(path.join(root, 'limits.json'), false)
+      virtual.importedModules.add(watched)
+      test.importedModules.add(virtual)
+      let { environment, transformed } = createEnvironment({
+        [id]: virtual,
+        [file]: test,
+      })
+
+      await expect(
+        collectDependencies({
+          project: createProject([environment]),
+          tsconfigs: new Map(),
+          reported: [file],
+          file,
+        }),
+      ).resolves.toStrictEqual(
+        [
+          file,
+          watched.file!,
+          path.join(root, 'base.json'),
+          path.join(root, 'test/tsconfig.json'),
+          path.join(root, 'tsconfig.json'),
+        ].toSorted(),
+      )
+      expect(transformed).toStrictEqual([watched.url])
+    },
+  )
+
+  it.each([
+    '\0virtual:limits',
+    '\0virtual:limits?source=/p/node_modules/pkg/data',
+  ])('follows the virtual module %s the worker reported', async id => {
+    let file = path.join(root, 'test/a.test.ts')
+    let virtual = createNode(id)
+    let watched = createNode(path.join(root, 'limits.json'))
+    virtual.importedModules.add(watched)
+    let { environment, transformed } = createEnvironment({
+      [file]: createNode(file),
+      [virtual.id!]: virtual,
+    })
+
+    await expect(
+      collectDependencies({
+        project: createProject([environment]),
+        reported: [file, virtual.id!],
+        tsconfigs: new Map(),
+        file,
+      }),
+    ).resolves.toStrictEqual(
+      [
+        file,
+        watched.file!,
+        path.join(root, 'base.json'),
+        path.join(root, 'test/tsconfig.json'),
+        path.join(root, 'tsconfig.json'),
+      ].toSorted(),
+    )
+    expect(transformed).toStrictEqual([])
+  })
+
+  it('follows chains of virtual modules but no module under node_modules', async () => {
+    let file = path.join(root, 'test/a.test.ts')
+    let test = createNode(file)
+    let routes = createNode('virtual:routes')
+    let pages = createNode('\0virtual:pages?lang.ts')
+    let page = createNode(path.join(root, 'src/page.ts'))
+    let library = createNode('/x/node_modules/y/index.js')
+    library.importedModules.add(createNode(path.join(root, 'src/hidden.ts')))
+    pages.importedModules.add(page)
+    routes.importedModules.add(pages)
+    routes.importedModules.add(library)
+    test.importedModules.add(routes)
+    let { environment, transformed } = createEnvironment({ [file]: test })
+
+    await expect(
+      collectDependencies({
+        project: createProject([environment]),
+        tsconfigs: new Map(),
+        reported: [file],
+        file,
+      }),
+    ).resolves.toStrictEqual(
+      [
+        file,
+        page.file!,
+        path.join(root, 'base.json'),
+        path.join(root, 'src/tsconfig.json'),
+        path.join(root, 'test/tsconfig.json'),
+        path.join(root, 'tsconfig.json'),
+      ].toSorted(),
+    )
+    expect(transformed).toStrictEqual([])
+  })
+
+  it('visits each module once through cycles of virtual modules', async () => {
+    let file = path.join(root, 'test/a.test.ts')
+    let test = createNode(file)
+    let source = createNode(path.join(root, 'src/a.ts'))
+    let virtual = createNode('\0virtual:a', false)
+    let lazy = createNode('virtual:b', false)
+    let shared = createNode(path.join(root, 'shared.json'), false)
+    test.importedModules.add(source)
+    source.importedModules.add(virtual)
+    source.importedModules.add(lazy)
+    virtual.importedModules.add(source)
+    virtual.importedModules.add(shared)
+    let { environment, transformed } = createEnvironment(
+      { [virtual.id!]: virtual, [file]: test },
+      new Map([[lazy, [shared, virtual]]]),
+    )
+
+    await expect(
+      collectDependencies({
+        project: createProject([environment]),
+        reported: [file, virtual.id!],
+        tsconfigs: new Map(),
+        file,
+      }),
+    ).resolves.toStrictEqual(
+      [
+        file,
+        source.file!,
+        shared.file!,
+        path.join(root, 'base.json'),
+        path.join(root, 'src/tsconfig.json'),
+        path.join(root, 'test/tsconfig.json'),
+        path.join(root, 'tsconfig.json'),
+      ].toSorted(),
+    )
+    expect(transformed.toSorted()).toStrictEqual(
+      [lazy.url, shared.url, virtual.url].toSorted(),
+    )
   })
 
   it('gives null without a report', async () => {

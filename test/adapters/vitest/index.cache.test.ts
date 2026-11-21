@@ -95,6 +95,16 @@ let bailFixture = path.resolve(import.meta.dirname, '../../fixtures/cache-bail')
 let rankFixture = path.resolve(import.meta.dirname, '../../fixtures/cache-rank')
 
 /**
+ * Fixture project whose test file covers `src/math.ts` with a value from
+ * `virtual:limits`, a virtual module a plugin of `vitest.config.ts` builds from
+ * `limits.json`, which it watches with `this.addWatchFile()`.
+ */
+let virtualFixture = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/cache-virtual',
+)
+
+/**
  * Environment variables the tests change, with their values before.
  */
 let variables = Object.fromEntries(
@@ -435,6 +445,38 @@ describe('vitestAdapter', () => {
       })
     }, Promise.resolve())
   }, 120_000)
+
+  it('runs mutants again after a change of a file a plugin watches for a virtual module', async () => {
+    let root = await copyFixture(virtualFixture)
+    await run(root)
+    let unchanged = await run(root)
+
+    expect(unchanged.result.diagnostics).toStrictEqual([])
+    expect(splitCached(unchanged.result)).toStrictEqual({
+      cached: ['src/math.ts'],
+      ran: [],
+    })
+    await writeFile(path.join(root, 'limits.json'), '{ "age": 18 }\n')
+    await setTimeout(5)
+    let changed = await run(root)
+    let again = await run(root)
+    let fresh = await run(root, { cache: false })
+
+    expect(splitCached(changed.result)).toStrictEqual({
+      ran: ['src/math.ts'],
+      cached: [],
+    })
+    expect(changed.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      fresh.result.results.map(summarizeCachedVerdict),
+    )
+    expect(
+      changed.result.results.map(summarizeCachedVerdict),
+    ).not.toStrictEqual(unchanged.result.results.map(summarizeCachedVerdict))
+    expect(splitCached(again.result)).toStrictEqual({
+      cached: ['src/math.ts'],
+      ran: [],
+    })
+  }, 60_000)
 
   it('runs a kill of a unit that stopped at it again after a change of what the tests it skipped read', async () => {
     let root = await copyFixture(bailFixture)
