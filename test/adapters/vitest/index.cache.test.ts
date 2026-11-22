@@ -5,7 +5,9 @@ import {
   readFile,
   symlink,
   mkdtemp,
+  utimes,
   mkdir,
+  stat,
   cp,
   rm,
 } from 'node:fs/promises'
@@ -15,6 +17,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import type { MutantResult } from '../../../types/run/mutant-result'
+import type { Diagnostic } from '../../../types/mutant/diagnostic'
 import type { RunResult } from '../../../types/run/run-result'
 
 import { getCachePath } from '../../../core/cache/get-cache-path'
@@ -123,6 +126,15 @@ let workspaceFixture = path.resolve(
 let copiesFixture = path.resolve(
   import.meta.dirname,
   '../../fixtures/cache-copies',
+)
+
+/**
+ * Fixture project whose test file covers `src/math.ts` and writes
+ * `package.json` back as it read it.
+ */
+let packageFixture = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/cache-package',
 )
 
 /**
@@ -387,6 +399,98 @@ describe('vitestAdapter', () => {
       ran: ['src/limit.ts', 'src/size.ts'],
       cached: [],
     })
+  }, 60_000)
+
+  it('runs without a cache, and names the file, while the configuration or a file every test file imports has a modification time at or after the start of the run', async () => {
+    let root = await copyFixture()
+    let config = path.join(root, 'vitest.config.ts')
+    let future = new Date(Date.now() + 10_000_000)
+    let past = new Date(Date.now() - 10_000_000)
+    /**
+     * Builds the warning of a run that a file left without a cache.
+     *
+     * @param file - Display path of the file.
+     * @returns The warning.
+     */
+    function skipped(file: string): Diagnostic {
+      return {
+        message: `Verdicts were neither reused nor cached because ${file} has a modification time at or after the start of the run, so it may have changed while the run went on.`,
+        code: 'cache-skipped',
+        severity: 'warning',
+        column: null,
+        file: null,
+        line: null,
+      }
+    }
+    await utimes(config, future, future)
+    let first = await run(root)
+    let second = await run(root)
+    await utimes(config, past, past)
+    await utimes(path.join(root, 'src/size.ts'), future, future)
+    let imported = await run(root)
+
+    expect(
+      [first, second, imported].map(({ result }) => result.cache),
+    ).toStrictEqual([false, false, false])
+    expect(first.result.diagnostics).toStrictEqual([
+      skipped('vitest.config.ts'),
+    ])
+    expect(second.result.diagnostics).toStrictEqual([
+      skipped('vitest.config.ts'),
+    ])
+    expect(imported.result.diagnostics).toStrictEqual([skipped('src/size.ts')])
+    await expect(stat(getCachePath(root))).rejects.toThrow('ENOENT')
+  }, 90_000)
+
+  it('reuses the verdicts of tests that write the package file back as it was', async () => {
+    let root = await copyFixture(packageFixture)
+    let first = await run(root)
+    let second = await run(root)
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(second.result.cache).toBe(true)
+    expect(splitCached(second.result)).toStrictEqual({
+      cached: ['src/math.ts'],
+      ran: [],
+    })
+  }, 60_000)
+
+  it('saves no verdicts, and names the package file, when tests change it again after the dry run', async () => {
+    let root = await copyFixture(packageFixture)
+    await writeFile(
+      path.join(root, 'test/math.test.ts'),
+      [
+        "import { writeFileSync, readFileSync } from 'node:fs'",
+        "import { fileURLToPath } from 'node:url'",
+        "import { expect, it } from 'vitest'",
+        '',
+        "import { isAdult } from '../src/math'",
+        '',
+        "let file = fileURLToPath(new URL('../package.json', import.meta.url))",
+        '',
+        "it('tells adults, and adds a space to the package file', () => {",
+        "  writeFileSync(file, readFileSync(file, 'utf8') + ' ')",
+        '  expect(isAdult(30)).toBe(true)',
+        '  expect(isAdult(5)).toBe(false)',
+        '})',
+        '',
+      ].join('\n'),
+    )
+    await setTimeout(5)
+    let { result } = await run(root)
+
+    expect(result.diagnostics).toStrictEqual([
+      {
+        message:
+          'Verdicts were not cached because package.json changed during the run.',
+        code: 'cache-skipped',
+        severity: 'warning',
+        column: null,
+        file: null,
+        line: null,
+      },
+    ])
+    await expect(stat(getCachePath(root))).rejects.toThrow('ENOENT')
   }, 60_000)
 
   it('neither reads nor writes the cache when it is off', async () => {

@@ -90,7 +90,11 @@ export interface RunResult {
 
   /**
    * Whether verdicts were reused from and saved to the cache: false with
-   * `--no-cache`, `run.cache: false`, or an adapter without cache support.
+   * `--no-cache`, `run.cache: false`, an adapter without cache support, and
+   * when no test file has a key, as when after the dry run a file every verdict
+   * depends on, other than one the tests read and wrote themselves, has a
+   * modification time at or after the start of the run, which a `cache-skipped`
+   * warning names.
    */
   cache: boolean
 

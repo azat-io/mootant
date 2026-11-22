@@ -8,12 +8,14 @@ import type { DryRunResult } from '../../types/adapter/dry-run-result'
 import type { TestAdapter } from '../../types/adapter/test-adapter'
 import type { FileMutants } from '../../types/mutant/file-mutants'
 import type { StoredCache } from '../../types/cache/stored-cache'
+import type { Diagnostic } from '../../types/mutant/diagnostic'
 import type { DryAnalysis } from '../../types/run/dry-analysis'
 import type { LimitSettings } from '../../types/run/run-state'
 import type { RunCache } from '../../types/cache/run-cache'
 
 import { getTestFileKey } from '../run/get-test-file-key'
 import { getEnvironmentKey } from './get-environment-key'
+import { getDisplayPath } from '../run/get-display-path'
 import { findChangedFiles } from './find-changed-files'
 import { getTestFileKeys } from './get-test-file-keys'
 import { createRunCache } from './create-run-cache'
@@ -90,6 +92,22 @@ interface PrepareInput {
 }
 
 /**
+ * Cache of a run, or what left the run without one.
+ */
+interface PreparedCache {
+  /**
+   * A `cache-skipped` warning that names a file which changed during the run or
+   * has unknown content, or null.
+   */
+  warning: Diagnostic | null
+
+  /**
+   * Cache of the run, or null.
+   */
+  cache: RunCache | null
+}
+
+/**
  * Prepares the cache of a run after its dry run: asks the adapter what every
  * verdict depends on, hashes those files together with the `.env` files, the
  * lockfile, `package.json` and the `tsconfig` and `jsconfig` files of the root,
@@ -102,21 +120,27 @@ interface PrepareInput {
  * verdicts came from: a test file that depends on one gets no key, and no test
  * file gets one when a file of the environment changed. The same goes for a
  * path whose content is unknown, such as a device or a pipe (`UNKNOWN_HASH`),
- * whatever its time. Dependencies the test code of the dry run changed itself
- * (`DryFile.modified`) are hashed as they are now, which is what the next run
- * starts from; `saveRunCache` checks that their contents stayed so.
+ * whatever its time. Files the test code of the dry run changed itself
+ * (`DryFile.modified`), files of the environment among them, are hashed as they
+ * are now, which is what the next run starts from; `saveRunCache` checks that
+ * their contents stayed so. A test runner that read such a file before the test
+ * code wrote it, as Vitest loads the `.env` files of its mode when it starts,
+ * may have run with an earlier text than the keys show, whether the test code
+ * or the user changed it.
  *
  * @param input - Session, dry run, settings and the stored entries.
- * @returns Cache of the run, or null when the adapter cannot tell what verdicts
- *   depend on, a file of the environment changed during the run or has unknown
- *   content, or no test file has a key.
+ * @returns Cache of the run. No cache when the adapter cannot tell what
+ *   verdicts depend on or no test file has a key; when a file of the
+ *   environment, or a dependency while no test file has a key, changed during
+ *   the run or has unknown content, with a `cache-skipped` warning that names
+ *   the first such file.
  */
 export async function prepareRunCache(
   input: PrepareInput,
-): Promise<RunCache | null> {
+): Promise<PreparedCache> {
   let { session, setup, root, dry } = input
   if (session.cacheInputs === undefined) {
-    return null
+    return { warning: null, cache: null }
   }
   let inputs = await session.cacheInputs()
   let lockfile = findLockfile(root)
@@ -138,9 +162,6 @@ export async function prepareRunCache(
   let all = [...files, ...[...dependencies.values()].flat()]
   let modified = new Set(dry.files.flatMap(file => file.modified ?? []))
   let changed = await findChangedFiles(all, input.started)
-  if (files.some(file => changed.has(file))) {
-    return null
-  }
   for (let file of modified) {
     changed.delete(file)
   }
@@ -151,8 +172,44 @@ export async function prepareRunCache(
       value.files.map(([relative]) => path.resolve(root, relative)),
     ),
   ])
-  if (files.some(file => hashes.get(file) === UNKNOWN_HASH)) {
-    return null
+  /**
+   * Tells whether a file leaves what depends on it without a key: it changed
+   * during the run, or its content is unknown.
+   *
+   * @param file - Absolute path.
+   * @returns Whether it does.
+   */
+  function isUnsure(file: string): boolean {
+    return changed.has(file) || hashes.get(file) === UNKNOWN_HASH
+  }
+  /**
+   * Leaves the run without a cache because of a file that changed during the
+   * run or whose content is unknown.
+   *
+   * @param file - Absolute path of the file.
+   * @returns No cache, with a `cache-skipped` warning that names the file.
+   */
+  function skip(file: string): PreparedCache {
+    let relative = getDisplayPath(file, root)
+    let display = relative === '' ? 'the root of the project' : relative
+    return {
+      warning: {
+        message:
+          hashes.get(file) === UNKNOWN_HASH ?
+            `Verdicts were neither reused nor cached because ${display} is a device, a pipe or a socket, so mootant cannot tell whether it changed.`
+          : `Verdicts were neither reused nor cached because ${display} has a modification time at or after the start of the run, so it may have changed while the run went on.`,
+        code: 'cache-skipped',
+        severity: 'warning',
+        column: null,
+        file: null,
+        line: null,
+      },
+      cache: null,
+    }
+  }
+  let unsure = files.find(file => isUnsure(file))
+  if (unsure !== undefined) {
+    return skip(unsure)
   }
   let variables = inputs.environment ?? {}
   let environment = getEnvironmentKey({
@@ -175,8 +232,7 @@ export async function prepareRunCache(
   })
   let keyed = dry.files.filter(file =>
     (dependencies.get(getTestFileKey(file)) ?? []).every(
-      dependency =>
-        !changed.has(dependency) && hashes.get(dependency) !== UNKNOWN_HASH,
+      dependency => !isUnsure(dependency),
     ),
   )
   let fileKeys = getTestFileKeys({
@@ -188,9 +244,14 @@ export async function prepareRunCache(
     root,
   })
   if (fileKeys.size === 0) {
-    return null
+    let dependency = [...dependencies.values()]
+      .flat()
+      .find(file => isUnsure(file))
+    return dependency === undefined ?
+        { warning: null, cache: null }
+      : skip(dependency)
   }
-  return createRunCache({
+  let cache = createRunCache({
     sources: new Map(
       input.files.flatMap(file =>
         file.source === null ?
@@ -223,4 +284,5 @@ export async function prepareRunCache(
     hashes,
     root,
   })
+  return { warning: null, cache }
 }

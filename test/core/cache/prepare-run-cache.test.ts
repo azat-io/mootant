@@ -13,6 +13,7 @@ import path from 'node:path'
 
 import type { FileMutants } from '../../../types/mutant/file-mutants'
 import type { StoredCache } from '../../../types/cache/stored-cache'
+import type { Diagnostic } from '../../../types/mutant/diagnostic'
 import type { FakeWorld } from '../../helpers/create-fake-adapter'
 import type { RunCache } from '../../../types/cache/run-cache'
 
@@ -33,12 +34,12 @@ let root = ''
  * @param run.stored - Entries and inputs of the cache file; empty by default.
  * @param run.started - Start of the run; by default no file changed during it.
  * @param run.incremental - Whether the run is incremental; false by default.
- * @returns Cache of the run, the state's mutant `m1` and its test file key.
+ * @returns Cache of the run, or the warning of a run left without one.
  */
 async function prepare(
   world: Partial<FakeWorld>,
   run: { incremental?: boolean; stored?: StoredCache; started?: number } = {},
-): Promise<RunCache | null> {
+): Promise<Awaited<ReturnType<typeof prepareRunCache>>> {
   let {
     stored = { entries: new Map(), inputs: new Map() },
     started = Number.POSITIVE_INFINITY,
@@ -64,7 +65,7 @@ async function prepare(
     repeat: false,
     files: null,
   })
-  let cache = await prepareRunCache({
+  let prepared = await prepareRunCache({
     files: [
       {
         absolute: path.join(root, 'src/a.ts'),
@@ -86,14 +87,14 @@ async function prepare(
     root,
     dry,
   })
-  cache?.recordUnit(state.mutants.get('m1')!, file, {
+  prepared.cache?.recordUnit(state.mutants.get('m1')!, file, {
     inputs: {
       dependencies: [file],
       environment: [],
     },
     verdict: 'survived',
   })
-  return cache
+  return prepared
 }
 
 /**
@@ -118,7 +119,24 @@ async function reuses(
     stored: { entries: first.entries, inputs: first.inputs },
     incremental,
   })
-  return second!.lookupUnit(state.mutants.get('m1')!, file) === 'survived'
+  return second.cache!.lookupUnit(state.mutants.get('m1')!, file) === 'survived'
+}
+
+/**
+ * Builds the warning of a run that a file left without a cache.
+ *
+ * @param reason - Why the file did, its path first.
+ * @returns The warning.
+ */
+function skipped(reason: string): Diagnostic {
+  return {
+    message: `Verdicts were neither reused nor cached because ${reason}`,
+    code: 'cache-skipped',
+    severity: 'warning',
+    column: null,
+    file: null,
+    line: null,
+  }
 }
 
 describe('prepareRunCache', () => {
@@ -134,26 +152,30 @@ describe('prepareRunCache', () => {
   })
 
   it('reuses evidence while nothing changed', async () => {
-    let first = await prepare({})
+    let { cache } = await prepare({})
 
-    expect(first!.entries.size).toBe(1)
-    await expect(reuses(first!)).resolves.toBe(true)
-    await expect(
-      prepare({
-        cacheInputs: {
-          files: [path.join(root, 'vitest.config.ts')],
-          settings: {},
-        },
-      }),
-    ).resolves.not.toBeNull()
-    await expect(
-      prepare({
-        onDry: result => ({
-          ...result,
-          files: result.files.map(({ environment, ...file }) => file),
-        }),
-      }),
-    ).resolves.not.toBeNull()
+    expect(cache!.entries.size).toBe(1)
+    await expect(reuses(cache!)).resolves.toBe(true)
+    expect(
+      (
+        await prepare({
+          cacheInputs: {
+            files: [path.join(root, 'vitest.config.ts')],
+            settings: {},
+          },
+        })
+      ).cache,
+    ).not.toBeNull()
+    expect(
+      (
+        await prepare({
+          onDry: result => ({
+            ...result,
+            files: result.files.map(({ environment, ...file }) => file),
+          }),
+        })
+      ).cache,
+    ).not.toBeNull()
   })
 
   it.each([
@@ -164,10 +186,10 @@ describe('prepareRunCache', () => {
     ['the package file', 'package.json'],
     ['a tsconfig file', 'tsconfig.build.json'],
   ])('reuses nothing after a change of %s', async (_name, name) => {
-    let first = await prepare({})
+    let { cache } = await prepare({})
     await writeFile(path.join(root, name), `changed ${name}`)
 
-    await expect(reuses(first!)).resolves.toBe(false)
+    await expect(reuses(cache!)).resolves.toBe(false)
   })
 
   it('reuses evidence after a change of a mutated file the test file read only in an incremental run', async () => {
@@ -180,25 +202,25 @@ describe('prepareRunCache', () => {
     let world: Partial<FakeWorld> = {
       files: [{ dependencies: [file, source, helper], file }],
     }
-    let first = await prepare(world)
+    let { cache } = await prepare(world)
     await writeFile(source, 'let a = 2')
 
-    await expect(reuses(first!, world)).resolves.toBe(false)
-    await expect(reuses(first!, world, true)).resolves.toBe(true)
+    await expect(reuses(cache!, world)).resolves.toBe(false)
+    await expect(reuses(cache!, world, true)).resolves.toBe(true)
 
     await writeFile(helper, 'two')
 
-    await expect(reuses(first!, world, true)).resolves.toBe(false)
+    await expect(reuses(cache!, world, true)).resolves.toBe(false)
   })
 
   it('reuses evidence with extra inputs while their files are unchanged', async () => {
     let extra = path.join(root, 'extra.json')
     await writeFile(extra, 'one')
-    let first = await prepare({})
+    let { cache } = await prepare({})
     let hash = createHash('sha256').update('one').digest('hex')
     let stored = {
       entries: new Map(
-        [...first!.entries].map(([slot, entry]) => [
+        [...cache!.entries].map(([slot, entry]) => [
           slot,
           { ...entry, inputs: 'i1' },
         ]),
@@ -217,7 +239,7 @@ describe('prepareRunCache', () => {
 
   it('keys a test file by the environment variables it read', async () => {
     let files = [{ file: path.join(root, 'a.test.ts'), environment: ['MODE'] }]
-    let first = await prepare({ files })
+    let { cache } = await prepare({ files })
     /**
      * Builds the inputs of a run with a value of `MODE`.
      *
@@ -235,20 +257,23 @@ describe('prepareRunCache', () => {
       }
     }
 
-    await expect(reuses(first!, withMode('m1'))).resolves.toBe(true)
-    await expect(reuses(first!, withMode('m2'))).resolves.toBe(false)
+    await expect(reuses(cache!, withMode('m1'))).resolves.toBe(true)
+    await expect(reuses(cache!, withMode('m2'))).resolves.toBe(false)
   })
 
-  it('gives no cache without cache inputs or test file dependencies', async () => {
-    await expect(prepare({ cacheInputs: undefined })).resolves.toBeNull()
+  it('gives no cache and no warning without cache inputs or test file dependencies', async () => {
+    await expect(prepare({ cacheInputs: undefined })).resolves.toStrictEqual({
+      warning: null,
+      cache: null,
+    })
     await expect(
       prepare({
         files: [{ file: path.join(root, 'a.test.ts'), dependencies: null }],
       }),
-    ).resolves.toBeNull()
+    ).resolves.toStrictEqual({ warning: null, cache: null })
   })
 
-  it('gives no key to what depends on a device or a pipe, whose content is unknown, and no cache when a file of the environment is one', async () => {
+  it('gives no key to what depends on a device or a pipe, whose content is unknown, and no cache, with a warning, when every test file or a file of the environment does', async () => {
     let a = path.join(root, 'a.test.ts')
     let b = path.join(root, 'b.test.ts')
     await writeFile(b, 'test b')
@@ -256,16 +281,21 @@ describe('prepareRunCache', () => {
       { covers: ['m1'], id: 'a1', file: a },
       { covers: ['m1'], id: 'b1', file: b },
     ]
-    let cache = await prepare({
+    let { cache } = await prepare({
       files: [
         { dependencies: ['/dev/null'], modified: ['/dev/null'], file: a },
         { dependencies: [], file: b },
       ],
       tests,
     })
+    let device = skipped(
+      `${path.relative(root, '/dev/null')} is a device, a pipe or a socket, so mootant cannot tell whether it changed.`,
+    )
 
     expect([...cache!.dependencies.values()]).toStrictEqual([[b]])
-
+    await expect(
+      prepare({ files: [{ dependencies: ['/dev/null'], file: a }] }),
+    ).resolves.toStrictEqual({ warning: device, cache: null })
     await expect(
       prepare({
         cacheInputs: {
@@ -274,7 +304,7 @@ describe('prepareRunCache', () => {
           settings: {},
         },
       }),
-    ).resolves.toBeNull()
+    ).resolves.toStrictEqual({ warning: device, cache: null })
   })
 
   it('gives no key to what depends on a file changed during the run', async () => {
@@ -286,7 +316,7 @@ describe('prepareRunCache', () => {
     await writeFile(b, 'test b')
     await utimes(a, future, future)
     try {
-      let cache = await prepare(
+      let { cache } = await prepare(
         {
           tests: [
             { covers: ['m1'], id: 'a1', file: a },
@@ -305,13 +335,86 @@ describe('prepareRunCache', () => {
         { started: Date.now() + 1 },
       )
 
-      expect([...modified!.dependencies.values()]).toStrictEqual([[a, a]])
+      expect([...modified.cache!.dependencies.values()]).toStrictEqual([[a, a]])
+    } finally {
+      await utimes(a, now, now)
+    }
+  })
+
+  it('gives no cache, with a warning that names the file, when a file of the environment, or one that left every test file without a key, changed during the run', async () => {
+    let a = path.join(root, 'a.test.ts')
+    let b = path.join(root, 'b.test.ts')
+    let config = path.join(root, 'vitest.config.ts')
+    let helper = path.join(root, 'helper.ts')
+    let future = new Date(Date.now() + 10_000_000)
+    let now = new Date()
+    let reason =
+      'has a modification time at or after the start of the run, so it may have changed while the run went on.'
+    await writeFile(helper, 'helper')
+    await utimes(helper, future, future)
+    try {
+      await expect(
+        prepare(
+          {
+            tests: [
+              { covers: ['m1'], id: 'a1', file: a },
+              { covers: ['m1'], id: 'b1', file: b },
+            ],
+            files: [
+              { dependencies: [helper], file: a },
+              { dependencies: null, file: b },
+            ],
+          },
+          { started: Date.now() + 1 },
+        ),
+      ).resolves.toStrictEqual({
+        warning: skipped(`helper.ts ${reason}`),
+        cache: null,
+      })
+
+      await utimes(root, future, future)
+
+      await expect(
+        prepare(
+          { files: [{ dependencies: [root], file: a }] },
+          { started: Date.now() + 1 },
+        ),
+      ).resolves.toStrictEqual({
+        warning: skipped(`the root of the project ${reason}`),
+        cache: null,
+      })
 
       await utimes(config, future, future)
 
-      await expect(prepare({}, { started: Date.now() + 1 })).resolves.toBeNull()
+      await expect(
+        prepare({}, { started: Date.now() + 1 }),
+      ).resolves.toStrictEqual({
+        warning: skipped(`vitest.config.ts ${reason}`),
+        cache: null,
+      })
     } finally {
-      await utimes(a, now, now)
+      await utimes(helper, now, now)
+      await utimes(root, now, now)
+      await utimes(config, now, now)
+    }
+  })
+
+  it('keeps the cache of a run whose test code wrote a file of the environment back', async () => {
+    let a = path.join(root, 'a.test.ts')
+    let config = path.join(root, 'vitest.config.ts')
+    let future = new Date(Date.now() + 10_000_000)
+    let now = new Date()
+    await utimes(config, future, future)
+    try {
+      let { warning, cache } = await prepare(
+        { files: [{ dependencies: [config], modified: [config], file: a }] },
+        { started: Date.now() + 1 },
+      )
+
+      expect(warning).toBeNull()
+      expect([...cache!.dependencies.values()]).toStrictEqual([[a, config]])
+      expect(cache!.environment).toContain(config)
+    } finally {
       await utimes(config, now, now)
     }
   })

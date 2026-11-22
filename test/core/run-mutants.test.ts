@@ -1,4 +1,14 @@
 import {
+  writeFile,
+  readFile,
+  realpath,
+  mkdtemp,
+  utimes,
+  mkdir,
+  stat,
+  rm,
+} from 'node:fs/promises'
+import {
   beforeEach,
   afterEach,
   beforeAll,
@@ -8,15 +18,6 @@ import {
   it,
   vi,
 } from 'vitest'
-import {
-  writeFile,
-  readFile,
-  realpath,
-  mkdtemp,
-  mkdir,
-  stat,
-  rm,
-} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -1290,7 +1291,42 @@ describe('runMutants', () => {
       let { result } = await run(createWorld({ cacheInputs: undefined }))
 
       expect(result.cache).toBe(false)
+      expect(result.diagnostics.map(entry => entry.code)).not.toContain(
+        'cache-skipped',
+      )
       await expect(stat(cacheFile())).rejects.toThrow('ENOENT')
+    })
+
+    it('is off, with a warning that names the file, when a file every verdict depends on was modified at or after the start of the run', async () => {
+      let config = path.join(root, 'fake.config.ts')
+      let world = createWorld({
+        cacheInputs: { files: [config], settings: null },
+      })
+      let past = new Date(Date.now() - 10_000_000)
+      let future = new Date(Date.now() + 10_000_000)
+      await writeFile(config, 'config')
+      await utimes(config, past, past)
+      try {
+        await run(world)
+        let saved = await readFile(cacheFile(), 'utf8')
+        await utimes(config, future, future)
+        let { result } = await run(world)
+
+        expect(result.cache).toBe(false)
+        expect(result.results.some(entry => entry.cached)).toBe(false)
+        expect(result.diagnostics).toContainEqual({
+          message:
+            'Verdicts were neither reused nor cached because fake.config.ts has a modification time at or after the start of the run, so it may have changed while the run went on.',
+          code: 'cache-skipped',
+          severity: 'warning',
+          column: null,
+          file: null,
+          line: null,
+        })
+        await expect(readFile(cacheFile(), 'utf8')).resolves.toBe(saved)
+      } finally {
+        await rm(config)
+      }
     })
 
     it('saves nothing from a run with error diagnostics', async () => {

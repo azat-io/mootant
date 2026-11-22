@@ -361,6 +361,12 @@ A file that tests read counts wherever it is, such as a fixture of the workspace
 above the root, but not under `node_modules`. Of the directories above the root,
 only the files read in them count, not the names they hold.
 
+Verdicts that depend on a file modified at or after the start of a run, by its
+modification time, are neither reused nor saved in that run, since the file may
+have changed after tests read it. A file system clock that runs ahead gives such
+times too. Mootant warns when such a file leaves the run without a cache. A file
+that tests read and then write themselves is compared by its content instead.
+
 After changes that only child processes, workers or the network see, or of files
 and names that do not count, delete the cache directory: `--no-cache` runs every
 mutant again but does not update the saved verdicts. Do the same after changes

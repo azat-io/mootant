@@ -465,9 +465,10 @@ async function execute(context: {
     )
   }
   let now = Date.now()
-  let cache =
-    stored === null ? null : (
-      await prepareRunCache({
+  let { warning, cache } =
+    stored === null ?
+      { warning: null, cache: null }
+    : await prepareRunCache({
         incremental: runSettings.incremental,
         started: context.startedAt,
         adapter: context.adapter,
@@ -481,7 +482,9 @@ async function execute(context: {
         root,
         now,
       })
-    )
+  if (warning !== null) {
+    diagnostics.push(warning)
+  }
   let state = createRunState({
     workers:
       session.workers ??
