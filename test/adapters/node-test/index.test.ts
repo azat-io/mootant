@@ -7,11 +7,15 @@ import {
   it,
   vi,
 } from 'vitest'
+import { writeFile, realpath, mkdtemp, cp, rm } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
+import { setTimeout } from 'node:timers/promises'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import type { AdapterSession } from '../../../types/adapter/adapter-session'
 import type { MutantResult } from '../../../types/run/mutant-result'
+import type { RunResult } from '../../../types/run/run-result'
 import type { RunEvent } from '../../../types/run/run-event'
 
 import { startNodeTestSession } from '../../../adapters/node-test/start-node-test-session'
@@ -173,6 +177,38 @@ function pick(results: MutantResult[], mutants: string[]): string[] {
         result.isolatedBecause ?? '-',
       ].join(' | '),
     )
+}
+
+/**
+ * Runs the mutants of a project with Node Test and the cache, unless it is off.
+ *
+ * @param root - Root of the project.
+ * @param cache - Whether the run uses the cache.
+ * @returns Result of the run.
+ */
+function runCached(root: string, cache: boolean): Promise<RunResult> {
+  return runMutants({
+    builtIns: createBuiltIns('node-test', nodeTestAdapter({ node })),
+    paths: ['src'],
+    concurrency: 1,
+    cwd: root,
+    cache,
+  })
+}
+
+/**
+ * Lists the replacement, the status and whether the verdict came from the cache
+ * of every mutant of a run.
+ *
+ * @param result - Result of a run.
+ * @returns One row per mutant, in run order.
+ */
+function listVerdicts(result: RunResult): [string, string, boolean][] {
+  return result.results.map(entry => [
+    entry.mutant.replacement,
+    entry.status,
+    entry.cached,
+  ])
 }
 
 describe('nodeTestAdapter', () => {
@@ -707,5 +743,85 @@ describe('nodeTestAdapter', () => {
         ["'kept'", "''", 'Killed'],
       ])
     }, 60_000)
+  })
+
+  describe('cache', () => {
+    let built: Awaited<ReturnType<typeof buildNodeTestPreload>>
+
+    beforeAll(async () => {
+      built = await buildNodeTestPreload()
+      preload.path = built.path
+    })
+
+    afterAll(async () => {
+      await built.remove()
+    })
+
+    it('runs mutants again after a change of a file of the workspace that tests read outside the root', async () => {
+      let workspace = await realpath(
+        await mkdtemp(path.join(tmpdir(), 'mootant-workspace-')),
+      )
+      try {
+        await cp(path.join(fixtures, 'workspace'), workspace, {
+          recursive: true,
+        })
+        await writeFile(
+          path.join(workspace, 'pnpm-lock.yaml'),
+          "lockfileVersion: '9.0'\n",
+        )
+        /**
+         * Files modified in the millisecond a run starts count as changed
+         * during it.
+         */
+        await setTimeout(5)
+        let root = path.join(workspace, 'packages/app')
+        let first = await runCached(root, true)
+        let unchanged = await runCached(root, true)
+
+        expect(first.diagnostics).toStrictEqual([])
+        expect(listVerdicts(unchanged)).toStrictEqual(
+          listVerdicts(first).map(([replacement, status]) => [
+            replacement,
+            status,
+            true,
+          ]),
+        )
+        expect(unchanged.runs).toStrictEqual({ dry: 1 })
+
+        await writeFile(
+          path.join(workspace, 'fixtures/limits.json'),
+          '{ "age": 18 }\n',
+        )
+        await setTimeout(5)
+        let changed = await runCached(root, true)
+        let fresh = await runCached(root, false)
+
+        expect(listVerdicts(changed)).toStrictEqual(
+          listVerdicts(fresh).map(([replacement, status]) => [
+            replacement,
+            status,
+            false,
+          ]),
+        )
+        expect(listVerdicts(changed)).toStrictEqual([
+          ['age > 18', 'Killed', false],
+          ['age == 18', 'Survived', false],
+          ['age >= 17', 'Survived', false],
+        ])
+
+        let again = await runCached(root, true)
+
+        expect(listVerdicts(again)).toStrictEqual(
+          listVerdicts(fresh).map(([replacement, status]) => [
+            replacement,
+            status,
+            true,
+          ]),
+        )
+        expect(again.runs).toStrictEqual({ dry: 1 })
+      } finally {
+        await rm(workspace, { recursive: true, force: true })
+      }
+    }, 120_000)
   })
 })

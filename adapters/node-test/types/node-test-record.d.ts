@@ -174,7 +174,7 @@ export interface NodeTestEnd {
   concurrent: boolean
 
   /**
-   * Project files and directories the code read and changed itself, sorted.
+   * Files and directories among `files` that the code changed itself, sorted.
    */
   modified: string[]
 
@@ -194,8 +194,8 @@ export interface NodeTestEnd {
   reached: boolean
 
   /**
-   * Project files and directories the code read through `node:fs`, a missing
-   * one included, sorted.
+   * Files and directories the code read through `node:fs` that count as inputs
+   * (`createInputFilter`), a missing one included, sorted.
    */
   files: string[]
 

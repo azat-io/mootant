@@ -8,6 +8,7 @@ let unit: NodeTestUnit = {
   expected: [{ occurrence: 0, name: 'a' }],
   plan: '/work/plan.json',
   out: '/work/out.jsonl',
+  directory: '/work',
   mode: 'isolated',
   commonjs: false,
   hitLimit: 100,

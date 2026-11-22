@@ -38,6 +38,7 @@ export async function runTestFile(
   writeFileSync(out, '')
   let unit: NodeTestUnit = {
     ...fields,
+    directory: context.workDirectory,
     commonjs: handle.commonjs,
     root: context.root,
     out,

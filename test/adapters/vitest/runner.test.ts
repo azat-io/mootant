@@ -121,6 +121,7 @@ let mainVitest = {
 let traces: FakeTraces | undefined
 let directory: string
 let options: VitestWorkerOptions
+let projects: string[] = []
 
 /**
  * Runs a test the way Vitest 5 does: every attempt of every repeat inside the
@@ -644,6 +645,11 @@ describe('Runner', () => {
     Reflect.deleteProperty(workerState, Symbol.for('mootant.vitest.strays'))
     vi.restoreAllMocks()
     await rm(directory, { recursive: true, force: true })
+    await Promise.all(
+      projects
+        .splice(0)
+        .map(project => rm(project, { recursive: true, force: true })),
+    )
   })
 
   afterAll(() => {
@@ -742,8 +748,9 @@ describe('Runner', () => {
 
   it('records what the unit depended on in a dry run, its teardown included', async () => {
     setOptions('dry')
-    let project = path.join(directory, 'project')
-    await mkdir(path.join(project, 'node_modules'), { recursive: true })
+    let project = await mkdtemp(path.join(tmpdir(), 'mootant-project-'))
+    projects.push(project)
+    await mkdir(path.join(project, 'node_modules'))
     options.root = project
     let { runner } = createRunner()
     let snapshot = '/project/test/__snapshots__/a.test.ts.snap'
@@ -811,6 +818,7 @@ describe('Runner', () => {
     expect(end.dependencies).toContain(import.meta.filename)
     expect(end.dependencies).toContain(data)
     expect(end.dependencies).not.toContain(written)
+    expect(end.dependencies).toContain(path.join(tmpdir(), 'outside.json'))
     expect(
       end.dependencies.filter(dependency => dependency.startsWith(project)),
     ).toStrictEqual([changed, data, setting, fixture])

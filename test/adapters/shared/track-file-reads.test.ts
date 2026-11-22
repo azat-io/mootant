@@ -4,6 +4,7 @@ import fs, {
   writeFileSync,
   readFileSync,
   symlinkSync,
+  mkdtempSync,
   renameSync,
   unlinkSync,
   existsSync,
@@ -18,6 +19,7 @@ import fs, {
 } from 'node:fs'
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { readFile, readdir, mkdtemp, rm } from 'node:fs/promises'
+import { setTimeout as wait } from 'node:timers/promises'
 import { syncBuiltinESMExports } from 'node:module'
 import url, { pathToFileURL } from 'node:url'
 import { tmpdir } from 'node:os'
@@ -195,6 +197,8 @@ describe('trackFileReads', () => {
       'made/inner',
       'made',
       'copy',
+      'copy/deep',
+      'copy/deep/n.txt',
       'one.txt',
       'one.txt',
       'one.txt',
@@ -205,8 +209,137 @@ describe('trackFileReads', () => {
       'hard.txt',
       'copy',
       'made/inner',
-      'gone-copy',
     ])
+  })
+
+  it('reports the copies of cp once it succeeded, and none that a filter, force: false or verbatimSymlinks may make other than its source', async () => {
+    let source = path.join(directory, 'copied')
+    mkdirSync(path.join(source, 'deep'), { recursive: true })
+    writeFileSync(path.join(source, 'deep', 'n.txt'), '1')
+    mkdirSync(path.join(directory, 'kept', 'deep'), { recursive: true })
+    writeFileSync(path.join(directory, 'kept', 'deep', 'n.txt'), 'kept')
+    let paths = record()
+    cpSync(source, path.join(directory, 'kept'), {
+      recursive: true,
+      force: false,
+    })
+    cpSync(source, path.join(directory, 'filtered'), {
+      filter: () => true,
+      recursive: true,
+    })
+    cpSync(source, path.join(directory, 'verbatim'), {
+      verbatimSymlinks: true,
+      recursive: true,
+    })
+    await fs.promises.cp(source, path.join(directory, 'filtered-promised'), {
+      filter: () => true,
+      recursive: true,
+    })
+    expect(() => {
+      cpSync(source, path.join(directory, 'kept'), {
+        errorOnExist: true,
+        recursive: true,
+        force: false,
+      })
+    }).toThrow()
+    let skipped = [...paths.written]
+    await fs.promises.cp(source, path.join(directory, 'promised'), {
+      recursive: true,
+    })
+    await new Promise<void>((resolve, reject) => {
+      // eslint-disable-next-line node/prefer-promises/fs -- The callback form is under test.
+      fs.cp(
+        source,
+        path.join(directory, 'called'),
+        { recursive: true },
+        error => {
+          if (error) {
+            reject(error)
+          } else {
+            resolve()
+          }
+        },
+      )
+    })
+
+    expect(skipped).toStrictEqual([])
+    expect(paths.written.slice(skipped.length)).toStrictEqual([
+      'promised',
+      'promised/deep',
+      'promised/deep/n.txt',
+      'called',
+      'called/deep',
+      'called/deep/n.txt',
+    ])
+    expect(
+      readFileSync(path.join(directory, 'kept', 'deep', 'n.txt'), 'utf8'),
+    ).toBe('kept')
+  })
+
+  it('leaves a rejection of mkdtemp that nobody handles unhandled', async () => {
+    let listeners = process.listeners('unhandledRejection')
+    let reasons: unknown[] = []
+    process.removeAllListeners('unhandledRejection')
+    process.on('unhandledRejection', reason => {
+      reasons.push(reason)
+    })
+    try {
+      record()
+      void fs.promises.mkdtemp(path.join(directory, 'missing/temp-'))
+      await wait(50)
+    } finally {
+      process.removeAllListeners('unhandledRejection')
+      for (let listener of listeners) {
+        process.on('unhandledRejection', listener)
+      }
+    }
+
+    expect(reasons).toHaveLength(1)
+    expect(reasons[0]).toBeInstanceOf(Error)
+  })
+
+  it('reports the directory that each form of mkdtemp made once it gives it, and nothing when it fails', async () => {
+    let paths = record()
+    let base = path.join(directory, 'temp-')
+    let plain = mkdtempSync(base)
+    let buffer = mkdtempSync(base, { encoding: 'buffer' })
+    let promised = await fs.promises.mkdtemp(base)
+    let called = await new Promise<string>((resolve, reject) => {
+      // eslint-disable-next-line node/prefer-promises/fs -- The callback form is under test.
+      fs.mkdtemp(base, (error, folder) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve(folder)
+        }
+      })
+    })
+    let disposable = fs.mkdtempDisposableSync(base)
+    let disposed = await fs.promises.mkdtempDisposable(base)
+    let failed = await new Promise<unknown>(resolve => {
+      // eslint-disable-next-line node/prefer-promises/fs -- The callback form is under test.
+      fs.mkdtemp(path.join(directory, 'missing/temp-'), error => {
+        resolve(error)
+      })
+    })
+    await expect(
+      fs.promises.mkdtemp(path.join(directory, 'missing/temp-')),
+    ).rejects.toThrow()
+    await new Promise(resolve => {
+      setImmediate(resolve)
+    })
+    let made = [
+      plain,
+      buffer.toString(),
+      promised,
+      called,
+      disposable.path,
+      disposed.path,
+    ].map(folder => path.relative(directory, folder))
+
+    expect(failed).toBeInstanceOf(Error)
+    expect(paths.written).toStrictEqual(made)
+    expect(paths.read).toStrictEqual([])
   })
 
   it('reports a file read through a URL of another realm, which Node takes by its shape', () => {
@@ -425,6 +558,7 @@ describe('trackFileReads', () => {
       await first.return!(undefined)
       let found = await new Promise<string[]>((resolve, reject) => {
         globCallback('sub/*', { cwd: tree }, (error, files) => {
+          readFileSync(path.join(tree, 'a.txt'))
           if (error) {
             reject(error)
           } else {
@@ -453,6 +587,7 @@ describe('trackFileReads', () => {
           'sub/deep',
           'sub',
           'sub/deep',
+          'a.txt',
         ].map(file => path.join('async-glob', file)),
       )
     },

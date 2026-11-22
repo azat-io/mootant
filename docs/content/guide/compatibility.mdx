@@ -117,9 +117,9 @@ code that a custom test environment runs end with `Error`.
 
 The type check of ts-jest is off, so a test file's own type error passes, and a
 mutant that only breaks types survives. After a change to a file or variable
-that only global setup reads, or to a variable that only a transformer's
-configuration, a test environment or a resolver reads, delete the
-[cache](/guide/configuration#cache) directory.
+that only global setup reads, to a variable that only a transformer's
+configuration, a test environment or a resolver reads, or to the names in the
+root of the project, delete the [cache](/guide/configuration#cache) directory.
 
 A test script that reaches Jest through another script loses the variables it
 sets on the way, and Jest runs from the root of the project even after a `cd` in

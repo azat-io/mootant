@@ -7,6 +7,7 @@ import { findChangedFiles } from './find-changed-files'
 import { getPortablePath } from './get-portable-path'
 import { writeRunCache } from './write-run-cache'
 import { createDigest } from './create-digest'
+import { UNKNOWN_HASH } from './unknown-hash'
 import { hashFiles } from './hash-files'
 
 /**
@@ -14,13 +15,14 @@ import { hashFiles } from './hash-files'
  * diagnostics or a file of the environment changed while it went on; evidence
  * from a test file whose dependencies changed while the run went on is left
  * out, since it may come from the old texts, and so is evidence whose run read
- * a file beyond them that changed. A file modified during the run that was
- * hashed for the keys counts as changed only when its content differs now, so
- * tests that write back what they read, or add and remove files of a directory
- * they list, keep their evidence; a file beyond the dependencies modified
- * during the run has no earlier hash and counts as changed. The files evidence
- * read beyond the dependencies of its test file are hashed now, and evidence
- * that shares such inputs names one stored copy of them.
+ * a file beyond them that changed or whose content is unknown, such as a device
+ * or a pipe (`UNKNOWN_HASH`). A file modified during the run that was hashed
+ * for the keys counts as changed only when its content differs now, so tests
+ * that write back what they read, or add and remove files of a directory they
+ * list, keep their evidence; a file beyond the dependencies modified during the
+ * run has no earlier hash and counts as changed. The files evidence read beyond
+ * the dependencies of its test file are hashed now, and evidence that shares
+ * such inputs names one stored copy of them.
  *
  * @param input - Cache of the run, where to save it and what happened.
  * @param input.cache - Lookups, entries and watched files of the run.
@@ -99,7 +101,12 @@ export async function saveRunCache(input: {
   let hashes = await hashFiles(extra)
   let inputs = new Map(cache.inputs)
   for (let [slot, value] of cache.pending) {
-    if (value.files.some(dependency => changed.has(dependency))) {
+    if (
+      value.files.some(
+        dependency =>
+          changed.has(dependency) || hashes.get(dependency) === UNKNOWN_HASH,
+      )
+    ) {
       cache.entries.delete(slot)
       continue
     }

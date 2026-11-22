@@ -105,6 +105,27 @@ let virtualFixture = path.resolve(
 )
 
 /**
+ * Fixture workspace whose project is `packages/app`: its test file covers
+ * `src/math.ts` with a value it reads from `fixtures/limits.json` of the
+ * workspace, outside the project root.
+ */
+let workspaceFixture = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/cache-workspace',
+)
+
+/**
+ * Fixture project whose test file covers `src/math.ts` with values it reads in
+ * a copy that `cp` makes in a directory of `mkdtemp`, following links: one
+ * behind a link to `test/shared`, which the test makes, and one in a `.git`
+ * directory, which the test makes too, as git keeps none in a fixture.
+ */
+let copiesFixture = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/cache-copies',
+)
+
+/**
  * Environment variables the tests change, with their values before.
  */
 let variables = Object.fromEntries(
@@ -636,6 +657,102 @@ describe('vitestAdapter', () => {
       })
     }, Promise.resolve())
   }, 120_000)
+
+  it('runs mutants again after a change of a file of the workspace that tests read outside the root', async () => {
+    let workspace = await copyFixture(workspaceFixture)
+    await writeFile(
+      path.join(workspace, 'pnpm-lock.yaml'),
+      "lockfileVersion: '9.0'\n",
+    )
+    await setTimeout(5)
+    let root = path.join(workspace, 'packages/app')
+    let first = await run(root)
+    let unchanged = await run(root)
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(splitCached(unchanged.result)).toStrictEqual({
+      cached: ['src/math.ts'],
+      ran: [],
+    })
+    expect(unchanged.units).toBe(0)
+
+    await writeFile(
+      path.join(workspace, 'fixtures/limits.json'),
+      '{ "age": 18 }\n',
+    )
+    await setTimeout(5)
+    let changed = await run(root)
+    let fresh = await run(root, { cache: false })
+
+    expect(splitCached(changed.result)).toStrictEqual({
+      ran: ['src/math.ts'],
+      cached: [],
+    })
+    expect(changed.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      fresh.result.results.map(summarizeCachedVerdict),
+    )
+    expect(
+      changed.result.results.map(entry => [
+        entry.mutant.replacement,
+        entry.status,
+      ]),
+    ).toStrictEqual([
+      ['age > 18', 'Killed'],
+      ['age == 18', 'Survived'],
+      ['age >= 17', 'Survived'],
+    ])
+
+    let again = await run(root)
+
+    expect(splitCached(again.result)).toStrictEqual({
+      cached: ['src/math.ts'],
+      ran: [],
+    })
+    expect(again.units).toBe(0)
+    expect(again.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      fresh.result.results.map(summarizeCachedVerdict),
+    )
+  }, 120_000)
+
+  it('runs mutants again after a change of what tests read in a copy cp made through a link or of a .git directory, which its walk of the source leaves out', async () => {
+    let root = await copyFixture(copiesFixture)
+    await mkdir(path.join(root, 'test/fx/.git'), { recursive: true })
+    await writeFile(path.join(root, 'test/fx/.git/HEAD'), '30\n')
+    await symlink('../shared', path.join(root, 'test/fx/link'))
+    await setTimeout(5)
+    await run(root)
+    await writeFile(path.join(root, 'test/shared/limits.txt'), '18\n')
+    await setTimeout(5)
+    let linked = await run(root)
+    let linkedFresh = await run(root, { cache: false })
+    await writeFile(path.join(root, 'test/fx/.git/HEAD'), '18\n')
+    await setTimeout(5)
+    let head = await run(root)
+    let headFresh = await run(root, { cache: false })
+
+    expect(linked.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      linkedFresh.result.results.map(summarizeCachedVerdict),
+    )
+    expect(head.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      headFresh.result.results.map(summarizeCachedVerdict),
+    )
+    expect(
+      [linked, head].map(({ result }) =>
+        result.results.map(entry => [entry.mutant.replacement, entry.status]),
+      ),
+    ).toStrictEqual([
+      [
+        ['age > 18', 'Killed'],
+        ['age == 18', 'Killed'],
+        ['age >= 17', 'Survived'],
+      ],
+      [
+        ['age > 18', 'Killed'],
+        ['age == 18', 'Survived'],
+        ['age >= 17', 'Survived'],
+      ],
+    ])
+  }, 180_000)
 
   it('keeps the cache of tests with side effects true to what they read', async () => {
     let root = await copyFixture(effectsFixture)

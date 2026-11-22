@@ -118,6 +118,7 @@ describe('runTestFile', () => {
       mutant: null,
       mode: 'dry',
       bail: false,
+      directory,
     })
     expect(output).toStrictEqual([['text', '/project/a.test.js']])
     expect(handle.state.count).toBe(4)

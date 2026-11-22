@@ -28,7 +28,7 @@ const READERS = new Set([
 /**
  * Functions of `node:fs` that change the paths at the given arguments, with
  * their `Sync` and `fs/promises` variants; `mkdir` changes only the directories
- * it creates.
+ * it creates, and what `cp` changes is known once it succeeded (`listCopies`).
  */
 const WRITERS: Record<string, number[]> = {
   createWriteStream: [0],
@@ -42,8 +42,8 @@ const WRITERS: Record<string, number[]> = {
   rmdir: [0],
   mkdir: [0],
   link: [1],
-  cp: [1],
   rm: [0],
+  cp: [],
 }
 
 /**
@@ -52,6 +52,21 @@ const WRITERS: Record<string, number[]> = {
  * target of a symbolic link, relative to the link's directory.
  */
 const SOURCES = new Set(['copyFile', 'symlink', 'rename', 'link', 'cp'])
+
+/**
+ * Functions of `node:fs` that make a directory under a name they choose, with
+ * their `Sync` and `fs/promises` variants; the directory is known only from
+ * what they give back.
+ */
+const CREATORS = new Set(['mkdtempDisposable', 'mkdtemp'])
+
+/**
+ * Functions of `node:fs` whose asynchronous forms may go on calling functions
+ * of `node:fs` after they return, as Node writes their walk in JavaScript; the
+ * calls of that walk report nothing, as what it reads and changes is reported
+ * apart, and the callback of the callback form runs outside it.
+ */
+const WALKERS = new Set(['glob', 'cp'])
 
 /**
  * Directories a recursive copy of a directory does not walk into for the files
@@ -128,11 +143,11 @@ interface FileSlot {
   >
 
   /**
-   * Whether the asynchronous work of a wrapped `glob` runs, whose own calls of
-   * `node:fs` report nothing, as its directories are reported before it
-   * starts.
+   * Whether the asynchronous work of a wrapped `glob` or `cp` runs, whose own
+   * calls of `node:fs` report nothing, as what it reads and changes is reported
+   * apart.
    */
-  globbing: AsyncLocalStorage<boolean>
+  walking: AsyncLocalStorage<boolean>
 
   /**
    * Receiver of the paths, or null while nothing records.
@@ -172,14 +187,18 @@ interface FileAccess {
  * `open` reads unless its flags create, empty or append to the file, as `w`,
  * `a` or `O_CREAT` do; `r+` reads. The source of a copy, a move or a link is
  * read, and so is every file and directory in a directory `cp` copies, outside
- * `node_modules` and `.git`; `mkdir` writes only the directories that did not
- * exist. A recursive `readdir` or `opendir` reads the directory and every
- * directory in it, each listed by its own names, so adding a file anywhere in
- * the tree changes what was read; `readdir` also reads the directories behind
- * the links it follows. `glob` reads the same of the directory where each
- * pattern's fixed part ends. Calls of `node:fs` that a wrapped function makes
- * while it runs report nothing, and neither do those of the asynchronous work
- * of `glob`. Descriptors and file handles are not paths and are not reported.
+ * `node_modules` and `.git`, whose copies it writes once it succeeded, unless a
+ * `filter`, `force: false` or `verbatimSymlinks` may make a copy other than its
+ * source (`listCopies`); `mkdir` writes only the directories that did not
+ * exist. `mkdtemp` and `mkdtempDisposable` write the directory they made once
+ * they give it. A recursive `readdir` or `opendir` reads the directory and
+ * every directory in it, each listed by its own names, so adding a file
+ * anywhere in the tree changes what was read; `readdir` also reads the
+ * directories behind the links it follows. `glob` reads the same of the
+ * directory where each pattern's fixed part ends. Calls of `node:fs` that a
+ * wrapped function makes while it runs report nothing, and neither do those of
+ * the asynchronous work of `glob` and `cp`, but those of their callbacks do.
+ * Descriptors and file handles are not paths and are not reported.
  *
  * @param receiver - Receives the paths while it is the current receiver; the
  *   next call replaces it, and null stops recording.
@@ -195,15 +214,14 @@ export function trackFileReads(receiver: FileAccessReceiver | null): void {
         existsSync: fs.existsSync,
         statSync: fs.statSync,
       },
-      globbing: new AsyncLocalStorage(),
+      walking: new AsyncLocalStorage(),
       receiver: null,
       inside: false,
     }
     global[SLOT] = slot
-    let names = [...READERS, ...Object.keys(WRITERS)].flatMap(name => [
-      name,
-      `${name}Sync`,
-    ])
+    let names = [...READERS, ...Object.keys(WRITERS), ...CREATORS].flatMap(
+      name => [name, `${name}Sync`],
+    )
     for (let target of [fs, fs.promises]) {
       for (let name of names) {
         let original: unknown = Reflect.get(target, name)
@@ -244,41 +262,134 @@ function wrap(
    * @returns What the function returns.
    */
   function wrapper(this: unknown, ...parameters: unknown[]): unknown {
-    if (slot.inside || slot.globbing.getStore() === true) {
+    if (slot.inside || slot.walking.getStore() === true) {
       return original.apply(this, parameters)
     }
     let current = slot.receiver
+    let after: ((value: unknown) => void) | null = null
     if (current !== null) {
+      let receiver = current
       /**
        * Reporting never reaches the code it watches: a relative path has no
        * absolute form once its working directory is gone, and the call
        * decides.
        */
       try {
-        let access = getAccess(base, parameters, slot)
-        for (let file of access.read) {
-          current.read(file)
-        }
-        for (let file of access.written) {
-          current.write(file)
+        if (CREATORS.has(base)) {
+          after = value => {
+            let given = (value as { path?: unknown }).path ?? value
+            let folder = resolvePath(
+              Buffer.isBuffer(given) ? given.toString() : String(given),
+            )
+            receiver.write(folder)
+          }
+        } else {
+          let access = getAccess(base, parameters, slot)
+          for (let file of access.read) {
+            receiver.read(file)
+          }
+          for (let file of access.written) {
+            receiver.write(file)
+          }
+          let copies =
+            base === 'cp' ? listCopies(parameters, access.read, slot) : []
+          if (copies.length > 0) {
+            after = () => {
+              for (let copy of copies) {
+                receiver.write(copy)
+              }
+            }
+          }
         }
       } catch {}
     }
+    /**
+     * Calls the function, reporting what `after` lists once it succeeded.
+     *
+     * @param values - Arguments of the call.
+     * @returns What the function returns.
+     */
+    let call = (values: unknown[]): unknown =>
+      after === null ?
+        original.apply(this, values)
+      : callThen((...given) => original.apply(this, given), values, after)
     slot.inside = true
     try {
-      if (name !== 'glob') {
-        return original.apply(this, parameters)
+      if (!WALKERS.has(name)) {
+        return call(parameters)
       }
-      return guardIterator(
-        slot.globbing.run(true, () => original.apply(this, parameters)),
-        slot,
-      )
+      let values = leaveWalk(parameters, slot)
+      let result = slot.walking.run(true, () => call(values))
+      return name === 'glob' ? guardIterator(result, slot) : result
     } finally {
       slot.inside = false
     }
   }
   Object.defineProperties(wrapper, Object.getOwnPropertyDescriptors(original))
   return wrapper
+}
+
+/**
+ * Calls a function of `node:fs` and runs what to report once it succeeded: with
+ * the value of the `Sync` form, the value of the promise of the `fs/promises`
+ * form, or what the callback of the callback form gets. A call that fails
+ * reports nothing, and its error reaches the code as it would: the promise
+ * given back is one that settles as the function's does, so a rejection nobody
+ * handles still is one. Reporting never reaches the code it watches.
+ *
+ * @param call - Calls the function with some arguments.
+ * @param parameters - Arguments of the call.
+ * @param after - What to report, with what the function gave.
+ * @returns What the function returns, or the promise that settles as its own.
+ */
+function callThen(
+  call: (...values: unknown[]) => unknown,
+  parameters: unknown[],
+  after: (value: unknown) => void,
+): unknown {
+  /**
+   * Reports, keeping any error away from the code.
+   *
+   * @param value - What the function gave.
+   */
+  function report(value: unknown): void {
+    try {
+      after(value)
+    } catch {}
+  }
+  let callback = parameters.at(-1)
+  if (typeof callback === 'function') {
+    return call(
+      ...parameters.slice(0, -1),
+      (error: unknown, value: unknown, ...rest: unknown[]) => {
+        if (error === null || error === undefined) {
+          report(value)
+        }
+        return Reflect.apply(callback, undefined, [
+          error,
+          value,
+          ...rest,
+        ]) as unknown
+      },
+    )
+  }
+  /**
+   * Waits for the promise of the function and reports its value.
+   *
+   * @param promise - What the function gave.
+   * @returns The value of the promise; its rejection rejects this too.
+   */
+  async function settle(promise: Promise<unknown>): Promise<unknown> {
+    let value = await promise
+    report(value)
+    return value
+  }
+  let result = call(...parameters)
+  if (result instanceof Promise) {
+    return settle(result)
+  }
+  report(result)
+  return result
 }
 
 /**
@@ -331,6 +442,54 @@ function walkDirectories(
     }
   }
   return read
+}
+
+/**
+ * Lists what a call of `cp` writes once it succeeds: the destination and each
+ * file and directory its walk of the source found, under the destination, but a
+ * directory that is there before the call, which the copy merges into and whose
+ * other entries stay inputs. None is listed with a `filter`, with `force:
+ * false`, which keeps a file that is there, or with `verbatimSymlinks`, which
+ * keeps a relative link as it is, so a copy of it may lead elsewhere than the
+ * link it copies: what such a call may make other than its source stays an
+ * input.
+ *
+ * @param parameters - Arguments of the call.
+ * @param read - What the call reads, the source first (`listSourceReads`).
+ * @param slot - Tracking state of the process, with the functions as Node made
+ *   them.
+ * @returns Absolute paths, taken before the call.
+ */
+function listCopies(
+  parameters: unknown[],
+  read: readonly string[],
+  slot: FileSlot,
+): string[] {
+  let [source] = read
+  let destination = toPath(parameters[1])
+  let options = (parameters[2] ?? {}) as {
+    verbatimSymlinks?: unknown
+    filter?: unknown
+    force?: unknown
+  }
+  if (
+    source === undefined ||
+    destination === null ||
+    options.filter !== undefined ||
+    options.force === false ||
+    options.verbatimSymlinks === true
+  ) {
+    return []
+  }
+  return read
+    .map(file => `${destination}${file.slice(source.length)}`)
+    .filter(copy => {
+      try {
+        return !slot.original.statSync(copy).isDirectory()
+      } catch {
+        return true
+      }
+    })
 }
 
 /**
@@ -523,8 +682,8 @@ function guardIterator(result: unknown, slot: FileSlot): unknown {
   }
   let generator = result as AsyncGenerator<unknown, unknown>
   let guarded: AsyncIterableIterator<unknown> = {
-    return: value => slot.globbing.run(true, () => generator.return(value)),
-    next: () => slot.globbing.run(true, () => generator.next()),
+    return: value => slot.walking.run(true, () => generator.return(value)),
+    next: () => slot.walking.run(true, () => generator.next()),
     [Symbol.asyncIterator]: () => guarded,
   }
   return guarded
@@ -578,6 +737,29 @@ function getAccess(
     read: listSourceReads(base, parameters, slot),
     written: listWrites(base, parameters, slot),
   }
+}
+
+/**
+ * Makes the callback of the callback form of `glob` or `cp`, the last argument,
+ * run outside the work of the function, so its own calls of `node:fs` report as
+ * those of the code do.
+ *
+ * @param parameters - Arguments of the call.
+ * @param slot - Tracking state of the process.
+ * @returns The arguments, with the callback replaced if there is one.
+ */
+function leaveWalk(parameters: unknown[], slot: FileSlot): unknown[] {
+  let callback = parameters.at(-1)
+  if (typeof callback !== 'function') {
+    return parameters
+  }
+  return [
+    ...parameters.slice(0, -1),
+    (...values: unknown[]): unknown =>
+      slot.walking.exit(
+        () => Reflect.apply(callback, undefined, values) as unknown,
+      ),
+  ]
 }
 
 /**

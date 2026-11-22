@@ -93,6 +93,7 @@ describe('preload', () => {
     let out = path.join(directory, 'out.jsonl')
     await writeFile(plan, '{}')
     process.env['MOOTANT_UNIT'] = JSON.stringify({
+      directory: path.join(directory, 'work'),
       root: directory,
       commonjs: true,
       hitLimit: null,
@@ -122,9 +123,10 @@ describe('preload', () => {
       plan,
       out,
     })
-    expect(vi.mocked(trackInputs)).toHaveBeenCalledWith(directory, {
-      ignored: ['NODE_TEST_CONTEXT', 'FORCE_COLOR'],
-    })
+    expect(vi.mocked(trackInputs)).toHaveBeenCalledWith(
+      { directory: path.join(directory, 'work'), root: directory },
+      { ignored: ['NODE_TEST_CONTEXT', 'FORCE_COLOR'] },
+    )
 
     let global = globalThis as Record<
       symbol,

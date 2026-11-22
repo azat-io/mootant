@@ -1,0 +1,7 @@
+{
+  "name": "jest-workspace",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

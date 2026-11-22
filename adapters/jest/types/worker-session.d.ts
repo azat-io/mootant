@@ -13,18 +13,17 @@ export interface WorkerSession {
    */
   reads: {
     /**
-     * Absolute directories whose files count: the real path of the project
-     * root, and the `rootDir` and `roots` of every project.
+     * Absolute directories whose files count, even those that hold the root:
+     * the real path of the project root, and the `rootDir` and `roots` of every
+     * project.
      */
     directories: string[]
 
     /**
-     * Extensions, without the dot, of the files that count wherever they are
-     * but in the temporary directory: the `moduleFileExtensions` of every
-     * project, and `snap`, since a custom snapshot resolver may put a snapshot
-     * file anywhere.
+     * Real path of the project root, which itself counts only under one of the
+     * directories.
      */
-    extensions: string[]
+    root: string
   }
 
   /**

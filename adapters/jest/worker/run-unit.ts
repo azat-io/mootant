@@ -1,5 +1,3 @@
-import path from 'node:path'
-
 import type { JestFileFacts } from '../types/jest-file-facts'
 import type { BootedProject } from '../types/booted-project'
 import type { UnitWorker } from '../types/unit-worker'
@@ -13,12 +11,6 @@ import { installExitGuards } from './install-exit-guards'
 import { wrapProjectConfig } from './wrap-project-config'
 import { readErrorFacts } from './read-error-facts'
 import { readJestResult } from './read-jest-result'
-
-/**
- * `path.extname` as this module loads, since test code the filter of reads runs
- * beside may replace it.
- */
-let getExtension = path.extname
 
 /**
  * Runs one test file through Jest's own `TestRunner` in serial mode: a fresh vm
@@ -43,25 +35,27 @@ let getExtension = path.extname
  * messages, as tests may read them. What the console kept is emptied once
  * `finish` is written, since with `--experimental-vm-modules` the vm of every
  * unit, its console with it, stays in the worker. A read counts under the
- * directories of the session, or with one of its extensions outside the
- * temporary directory, where tests make files under new names each run, but
+ * directories of the session, and elsewhere as `createInputFilter` tells, but
  * never under `node_modules`, which the lockfile stands for, in mootant's
- * files, or as a `node:` name that a stack frame gave and the tracker made a
- * path of. What Jest's resolver reads does not count, as it keeps what it found
- * across units and a real load is read anyway, but what a project's own
- * resolver reads, a file it only looks for too, decides what it gives, Jest's
- * default one aside when it hands that a request
- * (`WorkerCalls.defaultResolver`); that and what a transformer reads go apart,
- * as the session's, since a warm worker reads them only once, and stay among
- * the reads too when code outside the transformers read them, as a test file
- * loads a source the language service of ts-jest read first. The CommonJS
- * modules the own realm of the worker loaded so far count as reads do, since a
- * warm worker does not read a transformer, a test environment or a resolver
- * again, nor what they import; ES modules are not in `require.cache`, so one of
- * those counts only in the unit that loaded it. A transform still running when
- * the run ended, of an import the unit never awaited, ends the worker: what it
- * reads from then on reaches no unit, and a later unit would get the module
- * from the worker's memory.
+ * files, as a `node:` name that a stack frame gave and the tracker made a path
+ * of, or as the project root itself outside the directories of the session,
+ * which Babel and Browserslist look through in every worker, while its names
+ * change with whatever appears beside the project's own files. What Jest's
+ * resolver reads does not count, as it keeps what it found across units and a
+ * real load is read anyway, but what a project's own resolver reads, a file it
+ * only looks for too, decides what it gives, Jest's default one aside when it
+ * hands that a request (`WorkerCalls.defaultResolver`); that and what a
+ * transformer reads go apart, as the session's, since a warm worker reads them
+ * only once, and stay among the reads too when code outside the transformers
+ * read them, as a test file loads a source the language service of ts-jest read
+ * first. The CommonJS modules the own realm of the worker loaded so far count
+ * as reads do, since a warm worker does not read a transformer, a test
+ * environment or a resolver again, nor what they import, but not one that this
+ * or an earlier unit of the worker wrote itself (`UnitWorker.reads.own`); ES
+ * modules are not in `require.cache`, so one of those counts only in the unit
+ * that loaded it. A transform still running when the run ended, of an import
+ * the unit never awaited, ends the worker: what it reads from then on reaches
+ * no unit, and a later unit would get the module from the worker's memory.
  *
  * @param unit - Test file, project, mutant, switch plan and out file.
  * @param worker - What the boot of the worker made.
@@ -74,7 +68,7 @@ export async function runUnit(
   worker: UnitWorker,
 ): Promise<boolean> {
   let { BufferedConsole, process: target, directory, channel, flags } = worker
-  let { directories, extensions, temporary } = worker.reads
+  let { directories, inputs, root, own } = worker.reads
   let { calls } = worker
   let token = channel.begin(unit)
 
@@ -101,9 +95,7 @@ export async function runUnit(
       !file.endsWith('/node_modules') &&
       !file.startsWith(`${directory}/`) &&
       !file.includes('/node:') &&
-      (isUnder(directories, file) ||
-        (!isUnder(temporary, file) &&
-          extensions.has(getExtension(file).slice(1))))
+      (isUnder(directories, file) || (file !== root && inputs(file)))
     )
   }
 
@@ -202,6 +194,11 @@ export async function runUnit(
   let side = closeVmSide(channel.vm, worker.dead)
   worker.clearPerformance()
   let { modified, files } = tracking.stop()
+  for (let key of Object.keys(worker.requireCache)) {
+    if (tracking.owns(key)) {
+      own.add(key)
+    }
+  }
   let unsettled = calls.unsettled > 0
   worker.disableStores()
   let dirty = await readDirtyState(worker)
@@ -217,7 +214,7 @@ export async function runUnit(
         null
       : `  ● Console\n\n${worker.getConsoleOutput(printed, project.config, globalConfig)}\n`,
     loaded: Object.keys(worker.requireCache)
-      .filter(counts)
+      .filter(key => counts(key) && !own.has(key))
       .toSorted(compareCodeUnits),
     transforms: files.filter(read => transformed.has(read)),
     reads: files.filter(read => direct.has(read)),

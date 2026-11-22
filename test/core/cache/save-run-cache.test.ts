@@ -165,6 +165,25 @@ describe('saveRunCache', () => {
     })
   })
 
+  it('leaves out an entry whose run read a device or a pipe beyond the dry run, whose content is unknown', async () => {
+    let cache = createCache()
+    cache.pending.get('slot-b-extra')!.files.push('/dev/null')
+    let file = path.join(root, 'cache', 'run-v1.json')
+    await rm(file, { force: true })
+    let warning = await saveRunCache({
+      started: Number.POSITIVE_INFINITY,
+      failed: false,
+      now: 2,
+      cache,
+      file,
+      root,
+    })
+    let content = JSON.parse(await readFile(file, 'utf8')) as RunCacheFile
+
+    expect(warning).toBeNull()
+    expect(Object.keys(content.entries)).toStrictEqual(['slot-a', 'slot-b'])
+  })
+
   it('leaves out an entry whose run read a file changed during the run', async () => {
     let future = new Date(Date.now() + 10_000_000)
     await utimes(path.join(root, 'extra.json'), future, future)

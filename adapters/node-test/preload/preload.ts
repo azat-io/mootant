@@ -70,7 +70,10 @@ if (unit !== null) {
     commonjs: unit.commonjs,
   })
   write({ node: process.version, pid: process.pid, kind: 'start', hooks, time })
-  let inputs = trackInputs(unit.root, { ignored: NODE_TEST_VARIABLES })
+  let inputs = trackInputs(
+    { directory: unit.directory, root: unit.root },
+    { ignored: NODE_TEST_VARIABLES },
+  )
   let require = moduleApi.createRequire(import.meta.url)
   beforeEach(context => {
     tracker.open(context as TestContext)

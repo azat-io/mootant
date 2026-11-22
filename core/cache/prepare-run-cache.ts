@@ -18,6 +18,7 @@ import { findChangedFiles } from './find-changed-files'
 import { getTestFileKeys } from './get-test-file-keys'
 import { createRunCache } from './create-run-cache'
 import { findLockfile } from './find-lockfile'
+import { UNKNOWN_HASH } from './unknown-hash'
 import { hashFiles } from './hash-files'
 
 /**
@@ -99,15 +100,16 @@ interface PrepareInput {
  * for the incremental keys. Files modified since the run started may have
  * changed after the test runner read them, so their hash may not be what
  * verdicts came from: a test file that depends on one gets no key, and no test
- * file gets one when a file of the environment changed. Dependencies the test
- * code of the dry run changed itself (`DryFile.modified`) are hashed as they
- * are now, which is what the next run starts from; `saveRunCache` checks that
- * their contents stayed so.
+ * file gets one when a file of the environment changed. The same goes for a
+ * path whose content is unknown, such as a device or a pipe (`UNKNOWN_HASH`),
+ * whatever its time. Dependencies the test code of the dry run changed itself
+ * (`DryFile.modified`) are hashed as they are now, which is what the next run
+ * starts from; `saveRunCache` checks that their contents stayed so.
  *
  * @param input - Session, dry run, settings and the stored entries.
  * @returns Cache of the run, or null when the adapter cannot tell what verdicts
- *   depend on, a file of the environment changed during the run, or no test
- *   file has a key.
+ *   depend on, a file of the environment changed during the run or has unknown
+ *   content, or no test file has a key.
  */
 export async function prepareRunCache(
   input: PrepareInput,
@@ -149,6 +151,9 @@ export async function prepareRunCache(
       value.files.map(([relative]) => path.resolve(root, relative)),
     ),
   ])
+  if (files.some(file => hashes.get(file) === UNKNOWN_HASH)) {
+    return null
+  }
   let variables = inputs.environment ?? {}
   let environment = getEnvironmentKey({
     mutators: {
@@ -170,7 +175,8 @@ export async function prepareRunCache(
   })
   let keyed = dry.files.filter(file =>
     (dependencies.get(getTestFileKey(file)) ?? []).every(
-      dependency => !changed.has(dependency),
+      dependency =>
+        !changed.has(dependency) && hashes.get(dependency) !== UNKNOWN_HASH,
     ),
   )
   let fileKeys = getTestFileKeys({

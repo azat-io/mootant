@@ -1068,6 +1068,58 @@ module.exports = class extends TestEnvironment {
     expect(second.units).toBe(0)
   })
 
+  it('runs the mutants again after a change of a file of the workspace that tests read outside the root, whatever its name', async () => {
+    let workspace = await createProject('workspace')
+    await writeFile(
+      path.join(workspace, 'pnpm-lock.yaml'),
+      "lockfileVersion: '9.0'\n",
+    )
+    await setTimeout(5)
+    let root = path.join(workspace, 'packages/app')
+    let first = await runCached(root)
+    let unchanged = await runCached(root)
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(splitCached(unchanged.result)).toStrictEqual({
+      cached: ['src/math.js'],
+      ran: [],
+    })
+    expect(unchanged.units).toBe(0)
+
+    await changeFile(path.join(workspace, 'fixtures/limits.txt'), '18\n', true)
+    let changed = await runCached(root)
+    let fresh = await runCached(root, { cache: false })
+
+    expect(splitCached(changed.result)).toStrictEqual({
+      ran: ['src/math.js'],
+      cached: [],
+    })
+    expect(changed.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      fresh.result.results.map(summarizeCachedVerdict),
+    )
+    expect(
+      ['age > 18', 'age == 18', 'age >= 17'].map(replacement => [
+        replacement,
+        findReplaced(changed.result, replacement)?.status,
+      ]),
+    ).toStrictEqual([
+      ['age > 18', 'Killed'],
+      ['age == 18', 'Survived'],
+      ['age >= 17', 'Survived'],
+    ])
+
+    let again = await runCached(root)
+
+    expect(splitCached(again.result)).toStrictEqual({
+      cached: ['src/math.js'],
+      ran: [],
+    })
+    expect(again.units).toBe(0)
+    expect(again.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      fresh.result.results.map(summarizeCachedVerdict),
+    )
+  })
+
   it('neither reads nor writes the cache when it is off', async () => {
     let root = await createCacheProject()
     let file = getCachePath(root)

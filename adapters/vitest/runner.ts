@@ -1019,8 +1019,9 @@ export default class Runner extends TestRunner {
   }
 
   /**
-   * Starts recording the project files the test code reads through `node:fs`
-   * and the environment variables it reads, before the test file and its setup
+   * Starts recording the files the test code reads through `node:fs` that count
+   * as inputs, inside the project root or outside it (`createInputFilter`), and
+   * the environment variables it reads, before the test file and its setup
    * files load. The first worker of a project in a dry run also writes the
    * hashes of the worker's environment variables, as Vitest set them up, to
    * `env/<hash>.json` of the work directory, for the main process to tell what
@@ -1030,10 +1031,13 @@ export default class Runner extends TestRunner {
    */
   private startTracking(snapshot: boolean): void {
     let { directory, root } = this.options
-    let inputs = trackInputs(root, {
-      holder: Reflect.get(this, 'workerState'),
-      ignored: VITEST_VARIABLES,
-    })
+    let inputs = trackInputs(
+      { directory, root },
+      {
+        holder: Reflect.get(this, 'workerState'),
+        ignored: VITEST_VARIABLES,
+      },
+    )
     this.inputs = inputs
     if (snapshot) {
       let variables: Record<string, string> = {}

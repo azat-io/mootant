@@ -1,8 +1,7 @@
-import { readFileSync, realpathSync, existsSync } from 'node:fs'
 import { AsyncLocalStorage } from 'node:async_hooks'
+import { readFileSync, existsSync } from 'node:fs'
 import { setFlagsFromString } from 'node:v8'
 import { createRequire } from 'node:module'
-import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import type { JestModuleMap } from '../types/jest-module-map'
@@ -16,6 +15,7 @@ import type { JestUnit } from '../types/jest-unit'
 import { countDefaultResolverCalls } from './count-default-resolver-calls'
 import { createTransformerFactory } from './create-transformer-factory'
 import { RUNTIME_GLOBAL } from '../../../core/runtime/runtime-global'
+import { createInputFilter } from '../../shared/create-input-filter'
 import { getErrorMessage } from '../../shared/get-error-message'
 import { trackFileReads } from '../../shared/track-file-reads'
 import { createWorkerChannel } from './create-worker-channel'
@@ -69,9 +69,10 @@ let setV8Flags = setFlagsFromString
  * what it gets in plain Jest. Types are stripped only where the project's Jest
  * strips them, which needs Node's function. One count of the calls into the
  * resolvers and transformers of the projects serves every unit, which tells
- * what they read apart from what tests read. The temporary directory, as Node
- * gives it and as its real path, is where tests put what they make, under a new
- * name each run.
+ * what they read apart from what tests read. Which reads count outside the
+ * directories of the session is decided by the work directory, the one that
+ * holds the directory of `session.json`, and the project root
+ * (`createInputFilter`), taken here, before any unit runs.
  *
  * @param input - What the worker runs with.
  * @param input.process - The worker's process, with `MOOTANT_SESSION`, the
@@ -218,15 +219,15 @@ export function bootWorker(input: {
   let clearMarks = global.performance.clearMarks.bind(global.performance)
   let clearMeasures = global.performance.clearMeasures.bind(global.performance)
   let checkState: UnitWorker['checkState']
-  let temporary = tmpdir()
   let worker: UnitWorker = {
     reads: {
-      temporary:
-        existsSync(temporary) ?
-          [temporary, realpathSync(temporary)]
-        : [temporary],
-      extensions: new Set(session.reads.extensions),
+      inputs: createInputFilter({
+        directory: path.dirname(path.dirname(sessionFile)),
+        root: session.reads.root,
+      }),
       directories: session.reads.directories,
+      root: session.reads.root,
+      own: new Set(),
     },
     clearPerformance() {
       clearMarks()

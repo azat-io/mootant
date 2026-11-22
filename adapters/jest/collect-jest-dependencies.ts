@@ -15,13 +15,14 @@ import { listPackageFiles } from '../shared/list-package-files'
  * beside it, whether it exists or not. The file a custom snapshot resolver
  * gives is among the reads, as Jest looks for it when the unit starts. The
  * worker leaves out of the reads what is under `node_modules`, which the
- * lockfile stands for, mootant's own files, what Jest's resolver read, as a
- * real load is read anyway, and what only the transformers, the test
- * environment and the test runner in their own calls, or a project's own
- * resolver read, which every verdict depends on: through `getJestCacheInputs`
- * when a dry run read it, a missing file there only when named as a
- * configuration file (`isTransformInput`), else through `state.lateTransforms`,
- * which `runIsolated` adds.
+ * lockfile stands for, mootant's own files and, outside the directories of the
+ * session, the root itself and what `createInputFilter` leaves out, what Jest's
+ * resolver read, as a real load is read anyway, and what only the transformers,
+ * the test environment and the test runner in their own calls, or a project's
+ * own resolver read, which every verdict depends on: through
+ * `getJestCacheInputs` when a dry run read it, a missing file there only when
+ * named as a configuration file (`isTransformInput`), else through
+ * `state.lateTransforms`, which `runIsolated` adds.
  *
  * @param records - Records of the unit.
  * @param file - Absolute path of the test file.

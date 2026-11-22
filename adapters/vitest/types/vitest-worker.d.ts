@@ -12,10 +12,10 @@ export type VitestOutRecord =
   | {
       /**
        * Ids of the modules the worker evaluated, the files Node's `require`
-       * loaded, the project files the test code read through `node:fs` and the
-       * snapshot files of the test file (`listDependencies`), or null when the
-       * worker cannot tell, as with a test environment other than Vitest's
-       * own.
+       * loaded, the files the test code read through `node:fs` that count as
+       * inputs (`createInputFilter`) and the snapshot files of the test file
+       * (`listDependencies`), or null when the worker cannot tell, as with a
+       * test environment other than Vitest's own.
        */
       dependencies: string[] | null
 
@@ -48,9 +48,9 @@ export type VitestOutRecord =
       concurrent: boolean
 
       /**
-       * Project files and directories the test code read through `node:fs` and
-       * changed itself, by writing, creating, removing or moving them or the
-       * entries of a directory, sorted.
+       * Files and directories the test code read through `node:fs` that count
+       * as inputs and changed itself, by writing, creating, removing or moving
+       * them or the entries of a directory, sorted.
        */
       modified: string[]
 
@@ -223,7 +223,7 @@ export interface VitestWorkerOptions {
   repeat: boolean
 
   /**
-   * Project root; files the test code reads count as inputs only inside it.
+   * Project root; reads outside it count too (`createInputFilter`).
    */
   root: string
 }

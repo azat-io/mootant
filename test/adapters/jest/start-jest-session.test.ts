@@ -294,8 +294,7 @@ describe('startJestSession', { timeout: 60_000 }, () => {
       let saved = JSON.parse(
         await readFile(path.join(workDirectory, 'jest/session.json'), 'utf8'),
       ) as {
-        projects: { config: { moduleFileExtensions: string[] } }[]
-        reads: { directories: string[]; extensions: string[] }
+        reads: { directories: string[]; root: string }
       }
 
       expect(inputs.files).toStrictEqual(
@@ -321,10 +320,7 @@ describe('startJestSession', { timeout: 60_000 }, () => {
         env: { FROM_OPTIONS: '1' },
         jest: session.version,
       })
-      expect(saved.reads).toStrictEqual({
-        extensions: [...saved.projects[0]!.config.moduleFileExtensions, 'snap'],
-        directories: [root],
-      })
+      expect(saved.reads).toStrictEqual({ directories: [root], root })
     })
 
     it('beats what a configuration sets about which tests run and coverage', async () => {

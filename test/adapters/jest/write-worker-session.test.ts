@@ -86,7 +86,7 @@ describe('writeWorkerSession', () => {
     expect(JSON.parse(await readFile(file, 'utf8'))).toStrictEqual({
       reads: {
         directories: ['/p', '/p/src', '/shared', '/elsewhere', '/p/other'],
-        extensions: ['js', 'json', 'ts', 'snap'],
+        root: '/p',
       },
       projects: [
         {

@@ -11,11 +11,11 @@ import { listLoadedFiles } from './list-loaded-files'
  * Lists what a test file depended on in a test process that reached its end:
  * the test file, its default snapshot file (`<file>.snapshot`), whether it
  * exists or not, the modules the process loaded (`listLoadedFiles`) and the
- * project files the test code read, without files under `node_modules`, which
- * the lockfile stands for, and without mootant's preload; for the directory of
- * each module, the `package.json` files that decide its format
- * (`listPackageFiles`) and, when tsx compiles modules, the `tsconfig.json`
- * files that decide how (`listTsconfigFiles`).
+ * files the test code read that count as inputs (`createInputFilter`), without
+ * files under `node_modules`, which the lockfile stands for, and without
+ * mootant's preload; for the directory of each module, the `package.json` files
+ * that decide its format (`listPackageFiles`) and, when tsx compiles modules,
+ * the `tsconfig.json` files that decide how (`listTsconfigFiles`).
  *
  * @param input - Records of the process and what to look up.
  * @param input.records - Records of the process.
@@ -41,7 +41,8 @@ export function collectNodeDependencies(input: {
   }
   let excluded = path.dirname(input.preload) + path.sep
   /**
-   * Tells whether a path is a project file.
+   * Tells whether a path a record named counts: an absolute one outside
+   * `node_modules` and mootant's preload.
    *
    * @param candidate - Path a record named.
    * @returns Whether it counts.

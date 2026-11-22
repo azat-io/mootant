@@ -24,16 +24,20 @@ function file(name: string): string {
 }
 
 describe('trackInputs', () => {
-  it('records project files, changed files and variables until it stops', () => {
+  it('records the files that count, changed files and variables until it stops', () => {
     let root = path.resolve('/project')
     let options = { ignored: ['RUNNER_VARIABLE'] }
-    let inputs = trackInputs(root, options)
+    let inputs = trackInputs(
+      { directory: path.resolve('/work'), root },
+      options,
+    )
     let receiver = vi.mocked(trackFileReads).mock.calls[0]![0]!
     let [received, record] = vi.mocked(trackEnvironment).mock.calls[0]!
     receiver.read(file('b.json'))
     receiver.read(file('a.json'))
     receiver.read(root)
     receiver.read(path.resolve('/other/c.json'))
+    receiver.read(path.resolve('/work/switched/0.json'))
     receiver.read(file('node_modules/x/index.js'))
     receiver.write(file('a.json'))
     receiver.write(file('out/new.txt'))
@@ -47,9 +51,15 @@ describe('trackInputs', () => {
       file('b.json'),
       file('a.json'),
       root,
+      path.resolve('/other/c.json'),
     ])
     expect(inputs.stop()).toStrictEqual({
-      files: [root, file('a.json'), file('b.json')],
+      files: [
+        path.resolve('/other/c.json'),
+        root,
+        file('a.json'),
+        file('b.json'),
+      ],
       modified: [root, file('a.json')],
       environment: ['A', 'B'],
     })

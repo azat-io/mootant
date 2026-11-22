@@ -3,7 +3,6 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { AsyncLocalStorage, AsyncResource } from 'node:async_hooks'
 import { stripTypeScriptTypes, createRequire } from 'node:module'
 import { setFlagsFromString } from 'node:v8'
-import { realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -14,6 +13,7 @@ import type { JestUnit } from '../../../../adapters/jest/types/jest-unit'
 
 import { createTransformerFactory } from '../../../../adapters/jest/worker/create-transformer-factory'
 import { createTestRunner } from '../../../../adapters/jest/worker/create-test-runner'
+import { createInputFilter } from '../../../../adapters/shared/create-input-filter'
 import { trackFileReads } from '../../../../adapters/shared/track-file-reads'
 import { CHANNEL_SLOT } from '../../../../adapters/jest/worker/channel-slot'
 import { trackSpawners } from '../../../../adapters/shared/track-spawners'
@@ -32,6 +32,14 @@ vi.mock(import('../../../../adapters/shared/track-spawners'), () => ({
 vi.mock(import('../../../../adapters/jest/worker/run-unit'), () => ({
   runUnit: vi.fn(),
 }))
+
+vi.mock(
+  import('../../../../adapters/shared/create-input-filter'),
+  async importOriginal => {
+    let actual = await importOriginal()
+    return { createInputFilter: vi.fn(actual.createInputFilter) }
+  },
+)
 
 vi.mock(import('node:v8'), async importOriginal => {
   let actual = await importOriginal()
@@ -354,7 +362,7 @@ async function writeSession(
           id: 'p',
         },
       ],
-      reads: { extensions: ['js', 'snap'], directories: ['/p'] },
+      reads: { directories: ['/p'], root: '/p' },
       globalConfig: { maxWorkers: 2 },
       umask: 0o027,
     }),
@@ -400,11 +408,10 @@ describe('bootWorker', () => {
 
   afterEach(async () => {
     vi.mocked(createTransformerFactory).mockClear()
+    vi.mocked(createInputFilter).mockClear()
     vi.mocked(setFlagsFromString).mockClear()
     vi.mocked(createTestRunner).mockClear()
     vi.mocked(runUnit).mockReset()
-    /* Cspell:disable-next-line */
-    vi.unstubAllEnvs()
     Reflect.deleteProperty(globalThis, SHARED)
     await rm(directory, { recursive: true, force: true })
   })
@@ -518,9 +525,14 @@ describe('bootWorker', () => {
     ) as Pick<UnitWorker, 'BufferedConsole'>
 
     expect(worker.reads).toStrictEqual({
-      temporary: [tmpdir(), realpathSync(tmpdir())],
-      extensions: new Set(['snap', 'js']),
+      inputs: vi.mocked(createInputFilter).mock.results[0]!.value,
       directories: ['/p'],
+      own: new Set(),
+      root: '/p',
+    })
+    expect(vi.mocked(createInputFilter)).toHaveBeenCalledExactlyOnceWith({
+      directory: path.dirname(directory),
+      root: '/p',
     })
     expect(worker.BufferedConsole).toBe(BufferedConsole)
     expect(worker.requireCache).toBe(createRequire(import.meta.url).cache)
@@ -533,14 +545,6 @@ describe('bootWorker', () => {
     let worker = await readWorker(await boot())
 
     expect(worker.early).toBe(true)
-  })
-
-  it('takes a temporary directory that is missing only as Node gives it', async () => {
-    let missing = path.join(directory, 'missing')
-    vi.stubEnv('TMPDIR', missing)
-    let worker = await readWorker(await boot())
-
-    expect(worker.reads.temporary).toStrictEqual([missing])
   })
 
   it("counts the calls of each project's resolver, in the count the units and the transformers share", async () => {

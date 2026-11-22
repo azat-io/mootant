@@ -106,10 +106,10 @@ export type JestRecord =
 
       /**
        * Files and directories the code read that count, sorted: under the
-       * project root or a project's directories, or with an extension of a
-       * module or a snapshot outside the temporary directory, never under
-       * `node_modules` or mootant's files. Neither what the resolver read nor
-       * what only a transformer read is among them.
+       * project root or a project's directories, and elsewhere as
+       * `createInputFilter` tells, never under `node_modules` or in mootant's
+       * files, nor as the root itself outside those directories. Neither what
+       * the resolver read nor what only a transformer read is among them.
        */
       reads: string[]
 

@@ -13,9 +13,9 @@ export interface InputTracking {
   stop(): { environment: string[]; modified: string[]; files: string[] }
 
   /**
-   * Project files and directories read so far through `node:fs`, a missing one
-   * included, that the code had not written before; the set stays live until
-   * `stop`.
+   * Files and directories read so far through `node:fs` that count as inputs
+   * (`createInputFilter`), a missing one included, that the code had not
+   * written before; the set stays live until `stop`.
    */
   files: ReadonlySet<string>
 

@@ -248,6 +248,35 @@ describe('prepareRunCache', () => {
     ).resolves.toBeNull()
   })
 
+  it('gives no key to what depends on a device or a pipe, whose content is unknown, and no cache when a file of the environment is one', async () => {
+    let a = path.join(root, 'a.test.ts')
+    let b = path.join(root, 'b.test.ts')
+    await writeFile(b, 'test b')
+    let tests = [
+      { covers: ['m1'], id: 'a1', file: a },
+      { covers: ['m1'], id: 'b1', file: b },
+    ]
+    let cache = await prepare({
+      files: [
+        { dependencies: ['/dev/null'], modified: ['/dev/null'], file: a },
+        { dependencies: [], file: b },
+      ],
+      tests,
+    })
+
+    expect([...cache!.dependencies.values()]).toStrictEqual([[b]])
+
+    await expect(
+      prepare({
+        cacheInputs: {
+          files: [path.join(root, 'vitest.config.ts'), '/dev/null'],
+          environment: { '': { MODE: 'm1' } },
+          settings: {},
+        },
+      }),
+    ).resolves.toBeNull()
+  })
+
   it('gives no key to what depends on a file changed during the run', async () => {
     let a = path.join(root, 'a.test.ts')
     let b = path.join(root, 'b.test.ts')

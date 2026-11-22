@@ -15,21 +15,29 @@ export interface UnitWorker {
    */
   reads: {
     /**
-     * Extensions, without the dot, of the files that count wherever they are
-     * but in a temporary directory.
-     */
-    extensions: ReadonlySet<string>
-
-    /**
-     * Absolute directories whose files count.
+     * Absolute directories whose files count, even those that hold the root.
      */
     directories: readonly string[]
 
     /**
-     * The temporary directory as Node gives it and, when it exists, as its real
-     * path, whose files count only under a directory of the session.
+     * Tells whether a path outside the directories counts
+     * (`createInputFilter`).
      */
-    temporary: readonly string[]
+    inputs(file: string): boolean
+
+    /**
+     * Modules of the own realm of the worker that a unit wrote itself, such as
+     * a helper a test environment wrote in a directory of `mkdtemp`: they stay
+     * out of the loaded modules of every later unit too, as the module cache of
+     * the worker keeps them.
+     */
+    own: Set<string>
+
+    /**
+     * Real path of the project root, which itself counts only under one of the
+     * directories.
+     */
+    root: string
   }
 
   /**

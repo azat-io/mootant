@@ -10,18 +10,21 @@ import {
   vi,
 } from 'vitest'
 import { writeFile, mkdtemp, mkdir, rm } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
+import { UNKNOWN_HASH } from '../../../core/cache/unknown-hash'
 import { hashFiles } from '../../../core/cache/hash-files'
 
 vi.mock(import('node:fs/promises'), async importOriginal => ({
   ...(await importOriginal()),
   readFile: vi.fn(),
   readdir: vi.fn(),
+  stat: vi.fn(),
 }))
 
-let { readFile, readdir } = await import('node:fs/promises')
+let { readFile, readdir, stat } = await import('node:fs/promises')
 let actual = await vi.importActual<typeof FileSystem>('node:fs/promises')
 
 /**
@@ -44,6 +47,8 @@ describe('hashFiles', () => {
     vi.mocked(readFile).mockImplementation(actual.readFile)
     vi.mocked(readdir).mockReset()
     vi.mocked(readdir).mockImplementation(actual.readdir)
+    vi.mocked(stat).mockReset()
+    vi.mocked(stat).mockImplementation(actual.stat)
   })
 
   afterAll(async () => {
@@ -76,6 +81,20 @@ describe('hashFiles', () => {
     expect([...hashes.values()]).toStrictEqual([null, null])
   })
 
+  it('reads neither a pipe nor a device, which may never end, and tells their content apart from a missing file', async () => {
+    let pipe = path.join(directory, 'pipe')
+    /* Cspell:disable-next-line */
+    execFileSync('mkfifo', [pipe])
+    let hashes = await hashFiles([pipe, '/dev/null'])
+
+    expect(Object.fromEntries(hashes)).toStrictEqual({
+      '/dev/null': UNKNOWN_HASH,
+      [pipe]: UNKNOWN_HASH,
+    })
+    expect(readFile).not.toHaveBeenCalled()
+    expect(readdir).not.toHaveBeenCalled()
+  })
+
   it('hashes a directory by the names in it', async () => {
     let folder = path.join(directory, 'folder')
     await mkdir(folder)
@@ -104,6 +123,10 @@ describe('hashFiles', () => {
   })
 
   it('reads at most 32 files at once', async () => {
+    vi.mocked(stat).mockResolvedValue({
+      isDirectory: () => false,
+      isFile: () => true,
+    } as never)
     let reading = 0
     let most = 0
     vi.mocked(readFile).mockImplementation(async () => {

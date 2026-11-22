@@ -35,6 +35,11 @@ export interface NodeTestUnit {
   commonjs: boolean
 
   /**
+   * Work directory of the run, whose files never count as inputs.
+   */
+  directory: string
+
+  /**
    * Whether the unit stops starting tests once a test failed after the mutant
    * was reached. False in a dry run.
    */
@@ -46,7 +51,7 @@ export interface NodeTestUnit {
   plan: string
 
   /**
-   * Project root; files the test code reads count as inputs only inside it.
+   * Project root; reads outside it count too (`createInputFilter`).
    */
   root: string
 

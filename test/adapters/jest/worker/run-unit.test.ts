@@ -137,9 +137,10 @@ function createWorker(
       maxWorkers: 2,
     } as UnitWorker['globalConfig'],
     reads: {
-      extensions: new Set(['snap', 'js']),
-      temporary: ['/temporary'],
+      inputs: file => !file.startsWith('/temporary/'),
       directories: [directory],
+      root: directory,
+      own: new Set(),
     },
     Resolver: { clearDefaultResolverCache: vi.fn<() => void>() },
     clearPerformance: vi.fn<() => void>(),
@@ -802,7 +803,7 @@ describe('runUnit', () => {
     expect(readFinish(next)).toMatchObject({ writes: [], reads: [] })
   })
 
-  it('counts a read under a directory of the session whatever its name, and one with an extension of the session wherever it is', async () => {
+  it('counts a read under a directory of the session whatever its name, and one elsewhere that the shared rule counts, whatever its name, but not the root itself', async () => {
     let worker = createWorker(runner => {
       worker.channel.vm = createSide()
       for (let file of [
@@ -811,6 +812,7 @@ describe('runUnit', () => {
         '/elsewhere/module.js',
         '/elsewhere/data.txt',
         '/elsewhere',
+        '/temporary/data.txt',
         directory,
       ]) {
         fs.existsSync(file)
@@ -821,13 +823,15 @@ describe('runUnit', () => {
     await runUnit(unit, worker)
 
     expect(readFinish(unit).reads).toStrictEqual([
+      '/elsewhere',
+      '/elsewhere/data.txt',
       '/elsewhere/module.js',
       '/elsewhere/snapshots/a.test.js.snap',
       path.join(directory, 'data/table.txt'),
     ])
   })
 
-  it('leaves out a file in the temporary directory that only its extension would count, and keeps one under a directory of the session', async () => {
+  it('leaves out what the shared rule leaves out, but not under a directory of the session', async () => {
     let temporary = path.dirname(directory)
     let worker = createWorker(
       runner => {
@@ -843,9 +847,10 @@ describe('runUnit', () => {
       },
       {
         reads: {
-          extensions: new Set(['js']),
+          inputs: file => !file.startsWith(`${temporary}/`),
           directories: [directory],
-          temporary: [temporary],
+          root: directory,
+          own: new Set(),
         },
       },
     )
@@ -1063,7 +1068,7 @@ describe('runUnit', () => {
         requireCache: {
           '/p/node_modules/jest-runner/build/index.js': {},
           [path.join(directory, 'jest/worker.cjs')]: {},
-          '/elsewhere/notes.txt': {},
+          '/temporary/notes.txt': {},
           [helper]: {},
         },
         directory: path.join(directory, 'jest'),
@@ -1071,6 +1076,37 @@ describe('runUnit', () => {
     )
 
     expect(readFinish(unit).loaded).toStrictEqual([helper])
+  })
+
+  it('leaves out of the modules the worker loaded one that this or an earlier unit of the worker wrote itself, by the path require gives it, which its module cache keeps', async () => {
+    let cache: Record<string, unknown> = {}
+    let helpers: string[] = []
+    fs.mkdirSync(path.join(directory, 'real'))
+    fs.symlinkSync(path.join(directory, 'real'), path.join(directory, 'link'))
+    let worker = createWorker(
+      runner => {
+        if (helpers.length === 0) {
+          let folder = fs.mkdtempSync(path.join(directory, 'link/temp-'))
+          let helper = path.join(folder, 'helper.js')
+          fs.writeFileSync(helper, '')
+          let key = fs.realpathSync(helper)
+          cache[key] = {}
+          helpers.push(key)
+        }
+        givesNoTests(runner)
+      },
+      { requireCache: cache },
+    )
+    let first = createUnit()
+    await runUnit(first, worker)
+    let second = createUnit()
+    await runUnit(second, worker)
+
+    expect(helpers).toHaveLength(1)
+    expect(helpers[0]).toContain(`${path.sep}real${path.sep}`)
+    expect(Object.keys(cache)).toStrictEqual(helpers)
+    expect(readFinish(first).loaded).toStrictEqual([])
+    expect(readFinish(second).loaded).toStrictEqual([])
   })
 
   it('says whether the reads hold every file read through node:fs', async () => {

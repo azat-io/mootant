@@ -127,7 +127,8 @@ The directory of the configuration file is the root of the project. Reported
 paths and mutant ids are relative to it, so they stay the same wherever in the
 project you run Mootant. Paths in the configuration are relative to the root,
 and paths on the command line to the current directory. Without a configuration
-file, the current directory is the root.
+file, the current directory is the root. Files that tests read outside the root
+count for the [cache](#cache) too.
 
 ## Presets
 
@@ -356,12 +357,17 @@ Whether to reuse the verdicts of earlier runs. They are kept in
 mutated file and the files and environment variables its tests read stay the
 same. `true` by default. `--no-cache` and `--cache` set it for one run.
 
-After changes that only child processes, workers or the network see, delete that
-directory: `--no-cache` runs every mutant again but does not update the saved
-verdicts. Do the same after changes of a file that only a Vite plugin reads to
-build a module, unless the plugin calls `this.addWatchFile()` for the file as it
-loads or transforms the module, and the id of the module has neither `.json` nor
-`.map` at its end or right before a `?`.
+A file that tests read counts wherever it is, such as a fixture of the workspace
+above the root, but not under `node_modules`. Of the directories above the root,
+only the files read in them count, not the names they hold.
+
+After changes that only child processes, workers or the network see, or of files
+and names that do not count, delete the cache directory: `--no-cache` runs every
+mutant again but does not update the saved verdicts. Do the same after changes
+of a file that only a Vite plugin reads to build a module, unless the plugin
+calls `this.addWatchFile()` for the file as it loads or transforms the module,
+and the id of the module has neither `.json` nor `.map` at its end or right
+before a `?`.
 
 ### `incremental`
 
