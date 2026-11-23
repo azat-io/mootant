@@ -64,25 +64,42 @@ your configuration. It does not support:
 
 Any of these in one project stops the whole run with an error.
 
-Mootant follows `dangerouslyIgnoreUnhandledErrors` and `onUnhandledError` of the
-Vitest configuration when it decides whether an unhandled error or rejection
-kills a mutant, and leaves such an error to the test code when it listens for
-that event with its own `process.on` handler, as Vitest does. It does not read
-flags in test scripts: with `--dangerouslyIgnoreUnhandledErrors` there, these
-errors still kill mutants, which raises the score. One session runs every
-mutant, so an `onUnhandledError` that keeps state between calls, such as one
-that drops only the first occurrence of an error, may decide otherwise than a
-plain run with that mutant.
+For a custom Vitest configuration path, use
+[`vitestAdapter`](/guide/configuration#runner).
 
-Tests that load a mutated file only through a computed `import()`, or through a
-`vi.mock` that still loads the original module, may not be selected: a
-`__mocks__` file, or an inline factory without parameters whose own code does
-not call `importActual`, such as one that uses a helper. Mootant still runs such
-a test when it imports another mutated file of the paths, so with narrower paths
-the mutants it would kill may stay uncovered or survive, which lowers the score;
-re-check them with the paths of the full run. Child processes and workers
-started by a test run the original code. For a custom Vitest configuration path,
-use [`vitestAdapter`](/guide/configuration#runner).
+### Unhandled errors
+
+Mootant uses `dangerouslyIgnoreUnhandledErrors` and `onUnhandledError` from your
+Vitest configuration to decide whether an unhandled error or rejection kills a
+mutant. If a test registers its own `process.on` handler for the event, Mootant
+leaves the error to that handler, as Vitest does.
+
+Flags in test scripts are not read. If you set
+`--dangerouslyIgnoreUnhandledErrors` only in a test script, unhandled errors
+still kill mutants and raise the score.
+
+All mutants share one Vitest session. An `onUnhandledError` handler that keeps
+state between calls may behave differently from a plain run with that mutant.
+For example, a handler that ignores only the first occurrence of an error may
+have already seen it during an earlier mutant's run.
+
+### Test selection
+
+Mootant may miss a test that loads a mutated file only through:
+
+- A computed `import()`.
+- A `vi.mock` whose `__mocks__` file loads the original module.
+- A `vi.mock` with an inline factory that has no parameters and does not call
+  `importActual` directly, even if a helper loads the original module.
+
+Such a test is still selected if it imports another mutated file in the paths
+you pass to Mootant. Narrowing those paths may leave mutants uncovered or let
+them survive, lowering the score. Re-check these mutants with the same paths as
+the full run.
+
+### Child processes
+
+Child processes and workers started by a test run the original code.
 
 ## Jest
 
@@ -102,30 +119,49 @@ test runner. Mootant does not support:
 A project on jest-jasmine2 or a custom `runner` is skipped with a warning, and a
 run with no other project stops with an error.
 
-Each mutant runs a test file in a long-lived Jest worker, so a test file runs
-many times against one global setup. One that fails when it runs again without
-mutants stops the run with an error that names it. A test that leaves its
-process changed, such as a property of `http.globalAgent`, can change the
-verdicts of later mutants on that worker, which `freshWorkers` avoids. A worker
-takes about 600 MB on a large module graph, and `--concurrency` lowers the
-number of workers. `--fast` has no effect with this runner.
+### Worker reuse
 
-Child processes and workers started by a test run the original code. Mutants in
-code that only global setup runs, or in a source file that
-`transformIgnorePatterns` keeps out of the transform, stay uncovered. Those in
-code that a custom test environment runs end with `Error`.
+Mootant reuses Jest workers across mutants. Each test file runs many times
+against one global setup. If a test file fails when repeated without mutants,
+Mootant stops with an error that names the file.
 
-The type check of ts-jest is off, so a test file's own type error passes, and a
-mutant that only breaks types survives. After a change to a file or variable
-that only global setup reads, to a variable that only a transformer's
-configuration, a test environment or a resolver reads, or to the names in the
-root of the project, delete the [cache](/guide/configuration#cache) directory.
+Changes a test leaves in its process, such as a property of `http.globalAgent`,
+can affect later mutants on the same worker. Enable `freshWorkers` in
+[`jestAdapter`](/guide/configuration#runner) to start a new worker for every run
+of a test file. This prevents process state from leaking between runs, but is
+slower. Global setup and files on disk remain shared.
 
-A test script that reaches Jest through another script loses the variables it
-sets on the way, and Jest runs from the root of the project even after a `cd` in
-the test command. Use [`jestAdapter`](/guide/configuration#runner) to set the
-test command and environment variables, or `freshWorkers` for a new worker on
-every run of a test file, which is slower.
+A worker uses about 600 MB with a large module graph. Lower `--concurrency` to
+use fewer workers. `--fast` has no effect with Jest.
+
+### Mutation limits
+
+- Child processes and workers started by a test run the original code.
+- Mutants in code run only by global setup stay uncovered.
+- Mutants in source files excluded from transforms by `transformIgnorePatterns`
+  stay uncovered.
+- Mutants in code run by a custom test environment get an `Error` verdict.
+
+Mootant disables ts-jest's type checking. Type errors in test files do not fail
+the run, and mutants that only break types survive.
+
+### Cache invalidation
+
+Delete the [cache](/guide/configuration#cache) directory after changing:
+
+- A file or environment variable read only by global setup.
+- An environment variable read only by a transformer's configuration, a test
+  environment or a resolver.
+- File or directory names in the project root.
+
+### Test commands
+
+When a test script calls Jest through another script, Mootant does not preserve
+the environment variables set along the way. Jest also runs from the project
+root, even if the test command includes `cd`.
+
+Use [`jestAdapter`](/guide/configuration#runner) to set the test command and
+environment variables explicitly.
 
 ## Node Test
 

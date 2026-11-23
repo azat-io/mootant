@@ -226,31 +226,8 @@ export default defineConfig({
 
 ### `loggers`
 
-Loggers whose message text is not mutated. Mootant skips changes to the text of
-their calls, such as `'Saved'` → `''` in `logger.info('Saved')`. The text is a
-string or a template with only variable names in `${}`, alone or joined with
-`+`. Mootant also skips the removal of a `console` call with only such text,
-such as `console.log('Saved')`. It leaves alone the labels of child loggers,
-such as `'db'` in `logger.child('db')`.
-
-<details>
-<summary>Changes Mootant still makes in log calls</summary>
-
-- Changes to the code that builds the message, such as `name.trim()` → `name` or
-  `'Total: ' + total` → `'Total: '`.
-- Changes to a text with `%` or `${}` before other arguments, such as
-  `'Order %j'` in `logger.info('Order %j', order)`: `%j` converts `order` to
-  JSON and may throw, and `${}` may insert a `%`.
-- The removal of other calls, such as `logger.info('Saved')` or
-  `console.log('Saved', order.id)`: `logger` may be `undefined`, and `order.id`
-  throws when `order` is `null`.
-
-</details>
-
-A name is a receiver whose log methods write entries, such as `logger` in
-`logger.info('Saved')`, or a function called with a text first, such as
-`debug('Saved')`. A name matches in any letter case. After a leading `*`, the
-rest matches as written: `*Logger` matches `requestLogger`, but not `blogger`.
+Loggers whose message text is not mutated. For example, Mootant skips `'Saved'`
+→ `''` in `logger.info('Saved')`.
 
 `recommended` sets `['console', 'log', 'logger', '*Logger', 'debug']`. Your list
 replaces it, so repeat these names to add one:
@@ -262,6 +239,34 @@ export default defineConfig({
   },
 })
 ```
+
+Names can match an object with log methods, such as `logger` in
+`logger.info('Saved')`, or a function that takes the message as its first
+argument, such as `debug('Saved')`.
+
+A name matches in any letter case. After a leading `*`, the rest matches as
+written: `*Logger` matches `requestLogger`, but not `blogger`.
+
+<details>
+<summary>Which log changes are skipped</summary>
+
+Mootant skips changes to strings and templates with only variable names in
+`${}`, alone or joined with `+`. It also skips removing a `console` call with
+only such text, such as `console.log('Saved')`, and changing child logger
+labels, such as `'db'` in `logger.child('db')`.
+
+Mootant still makes these changes:
+
+- Changes to the code that builds the message, such as `name.trim()` → `name` or
+  `'Total: ' + total` → `'Total: '`.
+- Changes to a text with `%` or `${}` before other arguments, such as
+  `'Order %j'` in `logger.info('Order %j', order)`: `%j` converts `order` to
+  JSON and may throw, and `${}` may insert a `%`.
+- The removal of other calls, such as `logger.info('Saved')` or
+  `console.log('Saved', order.id)`: `logger` may be `undefined`, and `order.id`
+  throws when `order` is `null`.
+
+</details>
 
 ### `templates`
 
@@ -352,37 +357,72 @@ by default. `--fast` and `--no-fast` set it for one run.
 
 ### `cache`
 
-Whether to reuse the verdicts of earlier runs. They are kept in
-`node_modules/.cache/mootant` in the root of the project and reused while the
-mutated file and the files and environment variables its tests read stay the
-same. `true` by default. `--no-cache` and `--cache` set it for one run.
+Reuses verdicts from earlier runs. `true` by default. `--no-cache` and `--cache`
+set it for one run.
 
-A file that tests read counts wherever it is, such as a fixture of the workspace
-above the root, but not under `node_modules`. Of the directories above the root,
-only the files read in them count, not the names they hold.
+Verdicts are stored in `node_modules/.cache/mootant` in the project root. A
+verdict is reused while the mutated file and the files and environment variables
+read by its tests stay unchanged.
 
-Verdicts that depend on a file modified at or after the start of a run, by its
-modification time, are neither reused nor saved in that run, since the file may
-have changed after tests read it. A file system clock that runs ahead gives such
-times too. Mootant warns when such a file leaves the run without a cache. A file
-that tests read and then write themselves is compared by its content instead.
+Mootant tracks files read by tests, including files outside the project root,
+such as workspace fixtures. Files under `node_modules` are excluded. Directory
+listings above the project root are not tracked.
 
-After changes that only child processes, workers or the network see, or of files
-and names that do not count, delete the cache directory: `--no-cache` runs every
-mutant again but does not update the saved verdicts. Do the same after changes
-of a file that only a Vite plugin reads to build a module, unless the plugin
-calls `this.addWatchFile()` for the file as it loads or transforms the module,
-and the id of the module has neither `.json` nor `.map` at its end or right
-before a `?`.
+**When to clear the cache**
+
+Delete the cache directory after changes to:
+
+- Inputs that only child processes or workers read, or data from the network.
+- Files under `node_modules` or directory listings above the project root.
+- Files read only by a Vite plugin, unless they are tracked as described below.
+
+For Jest, also check its
+[cache invalidation rules](/guide/compatibility#cache-invalidation).
+
+**`--no-cache` does not clear or update saved verdicts.** It reruns every
+selected mutant without reading or updating the cache.
+
+<details>
+<summary>Files read by Vite plugins</summary>
+
+A file read only by a Vite plugin is tracked when both conditions hold:
+
+- The plugin calls `this.addWatchFile()` for the file while loading or
+  transforming the module.
+- The module ID does not end in `.json` or `.map` and does not contain `.json?`
+  or `.map?`.
+
+Otherwise, delete the cache directory after changing that file.
+
+</details>
+
+<details>
+<summary>Files modified during a run</summary>
+
+If a file's modification time is at or after the start of a run, verdicts that
+depend on it are neither reused nor saved in that run. The file may have changed
+after tests read it. A file system clock that runs ahead can also produce such
+timestamps.
+
+Mootant warns if this prevents caching for the entire run. Files that tests read
+and then write themselves are compared by content instead.
+
+</details>
 
 ### `incremental`
 
-Whether a verdict outlives changes elsewhere. A cached verdict is reused while
-the declaration of its mutant, what that uses in its file and what its tests
-read outside the mutated files stay the same. It is faster after an edit, but a
-change of a caller or of another mutated file may leave a verdict stale. It
-needs the cache. `false` by default. `--incremental` and `--no-incremental` set
-it for one run.
+Reuses cached verdicts after changes elsewhere in the project. Requires
+[caching](#cache). `false` by default. `--incremental` and `--no-incremental`
+set it for one run.
+
+A verdict is reused while these dependencies stay unchanged:
+
+- The declaration containing the mutant.
+- The code that declaration depends on in the same file.
+- Files and environment variables read by its tests, excluding mutated files.
+
+This speeds up runs after an edit, but changes to a caller or another mutated
+file may leave a cached verdict stale.
 
 ### `html`
 
@@ -471,29 +511,47 @@ export default defineConfig({
 
 ### `timeout`
 
-The time limit while a test file runs with a mutant:
-`factor × duration + constant` milliseconds for its loading and for each of its
-tests, added up, where the durations are how long they took without mutants. A
-mutant that goes over it counts as a timeout only when a second run with twice
-the limit times out too. So a mutant that only makes a test slower, such as a
-longer retry delay, gets the verdict of its tests when twice the limit is enough
-for it. One that needs more counts as a timeout, and so as detected in the
-score, even when a plain run of its tests passes in time. Near twice the limit,
-the verdict can change from run to run with the load of the machine. Raise
-`constant` for such a mutant, or ignore it with a
-[comment](/mutators#ignore-mutants). `{ factor: 3, constant: 250 }` by default.
+The time limit for running a test file with a mutant. Defaults to
+`{ factor: 3, constant: 250 }`.
+
+Mootant calculates `factor × duration + constant` milliseconds for loading the
+file and for each test, then adds these limits together. Each duration is
+measured during the run without mutants.
+
+When a mutant exceeds the limit:
+
+1. Mootant runs the test file again with twice the time limit.
+2. If the retry also times out, the mutant receives a `Timeout` verdict and
+   counts as detected in the score. Otherwise, the test results decide its
+   verdict.
+
+A mutant that only slows a test down, such as a longer retry delay, can still
+exceed the doubled limit. It then counts as detected even if the tests would
+pass with more time. Near this limit, the verdict may vary with machine load.
+
+Increase `constant` for such mutants, or ignore them with a
+[comment](/mutators#ignore-mutants).
 
 ### `hitLimit`
 
-The most evaluations of mutated code while a test file runs with a mutant:
-`max(floor, factor × hits)` for its loading and for each of its tests, added up,
-where the hits are how many evaluations they made without mutants. When fast
-mode tries many mutants in one test run, each test has its own, and a mutant
-over it runs its whole test file instead. A mutant that goes over the limit,
-such as a loop made endless, stops at once and runs the file again with twice
-the time limit and `factor × floor` more evaluations. Only a timeout there
-counts, so a mutant that only makes code hotter, such as a cache turned off,
-gets the verdict of its tests when these evaluations are enough for it. One that
-needs more counts as a timeout again, and so as detected in the score, even when
-a plain run of its tests passes in time. Raise `hitLimit` for such a mutant.
-`{ factor: 100, floor: 100000 }` by default.
+The maximum number of evaluations of mutated code while a test file runs with a
+mutant. Defaults to `{ factor: 100, floor: 100000 }`.
+
+Mootant calculates `max(floor, factor × hits)` for loading the file and for each
+test, then adds these limits together. Each hit count is measured during the run
+without mutants.
+
+When a mutant exceeds the limit, for example by creating an endless loop:
+
+1. Mootant stops running the test file and retries it with twice the time limit
+   and `factor × floor` additional evaluations.
+2. If the retry exceeds either limit, the mutant receives a `Timeout` verdict
+   and counts as detected in the score. Otherwise, the test results decide its
+   verdict.
+
+In [fast mode](#fast), each test has its own hit limit. Exceeding that limit
+first sends the mutant to a run of the whole test file.
+
+A mutant that increases the number of evaluations, such as disabling a cache,
+can exceed even the raised limit. It then counts as detected even if the tests
+would otherwise pass. Increase `hitLimit` for such mutants.

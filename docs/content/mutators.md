@@ -63,11 +63,13 @@ Settings that bring skipped changes back:
 - Most `subsumed` changes come back when the other mutant does not run, for
   example because its mutator is off. `owned` changes stay skipped.
 
-With [`--since`](/guide/cli#shared-options), a skipped change on a changed line
-brings along the mutants it is left to, even from lines that did not change, so
-the change is checked as a full run checks it. When the skip doesn't tell which
-of a mutator's mutants it is left to, as with condition's `true` and `false`,
-all of them run.
+With [`--since`](/guide/cli#shared-options), Mootant also selects mutants used
+in place of skipped changes on changed lines. These mutants may be on unchanged
+lines. This keeps the checks that a full run would make for those changes.
+
+A skip rule may identify a mutator and a location without naming a specific
+replacement. In that case, Mootant selects all mutants from that mutator at that
+location, such as both `true` and `false` from [condition](/mutators/condition).
 
 Code that Mootant never mutates, such as types, enums, decorators and module
 paths, doesn't appear in the list at all.

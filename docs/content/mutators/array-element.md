@@ -39,15 +39,20 @@ Each element gets its own mutant, a spread such as `...items` too:
 | `[...items, gift]`          | `[...items]`      |
 | `[item]`                    | `[]`              |
 
-In `recommended`, Mootant doesn't remove an element that has a mutant inside: in
-`[subtotal * rate, tax]`, it removes `tax` but not `subtotal * rate`, because
-[arithmetic-operator](/mutators/arithmetic-operator) changes it. A mutant of
-[optional-chaining](/mutators/optional-chaining) doesn't count:
-`[user?.coupon, code]` still becomes `[code]`. Neither does the mutant of
-[string-literal](/mutators/string-literal) that turns a whole string element
-into an empty string: `['card', 'paypal']` still becomes `['paypal']`. Other
-mutants inside the element still count, and an empty string `''` gets no
-removal, because string-literal fills it.
+In `recommended`, Mootant doesn't remove an element that has a mutant inside.
+For example, in `[subtotal * rate, tax]`, it removes `tax` but not
+`subtotal * rate`, because [arithmetic-operator](/mutators/arithmetic-operator)
+changes it.
+
+Two kinds of mutants do not prevent removal:
+
+- [optional-chaining](/mutators/optional-chaining): `[user?.coupon, code]` still
+  becomes `[code]`.
+- [string-literal](/mutators/string-literal) replacing a whole string element
+  with `''`: `['card', 'paypal']` still becomes `['paypal']`.
+
+Other mutants inside the element still prevent removal. An empty string `''`
+also stays in the array because string-literal fills it.
 
 With [`coarseMutants`](/guide/configuration#coarsemutants), on in `strict`,
 Mootant removes such elements too: `[subtotal * rate, tax]` → `[tax]`.

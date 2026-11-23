@@ -81,13 +81,22 @@ with a fixed value that Mootant picks from `T`:
 
 ### Skip a value with a finer mutant inside
 
-In `recommended`, a returned value with a finer mutant inside, such as
-`price * quantity`, gets no mutant of this mutator, unless it is a boolean. The
-same goes for a returned local variable, or a property of it, when its initial
-value or a later assignment holds a finer mutant, such as `sum` after
-`let sum = 0`. Any other use of the variable, such as `notify(sum)`, brings
-`sum` → `0` back. A statement that only assigns it, such as `sum += price`,
-doesn't, nor does `push()` or `unshift()` on the array literal it starts as.
+In `recommended`, this mutator skips returned values with a finer mutant inside,
+such as `price * quantity`. Boolean values are an exception: they can still get
+return-value mutants.
+
+This rule also applies to a returned local variable or one of its properties
+when its initial value or a later assignment has a finer mutant. For example,
+after `let sum = 0`, the `sum` → `0` mutant is skipped because the initial `0`
+has its own mutant.
+
+Other uses of the variable can bring the return-value mutant back:
+
+| Use of the variable                                          | Brings the mutant back? |
+| ------------------------------------------------------------ | ----------------------- |
+| Only an assignment, such as `sum += price`                   | No                      |
+| `push()` or `unshift()` on an array initialized as a literal | No                      |
+| Any other use, such as `notify(sum)`                         | Yes                     |
 
 This skip rests on a guess: a test that catches `price / quantity` also catches
 `0`. The guess can fail: for a function that sums a list, a test with an empty

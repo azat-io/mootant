@@ -109,9 +109,8 @@ least 80:
 npx mootant run src --since origin/main --threshold 80
 ```
 
-`--since` also selects the mutants that
-[skipped changes](/mutators#skipped-changes) on those lines are left to, even on
-lines that did not change.
+`--since` also includes mutants on unchanged lines when Mootant uses them in
+place of a [skipped change](/mutators#skipped-changes) on a changed line.
 
 The comparison ref must exist in the local Git repository. In CI, fetch the base
 branch and enough history to find its merge base with `HEAD`.
