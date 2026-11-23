@@ -16,7 +16,7 @@
     "jest",
     "node-test"
   ],
-  "homepage": "https://github.com/azat-io/mootant",
+  "homepage": "https://mootant.org",
   "repository": "azat-io/mootant",
   "license": "MIT",
   "author": "Azat S. <to@azat.io>",
