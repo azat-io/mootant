@@ -29,59 +29,211 @@ let items = headings.filter(({ depth }) => depth === 2 || depth === 3)
       >
         On this page
       </Typography>
-      <ul class="list">
-        {items.map(({ depth, slug, text }) => (
-          <li class:list={['item', { subheading: depth === 3 }]}>
-            <a
-              class="nav-link link"
-              href={`#${slug}`}
-            >
-              {text}
-            </a>
-          </li>
-        ))}
-      </ul>
+      <div class="outline">
+        <svg
+          aria-hidden="true"
+          class="indicator"
+        >
+          <path class="indicator-path" />
+        </svg>
+        <ul class="list">
+          {items.map(({ depth, slug, text }) => (
+            <li class:list={['item', { subheading: depth === 3 }]}>
+              <a
+                class="nav-link link"
+                href={`#${slug}`}
+              >
+                {text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   </nav>
 )}
 
 <script>
-  let sections: { heading: HTMLElement; link: HTMLAnchorElement }[] = []
+  let sections: {
+    link: HTMLAnchorElement
+    heading: HTMLElement
+    start: number
+    end: number
+  }[] = []
+  let clickedLink: HTMLAnchorElement | undefined
+  let indicatorPath: SVGPathElement | null
+  let indicator: SVGSVGElement | null
+  let list: HTMLUListElement | null
 
-  /* Marks the section the reader is in: the last one whose heading has passed
-     the top quarter of the window, or the last one at the end of the page. */
+  /* A continuous path follows the indentation, with rounded steps between
+     levels. Each section stores its interval along that path. */
+  let measureIndicator = (): void => {
+    if (!list?.offsetWidth || !indicatorPath) {
+      return
+    }
+    let previous: { bottom: number; x: number } | undefined
+    let length = 0
+    let path = ''
+    for (let section of sections) {
+      let { link } = section
+      let style = getComputedStyle(link)
+      let top = link.offsetTop + parseFloat(style.paddingBlockStart)
+      let bottom =
+        link.offsetTop + link.offsetHeight - parseFloat(style.paddingBlockEnd)
+      let x = link.offsetLeft + 1
+      if (previous) {
+        let gap = top - previous.bottom
+        let offset = x - previous.x
+        if (offset === 0) {
+          path += ` V ${top}`
+          length += gap
+        } else {
+          let radius = Math.min(4, Math.abs(offset) / 2, gap / 2)
+          let middle = previous.bottom + gap / 2
+          let direction = Math.sign(offset)
+          let sweep = offset > 0 ? 0 : 1
+          path +=
+            ` V ${middle - radius}` +
+            ` A ${radius} ${radius} 0 0 ${sweep}` +
+            ` ${previous.x + direction * radius} ${middle}` +
+            ` H ${x - direction * radius}` +
+            ` A ${radius} ${radius} 0 0 ${1 - sweep}` +
+            ` ${x} ${middle + radius} V ${top}`
+          length += gap + Math.abs(offset) + (Math.PI - 4) * radius
+        }
+      } else {
+        path = `M ${x} ${top}`
+      }
+      section.start = length
+      length += bottom - top
+      section.end = length
+      path += ` V ${bottom}`
+      previous = { bottom, x }
+    }
+    indicatorPath.setAttribute('d', path)
+    indicatorPath.style.setProperty('--indicator-total', `${length}`)
+  }
+
+  /* Marks the first section at the top, then the last heading that has passed
+     the top quarter of the window, or the last section at the end of the page. */
   let markCurrentSection = (): void => {
+    if (!list || !indicator || !indicatorPath) {
+      return
+    }
     let { innerHeight, scrollY } = globalThis
     let isAtEnd =
       innerHeight + scrollY >= document.documentElement.scrollHeight - 1
-    let current: HTMLAnchorElement | undefined
-    for (let { heading, link } of sections) {
-      if (!isAtEnd && heading.getBoundingClientRect().top > innerHeight / 4) {
+    let current = sections[0]
+    for (let section of sections) {
+      if (
+        !isAtEnd &&
+        section.heading.getBoundingClientRect().top > innerHeight / 4
+      ) {
         break
       }
-      current = link
+      current = section
     }
+    current = sections.find(({ link }) => link === clickedLink) ?? current
     for (let { link } of sections) {
-      if (link === current) {
+      if (link === current?.link) {
         link.setAttribute('aria-current', 'true')
       } else {
         link.removeAttribute('aria-current')
       }
     }
+    if (!current || !list.offsetWidth) {
+      delete indicator.dataset['current']
+      return
+    }
+    indicatorPath.style.setProperty('--indicator-start', `${-current.start}`)
+    indicatorPath.style.setProperty(
+      '--indicator-size',
+      `${current.end - current.start}`,
+    )
+    indicator.dataset['current'] = ''
   }
 
+  let resizeObserver = new ResizeObserver(() => {
+    measureIndicator()
+    markCurrentSection()
+  })
+
   document.addEventListener('astro:page-load', () => {
+    resizeObserver.disconnect()
+    clickedLink = undefined
+    list = document.querySelector<HTMLUListElement>('#table-of-contents .list')
+    indicator = document.querySelector<SVGSVGElement>(
+      '#table-of-contents .indicator',
+    )
+    indicatorPath = document.querySelector<SVGPathElement>(
+      '#table-of-contents .indicator-path',
+    )
     sections = [
       ...document.querySelectorAll<HTMLAnchorElement>('#table-of-contents a'),
     ].flatMap(link => {
       let heading = document.getElementById(
         decodeURIComponent(link.hash.slice(1)),
       )
-      return heading ? [{ heading, link }] : []
+      return heading ? [{ heading, link, start: 0, end: 0 }] : []
     })
+    if (list) {
+      resizeObserver.observe(list)
+    }
+    measureIndicator()
     markCurrentSection()
   })
 
+  /* Keep the clicked section selected while the browser scrolls to its anchor.
+     Capture runs before Astro handles the link; native navigation is preserved. */
+  document.addEventListener(
+    'click',
+    event => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        !(event.target instanceof Element)
+      ) {
+        return
+      }
+      let link = event.target.closest<HTMLAnchorElement>('#table-of-contents a')
+      if (link) {
+        clickedLink = link
+        markCurrentSection()
+      }
+    },
+    { capture: true },
+  )
+
+  let releaseClickedSection = (): void => {
+    clickedLink = undefined
+  }
+
+  for (let type of ['wheel', 'touchstart', 'pointerdown']) {
+    document.addEventListener(type, releaseClickedSection, {
+      capture: true,
+      passive: true,
+    })
+  }
+  document.addEventListener('keydown', event => {
+    if (
+      [
+        'ArrowUp',
+        'ArrowDown',
+        'PageUp',
+        'PageDown',
+        'Home',
+        'End',
+        ' ',
+      ].includes(event.key)
+    ) {
+      releaseClickedSection()
+    }
+  })
+  document.addEventListener('scrollend', releaseClickedSection)
   document.addEventListener('scroll', markCurrentSection, { passive: true })
   globalThis.addEventListener('resize', markCurrentSection, { passive: true })
 </script>
@@ -100,18 +252,53 @@ let items = headings.filter(({ depth }) => depth === 2 || depth === 3)
     inset-block-start: 0;
     max-block-size: 100dvb;
     padding-block: var(--space-l);
+    margin-inline-start: calc(0px - var(--space-xs));
     overflow-block: auto;
     scrollbar-width: thin;
   }
 
   .title {
     padding: var(--space-2xs) 0;
+    padding-inline-start: var(--space-xs);
+  }
+
+  .outline {
+    position: relative;
   }
 
   .list {
     padding-inline-start: 0;
     margin-block: 0;
     list-style-type: '';
+  }
+
+  .indicator {
+    position: absolute;
+    inset: 0;
+    display: none;
+    inline-size: 100%;
+    block-size: 100%;
+    pointer-events: none;
+    fill: none;
+    stroke: var(--color-content-brand);
+    stroke-width: 2px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+
+    &[data-current] {
+      display: block;
+    }
+  }
+
+  .indicator-path {
+    stroke-dasharray: var(--indicator-size) var(--indicator-total);
+    stroke-dashoffset: var(--indicator-start);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition:
+        stroke-dasharray 400ms cubic-bezier(0.4, 0, 0.2, 1),
+        stroke-dashoffset 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
   }
 
   .item {
@@ -125,6 +312,7 @@ let items = headings.filter(({ depth }) => depth === 2 || depth === 3)
   .link {
     display: block;
     padding: var(--space-2xs) 0;
+    padding-inline-start: var(--space-xs);
     font: var(--font-xs);
     overflow-wrap: anywhere;
   }
