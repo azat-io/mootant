@@ -1,6 +1,6 @@
 {
   "name": "mootant",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Mutation testing tool that ships with an agent skill for finding and fixing weak tests",
   "keywords": [
     "mutation-testing",
