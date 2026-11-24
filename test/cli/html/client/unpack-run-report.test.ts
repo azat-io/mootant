@@ -6,6 +6,28 @@ import { buildHtmlReport } from '../../../../cli/html/build-html-report'
 import { createRunResult } from '../../../helpers/create-run-result'
 
 describe('unpackRunReport', () => {
+  it('keeps the mark of parallel units only when they were on', () => {
+    let result = createRunResult()
+    let options = {
+      command: 'mootant run src --html',
+      date: '2026-10-27T10:05:00.000Z',
+      recheck: 'mootant run src',
+      version: '1.2.3',
+      project: 'cart',
+      idLength: 4,
+    }
+
+    expect(
+      unpackRunReport(buildHtmlReport(result, options)),
+    ).not.toHaveProperty('parallelUnits')
+
+    result.parallelUnits = true
+    let report = buildHtmlReport(result, options)
+
+    expect(report.meta.parallelUnits).toBe(true)
+    expect(unpackRunReport(report).parallelUnits).toBe(true)
+  })
+
   it('rebuilds the run report the data was packed from', () => {
     let result = createRunResult()
     let [file] = result.files

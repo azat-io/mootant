@@ -283,7 +283,7 @@ export interface HtmlReport {
  */
 export interface HtmlReportMeta extends Pick<
   RunReport,
-  'runnerVersion' | 'runner' | 'preset' | 'since' | 'mode'
+  'parallelUnits' | 'runnerVersion' | 'runner' | 'preset' | 'since' | 'mode'
 > {
   /**
    * Characters ids are cut to: the shortest that tells apart every listed

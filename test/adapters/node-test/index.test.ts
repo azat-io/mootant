@@ -216,7 +216,7 @@ describe('nodeTestAdapter', () => {
     vi.mocked(startNodeTestSession).mockReset()
   })
 
-  it('creates the node-test adapter without batch mode', async () => {
+  it('creates the node-test adapter with parallel units and without batch mode', async () => {
     vi.mocked(startNodeTestSession).mockResolvedValue({} as AdapterSession)
     let adapter = nodeTestAdapter({ command: 'bnt' })
     let context = {
@@ -227,7 +227,12 @@ describe('nodeTestAdapter', () => {
     }
     await adapter.start(context)
 
-    expect(adapter).toMatchObject({ name: 'node-test', batch: false, version })
+    expect(adapter).toMatchObject({
+      parallelUnits: true,
+      name: 'node-test',
+      batch: false,
+      version,
+    })
     expect(startNodeTestSession).toHaveBeenCalledWith(context, {
       command: 'bnt',
     })
@@ -608,6 +613,38 @@ describe('nodeTestAdapter', () => {
         expect.objectContaining({ reference: 'survived' }),
       ])
     }, 60_000)
+
+    it('gives the verdicts of the default mode with parallel units where no test shares a resource', async () => {
+      /**
+       * Runs the mutants of the fixture and lists what decided each of them.
+       *
+       * @param parallelUnits - Whether units of one test file run at once.
+       * @returns Description, status and cause, the test and test file of the
+       *   verdict, and the units that ran it, per mutant in run order.
+       */
+      async function decide(parallelUnits: boolean): Promise<unknown[][]> {
+        let result = await runMutants({
+          builtIns: createBuiltIns('node-test', nodeTestAdapter({ node })),
+          cwd: path.join(fixtures, 'basic'),
+          paths: ['src'],
+          concurrency: 2,
+          parallelUnits,
+          cache: false,
+        })
+        return result.results.map(entry => [
+          describeMutant(entry),
+          entry.status,
+          entry.cause,
+          entry.killedBy,
+          entry.killedIn,
+          entry.tries,
+        ])
+      }
+
+      let serial = await decide(false)
+
+      await expect(decide(true)).resolves.toStrictEqual(serial)
+    }, 120_000)
 
     it('agrees with mutants applied by hand in TypeScript, and runs fast mode as the default', async () => {
       /**

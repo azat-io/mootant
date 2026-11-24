@@ -204,7 +204,8 @@ let clock = captureClock()
  * neither. A test environment other than Vitest's own loads and sets up before
  * the runner exists, out of sight, so its units report no dependencies and are
  * never cached. A unit waits until the worker of the unit before it of the same
- * test file is gone, so a test file never runs twice at once.
+ * test file is gone, so a test file never runs twice at once, unless the run is
+ * an isolated one with parallel units (`VitestWorkerOptions.parallel`).
  *
  * Tests the user marked concurrent stay concurrent in isolated units and in a
  * dry run that tries each test once, as in a plain run; a batch run and a dry
@@ -505,9 +506,10 @@ export default class Runner extends TestRunner {
   }
 
   /**
-   * Claims a unit, waits for the unit before it of the same test file, and
-   * prepares the runtime before the test file and its setup files load. Vitest
-   * awaits this hook once per test file.
+   * Claims a unit, waits for the unit before it of the same test file unless
+   * the run is an isolated one with parallel units, and prepares the runtime
+   * before the test file and its setup files load. Vitest awaits this hook once
+   * per test file.
    *
    * @param paths - Absolute path of the test file.
    */
@@ -541,7 +543,9 @@ export default class Runner extends TestRunner {
       this.runnable = new Set()
       return
     }
-    await waitForTurn(options.directory, { index, hash }, clock)
+    if (options.parallel !== true || options.mode !== 'isolated') {
+      await waitForTurn(options.directory, { index, hash }, clock)
+    }
     this.started = clock.now()
     this.unitIndex = plan!.indexes[index]!
     this.outName = `${hash}-${index}`

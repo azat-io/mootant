@@ -42,6 +42,9 @@ Options:
                        Jest's maxWorkers, CPU cores - 1 for node:test)
   --fast               run: try many mutants in one test run; faster, but a
                        kill may be false (state left by earlier tries)
+  --parallel-units     run: run a test file for several mutants at once;
+                       faster, but a verdict may be false if the tests use a
+                       fixed file, port or database
   --no-cache           run: run every mutant again instead of reusing the
                        verdicts of earlier runs
   --incremental        run: reuse a verdict while the code of its mutant and
@@ -65,6 +68,7 @@ Options:
 let parserOptions = {
   mutant: { type: 'string', multiple: true },
   version: { type: 'boolean', short: 'v' },
+  'parallel-units': { type: 'boolean' },
   help: { type: 'boolean', short: 'h' },
   incremental: { type: 'boolean' },
   concurrency: { type: 'string' },
@@ -91,6 +95,7 @@ let runOnlyOptions = [
   'incremental',
   'cache',
   'fast',
+  'parallel-units',
   'mutant',
   'html',
   'all',
@@ -100,6 +105,11 @@ let runOnlyOptions = [
  * Options of the `run` command. Settings left out come from the configuration.
  */
 export interface RunOptions {
+  /**
+   * True when `--parallel-units` is given, false with `--no-parallel-units`.
+   */
+  parallelUnits?: boolean
+
   /**
    * True when `--incremental` is given, false with `--no-incremental`.
    */
@@ -358,6 +368,9 @@ function parseRunOptions(
       ...(threshold !== undefined && { threshold }),
       ...(values.incremental !== undefined && {
         incremental: values.incremental,
+      }),
+      ...(values['parallel-units'] !== undefined && {
+        parallelUnits: values['parallel-units'],
       }),
       ...(values.fast !== undefined && { fast: values.fast }),
       ...(values.html !== undefined && { html: values.html }),

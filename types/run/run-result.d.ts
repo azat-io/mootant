@@ -62,6 +62,13 @@ export interface RunResult {
   results: MutantResult[]
 
   /**
+   * Whether isolated units of one test file ran at the same time
+   * (`run.parallelUnits` with an adapter that runs them), so tests that share a
+   * fixed file, port or database may have given false verdicts.
+   */
+  parallelUnits: boolean
+
+  /**
    * Durations of the phases.
    */
   timing: RunDurations

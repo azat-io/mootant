@@ -20,6 +20,7 @@ let runKeys = [
   'hitLimit',
   'html',
   'incremental',
+  'parallelUnits',
   'paths',
   'runner',
   'threshold',
@@ -52,9 +53,9 @@ export function validateConfig(value: unknown, file: string): Config {
 /**
  * Finds what is wrong with the `run` settings: unknown keys, a threshold out of
  * 0 to 100, a concurrency that is not a positive integer, a non-boolean `fast`,
- * `cache` or `incremental`, an `html` that is neither a boolean nor a path, a
- * runner that is neither a name nor an object, paths that are not non-empty
- * strings, and limit settings that are not positive numbers.
+ * `cache`, `incremental` or `parallelUnits`, an `html` that is neither a
+ * boolean nor a path, a runner that is neither a name nor an object, paths that
+ * are not non-empty strings, and limit settings that are not positive numbers.
  *
  * @param value - Run settings read from the configuration file.
  * @returns Description of the first problem, or null when there is none.
@@ -71,6 +72,7 @@ function getRunProblem(value: unknown): string | null {
     }
   }
   let {
+    parallelUnits,
     incremental,
     concurrency,
     threshold,
@@ -100,6 +102,9 @@ function getRunProblem(value: unknown): string | null {
   }
   if (incremental !== undefined && typeof incremental !== 'boolean') {
     return '"incremental" must be true or false'
+  }
+  if (parallelUnits !== undefined && typeof parallelUnits !== 'boolean') {
+    return '"parallelUnits" must be true or false'
   }
   if (
     html !== undefined &&

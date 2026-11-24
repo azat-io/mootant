@@ -969,6 +969,86 @@ describe('Runner', () => {
     expect(tests[1]!.mode).toBe('skip')
   })
 
+  it('starts a unit of an isolated run with parallel units while the worker of the unit before still runs', async () => {
+    let batch: BatchUnit = {
+      tests: [{ mutants: ['m1'], hitLimit: 10, timeout: 20, id: 'a' }],
+      limits: BATCH_LIMITS,
+      project: 'batch',
+      file: FILE,
+    }
+    let started: string[] = []
+    /**
+     * Finds the claim file of the first unit of the test file in a project.
+     *
+     * @param project - Name of the project.
+     * @returns Absolute path of the claim file.
+     */
+    function getFirstClaim(project: string): string {
+      return path.join(directory, 'claim', `${getFileHash(FILE, project)}-0`)
+    }
+    /**
+     * Claims the first unit of the test file in a project of its own for a
+     * worker that is still writing its process id, so that it counts as
+     * running, then lets a runner claim the second unit and notes once that
+     * unit may start.
+     *
+     * @param project - Name of the project.
+     * @param mode - Kind of the run.
+     * @param parallel - Whether the run allows parallel units.
+     */
+    async function start(
+      project: string,
+      mode: 'isolated' | 'batch',
+      parallel: boolean,
+    ): Promise<void> {
+      writeFileSync(getFirstClaim(project), '')
+      setOptions(mode)
+      if (parallel) {
+        options.parallel = true
+      }
+      let unit = mode === 'isolated' ? { ...ISOLATED_UNIT, project } : batch
+      writePlan([unit, unit], project)
+      await createRunner(10_000, project).runner.onBeforeCollect([FILE])
+      started.push(project)
+    }
+    /**
+     * Ends the first units of the projects: they ran in this very process.
+     *
+     * @param names - Names of the projects.
+     */
+    function finishFirst(names: string[]): void {
+      for (let name of names) {
+        writeFileSync(getFirstClaim(name), String(process.pid))
+      }
+    }
+    let starts = [
+      start('serial', 'isolated', false),
+      start('batch', 'batch', true),
+      start('', 'isolated', true),
+    ]
+    try {
+      await vi.waitFor(
+        () => {
+          expect(started).toContain('')
+        },
+        { timeout: 2000 },
+      )
+      await new Promise(resolve => {
+        setTimeout(resolve, 100)
+      })
+
+      expect(started).toStrictEqual([''])
+
+      finishFirst(['serial', 'batch'])
+      await Promise.all(starts)
+
+      expect(started.toSorted()).toStrictEqual(['', 'batch', 'serial'])
+    } finally {
+      finishFirst(['serial', 'batch', ''])
+      await Promise.allSettled(starts)
+    }
+  })
+
   it('claims the unit planned for the project of the file', async () => {
     setOptions('batch')
     writeBatchPlan(

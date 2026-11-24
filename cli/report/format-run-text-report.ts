@@ -110,10 +110,11 @@ const STATIC_COST_TIME = 30_000
 /**
  * Formats a run report as text: a header with the command and the test runner;
  * the dry run, the mutants with how many were ignored or reused from the cache,
- * and time; the counts by status and the score; in a terminal, the files with
- * the lowest scores below 100, five at most; a section for each status to act
- * on (`survived`, `no coverage`, `errors`) with its count and its mutants
- * grouped by file, each as a diff of its source lines under a heading with the
+ * and time, which names fast mode and parallel units when they were on; the
+ * counts by status and the score; in a terminal, the files with the lowest
+ * scores below 100, five at most; a section for each status to act on
+ * (`survived`, `no coverage`, `errors`) with its count and its mutants grouped
+ * by file, each as a diff of its source lines under a heading with the
  * location, mutator and short id, the reason of an error or the likeliest test
  * file to extend of another mutant under the diff; and a hint to re-check the
  * first survivor, else the first listed mutant. Killed, timed-out and ignored
@@ -216,7 +217,7 @@ function getRunFields(
     ],
     [
       'time',
-      `${formatDuration(duration.total)}${report.mode === 'fast' ? ' in fast mode' : ''} (${phases.join(', ')})`,
+      `${formatDuration(duration.total)}${report.mode === 'fast' ? ' in fast mode' : ''}${report.parallelUnits ? ' with parallel units' : ''} (${phases.join(', ')})`,
     ],
   ]
   let { staticCost } = summary

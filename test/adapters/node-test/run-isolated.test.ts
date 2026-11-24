@@ -143,6 +143,71 @@ describe('runIsolated', () => {
     )
   })
 
+  it('runs units of one test file at once only with parallel units', async () => {
+    directory = await mkdtemp(path.join(tmpdir(), 'mootant-isolated-'))
+    let file = path.join(directory, 'a.test.js')
+    /**
+     * Runs two units of one test file and counts how many ran at once.
+     *
+     * @param parallelUnits - Whether the context allows parallel units.
+     * @returns Most units that ran at the same time.
+     */
+    async function countOverlap(parallelUnits: boolean): Promise<number> {
+      let running = 0
+      let most = 0
+      vi.mocked(runTestFile).mockImplementation(async () => {
+        running += 1
+        most = Math.max(most, running)
+        await new Promise(resolve => {
+          setTimeout(resolve, 20)
+        })
+        running -= 1
+        return createTestProcessOutcome([createNodeTestEnd({ reached: true })])
+      })
+      let handle: NodeTestHandle = {
+        context: {
+          workDirectory: directory,
+          concurrency: null,
+          root: directory,
+          parallelUnits,
+          files: [],
+        },
+        state: {
+          expected: new Map(),
+          modules: new Map(),
+          todo: new Map(),
+          plan: null,
+          count: 0,
+        },
+        preload: '/m/preload/preload.js',
+        checkTypeScript: () => null,
+        groups: new Set(),
+        commonjs: false,
+        testTimeout: 0,
+        files: [file],
+        node: 'node',
+        workers: 2,
+        tsx: false,
+        args: [],
+        env: {},
+      }
+      let limits = { hitLimit: 10, timeout: 500 }
+      let result = await runIsolated(handle, {
+        units: [
+          { mutant: 'm1', project: '', limits, file },
+          { mutant: 'm2', project: '', limits, file },
+        ],
+      })
+
+      expect(result.units.map(unit => unit.unit)).toStrictEqual([0, 1])
+
+      return most
+    }
+
+    await expect(countOverlap(false)).resolves.toBe(1)
+    await expect(countOverlap(true)).resolves.toBe(2)
+  })
+
   it('runs a unit again without bail when it stopped for a todo test', async () => {
     directory = await mkdtemp(path.join(tmpdir(), 'mootant-isolated-'))
     let file = path.join(directory, 'a.test.js')

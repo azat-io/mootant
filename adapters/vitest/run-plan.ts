@@ -24,14 +24,16 @@ import { readOutFiles } from './read-out-files'
  * hung workers and counts finished units while the run goes on. Several workers
  * may get the same test file; each claims the next unit of the file and waits
  * until the unit before it finished (`waitForTurn`), so a test file never runs
- * twice at once. A concurrency lowers every project's `maxWorkers` for this
- * run. A unit counts as finished when its worker marks it done or, once the run
- * is over, when a worker claimed it and died or was stopped before it could, so
- * the progress reaches the number of units that ran. The context's `onUnitEnd`
- * gets the index of each finished unit and, for a unit its worker marked done,
- * its facts with `describe`, else how long it ran, from its records. The read
- * as a unit ends and the read after the run share their decisions of the
- * unhandled errors, so each error is decided once (`StrayDecisions`).
+ * twice at once, unless an isolated run has parallel units, whose units of one
+ * test file start at once. A concurrency lowers every project's `maxWorkers`
+ * for this run. A unit counts as finished when its worker marks it done or,
+ * once the run is over, when a worker claimed it and died or was stopped before
+ * it could, so the progress reaches the number of units that ran. The context's
+ * `onUnitEnd` gets the index of each finished unit and, for a unit its worker
+ * marked done, its facts with `describe`, else how long it ran, from its
+ * records. The read as a unit ends and the read after the run share their
+ * decisions of the unhandled errors, so each error is decided once
+ * (`StrayDecisions`).
  *
  * @param handle - Live Vitest instance of the session.
  * @param plan - Kind of the run, units in plan order and the most units at

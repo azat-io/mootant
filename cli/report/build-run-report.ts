@@ -190,6 +190,7 @@ export function buildRunReport(
     preset: result.preset,
     since: result.since,
     mode: result.mode,
+    ...(result.parallelUnits && { parallelUnits: true }),
     files: list.files,
     ...(list.skipped && { skipped: list.skipped }),
     schemaVersion: 4,

@@ -287,6 +287,38 @@ describe('runIsolatedRounds', () => {
     ])
   })
 
+  it('gives every unit a serial chain of its own only with parallel units', async () => {
+    /**
+     * Runs the rounds of three mutants that one test file covers and lists the
+     * chains of each round as it starts.
+     *
+     * @param parallelUnits - Whether units of one test file run at once.
+     * @returns Chains of the units of each round.
+     */
+    async function listChains(parallelUnits: boolean): Promise<number[][]> {
+      let { session, state } = await createTestRun(
+        {
+          tests: [
+            { covers: ['m1', 'm2', 'm3'], file: '/t/a.test.ts', id: 'a1' },
+          ],
+        },
+        { mutants: ['m1', 'm2', 'm3'], isolate: true },
+      )
+      state.parallelUnits = parallelUnits
+      let chains: number[][] = []
+      state.report = event => {
+        if (event.kind === 'run-start') {
+          chains.push(event.chains)
+        }
+      }
+      await runIsolatedRounds(session, state)
+      return chains
+    }
+
+    await expect(listChains(false)).resolves.toStrictEqual([[0, 0, 0]])
+    await expect(listChains(true)).resolves.toStrictEqual([[0, 1, 2]])
+  })
+
   it('counts a mutant of a round once, as it runs again after a lost result rather than with more test files', async () => {
     let calls = 0
     let { session, state } = await createTestRun(

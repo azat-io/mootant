@@ -15,7 +15,8 @@ export interface AdapterSession {
    * Executes isolated units in one run. Several units may share a test file;
    * they run one after another, in plan order, never at the same time, since a
    * plain run of the test runner never runs a test file twice at once and tests
-   * may rely on it (a fixed file, port or database).
+   * may rely on it (a fixed file, port or database), unless the context allows
+   * parallel units (`AdapterContext.parallelUnits`).
    */
   runIsolated(plan: IsolatedPlan): Promise<IsolatedResult>
 

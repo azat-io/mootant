@@ -46,6 +46,26 @@ describe('runSpecifications', () => {
     expect(waitForWorkers).toHaveBeenCalledWith('/work')
   })
 
+  it('tells the workers about parallel units when the context allows them', async () => {
+    let handle = createHandle(() => Promise.resolve({ unhandledErrors: [] }))
+    handle.context.parallelUnits = true
+
+    await runSpecifications(
+      handle,
+      { mode: 'isolated', timeouts: null, repeat: false },
+      [],
+    )
+
+    expect(handle.vitest.provide).toHaveBeenCalledWith('mootant', {
+      directory: '/work',
+      mode: 'isolated',
+      timeouts: null,
+      parallel: true,
+      repeat: false,
+      root: '/p',
+    })
+  })
+
   it('returns the first unhandled error', async () => {
     let handle = createHandle(() =>
       Promise.resolve({

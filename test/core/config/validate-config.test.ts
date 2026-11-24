@@ -23,6 +23,7 @@ describe('validateConfig', () => {
         timeout: { constant: 100, factor: 2 },
         hitLimit: { factor: 10, floor: 1 },
         paths: ['src', 'lib'],
+        parallelUnits: true,
         incremental: true,
         concurrency: 4,
         threshold: 0,
@@ -105,6 +106,10 @@ describe('validateConfig', () => {
     [
       { run: { incremental: 'yes' } },
       '"run" is invalid: "incremental" must be true or false',
+    ],
+    [
+      { run: { parallelUnits: 1 } },
+      '"run" is invalid: "parallelUnits" must be true or false',
     ],
     [
       { run: { cache: 'no' } },

@@ -14,7 +14,9 @@ import { waitForWorkers } from './wait-for-workers'
  * must run until this resolves: the wait relies on it to stop workers that hang
  * in their teardown. Failing tests and unhandled errors, such as a worker that
  * died, are expected in mootant's runs, so the exit code Vitest sets for them
- * is restored.
+ * is restored. When the context allows parallel units, the workers are told so,
+ * and a unit of an isolated run does not wait for the unit before it of the
+ * same test file.
  *
  * @param handle - Live Vitest instance of the session.
  * @param worker - Kind of the run the workers perform and, for a dry run, the
@@ -28,13 +30,14 @@ import { waitForWorkers } from './wait-for-workers'
  */
 export async function runSpecifications(
   handle: VitestHandle,
-  worker: Omit<VitestWorkerOptions, 'directory' | 'root'>,
+  worker: Omit<VitestWorkerOptions, 'directory' | 'parallel' | 'root'>,
   specifications: TestSpecification[],
 ): Promise<string | null> {
   let { context, vitest } = handle
   let { exitCode } = process
   vitest.provide('mootant', {
     ...worker,
+    ...(context.parallelUnits === true && { parallel: true }),
     directory: context.workDirectory,
     root: context.root,
   })

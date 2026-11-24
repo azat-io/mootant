@@ -12,14 +12,15 @@ export type { NodeTestAdapterOptions } from './types/node-test-adapter-options'
  *
  * @param options - Test command, test files, flags, variables and Node binary,
  *   when not those of the project's test scripts.
- * @returns Adapter named `node-test` without batch mode and with mootant's
- *   version.
+ * @returns Adapter named `node-test` with parallel units, without batch mode,
+ *   and with mootant's version.
  */
 export function nodeTestAdapter(
   options: NodeTestAdapterOptions = {},
 ): TestAdapter {
   return {
     start: context => startNodeTestSession(context, options),
+    parallelUnits: true,
     name: 'node-test',
     batch: false,
     version,

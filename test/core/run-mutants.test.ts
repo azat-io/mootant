@@ -634,6 +634,88 @@ describe('runMutants', () => {
     )
   })
 
+  it('runs the units of one test file at once only with an adapter that has parallel units', async () => {
+    let [ratio, two] = ids['src/flag.ts']!
+    /**
+     * Runs the two mutants of one test file and lists what the run told the
+     * adapter and the progress.
+     *
+     * @param adapter - Whether the adapter has parallel units, or undefined
+     *   when it does not tell.
+     * @param options - What the run asks for, over the defaults.
+     * @returns Whether the context allowed parallel units and the result says
+     *   they ran, the notes and the chains of the isolated round.
+     */
+    async function runFlag(
+      adapter: undefined | boolean,
+      options: Partial<Parameters<typeof runMutants>[0]>,
+    ): Promise<{
+      context: undefined | boolean
+      chains: number[][]
+      notes: string[]
+      ran: boolean
+    }> {
+      let events: RunEvent[] = []
+      let { result, fake } = await run(
+        {
+          tests: [
+            {
+              file: path.join(root, 'test/flag.test.ts'),
+              covers: [ratio!, two!],
+              id: 'flag',
+            },
+          ],
+          parallelUnits: adapter,
+        },
+        {
+          onProgress: event => {
+            events.push(event)
+          },
+          paths: ['src/flag.ts'],
+          cache: false,
+          ...options,
+        },
+      )
+      return {
+        chains: events.flatMap(event =>
+          event.kind === 'run-start' ? [event.chains] : [],
+        ),
+        notes: events.flatMap(event =>
+          event.kind === 'note' ? [event.message] : [],
+        ),
+        context: fake.context!.parallelUnits,
+        ran: result.parallelUnits,
+      }
+    }
+
+    await expect(runFlag(true, { parallelUnits: true })).resolves.toStrictEqual(
+      { chains: [[0, 1]], context: true, notes: [], ran: true },
+    )
+    await expect(runFlag(true, {})).resolves.toStrictEqual({
+      chains: [[0, 0]],
+      context: false,
+      ran: false,
+      notes: [],
+    })
+    useRunConfig({ parallelUnits: true })
+    await expect(runFlag(undefined, {})).resolves.toStrictEqual({
+      notes: [
+        'fake has no parallel units, so each test file runs for one mutant at a time, as a run without --parallel-units does.',
+      ],
+      chains: [[0, 0]],
+      context: false,
+      ran: false,
+    })
+    await expect(
+      runFlag(true, { parallelUnits: false }),
+    ).resolves.toStrictEqual({
+      chains: [[0, 0]],
+      context: false,
+      ran: false,
+      notes: [],
+    })
+  })
+
   it('lets the options win over the configuration', async () => {
     let [add] = ids['src/math.ts']!
     useRunConfig({ concurrency: 5, threshold: 10, fast: true })
@@ -1167,6 +1249,19 @@ describe('runMutants', () => {
         message: 'Reused cached verdicts for 3 of 4 mutants.',
         kind: 'note',
       })
+    })
+
+    it('keeps the verdicts of runs with parallel units apart from the others', async () => {
+      let world = createWorld({ parallelUnits: true })
+      await run(world, { parallelUnits: true })
+      let parallel = await run(world, { parallelUnits: true })
+      let serial = await run(world)
+      let unable = await run(createWorld(), { parallelUnits: true })
+
+      expect(parallel.fake.calls.isolated).toStrictEqual([])
+      expect(serial.fake.calls.isolated).not.toStrictEqual([])
+      expect(serial.result.results.some(entry => entry.cached)).toBe(false)
+      expect(unable.fake.calls.isolated).toStrictEqual([])
     })
 
     it('reuses verdicts through a change outside their region only in incremental runs', async () => {

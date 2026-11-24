@@ -68,6 +68,13 @@ interface RunMutantsOptions {
   builtIns: BuiltInAdapters
 
   /**
+   * Parallel units (`--parallel-units`): isolated units of one test file may
+   * run at the same time; over `run.parallelUnits`. With an adapter that cannot
+   * run them so, the run notes it and runs them one after another.
+   */
+  parallelUnits?: boolean
+
+  /**
    * Incremental mode (`--incremental`): a cached verdict is reused while the
    * region of its mutant (see `getMutantRegions`) and what its test file reads
    * outside the mutated files stay the same, even after changes elsewhere,
@@ -164,7 +171,10 @@ interface RunMutantsOptions {
  * report also lists the candidates its mutators skipped. The adapter is closed
  * and the work directory removed whatever happens; what the adapter tells of
  * its close, such as a global teardown that failed, joins the diagnostics of a
- * run that went through, after its cache was saved.
+ * run that went through, after its cache was saved. With parallel units, an
+ * adapter that runs them may run the isolated units of one test file at the
+ * same time, and their verdicts are cached apart from those of other runs; an
+ * adapter that cannot runs them one after another, with a note.
  *
  * @param options - Paths, configuration, adapters and run settings.
  * @returns Verdicts, diagnostics and timings, before they are formatted.
@@ -179,7 +189,11 @@ export async function runMutants(
   let startedAt = Date.now()
   let setup = await prepareRun(options)
   let { root, run } = setup
-  let { fast: requestedFast, ...runSettings } = resolveRunSettings(options, run)
+  let {
+    parallelUnits: requestedParallel,
+    fast: requestedFast,
+    ...runSettings
+  } = resolveRunSettings(options, run)
   let { threshold } = runSettings
   let html = getHtmlPath(options.html, run.html, {
     picked: (options.mutantIds?.length ?? 0) > 0,
@@ -245,6 +259,13 @@ export async function runMutants(
       kind: 'note',
     })
   }
+  let parallelUnits = requestedParallel && adapter.parallelUnits === true
+  if (requestedParallel && !parallelUnits) {
+    report({
+      message: `${adapter.name} has no parallel units, so each test file runs for one mutant at a time, as a run without --parallel-units does.`,
+      kind: 'note',
+    })
+  }
   if (since !== null && mutants.length === 0) {
     let total = performance.now() - started
     return {
@@ -263,6 +284,7 @@ export async function runMutants(
       preset: setup.preset,
       runnerVersion: null,
       staticCost: [],
+      parallelUnits,
       cache: false,
       results: [],
       listedIds,
@@ -303,6 +325,7 @@ export async function runMutants(
       concurrency: runSettings.concurrency,
       workDirectory: work.path,
       files: switched,
+      parallelUnits,
       root,
     })
     let result: RunResult
@@ -310,6 +333,7 @@ export async function runMutants(
       result = await execute({
         diagnostics: listing.diagnostics,
         listed: listing.files,
+        parallelUnits,
         runSettings,
         startedAt,
         listedIds,
@@ -364,6 +388,8 @@ export async function runMutants(
  * @param context.html - Absolute path of the HTML report, or null.
  * @param context.fast - Whether the run is in fast mode, which needs an adapter
  *   with batch mode.
+ * @param context.parallelUnits - Whether isolated units of one test file may
+ *   run at the same time, which needs an adapter with parallel units.
  * @param context.setup - Prepared configuration.
  * @param context.runSettings - Concurrency, threshold, try limits, incremental
  *   mode and whether the cache is on, resolved by `resolveRunSettings`.
@@ -372,14 +398,15 @@ export async function runMutants(
  * @returns Result of the run.
  */
 async function execute(context: {
+  runSettings: Omit<RunSettings, 'parallelUnits' | 'fast'>
   setup: Awaited<ReturnType<typeof prepareRun>>
-  runSettings: Omit<RunSettings, 'fast'>
   live: { state: RunState | null }
   since: SinceRevision | null
   options: RunMutantsOptions
   diagnostics: Diagnostic[]
   switched: SwitchedFile[]
   session: AdapterSession
+  parallelUnits: boolean
   listed: FileMutants[]
   adapter: TestAdapter
   files: FileMutants[]
@@ -469,6 +496,7 @@ async function execute(context: {
     stored === null ?
       { warning: null, cache: null }
     : await prepareRunCache({
+        parallelUnits: context.parallelUnits,
         incremental: runSettings.incremental,
         started: context.startedAt,
         adapter: context.adapter,
@@ -493,6 +521,7 @@ async function execute(context: {
     imports: await readTestImports(
       [...analysis.testFiles.values()].map(entry => entry.file),
     ),
+    parallelUnits: context.parallelUnits,
     batch: context.adapter.batch,
     report: options.onProgress,
     mutants: pending,
@@ -571,6 +600,7 @@ async function execute(context: {
     results: decideResults(state, mutants),
     runnerVersion: session.version ?? null,
     staticCost: computeStaticCost(state),
+    parallelUnits: context.parallelUnits,
     mode: fast ? 'fast' : 'isolated',
     threshold: runSettings.threshold,
     listedIds: context.listedIds,

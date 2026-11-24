@@ -29,6 +29,12 @@ interface EnvironmentInput {
   hashes: ReadonlyMap<string, string | null>
 
   /**
+   * Whether isolated units of one test file run at the same time, false when
+   * omitted.
+   */
+  parallelUnits?: boolean
+
+  /**
    * How try limits grow from the dry run.
    */
   limits: LimitSettings
@@ -62,7 +68,8 @@ interface EnvironmentInput {
  * runner, the hashes of the files every verdict depends on, the settings of the
  * test runner, the try limits, the preset and its mutators, and the major
  * version of Node.js with the platform. Concurrency and fast mode are not part
- * of it.
+ * of it. Parallel units are part of it only when on, since their verdicts may
+ * differ where tests rely on a test file never running twice at once.
  *
  * @param input - Versions, files, hashes and settings of the run.
  * @returns SHA-256 in hex.
@@ -84,5 +91,6 @@ export function getEnvironmentKey(input: EnvironmentInput): string {
     process.versions.node.split('.', 1)[0],
     process.platform,
     process.arch,
+    ...(input.parallelUnits === true ? ['parallel-units'] : []),
   ])
 }

@@ -318,18 +318,19 @@ export default defineConfig({
 })
 ```
 
-| Setting                       | Default                                                           | For one run                         |
-| ----------------------------- | ----------------------------------------------------------------- | ----------------------------------- |
-| [`paths`](#paths)             | None                                                              | The paths after `mootant run`       |
-| [`threshold`](#threshold)     | None                                                              | `--threshold`                       |
-| [`concurrency`](#concurrency) | `maxWorkers` of Vitest or Jest, CPU cores minus one for Node Test | `--concurrency`                     |
-| [`fast`](#fast)               | `false`                                                           | `--fast`, `--no-fast`               |
-| [`cache`](#cache)             | `true`                                                            | `--cache`, `--no-cache`             |
-| [`incremental`](#incremental) | `false`                                                           | `--incremental`, `--no-incremental` |
-| [`html`](#html)               | No report                                                         | `--html`, `--no-html`               |
-| [`runner`](#runner)           | Detected                                                          | None                                |
-| [`timeout`](#timeout)         | `{ factor: 3, constant: 250 }`                                    | None                                |
-| [`hitLimit`](#hitlimit)       | `{ factor: 100, floor: 100000 }`                                  | None                                |
+| Setting                           | Default                                                           | For one run                               |
+| --------------------------------- | ----------------------------------------------------------------- | ----------------------------------------- |
+| [`paths`](#paths)                 | None                                                              | The paths after `mootant run`             |
+| [`threshold`](#threshold)         | None                                                              | `--threshold`                             |
+| [`concurrency`](#concurrency)     | `maxWorkers` of Vitest or Jest, CPU cores minus one for Node Test | `--concurrency`                           |
+| [`fast`](#fast)                   | `false`                                                           | `--fast`, `--no-fast`                     |
+| [`parallelUnits`](#parallelunits) | `false`                                                           | `--parallel-units`, `--no-parallel-units` |
+| [`cache`](#cache)                 | `true`                                                            | `--cache`, `--no-cache`                   |
+| [`incremental`](#incremental)     | `false`                                                           | `--incremental`, `--no-incremental`       |
+| [`html`](#html)                   | No report                                                         | `--html`, `--no-html`                     |
+| [`runner`](#runner)               | Detected                                                          | None                                      |
+| [`timeout`](#timeout)             | `{ factor: 3, constant: 250 }`                                    | None                                      |
+| [`hitLimit`](#hitlimit)           | `{ factor: 100, floor: 100000 }`                                  | None                                      |
 
 ### `paths`
 
@@ -354,6 +355,31 @@ Fast mode tries many mutants in one test run and trusts their kills. It is
 faster, but a kill may be false, and tests that run concurrently run one at a
 time. It works with Vitest and changes nothing with Jest and Node Test. `false`
 by default. `--fast` and `--no-fast` set it for one run.
+
+### `parallelUnits`
+
+Runs a test file for several mutants at once. This speeds up runs where a few
+test files cover most mutants. It works with Vitest and Node Test and changes
+nothing with Jest. `false` by default. `--parallel-units` and
+`--no-parallel-units` set it for one run.
+
+Turn it on only if a test file can safely run twice at once: its tests use no
+fixed file, port, database or other shared resource. Otherwise runs can disturb
+each other and give false verdicts: mostly kills, which raise the score,
+sometimes survivors, which lower it.
+
+<details>
+<summary>Memory, cache and reports</summary>
+
+- Runs of one test file load at the same time, so memory use grows. Lower
+  [`concurrency`](#concurrency) if memory runs short: a test process that runs
+  out of memory gives its mutant a false kill.
+- Runs with and without this setting never reuse each other's verdicts. The
+  first run after a switch runs every mutant again.
+- Reports mark such runs: the `time` line in the terminal, the mode in the HTML
+  report and `"parallelUnits": true` in JSON.
+
+</details>
 
 ### `cache`
 

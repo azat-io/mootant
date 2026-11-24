@@ -572,6 +572,21 @@ describe('formatRunTextReport', () => {
     },
   )
 
+  it('names parallel units in the time when they were on', () => {
+    let report = createRunReport()
+    report.parallelUnits = true
+
+    expect(getField(format(report), 'time')).toBe(
+      '1.3s in fast mode with parallel units (start 0.2s, dry run 0.2s, batch 0.2s, isolated 0.7s)',
+    )
+
+    report.mode = 'isolated'
+
+    expect(getField(format(report), 'time')).toMatch(
+      /^1\.3s with parallel units \(/u,
+    )
+  })
+
   it('counts several batch verdicts in fast mode', () => {
     let report = createRunReport()
     report.summary.totalBatch = 3

@@ -9,8 +9,9 @@ import type {
  * test file, the units of one file in a mootant run, are spread out: after the
  * given sequencer sorted them, they are taken in turns, one per test file and
  * project, in the order each file first appears. A unit waits for the unit
- * before it of the same file, so spreading them lets other test files use the
- * workers meanwhile. A run with one specification per file keeps its order.
+ * before it of the same file, unless an isolated run has parallel units, so
+ * spreading them lets other test files use the workers meanwhile. A run with
+ * one specification per file keeps its order.
  *
  * @param Base - Sequencer class the instance was configured with.
  * @returns Sequencer class to put in its place.

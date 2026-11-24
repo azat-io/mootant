@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import type { DryRunResult } from '../../../types/adapter/dry-run-result'
+import type { RunEvent } from '../../../types/run/run-event'
 
 import { createJestReferenceArguments } from '../../helpers/create-jest-reference-arguments'
 import { createDryRunRequest } from '../../helpers/create-dry-run-request'
@@ -131,8 +132,9 @@ describe('jestAdapter', { timeout: 60_000 }, () => {
 
   afterEach(cleanUp)
 
-  it("creates an adapter with mootant's version and no batch mode", () => {
+  it("creates an adapter with mootant's version, no batch mode and no parallel units", () => {
     expect(jestAdapter()).toMatchObject({ name: 'jest', batch: false, version })
+    expect(jestAdapter()).not.toHaveProperty('parallelUnits')
   })
 
   it.each([
@@ -532,6 +534,35 @@ describe('jestAdapter', { timeout: 60_000 }, () => {
       )
       expect(listForked().length).toBeLessThan(
         vi.mocked(runOnWorker).mock.calls.length,
+      )
+    })
+
+    it('runs a test file for one mutant at a time with parallel units, with a note', async () => {
+      let events: RunEvent[] = []
+      let { original, result, rows } = await runJestBothWays(
+        await createProject('shared'),
+        {
+          onProgress: event => {
+            events.push(event)
+          },
+          parallelUnits: true,
+        },
+      )
+
+      expect(original).toBe(true)
+      expect(events.filter(event => event.kind === 'note')).toStrictEqual([
+        {
+          message:
+            'jest has no parallel units, so each test file runs for one mutant at a time, as a run without --parallel-units does.',
+          kind: 'note',
+        },
+      ])
+      expect(result.diagnostics).toStrictEqual([])
+      expect(rows).toStrictEqual(
+        rows.map(row => ({ ...row, verdict: row.reference })),
+      )
+      expect(new Set(rows.map(row => row.reference))).toStrictEqual(
+        new Set(['survived', 'killed']),
       )
     })
   })

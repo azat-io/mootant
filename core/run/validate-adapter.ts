@@ -6,7 +6,7 @@ import { isRecord } from '../plugins/is-record'
 /**
  * Checks the shape of a test runner adapter given in the configuration: an
  * object with a kebab-case `name`, a boolean `batch`, a `start` function and,
- * when present, a string `version`.
+ * when present, a string `version` and a boolean `parallelUnits`.
  *
  * @param value - Adapter object of the configuration.
  * @param source - Where it came from, for messages, such as `run.runner`.
@@ -44,6 +44,12 @@ function getAdapterProblem(value: unknown): string | null {
   }
   if (value['version'] !== undefined && typeof value['version'] !== 'string') {
     return '"version" must be a string'
+  }
+  if (
+    value['parallelUnits'] !== undefined &&
+    typeof value['parallelUnits'] !== 'boolean'
+  ) {
+    return '"parallelUnits" must be true or false'
   }
   return null
 }

@@ -34,16 +34,24 @@ let root = ''
  * @param run.stored - Entries and inputs of the cache file; empty by default.
  * @param run.started - Start of the run; by default no file changed during it.
  * @param run.incremental - Whether the run is incremental; false by default.
+ * @param run.parallelUnits - Whether units of one test file run at once; left
+ *   out by default.
  * @returns Cache of the run, or the warning of a run left without one.
  */
 async function prepare(
   world: Partial<FakeWorld>,
-  run: { incremental?: boolean; stored?: StoredCache; started?: number } = {},
+  run: {
+    parallelUnits?: boolean
+    incremental?: boolean
+    stored?: StoredCache
+    started?: number
+  } = {},
 ): Promise<Awaited<ReturnType<typeof prepareRunCache>>> {
   let {
     stored = { entries: new Map(), inputs: new Map() },
     started = Number.POSITIVE_INFINITY,
     incremental = false,
+    parallelUnits,
   } = run
   let file = path.join(root, 'a.test.ts')
   let { session, state, fake } = await createTestRun(
@@ -80,6 +88,7 @@ async function prepare(
     analysis: state.analysis,
     adapter: fake.adapter,
     limits: TEST_LIMITS,
+    parallelUnits,
     incremental,
     session,
     started,
@@ -176,6 +185,49 @@ describe('prepareRunCache', () => {
         })
       ).cache,
     ).not.toBeNull()
+  })
+
+  it('keeps the evidence of runs with parallel units apart from the others', async () => {
+    let file = path.join(root, 'a.test.ts')
+    let { state } = await createTestRun(
+      { tests: [{ covers: ['m1'], id: 'a1', file }] },
+      { mutants: ['m1'], isolate: true },
+    )
+    /**
+     * Tells whether a run reuses what an earlier run recorded.
+     *
+     * @param first - Whether the earlier run had parallel units, or undefined
+     *   when it left the setting out.
+     * @param second - The same for this run.
+     * @param incremental - Whether this run is incremental; false by default.
+     * @returns Whether the evidence of `m1` is reused.
+     */
+    async function reusesAcross(
+      first: undefined | boolean,
+      second: undefined | boolean,
+      incremental = false,
+    ): Promise<boolean> {
+      let { cache } = await prepare({}, { parallelUnits: first })
+      let next = await prepare(
+        {},
+        {
+          stored: { entries: cache!.entries, inputs: cache!.inputs },
+          parallelUnits: second,
+          incremental,
+        },
+      )
+      return (
+        next.cache!.lookupUnit(state.mutants.get('m1')!, file) === 'survived'
+      )
+    }
+
+    await expect(reusesAcross(undefined, false)).resolves.toBe(true)
+    await expect(reusesAcross(false, undefined)).resolves.toBe(true)
+    await expect(reusesAcross(true, true)).resolves.toBe(true)
+    await expect(reusesAcross(true, true, true)).resolves.toBe(true)
+    await expect(reusesAcross(undefined, true)).resolves.toBe(false)
+    await expect(reusesAcross(true, false)).resolves.toBe(false)
+    await expect(reusesAcross(true, undefined, true)).resolves.toBe(false)
   })
 
   it.each([

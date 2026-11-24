@@ -249,6 +249,16 @@ describe('buildRunReport', () => {
     expect(build(result).since).toStrictEqual({ base: 'abc123', ref: 'main' })
   })
 
+  it('marks a run with parallel units, and only such a run', () => {
+    let result = createRunResult()
+
+    expect(build(result)).not.toHaveProperty('parallelUnits')
+
+    result.parallelUnits = true
+
+    expect(build(result).parallelUnits).toBe(true)
+  })
+
   it('reports the checks of fast mode as null in the default mode', () => {
     let result = createRunResult()
     result.mode = 'isolated'

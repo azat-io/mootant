@@ -155,6 +155,27 @@ function expectAgreement(rows: Row[]): void {
 }
 
 /**
+ * Lists what decided each mutant of a run: its description, status and cause,
+ * the test and test file of its verdict, its path and how many units ran it.
+ *
+ * @param result - Result of a run.
+ * @returns One row per mutant, in run order.
+ */
+function listVerdicts(
+  result: Awaited<ReturnType<typeof runMutants>>,
+): unknown[][] {
+  return result.results.map(entry => [
+    describeMutant(entry),
+    entry.status,
+    entry.cause,
+    entry.killedBy,
+    entry.killedIn,
+    entry.path,
+    entry.tries,
+  ])
+}
+
+/**
  * Lists the files with a mutant the reference kills.
  *
  * @param rows - Verdicts per mutant.
@@ -545,6 +566,23 @@ describe('vitestAdapter', () => {
 
     expect(isolated.results.map(classifyVerdict)).toStrictEqual(['killed'])
   }, 30_000)
+
+  it('gives the verdicts of the default mode with parallel units where no test shares a resource', async () => {
+    let builtIns = createBuiltIns('vitest', vitestAdapter())
+    let options = {
+      cwd: equivalenceRoot,
+      paths: ['src'],
+      concurrency: 2,
+      cache: false,
+      builtIns,
+    }
+    let serial = await runMutants(options)
+    let parallel = await runMutants({ ...options, parallelUnits: true })
+
+    expect(parallel.diagnostics).toStrictEqual([])
+    expect(parallel.runs).toStrictEqual(serial.runs)
+    expect(listVerdicts(parallel)).toStrictEqual(listVerdicts(serial))
+  }, 60_000)
 
   it('never runs a test file twice at once', async () => {
     /**

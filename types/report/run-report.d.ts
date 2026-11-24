@@ -287,6 +287,13 @@ export interface RunReport {
   files: ListReportFile[]
 
   /**
+   * True when isolated units of one test file ran at the same time
+   * (`run.parallelUnits`), so tests that share a fixed file, port or database
+   * may have given false verdicts, mostly false kills; left out otherwise.
+   */
+  parallelUnits?: true
+
+  /**
    * Version of the report shape. It changes when a field changes meaning or is
    * removed; new fields do not change it.
    */

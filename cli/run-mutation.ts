@@ -50,6 +50,7 @@ export async function runMutation(options: RunOptions): Promise<void> {
     })
     progress.finish()
     let recheck = formatCommand('run', {
+      parallelUnits: options.parallelUnits,
       incremental: options.incremental,
       config: options.config,
       preset: options.preset,

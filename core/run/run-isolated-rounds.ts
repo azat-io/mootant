@@ -16,18 +16,20 @@ import { countRun } from './count-run'
  * and the second round, then twice as many as in the round before (2, 4, 8, and
  * so on), so a mutant stops at the batch of the file that killed it, and a
  * survivor, which must run every file, needs only a few rounds. Idle workers
- * take no extra files: a unit can wait for another of its test file, and the
- * pool runs units in order, so extra files may make a round longer, and
- * measurements showed no gain. A mutant whose timeout waits for its
- * confirmation takes no new files until the confirmation decides it. The
- * verdict comes from the first file with evidence (`decideEvidence`), so it
+ * take no extra files: without parallel units a unit can wait for another of
+ * its test file, and the pool runs units in order, so extra files may make a
+ * round longer, and measurements showed no gain. A mutant whose timeout waits
+ * for its confirmation takes no new files until the confirmation decides it.
+ * The verdict comes from the first file with evidence (`decideEvidence`), so it
  * does not depend on the batches or the workers. A round also runs the retries
  * and confirmations of the round before. A request lives at most six rounds, as
  * a unit missing twice gets an `Error` verdict and a timeout is confirmed once,
  * or twice when the confirmation of a timer goes over the hit limit, so the
  * rounds end. While a round runs, its units count in the live verdict counts as
  * they end (`previewIsolatedUnit`), and every mutant is counted again once its
- * result is recorded (`countVerdicts`).
+ * result is recorded (`countVerdicts`). With parallel units
+ * (`RunState.parallelUnits`) the units of one test file form no serial chain in
+ * the estimate of a round.
  *
  * @param session - Live test runner.
  * @param state - State of the run, updated in place.
@@ -116,7 +118,10 @@ async function runRound(
         plan.units[index]!.limits.timeout
       : getFileCost(state, request.file),
     ),
-    chains: numberChains(requests.map(request => request.file)),
+    chains:
+      state.parallelUnits === true ?
+        requests.map((_request, index) => index)
+      : numberChains(requests.map(request => request.file)),
     confirming: held.confirming.size,
     survivors: held.survivors.size,
     retrying: held.retrying.size,

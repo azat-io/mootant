@@ -10,16 +10,16 @@ import { slimListMutant } from './slim-list-mutant'
 /**
  * Shapes a run report as `--json` prints it: the counts and scores with the
  * total duration, the schema version, diagnostics, command, which mutants are
- * listed, runner, preset, mode, the `--since` revision when given and, last, so
- * that output cut short keeps the rest, the mutants. A mutant to act on or an
- * ignored one keeps its position, mutator, status, scope, source lines and
- * focus (`slimListMutant`), the ignore directive and its reason, the message
- * and cause of the verdict, `path` only for a batch verdict, the number of
- * covering tests, its likeliest test files, the first covering test and the
- * re-check command, each only when set. A killed or timed-out mutant, listed
- * with `--all`, keeps only its position, mutator, status, the test file that
- * killed it and a batch `path`. Fields that are null are left out; the full
- * report is what `--json --verbose` prints.
+ * listed, runner, preset, mode, parallel units when they were on, the `--since`
+ * revision when given and, last, so that output cut short keeps the rest, the
+ * mutants. A mutant to act on or an ignored one keeps its position, mutator,
+ * status, scope, source lines and focus (`slimListMutant`), the ignore
+ * directive and its reason, the message and cause of the verdict, `path` only
+ * for a batch verdict, the number of covering tests, its likeliest test files,
+ * the first covering test and the re-check command, each only when set. A
+ * killed or timed-out mutant, listed with `--all`, keeps only its position,
+ * mutator, status, the test file that killed it and a batch `path`. Fields that
+ * are null are left out; the full report is what `--json --verbose` prints.
  *
  * @param report - Full report of a run.
  * @returns Report as `--json` prints it.
@@ -56,6 +56,7 @@ export function slimRunReport(report: RunReport): SlimRunReport {
     runner: report.runner,
     preset: report.preset,
     mode: report.mode,
+    ...(report.parallelUnits && { parallelUnits: true }),
     ...(report.since !== null && { since: report.since }),
     mutants,
   }

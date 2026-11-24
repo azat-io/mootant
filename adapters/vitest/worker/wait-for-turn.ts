@@ -14,12 +14,14 @@ const POLL_INTERVAL = 20
  * Waits until the unit before this one of the same test file has finished, so
  * two units of one test file never run at the same time: a plain run of the
  * test runner never runs a test file twice at once, and tests may rely on it,
- * such as with a fixed file, port or database. The unit before has finished
- * when its worker process is gone: Vitest stops a worker only after its
- * teardown, worker-scoped fixture cleanup and environment teardown included, so
- * a unit never starts while the one before still holds a resource. A unit
- * before that ran in this very process has finished too. Units are claimed in
- * order, so the unit before is always claimed and its worker runs or has run.
+ * such as with a fixed file, port or database; an isolated run with parallel
+ * units does not wait (`VitestWorkerOptions.parallel`). The unit before has
+ * finished when its worker process is gone: Vitest stops a worker only after
+ * its teardown, worker-scoped fixture cleanup and environment teardown
+ * included, so a unit never starts while the one before still holds a resource.
+ * A unit before that ran in this very process has finished too. Units are
+ * claimed in order, so the unit before is always claimed and its worker runs or
+ * has run.
  *
  * @param directory - Work directory of the run.
  * @param unit - The claimed unit.

@@ -62,6 +62,11 @@ export interface FakeWorld {
   cacheInputs?: CacheInputs
 
   /**
+   * Whether the adapter has parallel units; none when omitted.
+   */
+  parallelUnits?: boolean
+
+  /**
    * Test files with load-time behavior.
    */
   files?: FakeTestFile[]
@@ -288,6 +293,9 @@ const SITE_PATTERN = /hit\("(?<id>[^"]+)"\)/gu
 export function createFakeAdapter(world: FakeWorld): FakeAdapter {
   let fake: FakeAdapter = {
     adapter: {
+      ...(world.parallelUnits !== undefined && {
+        parallelUnits: world.parallelUnits,
+      }),
       start: context => {
         fake.context = context
         return Promise.resolve(session)

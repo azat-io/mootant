@@ -162,6 +162,7 @@ export function createRunResult(): RunResult {
     unrepeatable: ['fits-small'],
     runnerVersion: '5.0.4',
     preset: 'recommended',
+    parallelUnits: false,
     runner: 'vitest',
     threshold: null,
     cache: false,

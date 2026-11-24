@@ -151,6 +151,45 @@ export type VitestOutRecord =
     }
 
 /**
+ * Options the main process provides to workers under the key `mootant`.
+ */
+export interface VitestWorkerOptions {
+  /**
+   * Watchdog budgets of a dry run (`DryRunRequest.timeouts`), or null in batch
+   * and isolated runs, whose plans carry their own.
+   */
+  timeouts: { test: number; file: number } | null
+
+  /**
+   * Kind of the run.
+   */
+  mode: 'isolated' | 'batch' | 'dry'
+
+  /**
+   * Whether a unit of an isolated run starts without waiting for the unit
+   * before it of the same test file (`AdapterContext.parallelUnits`); false or
+   * omitted waits.
+   */
+  parallel?: boolean
+
+  /**
+   * Work directory of this run.
+   */
+  directory: string
+
+  /**
+   * Whether a dry run tries every test twice in a row (`DryRunRequest.repeat`);
+   * false in batch and isolated runs.
+   */
+  repeat: boolean
+
+  /**
+   * Project root; reads outside it count too (`createInputFilter`).
+   */
+  root: string
+}
+
+/**
  * Content of `beat/<pid>.json`; the main process timestamps it when it first
  * sees `sequence`.
  */
@@ -194,38 +233,6 @@ export interface VitestHeartbeat {
    * Process id of the worker.
    */
   pid: number
-}
-
-/**
- * Options the main process provides to workers under the key `mootant`.
- */
-export interface VitestWorkerOptions {
-  /**
-   * Watchdog budgets of a dry run (`DryRunRequest.timeouts`), or null in batch
-   * and isolated runs, whose plans carry their own.
-   */
-  timeouts: { test: number; file: number } | null
-
-  /**
-   * Kind of the run.
-   */
-  mode: 'isolated' | 'batch' | 'dry'
-
-  /**
-   * Work directory of this run.
-   */
-  directory: string
-
-  /**
-   * Whether a dry run tries every test twice in a row (`DryRunRequest.repeat`);
-   * false in batch and isolated runs.
-   */
-  repeat: boolean
-
-  /**
-   * Project root; reads outside it count too (`createInputFilter`).
-   */
-  root: string
 }
 
 /**

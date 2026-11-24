@@ -113,13 +113,18 @@ describe('vitestAdapter', () => {
     vi.mocked(startVitestSession).mockReset()
   })
 
-  it("creates a batch adapter with mootant's version that starts a Vitest session", async () => {
+  it("creates a batch adapter with parallel units and mootant's version that starts a Vitest session", async () => {
     let session = {} as AdapterSession
     vi.mocked(startVitestSession).mockResolvedValue(session)
     let context = {} as AdapterContext
     let adapter = vitestAdapter({ config: 'vitest.unit.ts' })
 
-    expect(adapter).toMatchObject({ name: 'vitest', batch: true, version })
+    expect(adapter).toMatchObject({
+      parallelUnits: true,
+      name: 'vitest',
+      batch: true,
+      version,
+    })
     await expect(adapter.start(context)).resolves.toBe(session)
     expect(startVitestSession).toHaveBeenCalledWith(context, {
       config: 'vitest.unit.ts',

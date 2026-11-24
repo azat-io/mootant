@@ -39,6 +39,15 @@ export interface AdapterContext {
   concurrency: number | null
 
   /**
+   * Whether isolated units of one test file may run at the same time, each in a
+   * worker of its own: the project's tests must not rely on a test file never
+   * running twice at once, as with a fixed file, port or database. False or
+   * omitted runs them one after another, in plan order. Only an adapter with
+   * `TestAdapter.parallelUnits` gets true.
+   */
+  parallelUnits?: boolean
+
+  /**
    * Directory for files of this run (plans, results, heartbeats); the core
    * creates it and removes it after `close`.
    */

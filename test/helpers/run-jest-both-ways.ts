@@ -1,6 +1,7 @@
 import path from 'node:path'
 
 import type { TestAdapter } from '../../types/adapter/test-adapter'
+import type { RunEvent } from '../../types/run/run-event'
 
 import { createJestReferenceArguments } from './create-jest-reference-arguments'
 import { jestAdapter } from '../../adapters/jest/index'
@@ -27,6 +28,8 @@ import { runReference } from './run-reference'
  *   would give in `NODE_OPTIONS`.
  * @param options.jestFlags - More flags of Jest in the run by hand.
  * @param options.paths - Files to mutate.
+ * @param options.parallelUnits - Whether Mootant's run asks for parallel units.
+ * @param options.onProgress - Receives the events of Mootant's run.
  * @returns Mootant's run, the verdicts by hand, and a row per mutant: its
  *   description, its verdict reduced by `classifyVerdict` and its verdict by
  *   hand.
@@ -35,8 +38,10 @@ export async function runJestBothWays(
   root: string,
   options: {
     reference?: Awaited<ReturnType<typeof runReference>>
+    onProgress?(event: RunEvent): void
     testFiles?(file: string): string[]
     concurrency?: number | null
+    parallelUnits?: boolean
     adapter?: TestAdapter
     nodeFlags?: string[]
     jestFlags?: string[]
@@ -52,7 +57,9 @@ export async function runJestBothWays(
   let result = await runMutants({
     builtIns: createBuiltIns('jest', options.adapter ?? jestAdapter()),
     ...(concurrency !== null && { concurrency }),
+    parallelUnits: options.parallelUnits,
     paths: options.paths ?? ['src'],
+    onProgress: options.onProgress,
     cache: false,
     cwd: root,
   })

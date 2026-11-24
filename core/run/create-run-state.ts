@@ -35,6 +35,12 @@ interface RunStateInput {
   hosted: readonly Mutant[]
 
   /**
+   * Whether isolated units of one test file may run at the same time; false
+   * when omitted.
+   */
+  parallelUnits?: boolean
+
+  /**
    * Coverage and stability of the dry run.
    */
   analysis: DryAnalysis
@@ -94,6 +100,7 @@ export function createRunState(input: RunStateInput): RunState {
           running: null,
         },
     moduleTests: indexModuleTests(input.hosted, analysis),
+    parallelUnits: input.parallelUnits === true,
     report: input.report ?? (() => {}),
     workers: input.workers,
     imports: input.imports,

@@ -32,9 +32,9 @@ const LEGEND: RunStatus[] = [
  * the threshold check of the score, what else failed the run, the covered score
  * when it differs, the weakest mutators and the files with the most test time;
  * the card of the run with the bar and legend of the statuses and the facts of
- * the run with its phases; the mutants to act on with a filter and the command
- * to run again; the table of files; the summary of the skipped candidates; and
- * the warnings.
+ * the run, its mode with parallel units when they were on, with its phases; the
+ * mutants to act on with a filter and the command to run again; the table of
+ * files; the summary of the skipped candidates; and the warnings.
  *
  * @param index - Index of the report.
  * @returns HTML of the page.
@@ -89,7 +89,7 @@ export function renderOverview(index: ReportIndex): string {
       : `${meta.runner} ${meta.runnerVersion}`,
     ],
     ['tests', String(summary.totalTests)],
-    ['mode', meta.mode],
+    ['mode', meta.parallelUnits ? `${meta.mode}, parallel units` : meta.mode],
     ['preset', meta.preset],
     ['cache', meta.cache ? `on, ${summary.totalCached ?? 0} reused` : 'off'],
     ['time', formatTime(duration.total)],

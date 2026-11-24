@@ -8,6 +8,12 @@ const PLAIN_ARGUMENT_PATTERN = /^[\w%+,\-./:=@]+$/u
  */
 interface CommandOptions {
   /**
+   * Whether units of one test file run at once, from `--parallel-units` or
+   * `--no-parallel-units`.
+   */
+  parallelUnits?: boolean
+
+  /**
    * Whether verdicts are reused by region, from `--incremental` or
    * `--no-incremental`.
    */
@@ -89,6 +95,11 @@ export function formatCommand(
   }
   if (options.fast !== undefined) {
     parts.push(options.fast ? '--fast' : '--no-fast')
+  }
+  if (options.parallelUnits !== undefined) {
+    parts.push(
+      options.parallelUnits ? '--parallel-units' : '--no-parallel-units',
+    )
   }
   if (options.incremental !== undefined) {
     parts.push(options.incremental ? '--incremental' : '--no-incremental')

@@ -33,7 +33,8 @@ export interface IsolatedUnit {
 
 /**
  * Units of one isolated run. Several units may share a test file; they never
- * run at the same time.
+ * run at the same time, unless the context allows parallel units
+ * (`AdapterContext.parallelUnits`).
  */
 export interface IsolatedPlan {
   /**

@@ -12,6 +12,10 @@ describe('validateAdapter', () => {
     }
 
     expect(validateAdapter(adapter, 'jest-like')).toBe(adapter)
+
+    let parallel = { ...adapter, parallelUnits: true }
+
+    expect(validateAdapter(parallel, 'jest-like')).toBe(parallel)
   })
 
   it.each<[unknown, string]>([
@@ -29,6 +33,10 @@ describe('validateAdapter', () => {
     [
       { start: () => null, name: 'jest', batch: true, version: 1 },
       '"version" must be a string',
+    ],
+    [
+      { start: () => null, parallelUnits: 1, name: 'jest', batch: true },
+      '"parallelUnits" must be true or false',
     ],
   ])('rejects %o', (value, problem) => {
     expect(() => validateAdapter(value, 'acme')).toThrow(

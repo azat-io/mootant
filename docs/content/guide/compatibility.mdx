@@ -132,7 +132,7 @@ of a test file. This prevents process state from leaking between runs, but is
 slower. Global setup and files on disk remain shared.
 
 A worker uses about 600 MB with a large module graph. Lower `--concurrency` to
-use fewer workers. `--fast` has no effect with Jest.
+use fewer workers. `--fast` and `--parallel-units` have no effect with Jest.
 
 ### Mutation limits
 

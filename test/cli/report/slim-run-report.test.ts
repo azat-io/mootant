@@ -157,6 +157,16 @@ describe('slimRunReport', () => {
     expect(slim.mutants[1]).not.toHaveProperty('killedIn')
   })
 
+  it('keeps the mark of parallel units only when they were on', () => {
+    let report = createRunReport()
+
+    expect(slimRunReport(report)).not.toHaveProperty('parallelUnits')
+
+    report.parallelUnits = true
+
+    expect(slimRunReport(report).parallelUnits).toBe(true)
+  })
+
   it('puts the mutants last, after the counts, diagnostics and settings', () => {
     let report = createRunReport()
     report.since = { base: 'abc123', ref: 'main' }

@@ -42,6 +42,16 @@ export interface RunConfig {
   html?: boolean | string
 
   /**
+   * Parallel units: run one test file for several mutants at once, each run in
+   * a process of its own, with Vitest and Node Test; faster when a few test
+   * files cover most mutants, but runs of one test file that share something
+   * outside their processes, such as a fixed file, port or database, may give
+   * false verdicts. False when omitted, so a test file runs for one mutant at a
+   * time, as a plain run never runs a test file twice at once.
+   */
+  parallelUnits?: boolean
+
+  /**
    * Incremental mode: reuse a cached verdict while the declaration of its
    * mutant, what that uses in its file and what its test file reads outside the
    * mutated files stay the same, even after changes elsewhere, which may leave

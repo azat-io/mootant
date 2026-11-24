@@ -16,6 +16,12 @@ export interface RunSettings {
   threshold: number | null
 
   /**
+   * Whether parallel units were asked for, which the run uses only with an
+   * adapter that runs them.
+   */
+  parallelUnits: boolean
+
+  /**
    * How try limits grow from the dry run.
    */
   limits: LimitSettings

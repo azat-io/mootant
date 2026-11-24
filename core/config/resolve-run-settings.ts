@@ -6,7 +6,8 @@ import type { RunConfig } from '../../types/config/run-config'
  * configuration, which wins over the default. The defaults are those
  * `RunConfig` documents: the runner's own concurrency, no threshold, a timeout
  * factor of 3 with a constant of 250, a hit limit factor of 100 with a floor of
- * 100000, the cache on, and incremental and fast mode off.
+ * 100000, the cache on, and incremental mode, fast mode and parallel units
+ * off.
  *
  * @param options - Settings given on the command line, undefined when not
  *   given.
@@ -16,7 +17,12 @@ import type { RunConfig } from '../../types/config/run-config'
 export function resolveRunSettings(
   options: Pick<
     RunConfig,
-    'concurrency' | 'incremental' | 'threshold' | 'cache' | 'fast'
+    | 'parallelUnits'
+    | 'concurrency'
+    | 'incremental'
+    | 'threshold'
+    | 'cache'
+    | 'fast'
   >,
   run: RunConfig,
 ): RunSettings {
@@ -31,6 +37,7 @@ export function resolveRunSettings(
         factor: run.timeout?.factor ?? 3,
       },
     },
+    parallelUnits: options.parallelUnits ?? run.parallelUnits ?? false,
     incremental: options.incremental ?? run.incremental ?? false,
     concurrency: options.concurrency ?? run.concurrency ?? null,
     threshold: options.threshold ?? run.threshold ?? null,

@@ -19,16 +19,18 @@ import { runTestFile } from './run-test-file'
 /**
  * Executes isolated units, each in a test process of its own with its mutant
  * active from the start, with the session's processes at once but never two
- * units of one test file at once, in plan order per file (`runInPool`). A unit
- * stops starting tests after a test failed once the mutant was reached, unless
- * its test file reported a todo test or suite in its dry run, since node:test
- * reports todo tests only some time after they ran; tests that failed in the
- * file's dry run of a process that still exited with 0 never count. A unit that
- * stopped for a failure that turned out a todo test, as one that only the
- * mutant made todo, runs again without stopping (`checkTodoBail`). A watchdog
- * stops a unit past its timeout (`getUnitDeadline`). Every unit reports its
- * facts (`buildIsolatedFacts`) and, once its process reached its end, what it
- * read, to the result and, as it ends, to the context's `onUnitEnd`.
+ * units of one test file at once, in plan order per file (`runInPool`), unless
+ * the context allows parallel units, when every unit has a key of its own. A
+ * unit stops starting tests after a test failed once the mutant was reached,
+ * unless its test file reported a todo test or suite in its dry run, since
+ * node:test reports todo tests only some time after they ran; tests that failed
+ * in the file's dry run of a process that still exited with 0 never count. A
+ * unit that stopped for a failure that turned out a todo test, as one that only
+ * the mutant made todo, runs again without stopping (`checkTodoBail`). A
+ * watchdog stops a unit past its timeout (`getUnitDeadline`). Every unit
+ * reports its facts (`buildIsolatedFacts`) and, once its process reached its
+ * end, what it read, to the result and, as it ends, to the context's
+ * `onUnitEnd`.
  *
  * @param handle - Live session.
  * @param plan - Units to run.
@@ -93,7 +95,7 @@ export async function runIsolated(
         context.onUnitEnd?.({ unit: index, facts })
         return facts
       },
-      key: unit.file,
+      key: context.parallelUnits === true ? String(index) : unit.file,
     })),
     handle.workers,
   )

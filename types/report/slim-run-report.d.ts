@@ -116,7 +116,7 @@ export interface SlimRunReportSummary extends Pick<
  */
 export interface SlimRunReport extends Pick<
   RunReport,
-  'runner' | 'listed' | 'preset' | 'mode'
+  'parallelUnits' | 'runner' | 'listed' | 'preset' | 'mode'
 > {
   /**
    * Mutants of the mutated files, in file and canonical order: the ones to act

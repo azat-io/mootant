@@ -51,6 +51,13 @@ export interface RunState {
   live: LiveVerdicts | null
 
   /**
+   * Whether isolated units of one test file may run at the same time
+   * (`AdapterContext.parallelUnits`), so they form no serial chain; false or
+   * omitted when they run one after another.
+   */
+  parallelUnits?: boolean
+
+  /**
    * Verdicts of earlier runs to reuse and the evidence of this run to store, or
    * null when the cache is off.
    */

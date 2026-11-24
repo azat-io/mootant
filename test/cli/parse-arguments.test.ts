@@ -40,6 +40,9 @@ const HELP_TEXT = [
   "                       Jest's maxWorkers, CPU cores - 1 for node:test)",
   '  --fast               run: try many mutants in one test run; faster, but a',
   '                       kill may be false (state left by earlier tries)',
+  '  --parallel-units     run: run a test file for several mutants at once;',
+  '                       faster, but a verdict may be false if the tests use a',
+  '                       fixed file, port or database',
   '  --no-cache           run: run every mutant again instead of reusing the',
   '                       verdicts of earlier runs',
   '  --incremental        run: reuse a verdict while the code of its mutant and',
@@ -216,6 +219,7 @@ describe('parseArguments', () => {
         '--concurrency',
         '3',
         '--fast',
+        '--parallel-units',
         '--no-cache',
         '--since',
         'main',
@@ -239,6 +243,7 @@ describe('parseArguments', () => {
       options: {
         mutantIds: ['k3m9x2p7q4w8', 'v7m5k6j2r8s4'],
         config: 'mootant.config.ts',
+        parallelUnits: true,
         preset: 'strict',
         threshold: 72.5,
         concurrency: 3,
@@ -259,6 +264,8 @@ describe('parseArguments', () => {
     [['--no-html'], { html: false }],
     [['--incremental'], { incremental: true }],
     [['--no-incremental'], { incremental: false }],
+    [['--parallel-units'], { parallelUnits: true }],
+    [['--no-parallel-units'], { parallelUnits: false }],
   ])('reads %j', (flags, option) => {
     expect(parseArguments(['run', 'src', ...flags], '1.0.0')).toStrictEqual({
       options: {
@@ -348,6 +355,10 @@ describe('parseArguments', () => {
     {
       message: '--incremental applies to the run command only.',
       argv: ['list', 'src', '--incremental'],
+    },
+    {
+      message: '--parallel-units applies to the run command only.',
+      argv: ['list', 'src', '--no-parallel-units'],
     },
     {
       message: '--html applies to the run command only.',

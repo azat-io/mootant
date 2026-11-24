@@ -17,6 +17,13 @@ export interface TestAdapter {
   start(context: AdapterContext): Promise<AdapterSession>
 
   /**
+   * Whether the adapter runs isolated units of one test file at the same time
+   * when the context allows it (`AdapterContext.parallelUnits`). Optional;
+   * without it the core never allows it, and a run that asks for it notes so.
+   */
+  parallelUnits?: boolean
+
+  /**
    * Version of the adapter itself, part of the cache key; the version of the
    * test runner is `AdapterSession.version`. Optional.
    */

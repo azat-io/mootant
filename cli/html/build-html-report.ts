@@ -195,6 +195,7 @@ export function buildHtmlReport(
       runner: report.runner,
       preset: report.preset,
       since: report.since,
+      ...(report.parallelUnits && { parallelUnits: true }),
       cache: result.cache,
       date: options.date,
       mode: report.mode,

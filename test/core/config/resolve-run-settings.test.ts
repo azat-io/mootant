@@ -11,6 +11,7 @@ describe('resolveRunSettings', () => {
         hitLimit: { floor: 100_000, factor: 100 },
         timeout: { constant: 250, factor: 3 },
       },
+      parallelUnits: false,
       incremental: false,
       concurrency: null,
       threshold: null,
@@ -28,6 +29,7 @@ describe('resolveRunSettings', () => {
       {
         hitLimit: { factor: 2, floor: 5 },
         timeout: { factor: 1 },
+        parallelUnits: true,
         incremental: true,
         concurrency: 3,
         threshold: 50,
@@ -41,6 +43,7 @@ describe('resolveRunSettings', () => {
         timeout: { constant: 250, factor: 1 },
         hitLimit: { factor: 2, floor: 5 },
       },
+      parallelUnits: true,
       incremental: true,
       concurrency: 3,
       threshold: 50,
@@ -56,6 +59,7 @@ describe('resolveRunSettings', () => {
     expect(
       resolveRunSettings(
         {
+          parallelUnits: false,
           incremental: false,
           concurrency: 2,
           threshold: 80,
@@ -63,6 +67,7 @@ describe('resolveRunSettings', () => {
           fast: false,
         },
         {
+          parallelUnits: true,
           incremental: true,
           concurrency: 5,
           threshold: 10,
@@ -71,6 +76,7 @@ describe('resolveRunSettings', () => {
         },
       ),
     ).toMatchObject({
+      parallelUnits: false,
       incremental: false,
       concurrency: 2,
       threshold: 80,

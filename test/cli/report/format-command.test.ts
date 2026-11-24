@@ -27,6 +27,17 @@ describe('formatCommand', () => {
     expect(formatCommand('run', { fast: false, paths: [] })).toBe(
       'mootant run --no-fast',
     )
+    expect(
+      formatCommand('run', {
+        parallelUnits: true,
+        incremental: true,
+        paths: ['src'],
+        fast: true,
+      }),
+    ).toBe('mootant run src --fast --parallel-units --incremental')
+    expect(formatCommand('run', { parallelUnits: false, paths: [] })).toBe(
+      'mootant run --no-parallel-units',
+    )
     expect(formatCommand('list', { paths: ['src'], skipped: true })).toBe(
       'mootant list src --skipped',
     )

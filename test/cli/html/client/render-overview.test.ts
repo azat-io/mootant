@@ -151,6 +151,20 @@ describe('renderOverview', () => {
     expect(squashHtml(passing)).not.toContain(squashHtml('run failed'))
   })
 
+  it('names parallel units next to the mode when they were on', () => {
+    let report = createHtmlReport()
+
+    expect(squashHtml(renderOverview(indexReport(report)))).toContain(
+      squashHtml('<div><dt>mode</dt><dd>fast</dd></div>'),
+    )
+
+    report.meta.parallelUnits = true
+
+    expect(squashHtml(renderOverview(indexReport(report)))).toContain(
+      squashHtml('<div><dt>mode</dt><dd>fast, parallel units</dd></div>'),
+    )
+  })
+
   it('describes only errors', () => {
     let report = createHtmlReport()
     report.mutants = report.mutants.filter(mutant => mutant.status === 'Error')

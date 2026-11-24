@@ -74,17 +74,17 @@ wrap redirects in `cmd /c "..."`, since its `>` writes UTF-16.
 node -e "const fs=require('fs');fs.mkdirSync('.mootant',{recursive:true});fs.existsSync('.mootant/.gitignore')||fs.writeFileSync('.mootant/.gitignore','*')"
 
 # The first run
-<mootant> run [<paths>] [--since <base>] --no-fast --no-incremental [--mutant <id>] --json > .mootant/before.json 2> .mootant/before.log
+<mootant> run [<paths>] [--since <base>] --no-fast --no-incremental --no-parallel-units [--mutant <id>] --json > .mootant/before.json 2> .mootant/before.log
 
 # Problems of a run, then one line per mutant
 node -e "const r=require('./.mootant/before.json');console.log(JSON.stringify({schemaVersion:r.schemaVersion,diagnostics:r.diagnostics,summary:r.summary}))"
 node -e "for(const m of require('./.mootant/before.json').mutants)console.log(m.id,m.status,m.file+':'+(m.focus||m).line,m.scope||'-',m.mutator,m.tests)"
 
-# A recheck: the mutant's recheck with <mootant> in place of mootant, always with --no-fast --no-incremental
-<mootant> run [<paths>] --no-fast --no-incremental --mutant <id> [--mutant <id>] --json --all > .mootant/recheck.json 2> .mootant/recheck.log
+# A recheck: the mutant's recheck with <mootant> in place of mootant, always with --no-fast --no-incremental --no-parallel-units
+<mootant> run [<paths>] --no-fast --no-incremental --no-parallel-units --mutant <id> [--mutant <id>] --json --all > .mootant/recheck.json 2> .mootant/recheck.log
 
 # The last run: the first run's command with --all, then the final status of full ids and any new problem ids
-<mootant> run [<paths>] [--since <base>] --no-fast --no-incremental [--mutant <id>] --json --all > .mootant/after.json 2> .mootant/after.log
+<mootant> run [<paths>] [--since <base>] --no-fast --no-incremental --no-parallel-units [--mutant <id>] --json --all > .mootant/after.json 2> .mootant/after.log
 node -e "const b=require('./.mootant/before.json').mutants.map(m=>m.id),a=require('./.mootant/after.json').mutants;for(const id of process.argv.slice(1))console.log(id,(a.find(m=>m.id===id)||{status:'missing'}).status);for(const m of a)if(!b.includes(m.id)&&['Survived','NoCoverage','Error'].includes(m.status))console.log('new',m.id,m.status)" <id> <id>
 ```
 

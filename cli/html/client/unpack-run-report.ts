@@ -138,6 +138,7 @@ export function unpackRunReport(report: HtmlReport): RunReport {
     runner: meta.runner,
     preset: meta.preset,
     since: meta.since,
+    ...(meta.parallelUnits && { parallelUnits: true }),
     schemaVersion: 4,
     mode: meta.mode,
     command: 'run',

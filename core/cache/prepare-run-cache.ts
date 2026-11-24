@@ -50,6 +50,14 @@ interface PrepareInput {
   session: AdapterSession
 
   /**
+   * Whether isolated units of one test file run at the same time; such runs
+   * never reuse the verdicts of other runs, nor other runs theirs, since tests
+   * that rely on a test file never running twice at once may give other
+   * verdicts. False when omitted.
+   */
+  parallelUnits?: boolean
+
+  /**
    * Coverage and tests of the dry run.
    */
   analysis: DryAnalysis
@@ -126,7 +134,8 @@ interface PreparedCache {
  * their contents stayed so. A test runner that read such a file before the test
  * code wrote it, as Vitest loads the `.env` files of its mode when it starts,
  * may have run with an earlier text than the keys show, whether the test code
- * or the user changed it.
+ * or the user changed it. A run with parallel units has an environment key of
+ * its own.
  *
  * @param input - Session, dry run, settings and the stored entries.
  * @returns Cache of the run. No cache when the adapter cannot tell what
@@ -224,6 +233,7 @@ export async function prepareRunCache(
       adapter: input.adapter.name,
     },
     build: (await stat(import.meta.filename)).mtimeMs,
+    parallelUnits: input.parallelUnits === true,
     settings: inputs.settings,
     limits: input.limits,
     hashes,
