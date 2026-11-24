@@ -36,6 +36,7 @@ export default defineConfig({
     'stmts',
     'subtest',
     'subtests',
+    'takumi',
     'windowid',
     'wordmark',
   ],
