@@ -5,6 +5,7 @@ import path from 'node:path'
 import type { AdapterSession } from '../../types/adapter/adapter-session'
 import type { ActiveMutator } from '../../types/mutator/active-mutator'
 import type { DryRunResult } from '../../types/adapter/dry-run-result'
+import type { CacheInputs } from '../../types/adapter/cache-inputs'
 import type { TestAdapter } from '../../types/adapter/test-adapter'
 import type { FileMutants } from '../../types/mutant/file-mutants'
 import type { StoredCache } from '../../types/cache/stored-cache'
@@ -15,11 +16,14 @@ import type { RunCache } from '../../types/cache/run-cache'
 
 import { getTestFileKey } from '../run/get-test-file-key'
 import { getEnvironmentKey } from './get-environment-key'
+import { compareCodeUnits } from '../compare-code-units'
 import { getDisplayPath } from '../run/get-display-path'
 import { findChangedFiles } from './find-changed-files'
 import { getTestFileKeys } from './get-test-file-keys'
+import { getPortablePath } from './get-portable-path'
 import { createRunCache } from './create-run-cache'
 import { findLockfile } from './find-lockfile'
+import { createDigest } from './create-digest'
 import { UNKNOWN_HASH } from './unknown-hash'
 import { hashFiles } from './hash-files'
 
@@ -43,6 +47,13 @@ interface PrepareInput {
    * Entries and inputs of the cache file, read while the dry run went on.
    */
   stored: Promise<StoredCache>
+
+  /**
+   * Absolute paths of the files the dry run switched, those it dropped as
+   * broken left out: the hit counts of a unit cover only their sites, so a
+   * timeout by the hit limit holds only for runs that switch the same files.
+   */
+  switched: readonly string[]
 
   /**
    * Live test runner after the dry run.
@@ -89,6 +100,12 @@ interface PrepareInput {
   started: number
 
   /**
+   * Whether the run is in fast mode, which neither stores nor reuses timeouts
+   * by the hit limit (`RunCacheInput.timeouts`).
+   */
+  fast: boolean
+
+  /**
    * Project root.
    */
   root: string
@@ -108,6 +125,12 @@ interface PreparedCache {
    * has unknown content, or null.
    */
   warning: Diagnostic | null
+
+  /**
+   * What the session said every verdict depends on (`cacheInputs`), asked once,
+   * or null when the adapter cannot tell.
+   */
+  inputs: CacheInputs | null
 
   /**
    * Cache of the run, or null.
@@ -135,21 +158,21 @@ interface PreparedCache {
  * code wrote it, as Vitest loads the `.env` files of its mode when it starts,
  * may have run with an earlier text than the keys show, whether the test code
  * or the user changed it. A run with parallel units has an environment key of
- * its own.
+ * its own. Outside fast mode, the cache keeps timeouts by the hit limit too.
  *
  * @param input - Session, dry run, settings and the stored entries.
- * @returns Cache of the run. No cache when the adapter cannot tell what
- *   verdicts depend on or no test file has a key; when a file of the
- *   environment, or a dependency while no test file has a key, changed during
- *   the run or has unknown content, with a `cache-skipped` warning that names
- *   the first such file.
+ * @returns Cache of the run, with what the session said verdicts depend on. No
+ *   cache when the adapter cannot tell what verdicts depend on or no test file
+ *   has a key; when a file of the environment, or a dependency while no test
+ *   file has a key, changed during the run or has unknown content, with a
+ *   `cache-skipped` warning that names the first such file.
  */
 export async function prepareRunCache(
   input: PrepareInput,
 ): Promise<PreparedCache> {
   let { session, setup, root, dry } = input
   if (session.cacheInputs === undefined) {
-    return { warning: null, cache: null }
+    return { warning: null, inputs: null, cache: null }
   }
   let inputs = await session.cacheInputs()
   let lockfile = findLockfile(root)
@@ -214,6 +237,7 @@ export async function prepareRunCache(
         line: null,
       },
       cache: null,
+      inputs,
     }
   }
   let unsure = files.find(file => isUnsure(file))
@@ -258,7 +282,7 @@ export async function prepareRunCache(
       .flat()
       .find(file => isUnsure(file))
     return dependency === undefined ?
-        { warning: null, cache: null }
+        { warning: null, cache: null, inputs }
       : skip(dependency)
   }
   let cache = createRunCache({
@@ -277,6 +301,11 @@ export async function prepareRunCache(
       hashes,
       root,
     }),
+    switched: createDigest(
+      input.switched
+        .map(file => getPortablePath(file, root))
+        .toSorted(compareCodeUnits),
+    ),
     reads: new Map(
       dry.files.map(file => [getTestFileKey(file), file.environment ?? []]),
     ),
@@ -286,6 +315,7 @@ export async function prepareRunCache(
     regions: new Map(input.files.flatMap(file => [...(file.regions ?? [])])),
     incremental: input.incremental,
     analysis: input.analysis,
+    timeouts: !input.fast,
     environment: files,
     now: input.now,
     variables,
@@ -294,5 +324,5 @@ export async function prepareRunCache(
     hashes,
     root,
   })
-  return { warning: null, cache }
+  return { warning: null, inputs, cache }
 }

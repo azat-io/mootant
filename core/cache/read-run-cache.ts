@@ -10,7 +10,7 @@ import { isRecord } from '../plugins/is-record'
 /**
  * Statuses an entry may store.
  */
-const STATUSES = new Set<unknown>(['Survived', 'Killed'])
+const STATUSES = new Set<unknown>(['Survived', 'Timeout', 'Killed'])
 
 /**
  * Paths an entry may come from.

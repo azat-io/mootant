@@ -7,6 +7,8 @@ import type { SinceRevision } from '../types/git/since-revision'
 import type { TestAdapter } from '../types/adapter/test-adapter'
 import type { FileMutants } from '../types/mutant/file-mutants'
 import type { RunSettings } from '../types/config/run-settings'
+import type { ProjectTree } from '../types/cache/project-tree'
+import type { DrySnapshot } from '../types/cache/dry-snapshot'
 import type { Diagnostic } from '../types/mutant/diagnostic'
 import type { DryAnalysis } from '../types/run/dry-analysis'
 import type { RunResult } from '../types/run/run-result'
@@ -16,22 +18,32 @@ import type { RunEvent } from '../types/run/run-event'
 
 import { createSwitchedFiles } from './instrument/create-switched-files'
 import { getComponentFramework } from './parser/get-component-framework'
+import { createSnapshotSession } from './cache/create-snapshot-session'
 import { selectChangedMutants } from './files/select-changed-mutants'
+import { createDryReuseMiss } from './cache/create-dry-reuse-miss'
+import { getDrySnapshotPath } from './cache/get-dry-snapshot-path'
 import { loadSvelteCompiler } from './parser/load-svelte-compiler'
 import { resolveRunSettings } from './config/resolve-run-settings'
 import { getPackageDirectory } from './run/get-package-directory'
 import { createWorkDirectory } from './run/create-work-directory'
 import { previewIsolatedUnit } from './run/preview-isolated-unit'
+import { getDrySnapshotKey } from './cache/get-dry-snapshot-key'
 import { resolveMutantIds } from './identity/resolve-mutant-ids'
+import { createDrySnapshot } from './cache/create-dry-snapshot'
 import { markOutsideMutants } from './run/mark-outside-mutants'
+import { checkDrySnapshot } from './cache/check-dry-snapshot'
 import { applyCachedBatch } from './cache/apply-cached-batch'
 import { applyCachedUnits } from './cache/apply-cached-units'
 import { runIsolatedRounds } from './run/run-isolated-rounds'
 import { computeStaticCost } from './run/compute-static-cost'
 import { loadVueCompiler } from './parser/load-vue-compiler'
+import { hashProjectTree } from './cache/hash-project-tree'
+import { saveDrySnapshot } from './cache/save-dry-snapshot'
+import { readDrySnapshot } from './cache/read-dry-snapshot'
 import { prepareRunCache } from './cache/prepare-run-cache'
 import { listFileMutants } from './files/list-file-mutants'
 import { readChangedLines } from './git/read-changed-lines'
+import { isDryReuseMiss } from './cache/is-dry-reuse-miss'
 import { readTestImports } from './run/read-test-imports'
 import { getTestFileKey } from './run/get-test-file-key'
 import { compareCodeUnits } from './compare-code-units'
@@ -147,6 +159,45 @@ interface RunMutantsOptions {
 }
 
 /**
+ * How a run reuses and saves its dry run (`DrySnapshot`).
+ */
+interface DrySnapshots {
+  /**
+   * Hashes everything under the project root (`hashProjectTree`), once per run;
+   * null when a directory or link cannot be read.
+   */
+  tree(): Promise<ProjectTree | null>
+
+  /**
+   * Environment variables of the main process as the run started, before the
+   * test runner could set any.
+   */
+  environment: NodeJS.ProcessEnv
+
+  /**
+   * Saved dry run that the run replays without the test runner, or null for a
+   * run with the test runner, which saves its own.
+   */
+  replay: DrySnapshot | null
+}
+
+/**
+ * What the phases of a run give back.
+ */
+interface Executed {
+  /**
+   * Dry run of a run with the test runner whose verdicts were cached, to save
+   * for later runs once the session closed with nothing to tell, or null.
+   */
+  snapshot: DrySnapshot | null
+
+  /**
+   * Result of the run.
+   */
+  result: RunResult
+}
+
+/**
  * Runs the mutants of the given paths against the project's tests: lists the
  * mutants, starts the test runner through its adapter, hosts the mutants of
  * every file of the paths, checking that switched Svelte and Vue components
@@ -171,7 +222,15 @@ interface RunMutantsOptions {
  * report also lists the candidates its mutators skipped. The adapter is closed
  * and the work directory removed whatever happens; what the adapter tells of
  * its close, such as a global teardown that failed, joins the diagnostics of a
- * run that went through, after its cache was saved. With parallel units, an
+ * run that went through, after its cache was saved. Unless the cache is off, in
+ * fast mode, or with `--since` or `--mutant`, a run first tries to decide its
+ * mutants from the dry run an earlier run saved and cached verdicts, without
+ * starting the test runner (`replayDrySnapshot`); a run that starts it hashes
+ * everything under the project root first, and once its session closed with
+ * nothing to tell, saves its own dry run, leaving out its work directory, which
+ * may lie in the project, or removes the saved one when it cannot be replayed
+ * (`saveDrySnapshot`), with a note that names a path that changed during the
+ * run; the time it takes counts in the isolated phase. With parallel units, an
  * adapter that runs them may run the isolated units of one test file at the
  * same time, and their verdicts are cached apart from those of other runs; an
  * adapter that cannot runs them one after another, with a note.
@@ -187,6 +246,7 @@ export async function runMutants(
 ): Promise<RunResult> {
   let started = performance.now()
   let startedAt = Date.now()
+  let environment = { ...process.env }
   let setup = await prepareRun(options)
   let { root, run } = setup
   let {
@@ -195,10 +255,8 @@ export async function runMutants(
     ...runSettings
   } = resolveRunSettings(options, run)
   let { threshold } = runSettings
-  let html = getHtmlPath(options.html, run.html, {
-    picked: (options.mutantIds?.length ?? 0) > 0,
-    root,
-  })
+  let picked = (options.mutantIds?.length ?? 0) > 0
+  let html = getHtmlPath(options.html, run.html, { picked, root })
   let fromConfig = options.paths.length === 0
   let paths = fromConfig ? (run.paths ?? []) : options.paths
   if (paths.length === 0) {
@@ -297,6 +355,47 @@ export async function runMutants(
       root,
     }
   }
+  let outputs = html === null ? [] : [html]
+  let tree: Promise<ProjectTree | null> | null = null
+  /**
+   * Hashes everything under the project root once per run, for the saved dry
+   * run.
+   *
+   * @returns The hash with the entry of every path, or null when a directory or
+   *   link cannot be read.
+   */
+  function hashTree(): Promise<ProjectTree | null> {
+    tree ??= hashProjectTree(root, outputs)
+    return tree
+  }
+  let snapshots: DrySnapshots | null =
+    !fast && !picked && since === null && runSettings.cache ?
+      { tree: hashTree, replay: null, environment }
+    : null
+  let shared = {
+    diagnostics: listing.diagnostics,
+    listed: listing.files,
+    parallelUnits,
+    runSettings,
+    startedAt,
+    listedIds,
+    snapshots,
+    adapter,
+    options,
+    started,
+    files,
+    since,
+    setup,
+    html,
+    fast,
+  }
+  if (snapshots !== null) {
+    let replayed = await replayDrySnapshot({ ...shared, snapshots })
+    if (replayed !== null) {
+      return replayed
+    }
+    await hashTree()
+  }
   let work = await createWorkDirectory()
   try {
     let switched: SwitchedFile[] = []
@@ -328,38 +427,44 @@ export async function runMutants(
       parallelUnits,
       root,
     })
-    let result: RunResult
+    let executed: Executed
     try {
-      result = await execute({
-        diagnostics: listing.diagnostics,
-        listed: listing.files,
-        parallelUnits,
-        runSettings,
-        startedAt,
-        listedIds,
-        switched,
-        session,
-        adapter,
-        options,
-        started,
-        files,
-        since,
-        setup,
-        html,
-        live,
-        fast,
-      })
+      executed = await execute({ ...shared, switched, session, live })
     } catch (error) {
       await session.close()
       throw error
     }
     let late: unknown = await session.close()
-    return Array.isArray(late) ?
-        {
-          ...result,
-          diagnostics: [...result.diagnostics, ...(late as Diagnostic[])],
-        }
-      : result
+    let closing = Array.isArray(late) ? (late as Diagnostic[]) : null
+    let { result } = executed
+    if (snapshots !== null) {
+      let saving = performance.now()
+      let change = await saveDrySnapshot({
+        snapshot: (closing?.length ?? 0) === 0 ? executed.snapshot : null,
+        outputs: [...outputs, work.path],
+        file: getDrySnapshotPath(root),
+        tree: await snapshots.tree(),
+        root,
+      })
+      let spent = performance.now() - saving
+      if (change !== null) {
+        report({
+          message: `Did not save the dry run for later runs, as ${change}.`,
+          kind: 'note',
+        })
+      }
+      result = {
+        ...result,
+        timing: {
+          ...result.timing,
+          isolated: result.timing.isolated + spent,
+          total: result.timing.total + spent,
+        },
+      }
+    }
+    return closing === null ? result : (
+        { ...result, diagnostics: [...result.diagnostics, ...closing] }
+      )
   } finally {
     await work.remove()
   }
@@ -395,12 +500,20 @@ export async function runMutants(
  *   mode and whether the cache is on, resolved by `resolveRunSettings`.
  * @param context.live - Holder of the state of the run once it exists, so the
  *   units that end count in the live verdict counts.
- * @returns Result of the run.
+ * @param context.snapshots - How the run reuses and saves its dry run, or null
+ *   for a run that does neither. A run that replays a saved dry run whose
+ *   inputs `replayDrySnapshot` checked, with a session that runs nothing
+ *   (`createSnapshotSession`), compares its key first and throws
+ *   (`createDryReuseMiss`) when it differs or a mutant needs the test runner.
+ * @returns Result of the run, with its dry run to save when it may be replayed.
+ * @throws Error - Named `DryReuseMiss` (`createDryReuseMiss`) when a replay
+ *   cannot decide the run.
  */
 async function execute(context: {
   runSettings: Omit<RunSettings, 'parallelUnits' | 'fast'>
   setup: Awaited<ReturnType<typeof prepareRun>>
   live: { state: RunState | null }
+  snapshots: DrySnapshots | null
   since: SinceRevision | null
   options: RunMutantsOptions
   diagnostics: Diagnostic[]
@@ -415,8 +528,9 @@ async function execute(context: {
   startedAt: number
   started: number
   fast: boolean
-}): Promise<RunResult> {
-  let { runSettings, session, options, setup, fast } = context
+}): Promise<Executed> {
+  let { runSettings, snapshots, session, options, setup, fast } = context
+  let replay = snapshots?.replay ?? null
   let { limits } = runSettings
   let { root } = setup
   let cachePath = getCachePath(root)
@@ -458,24 +572,56 @@ async function execute(context: {
     .filter(file => displays.has(file.absolute))
     .flatMap(file => file.mutants)
     .filter(mutant => mutant.status === 'Pending')
+  let related = built.switched.map(entry => entry.file)
+  let key =
+    snapshots === null ? null : (
+      await getDrySnapshotKey({
+        context: {
+          concurrency: runSettings.concurrency,
+          parallelUnits: context.parallelUnits,
+        },
+        switched: context.switched,
+        adapter: context.adapter,
+        related,
+        limits,
+        setup,
+        root,
+      })
+    )
 
+  if (replay !== null && replay.key !== key) {
+    throw createDryReuseMiss(
+      'the settings, the versions or the working directory changed',
+    )
+  }
   let dryStarted = performance.now()
-  let dryPhase = await runDryPhase(session, {
-    mutantFiles: new Map(
-      hosted.map(mutant => [mutant.id, absolutes.get(mutant.file)!]),
-    ),
-    related: built.switched.map(entry => entry.file),
-    report: event => options.onProgress?.(event),
-    switched: context.switched,
-    repeat: fast,
-    displays,
-    root,
-  })
-  options.onProgress?.({
-    duration: performance.now() - dryStarted,
-    tests: dryPhase.dry.tests.length,
-    kind: 'dry-end',
-  })
+  let dryPhase =
+    replay === null ?
+      await runDryPhase(session, {
+        mutantFiles: new Map(
+          hosted.map(mutant => [mutant.id, absolutes.get(mutant.file)!]),
+        ),
+        report: event => options.onProgress?.(event),
+        switched: context.switched,
+        repeat: fast,
+        displays,
+        related,
+        root,
+      })
+    : {
+        diagnostics: replay.phase.diagnostics,
+        errors: new Map(replay.phase.errors),
+        unrepeatableFiles: new Set<string>(),
+        dry: replay.phase.dry,
+        runs: 0,
+      }
+  if (replay === null) {
+    options.onProgress?.({
+      duration: performance.now() - dryStarted,
+      tests: dryPhase.dry.tests.length,
+      kind: 'dry-end',
+    })
+  }
   diagnostics.push(...dryPhase.diagnostics)
   for (let [file, message] of dryPhase.errors) {
     errors.set(file, message)
@@ -492,10 +638,11 @@ async function execute(context: {
     )
   }
   let now = Date.now()
-  let { warning, cache } =
+  let { warning, inputs, cache } =
     stored === null ?
-      { warning: null, cache: null }
+      { warning: null, inputs: null, cache: null }
     : await prepareRunCache({
+        switched: context.switched.map(entry => entry.file),
         parallelUnits: context.parallelUnits,
         incremental: runSettings.incremental,
         started: context.startedAt,
@@ -507,6 +654,7 @@ async function execute(context: {
         stored,
         limits,
         setup,
+        fast,
         root,
         now,
       })
@@ -569,6 +717,7 @@ async function execute(context: {
       line: null,
     })
   }
+  let snapshot: DrySnapshot | null = null
   if (cache !== null) {
     let skipped = await saveRunCache({
       failed: [
@@ -583,11 +732,22 @@ async function execute(context: {
     })
     if (skipped !== null) {
       diagnostics.push(skipped)
+    } else if (snapshots !== null && replay === null) {
+      snapshot = createDrySnapshot({
+        environment: snapshots.environment,
+        tree: await snapshots.tree(),
+        inputs: inputs!,
+        phase: dryPhase,
+        key: key!,
+        testFiles,
+        session,
+        cache,
+      })
     }
   }
   let finished = performance.now()
 
-  return {
+  let result: RunResult = {
     timing: {
       batch: fast ? isolatedStarted - batchStarted : null,
       startup: dryStarted - context.started,
@@ -615,6 +775,80 @@ async function execute(context: {
     runs: state.runs,
     diagnostics,
     root,
+  }
+  return { snapshot, result }
+}
+
+/**
+ * Tries to decide a run from the dry run an earlier run saved (`DrySnapshot`)
+ * and cached verdicts, without starting the test runner: checks its inputs
+ * (`checkDrySnapshot`) before the run builds its switched files, then runs the
+ * phases with the saved dry phase and a session that refuses to run anything
+ * (`createSnapshotSession`), holding the events of the run back until it ends.
+ * When nothing is saved, the test runner starts; when the saved dry run is
+ * stale, a mutant has no valid cached verdict or the replay fails otherwise,
+ * the events are dropped, a note tells why, and the test runner starts. Nothing
+ * ran or was written before.
+ *
+ * @param context - The run as `runMutants` prepared it, without a session.
+ * @returns Result of the run, or null when the test runner has to start.
+ */
+async function replayDrySnapshot(
+  context: Omit<
+    Parameters<typeof execute>[0],
+    'switched' | 'session' | 'live'
+  > & { snapshots: DrySnapshots },
+): Promise<RunResult | null> {
+  let { onProgress } = context.options
+  let snapshot = await readDrySnapshot(getDrySnapshotPath(context.setup.root))
+  if (snapshot === null) {
+    return null
+  }
+  let events: RunEvent[] = []
+  try {
+    let stale = await checkDrySnapshot(snapshot, {
+      environment: context.snapshots.environment,
+      tree: context.snapshots.tree,
+      root: context.setup.root,
+    })
+    if (stale !== null) {
+      throw createDryReuseMiss(stale)
+    }
+    let { result } = await execute({
+      ...context,
+      options: {
+        ...context.options,
+        ...(onProgress !== undefined && {
+          onProgress: event => {
+            events.push(event)
+          },
+        }),
+      },
+      snapshots: { ...context.snapshots, replay: snapshot },
+      session: createSnapshotSession(snapshot),
+      live: { state: null },
+      switched: [],
+    })
+    onProgress?.({
+      message:
+        'Reused the dry run of an earlier run, as nothing it depended on changed, so the test runner did not start.',
+      kind: 'note',
+    })
+    for (let event of events) {
+      onProgress?.(event)
+    }
+    return result
+  } catch (error) {
+    onProgress?.({
+      message:
+        isDryReuseMiss(error) ?
+          error.message
+        : createDryReuseMiss(
+            `it could not be replayed (${(error as Error).message})`,
+          ).message,
+      kind: 'note',
+    })
+    return null
   }
 }
 

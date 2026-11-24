@@ -112,7 +112,8 @@ export interface RunReportMutant extends Omit<ListReportMutant, 'status'> {
  */
 export interface RunReportSummary {
   /**
-   * Test runner runs by kind; kinds that did not run are left out.
+   * Test runner runs by kind; kinds that did not run are left out, the dry run
+   * too when the run reused the dry run of an earlier run.
    */
   runs: Partial<Record<RunKind, number>>
 
@@ -215,7 +216,8 @@ export interface RunReportSummary {
   totalErrors: number
 
   /**
-   * Tests the dry run ran.
+   * Tests the dry run ran, or the dry run of an earlier run that the run
+   * reused.
    */
   totalTests: number
 

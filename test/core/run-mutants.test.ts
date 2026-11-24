@@ -18,15 +18,23 @@ import {
   it,
   vi,
 } from 'vitest'
+import { execFileSync } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
+import type { IsolatedFacts } from '../../types/adapter/isolated-result'
+import type { RunCacheFile } from '../../types/cache/run-cache-file'
+import type { DrySnapshot } from '../../types/cache/dry-snapshot'
 import type { FakeWorld } from '../helpers/create-fake-adapter'
 import type { Diagnostic } from '../../types/mutant/diagnostic'
 import type { RunConfig } from '../../types/config/run-config'
 import type { RunEvent } from '../../types/run/run-event'
 
 import { createSwitchedFiles } from '../../core/instrument/create-switched-files'
+import { getDrySnapshotPath } from '../../core/cache/get-dry-snapshot-path'
+import { saveDrySnapshot } from '../../core/cache/save-dry-snapshot'
+import { hashProjectTree } from '../../core/cache/hash-project-tree'
 import { readChangedLines } from '../../core/git/read-changed-lines'
 import { createFakeAdapter } from '../helpers/create-fake-adapter'
 import { getCachePath } from '../../core/cache/get-cache-path'
@@ -50,6 +58,11 @@ vi.mock(
     return { createSwitchedFiles: vi.fn(actual.createSwitchedFiles) }
   },
 )
+
+vi.mock(import('../../core/cache/save-dry-snapshot'), async importOriginal => {
+  let actual = await importOriginal()
+  return { saveDrySnapshot: vi.fn(actual.saveDrySnapshot) }
+})
 
 /**
  * Real path of the temporary project of the tests.
@@ -1217,6 +1230,79 @@ describe('runMutants', () => {
       return getCachePath(root)
     }
 
+    /**
+     * Finds the saved dry run of the project.
+     *
+     * @returns Absolute path of the file.
+     */
+    function snapshotFile(): string {
+      return getDrySnapshotPath(root)
+    }
+
+    /**
+     * Runs the project and collects the notes of the run.
+     *
+     * @param world - Simulated project.
+     * @returns Result of the run, the fake adapter and the notes.
+     */
+    async function runNoted(
+      world: FakeWorld,
+    ): Promise<Awaited<ReturnType<typeof run>> & { notes: string[] }> {
+      let notes: string[] = []
+      let ran = await run(world, {
+        onProgress: event => {
+          if (event.kind === 'note') {
+            notes.push(event.message)
+          }
+        },
+      })
+      return { ...ran, notes }
+    }
+
+    /**
+     * Summarizes the verdicts of a run.
+     *
+     * @param ran - A run.
+     * @param ran.result - Result of the run.
+     * @returns Id, status, cause and whether it was cached, of each mutant.
+     */
+    function summarize(ran: Awaited<ReturnType<typeof run>>): unknown[] {
+      return ran.result.results.map(entry => [
+        entry.mutant.id,
+        entry.status,
+        entry.cause,
+        entry.cached,
+      ])
+    }
+
+    /**
+     * Summarizes the verdict of one mutant of a run.
+     *
+     * @param ran - A run.
+     * @param ran.result - Result of the run.
+     * @param id - Id of the mutant.
+     * @returns Status, cause and whether it was cached.
+     */
+    function summarizeOne(
+      ran: Awaited<ReturnType<typeof run>>,
+      id: string,
+    ): unknown[] {
+      let entry = ran.result.results.find(found => found.mutant.id === id)!
+      return [entry.status, entry.cause, entry.cached]
+    }
+
+    /**
+     * Writes a file with a modification time before the next run.
+     *
+     * @param file - Absolute path.
+     * @param text - Content.
+     */
+    async function writeBefore(file: string, text: string): Promise<void> {
+      let past = new Date(Date.now() - 10_000)
+      await writeFile(file, text)
+      await utimes(file, past, past)
+    }
+
     afterEach(async () => {
       await rm(path.join(root, 'node_modules'), {
         recursive: true,
@@ -1227,6 +1313,7 @@ describe('runMutants', () => {
     it('reuses the verdicts of an unchanged project', async () => {
       let events: RunEvent[] = []
       let first = await run(createWorld())
+      await rm(snapshotFile())
       let second = await run(createWorld(), {
         onProgress: event => {
           events.push(event)
@@ -1249,6 +1336,601 @@ describe('runMutants', () => {
         message: 'Reused cached verdicts for 3 of 4 mutants.',
         kind: 'note',
       })
+    })
+
+    it('replays the dry run of an unchanged project without the test runner, with the verdicts of a warm run', async () => {
+      let events: RunEvent[] = []
+      await run(createWorld())
+      let replayed = await run(createWorld(), {
+        onProgress: event => {
+          events.push(event)
+        },
+      })
+      await rm(snapshotFile())
+      let warm = await run(createWorld())
+
+      expect(replayed.fake.context).toBeNull()
+      expect(replayed.result.runs).toStrictEqual({})
+      expect(warm.result.runs).toStrictEqual({ dry: 1 })
+      expect(replayed.result.results).toStrictEqual(warm.result.results)
+      expect(replayed.result.tests).toStrictEqual(warm.result.tests)
+      expect(replayed.result.diagnostics).toStrictEqual(warm.result.diagnostics)
+      expect(replayed.result.cache).toBe(true)
+      expect(events.map(event => event.kind)).toStrictEqual([
+        'mutants',
+        'note',
+        'note',
+        'verdicts',
+      ])
+      expect(events.filter(event => event.kind === 'note')).toStrictEqual([
+        {
+          message:
+            'Reused the dry run of an earlier run, as nothing it depended on changed, so the test runner did not start.',
+          kind: 'note',
+        },
+        {
+          message: 'Reused cached verdicts for 3 of 4 mutants.',
+          kind: 'note',
+        },
+      ])
+    })
+
+    it('starts the test runner, with a note why, once anything the saved dry run depended on changed', async () => {
+      let test = path.join(root, 'test/math.test.ts')
+      let added = path.join(root, 'added.txt')
+      /**
+       * Runs the project and tells what became of the saved dry run.
+       *
+       * @returns Whether the test runner started, and the notes but the count
+       *   of cached verdicts.
+       */
+      async function getMiss(): Promise<[boolean, string[]]> {
+        let { notes, fake } = await runNoted(createWorld())
+        return [
+          fake.context !== null,
+          notes.filter(note => !note.startsWith('Reused cached')),
+        ]
+      }
+      /**
+       * Builds the note of a missed replay.
+       *
+       * @param reason - What changed.
+       * @returns The note.
+       */
+      function missed(reason: string): string {
+        return `Did not reuse the dry run of an earlier run, as ${reason}.`
+      }
+      await mkdir(path.dirname(test), { recursive: true })
+      await writeBefore(test, 'test')
+      try {
+        await run(createWorld())
+        await writeBefore(test, 'changed')
+
+        await expect(getMiss()).resolves.toStrictEqual([
+          true,
+          [missed('test/math.test.ts changed')],
+        ])
+
+        await writeFile(added, 'a file anywhere in the project')
+
+        await expect(getMiss()).resolves.toStrictEqual([
+          true,
+          [missed('a file of the project was added, removed or changed')],
+        ])
+
+        /* Cspell:disable-next-line */
+        vi.stubEnv('MOOTANT_REPLAY_VARIABLE', 'set')
+
+        await expect(getMiss()).resolves.toStrictEqual([
+          true,
+          [missed('an environment variable changed')],
+        ])
+
+        useRunConfig({ hitLimit: { floor: 1000, factor: 10 } })
+
+        await expect(getMiss()).resolves.toStrictEqual([
+          true,
+          [
+            missed(
+              'the settings, the versions or the working directory changed',
+            ),
+          ],
+        ])
+        vi.stubEnv('SHLVL', '99')
+
+        await expect(getMiss()).resolves.toStrictEqual([
+          false,
+          [
+            'Reused the dry run of an earlier run, as nothing it depended on changed, so the test runner did not start.',
+          ],
+        ])
+      } finally {
+        /* Cspell:disable-next-line */
+        vi.unstubAllEnvs()
+        await rm(path.dirname(test), { recursive: true, force: true })
+        await rm(added, { force: true })
+      }
+    })
+
+    it('falls back to the test runner when the saved dry run cannot be replayed', async () => {
+      await run(createWorld())
+      let snapshot = JSON.parse(
+        await readFile(snapshotFile(), 'utf8'),
+      ) as DrySnapshot
+      await writeFile(
+        snapshotFile(),
+        JSON.stringify({ ...snapshot, phase: { dry: {} } }),
+      )
+      let { result, notes, fake } = await runNoted(createWorld())
+
+      expect(fake.context).not.toBeNull()
+      expect(result.runs).toStrictEqual({ dry: 1 })
+      expect(notes[0]).toMatch(
+        /^Did not reuse the dry run of an earlier run, as it could not be replayed \(.+\)\.$/u,
+      )
+    })
+
+    it('neither reuses nor saves a dry run with --mutant or --since, in fast mode or without the cache', async () => {
+      let [add] = ids['src/math.ts']!
+      await run(createWorld(), { mutantIds: [add!] })
+
+      await expect(stat(snapshotFile())).rejects.toThrow('ENOENT')
+
+      vi.mocked(readChangedLines).mockResolvedValue({
+        files: new Map([[path.join(root, 'src/math.ts'), new Set([2])]]),
+        base: 'abc123',
+      })
+      await run(createWorld(), { since: 'main' })
+
+      await expect(stat(snapshotFile())).rejects.toThrow('ENOENT')
+
+      let full = await run(createWorld())
+      let saved = await readFile(snapshotFile(), 'utf8')
+      let picked = await run(createWorld(), { mutantIds: [add!] })
+      let changed = await run(createWorld(), { since: 'main' })
+      let fast = await run(createWorld(), { fast: true })
+      let off = await run(createWorld(), { cache: false })
+
+      expect(full.fake.context).not.toBeNull()
+      expect(picked.fake.context).not.toBeNull()
+      expect(changed.fake.context).not.toBeNull()
+      expect(fast.fake.context).not.toBeNull()
+      expect(off.fake.context).not.toBeNull()
+      await expect(readFile(snapshotFile(), 'utf8')).resolves.toBe(saved)
+    })
+
+    it('saves no dry run when the session tells something as it closes, and removes the saved one', async () => {
+      let warning: Diagnostic = {
+        message: 'Global teardown was stopped.',
+        code: 'teardown-failed',
+        severity: 'warning',
+        column: null,
+        file: null,
+        line: null,
+      }
+      let loud = createWorld({ closeDiagnostics: [warning] })
+      await run(loud)
+
+      await expect(stat(snapshotFile())).rejects.toThrow('ENOENT')
+
+      await run(createWorld({ closeDiagnostics: [] }))
+      await stat(snapshotFile())
+      await rm(cacheFile())
+      let again = await run(loud)
+
+      expect(again.fake.context).not.toBeNull()
+      expect(again.result.diagnostics).toContainEqual(warning)
+      await expect(stat(snapshotFile())).rejects.toThrow('ENOENT')
+    })
+
+    it('saves no dry run when a file of the project appears while mutants run, with a note that names it', async () => {
+      let late = path.join(root, 'late.test.ts')
+      try {
+        let { notes } = await runNoted(
+          createWorld({
+            onIsolated: (result, _plan, call) => {
+              if (call === 1) {
+                writeFileSync(late, 'test')
+              }
+              return result
+            },
+          }),
+        )
+
+        expect(notes).toContain(
+          'Did not save the dry run for later runs, as late.test.ts was added during the run.',
+        )
+        await expect(stat(snapshotFile())).rejects.toThrow('ENOENT')
+        await expect(run(createWorld())).resolves.toMatchObject({
+          result: { runs: { dry: 1 } },
+        })
+      } finally {
+        await rm(late, { force: true })
+      }
+    })
+
+    it('saves no dry run when a test file has no key, such as one that read a pipe', async () => {
+      let pipe = path.join(root, 'pipe')
+      let world = createWorld()
+      /* Cspell:disable-next-line */
+      execFileSync('mkfifo', [pipe])
+      try {
+        await run({
+          ...world,
+          tests: [
+            ...world.tests,
+            {
+              file: path.join(root, 'test/pipe.test.ts'),
+              covers: [ids['src/flag.ts']![0]!],
+              id: 'pipe',
+            },
+          ],
+          files: [
+            {
+              file: path.join(root, 'test/pipe.test.ts'),
+              dependencies: [pipe],
+            },
+          ],
+        })
+
+        await expect(stat(cacheFile())).resolves.toBeDefined()
+        await expect(stat(snapshotFile())).rejects.toThrow('ENOENT')
+      } finally {
+        await rm(pipe)
+      }
+    })
+
+    it('would replay a stale dry run without the hash of the project tree', async () => {
+      let [ratio] = ids['src/flag.ts']!
+      let killer = path.join(root, 'test/flag.test.ts')
+      let base = createWorld()
+      let world = {
+        ...base,
+        tests: [
+          ...base.tests,
+          {
+            kills: { [ratio!]: 'expected 6 to be 7' },
+            covers: [ratio!],
+            file: killer,
+            id: 'flag',
+          },
+        ],
+      }
+      /**
+       * Gives the verdict of the mutant the new test file kills.
+       *
+       * @param ran - A run.
+       * @returns Status of the mutant.
+       */
+      function getStatus(ran: Awaited<ReturnType<typeof run>>): string {
+        return ran.result.results.find(entry => entry.mutant.id === ratio)!
+          .status
+      }
+      await run(base)
+      await mkdir(path.dirname(killer), { recursive: true })
+      await writeFile(killer, 'test')
+      try {
+        let snapshot = JSON.parse(
+          await readFile(snapshotFile(), 'utf8'),
+        ) as DrySnapshot
+        await writeFile(
+          snapshotFile(),
+          JSON.stringify({
+            ...snapshot,
+            tree: (await hashProjectTree(root, []))!.hash,
+          }),
+        )
+        let forged = await run(world)
+        await writeFile(snapshotFile(), JSON.stringify(snapshot))
+        let checked = await run(world)
+
+        expect(forged.fake.context).toBeNull()
+        expect(getStatus(forged)).toBe('Survived')
+        expect(checked.fake.context).not.toBeNull()
+        expect(getStatus(checked)).toBe('Killed')
+      } finally {
+        await rm(path.dirname(killer), { recursive: true, force: true })
+      }
+    })
+
+    it('caches a timeout by the hit limit once a unit with the raised limit confirmed it, and replays it', async () => {
+      let [add] = ids['src/math.ts']!
+      let [ratio, two] = ids['src/flag.ts']!
+      let world = createWorld({
+        tests: [
+          {
+            file: path.join(root, 'test/math.test.ts'),
+            covers: [add!, ratio!, two!],
+            loops: [add!],
+            hot: [ratio!],
+            id: 'math',
+          },
+        ],
+      })
+      let first = await run(world)
+      let stored = JSON.parse(
+        await readFile(cacheFile(), 'utf8'),
+      ) as RunCacheFile
+      let replayed = await run(world)
+
+      expect(summarizeOne(first, add!)).toStrictEqual([
+        'Timeout',
+        'hit-limit',
+        false,
+      ])
+      expect(summarizeOne(first, ratio!)).toStrictEqual([
+        'Survived',
+        null,
+        false,
+      ])
+      expect(
+        Object.values(stored.entries)
+          .map(entry => `${entry.status} ${entry.cause} ${entry.path}`)
+          .toSorted(),
+      ).toStrictEqual([
+        'Survived null isolated',
+        'Survived null isolated',
+        'Timeout hit-limit isolated',
+      ])
+      expect(replayed.fake.context).toBeNull()
+      expect(summarizeOne(replayed, add!)).toStrictEqual([
+        'Timeout',
+        'hit-limit',
+        true,
+      ])
+      expect(summarizeOne(replayed, ratio!)).toStrictEqual([
+        'Survived',
+        null,
+        true,
+      ])
+    })
+
+    it.each<
+      [string, (unit: IsolatedFacts) => IsolatedFacts, (string | null)[]]
+    >([
+      [
+        'crashed',
+        unit => ({
+          ...unit,
+          tests: unit.tests.map(test => ({ ...test, hits: 0 })),
+          incomplete: 'crash',
+          hits: 0,
+        }),
+        ['Killed', 'crash'],
+      ],
+      [
+        'hung',
+        unit => ({
+          ...unit,
+          tests: unit.tests.map(test => ({ ...test, hits: 0 })),
+          incomplete: 'hang',
+          hits: 0,
+        }),
+        ['Timeout', 'hang'],
+      ],
+      [
+        'ran out of time',
+        unit => ({
+          ...unit,
+          tests: unit.tests.map(test => ({ ...test, timedOut: true, hits: 0 })),
+          hits: 0,
+        }),
+        ['Timeout', 'time-limit'],
+      ],
+      [
+        'decided nothing',
+        unit => ({
+          ...unit,
+          tests: unit.tests.map(test => ({
+            ...test,
+            reached: false,
+            failed: false,
+            hits: 0,
+          })),
+          reached: false,
+          hits: 0,
+        }),
+        ['NoCoverage', null],
+      ],
+      ['went missing', unit => ({ ...unit, unit: -1 }), ['Error', null]],
+    ])(
+      'caches no timeout whose confirmation %s',
+      async (_name, change, verdict) => {
+        let [add] = ids['src/math.ts']!
+        let world = createWorld({
+          onIsolated: (result, _plan, call) =>
+            call === 1 ? result : (
+              {
+                units: result.units.map(change).filter(unit => unit.unit >= 0),
+              }
+            ),
+          tests: [
+            {
+              file: path.join(root, 'test/math.test.ts'),
+              covers: [add!],
+              loops: [add!],
+              id: 'math',
+            },
+          ],
+        })
+        let first = await run(world)
+        let stored = JSON.parse(
+          await readFile(cacheFile(), 'utf8'),
+        ) as RunCacheFile
+        let second = await run(createWorld({ tests: world.tests }))
+
+        expect(summarizeOne(first, add!)).toStrictEqual([...verdict, false])
+        expect(Object.values(stored.entries)).toStrictEqual([])
+        expect(second.fake.calls.isolated).not.toStrictEqual([])
+        expect(summarizeOne(second, add!)).toStrictEqual([
+          'Timeout',
+          'hit-limit',
+          false,
+        ])
+      },
+    )
+
+    it('reuses a timeout by the hit limit only in a run that switches the same files, either way', async () => {
+      let [add] = ids['src/math.ts']!
+      let world = createWorld({
+        tests: [
+          {
+            file: path.join(root, 'test/math.test.ts'),
+            covers: [add!],
+            loops: [add!],
+            id: 'math',
+          },
+        ],
+      })
+      let picked = { mutantIds: [add!] }
+      /**
+       * Runs the project and tells whether the unit of the loop ran.
+       *
+       * @param options - Mutants to pick, every one by default.
+       * @returns Whether a unit ran, and the verdict of the loop.
+       */
+      async function runLoop(
+        options: Partial<Parameters<typeof runMutants>[0]> = {},
+      ): Promise<unknown[]> {
+        let ran = await run(world, options)
+        return [ran.fake.calls.isolated.length > 0, ...summarizeOne(ran, add!)]
+      }
+      let timeout = ['Timeout', 'hit-limit']
+
+      await expect(runLoop(picked)).resolves.toStrictEqual([
+        true,
+        ...timeout,
+        false,
+      ])
+      await expect(runLoop(picked)).resolves.toStrictEqual([
+        false,
+        ...timeout,
+        true,
+      ])
+      await expect(runLoop()).resolves.toStrictEqual([true, ...timeout, false])
+
+      await rm(snapshotFile())
+
+      await expect(runLoop()).resolves.toStrictEqual([false, ...timeout, true])
+      await expect(runLoop(picked)).resolves.toStrictEqual([
+        true,
+        ...timeout,
+        false,
+      ])
+    })
+
+    it('starts the test runner for another configuration, concurrency or working directory', async () => {
+      /**
+       * Makes the run find a configuration file of the root.
+       *
+       * @param name - Base name of the file in the root.
+       */
+      function useConfigFile(name: string): void {
+        vi.mocked(loadConfig).mockResolvedValue({
+          file: path.join(root, name),
+          directory: root,
+          config: {},
+        })
+      }
+      /**
+       * Runs the project and tells whether the test runner started.
+       *
+       * @param options - Concurrency of the run, if any.
+       * @returns Whether the adapter started, and the notes about the dry run.
+       */
+      async function runStarted(
+        options: Partial<Parameters<typeof runMutants>[0]> = {},
+      ): Promise<[boolean, string[]]> {
+        let notes: string[] = []
+        let ran = await run(createWorld(), {
+          ...options,
+          onProgress: event => {
+            if (event.kind === 'note' && event.message.includes('dry run')) {
+              notes.push(event.message)
+            }
+          },
+        })
+        return [ran.fake.context !== null, notes]
+      }
+      let changed = [
+        'Did not reuse the dry run of an earlier run, as the settings, the versions or the working directory changed.',
+      ]
+      useConfigFile('mootant.config.js')
+      await run(createWorld())
+      useConfigFile('mootant.e2e.config.js')
+
+      await expect(runStarted()).resolves.toStrictEqual([true, changed])
+      await expect(runStarted({ concurrency: 2 })).resolves.toStrictEqual([
+        true,
+        changed,
+      ])
+
+      let cwd = vi.spyOn(process, 'cwd').mockReturnValue(path.join(root, 'src'))
+      try {
+        await expect(runStarted({ concurrency: 2 })).resolves.toStrictEqual([
+          true,
+          changed,
+        ])
+      } finally {
+        cwd.mockRestore()
+      }
+    })
+
+    it('counts the time it takes to save the dry run in the last phase', async () => {
+      let actual = await vi.importActual<{
+        saveDrySnapshot: typeof saveDrySnapshot
+      }>('../../core/cache/save-dry-snapshot')
+      vi.mocked(saveDrySnapshot).mockImplementationOnce(async input => {
+        await new Promise(resolve => {
+          setTimeout(resolve, 50)
+        })
+        return actual.saveDrySnapshot(input)
+      })
+      let { result } = await run(createWorld())
+      let { timing } = result
+
+      expect(timing.isolated).toBeGreaterThanOrEqual(49)
+      expect(timing.total).toBeCloseTo(
+        timing.startup + timing.dryRun + timing.isolated,
+        2,
+      )
+      await expect(stat(snapshotFile())).resolves.toBeDefined()
+    })
+
+    it('saves the dry run while its work directory lies in the project', async () => {
+      let temporary = path.join(root, '.tmp')
+      await mkdir(temporary)
+      vi.stubEnv('TMPDIR', temporary)
+      try {
+        await run(createWorld())
+
+        await expect(stat(snapshotFile())).resolves.toBeDefined()
+      } finally {
+        /* Cspell:disable-next-line */
+        vi.unstubAllEnvs()
+        await rm(temporary, { recursive: true, force: true })
+      }
+    })
+
+    it('reuses no timeout in fast mode', async () => {
+      let [add] = ids['src/math.ts']!
+      let world = createWorld({
+        tests: [
+          {
+            file: path.join(root, 'test/math.test.ts'),
+            covers: [add!],
+            loops: [add!],
+            id: 'math',
+          },
+        ],
+      })
+      await run(world)
+      let fast = await run(world, { incremental: true, fast: true })
+      let fresh = await run(world, { cache: false, fast: true })
+
+      expect(fast.fake.calls.isolated).not.toStrictEqual([])
+      expect(summarize(fast)).toStrictEqual(summarize(fresh))
+      expect(fast.result.diagnostics).toStrictEqual(fresh.result.diagnostics)
     })
 
     it('keeps the verdicts of runs with parallel units apart from the others', async () => {
@@ -1390,6 +2072,7 @@ describe('runMutants', () => {
         'cache-skipped',
       )
       await expect(stat(cacheFile())).rejects.toThrow('ENOENT')
+      await expect(stat(snapshotFile())).rejects.toThrow('ENOENT')
     })
 
     it('is off, with a warning that names the file, when a file every verdict depends on was modified at or after the start of the run', async () => {
@@ -1438,6 +2121,7 @@ describe('runMutants', () => {
 
         expect(result.diagnostics).toContainEqual(skipped)
         await expect(stat(cacheFile())).rejects.toThrow('ENOENT')
+        await expect(stat(snapshotFile())).rejects.toThrow('ENOENT')
       } finally {
         await rm(bad)
       }
@@ -1458,6 +2142,7 @@ describe('runMutants', () => {
 
       expect(result.diagnostics).toContainEqual(skipped)
       await expect(stat(cacheFile())).rejects.toThrow('ENOENT')
+      await expect(stat(snapshotFile())).rejects.toThrow('ENOENT')
     })
 
     it('warns when the cache cannot be saved', async () => {

@@ -86,6 +86,23 @@ interface RunCacheInput {
   stored: StoredCache
 
   /**
+   * Whether isolated timeouts by the hit limit are stored and reused: the count
+   * of site evaluations does not depend on the load of the machine, so such a
+   * timeout is as repeatable as a kill among runs that switch the same files
+   * (`switched`). False in fast mode, whose dry run tries each test twice and
+   * so gives other limits.
+   */
+  timeouts: boolean
+
+  /**
+   * Digest of the files the run switched. The hit counts of a unit and its
+   * limits cover only their sites, so the keys of a timeout by the hit limit
+   * take it in: a run that switches other files, as a run of only some mutants
+   * does, never reuses it.
+   */
+  switched: string
+
+  /**
    * Project root; slots name test files relative to it.
    */
   root: string
@@ -140,8 +157,11 @@ interface Address {
  * than the dry run of its test file, such as a module only the mutant loads or
  * an environment variable only it reads: evidence stores those inputs, and is
  * valid only while each of them is unchanged too. Evidence of a run whose
- * inputs are unknown is not stored. Kills by a crash depend on the load of the
- * machine and are never stored, and neither are timeouts and errors.
+ * inputs are unknown is not stored. Kills by a crash and timeouts by the timer
+ * or a hang depend on the load of the machine and are never stored, and neither
+ * are errors; an isolated timeout by the hit limit does not and is stored and
+ * reused outside fast mode (`timeouts`), by runs that switch the same files
+ * (`switched`), whose sites its hit counts cover.
  *
  * @param input - Stored entries, test file keys, source hashes, mutant regions,
  *   the mode and the dry run.
@@ -256,20 +276,40 @@ export function createRunCache(input: RunCacheInput): RunCache {
   }
 
   /**
+   * Gives the keys a timeout by the hit limit has at an address, which take in
+   * the files the run switched (`switched`).
+   *
+   * @param address - Slot, keys and test file of the evidence.
+   * @returns The address with the keys of a timeout.
+   */
+  function locateTimeout(address: Address): Address {
+    return {
+      ...address,
+      incremental:
+        address.incremental === null ?
+          null
+        : createDigest([address.incremental, input.switched]),
+      key: createDigest([address.key, input.switched]),
+    }
+  }
+
+  /**
    * Reads valid stored evidence and marks it as used.
    *
    * @param address - Slot, key and test file of the evidence, or null.
-   * @returns The evidence, or null when there is no valid entry or its test is
-   *   not in the dry run.
+   * @returns The evidence, or null when there is no valid entry, its test is
+   *   not in the dry run, or it is a timeout that the run does not reuse.
    */
   function read(address: Address | null): MutantVerdict | 'survived' | null {
     if (address === null) {
       return null
     }
     let entry = stored.entries.get(address.slot)
+    let current = entry?.status === 'Timeout' ? locateTimeout(address) : address
     if (
       entry === undefined ||
-      !isCurrent(entry, address) ||
+      (entry.status === 'Timeout' && !input.timeouts) ||
+      !isCurrent(entry, current) ||
       (entry.test !== null && !analysis.tests.has(entry.test)) ||
       (entry.inputs !== null &&
         !isUnchanged(address.file, stored.inputs.get(entry.inputs)!))
@@ -279,7 +319,7 @@ export function createRunCache(input: RunCacheInput): RunCache {
     if (entry.inputs !== null) {
       inputs.set(entry.inputs, stored.inputs.get(entry.inputs)!)
     }
-    if (entry.key !== address.key) {
+    if (entry.key !== current.key) {
       regional.add(address.mutant)
     }
     entries.set(address.slot, { ...entry, used: now })
@@ -290,9 +330,9 @@ export function createRunCache(input: RunCacheInput): RunCache {
     return {
       file: analysis.testFiles.get(address.file)!.file,
       message: entry.message,
+      status: entry.status,
       cause: entry.cause,
       test: entry.test,
-      status: 'Killed',
     }
   }
 
@@ -302,7 +342,7 @@ export function createRunCache(input: RunCacheInput): RunCache {
    * @param address - Slot, key and test file of the evidence, or null.
    * @param origin - Path of the evidence and whether a kill on it came from the
    *   first covering test of the mutant.
-   * @param recorded - A kill or a pass, with what its run read.
+   * @param recorded - A kill, a timeout or a pass, with what its run read.
    */
   function write(
     address: Address | null,
@@ -310,12 +350,14 @@ export function createRunCache(input: RunCacheInput): RunCache {
     recorded: CacheEvidence,
   ): void {
     let { verdict: evidence, inputs: seen } = recorded
-    if (
-      address === null ||
-      !seen ||
-      (evidence !== 'survived' &&
-        (evidence.status !== 'Killed' || evidence.cause === 'crash'))
-    ) {
+    let storable =
+      evidence === 'survived' ||
+      (evidence.status === 'Killed' && evidence.cause !== 'crash') ||
+      (input.timeouts &&
+        origin.path === 'isolated' &&
+        evidence.status === 'Timeout' &&
+        evidence.cause === 'hit-limit')
+    if (address === null || !seen || !storable) {
       return
     }
     let known = new Set(input.dependencies.get(address.file))
@@ -335,32 +377,36 @@ export function createRunCache(input: RunCacheInput): RunCache {
       pending.delete(address.slot)
     }
     owners.set(address.slot, address.file)
+    let { incremental, key } =
+      evidence !== 'survived' && evidence.status === 'Timeout' ?
+        locateTimeout(address)
+      : address
     entries.set(
       address.slot,
       evidence === 'survived' ?
         {
-          incremental: address.incremental,
           status: 'Survived',
           path: origin.path,
-          key: address.key,
           message: null,
           inputs: null,
           first: false,
+          incremental,
           cause: null,
           test: null,
           used: now,
+          key,
         }
       : {
-          incremental: address.incremental,
+          status: evidence.status === 'Timeout' ? 'Timeout' : 'Killed',
           message: evidence.message,
           cause: evidence.cause,
           first: origin.first,
           test: evidence.test,
           path: origin.path,
-          key: address.key,
-          status: 'Killed',
           inputs: null,
+          incremental,
           used: now,
+          key,
         },
     )
   }

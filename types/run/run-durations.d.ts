@@ -9,17 +9,22 @@ export interface RunDurations {
   batch: number | null
 
   /**
-   * Isolated runs, retries and confirmations included.
+   * Isolated runs, retries and confirmations included, and saving the cache and
+   * the dry run for later runs.
    */
   isolated: number
 
   /**
-   * Loading the configuration, listing mutants and starting the test runner.
+   * Loading the configuration, listing mutants, checking the dry run of an
+   * earlier run and hashing the project, and starting the test runner when that
+   * dry run is not reused.
    */
   startup: number
 
   /**
-   * Dry runs, the uninstrumented check of failing tests included.
+   * Dry runs, the uninstrumented check of failing tests included, and preparing
+   * the cache; only the latter when the run reuses the dry run of an earlier
+   * run.
    */
   dryRun: number
 

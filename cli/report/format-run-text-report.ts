@@ -198,6 +198,7 @@ function getRunFields(
     summary.totalCached !== null && summary.totalCached > 0 ?
       `, ${summary.totalCached} cached`
     : ''
+  let reused = summary.runs.dry === undefined && summary.totalTests > 0
   let phases = [
     `start ${formatDuration(duration.startup)}`,
     `dry run ${formatDuration(duration.dryRun)}`,
@@ -209,7 +210,9 @@ function getRunFields(
   let fields: [label: string, value: string][] = [
     [
       'dry run',
-      `${pluralize(summary.totalTests, 'test')} in ${formatDuration(duration.dryRun)}`,
+      reused ?
+        `${pluralize(summary.totalTests, 'test')} of an earlier run`
+      : `${pluralize(summary.totalTests, 'test')} in ${formatDuration(duration.dryRun)}`,
     ],
     [
       'mutants',

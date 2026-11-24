@@ -4,11 +4,13 @@ import type { RunKind } from './run-kind'
  * What happens in a mutation run, as it happens; the command line turns these
  * into live progress. Events come in this order: `mutants`, `dry-start`, units
  * of the dry run, a `dry-again` before each later dry run, `dry-end`, then for
- * every later run of the test runner a `run-start` and its units. When tests
- * fail without mutants, `dry-failed` comes before the run throws. `verdicts`
- * comes whenever the counts of decided mutants change, from right before the
- * first `run-start` on; the last one counts the final results. `note` and
- * `output` may come at any point.
+ * every later run of the test runner a `run-start` and its units; a run that
+ * reuses the dry run of an earlier run has neither `dry-start` nor `dry-end`,
+ * and the events of its phases come all at once as it ends. When tests fail
+ * without mutants, `dry-failed` comes before the run throws. `verdicts` comes
+ * whenever the counts of decided mutants change, from right before the first
+ * `run-start` on; the last one counts the final results. `note` and `output`
+ * may come at any point.
  */
 export type RunEvent =
   | {

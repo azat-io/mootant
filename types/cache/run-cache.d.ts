@@ -41,8 +41,9 @@ export interface RunCache {
   recordBatch(mutant: MutantState, test: string, evidence: CacheEvidence): void
 
   /**
-   * Records the evidence of an isolated unit: a kill or a reached pass, with
-   * what the unit read. Kills by a crash, timeouts and errors are not stored,
+   * Records the final evidence of an isolated unit: a kill, a timeout or a
+   * reached pass, with what the unit read. Kills by a crash, errors, and
+   * timeouts other than one by the hit limit outside fast mode are not stored,
    * and neither is anything about a test file without a key or a unit whose
    * inputs are unknown.
    */
@@ -108,7 +109,7 @@ export interface CacheEvidence<
   inputs: RunInputs | undefined | null
 
   /**
-   * A kill or a pass.
+   * A kill, a timeout or a pass.
    */
   verdict: Verdict
 }

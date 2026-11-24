@@ -13,7 +13,7 @@ import { corePlugin } from '../plugins/core-plugin'
 import { loadConfig } from './load-config'
 
 /**
- * Mutators, settings, root and run settings of a run.
+ * Mutators, settings, root, configuration file and run settings of a run.
  */
 interface RunSetup {
   /**
@@ -30,6 +30,11 @@ interface RunSetup {
    * Mutators turned on, in rank order.
    */
   mutators: ActiveMutator[]
+
+  /**
+   * Absolute path of the configuration file, or null without one.
+   */
+  file: string | null
 
   /**
    * Presets the run extends, joined for reports.
@@ -84,8 +89,8 @@ const RUN_PRESET_ID = 'mootant:run'
  * win.
  *
  * @param options - Configuration path, preset and working directory.
- * @returns Active mutators, settings, known ids, presets, root and run settings
- *   of the run.
+ * @returns Active mutators, settings, known ids, presets, root, configuration
+ *   file and run settings of the run.
  * @throws Error - When the configuration or a plugin cannot be loaded or is
  *   invalid, or a preset or mutator id is unknown.
  */
@@ -132,6 +137,7 @@ export async function prepareRun(options: RunOptions): Promise<RunSetup> {
     knownMutatorIds: new Set(known),
     root: loaded?.directory ?? cwd,
     preset: extended.join(', '),
+    file: loaded?.file ?? null,
     run: config.run ?? {},
     mutators,
     settings,

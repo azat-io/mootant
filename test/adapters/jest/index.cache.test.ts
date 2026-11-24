@@ -5,6 +5,7 @@ import {
   mkdtemp,
   mkdir,
   stat,
+  rm,
 } from 'node:fs/promises'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { setTimeout } from 'node:timers/promises'
@@ -14,6 +15,7 @@ import path from 'node:path'
 import type { MutantResult } from '../../../types/run/mutant-result'
 import type { RunResult } from '../../../types/run/run-result'
 
+import { getDrySnapshotPath } from '../../../core/cache/get-dry-snapshot-path'
 import { createDryRunRequest } from '../../helpers/create-dry-run-request'
 import { createJestScope } from '../../helpers/create-jest-scope'
 import { getCachePath } from '../../../core/cache/get-cache-path'
@@ -51,6 +53,7 @@ let {
   clearVariables,
   createProject,
   directories,
+  listForked,
   cleanUp,
   closes,
   start,
@@ -62,29 +65,46 @@ let {
  *
  * @param root - Root of the copy.
  * @param options - Whether the run uses the cache, which it does when omitted,
- *   and how many workers it has, two when omitted.
+ *   how many workers it has, two when omitted, and whether it may replay.
  * @param options.concurrency - Number of workers.
  * @param options.cache - Whether the run uses the cache.
- * @returns Result of the run and the isolated units it ran.
+ * @param options.replay - Whether the run may reuse the dry run an earlier run
+ *   saved; otherwise a run with the cache removes that first, so it starts
+ *   Jest, as the rows that check the cache keys of fresh dry runs need.
+ * @param options.paths - Paths to mutate; `src` when omitted.
+ * @returns Result of the run, the isolated units it ran and its notes.
  */
 async function runCached(
   root: string,
-  options: { concurrency?: number; cache?: boolean } = {},
-): Promise<{ result: RunResult; units: number }> {
+  options: {
+    concurrency?: number
+    paths?: string[]
+    replay?: boolean
+    cache?: boolean
+  } = {},
+): Promise<{ result: RunResult; notes: string[]; units: number }> {
+  let { replay = false, ...settings } = options
+  if (!replay && settings.cache !== false) {
+    await rm(getDrySnapshotPath(root), { force: true })
+  }
   let units = 0
+  let notes: string[] = []
   let result = await runMutants({
     onProgress: event => {
       if (event.kind === 'run-start' && event.run === 'isolated') {
         units += event.units
+      }
+      if (event.kind === 'note') {
+        notes.push(event.message)
       }
     },
     builtIns: createBuiltIns('jest', jestAdapter()),
     paths: ['src'],
     concurrency: 2,
     cwd: root,
-    ...options,
+    ...settings,
   })
-  return { result, units }
+  return { result, notes, units }
 }
 
 /**
@@ -161,10 +181,13 @@ describe('jestAdapter', { timeout: 300_000 }, () => {
 
   afterEach(cleanUp)
 
-  it('reuses every verdict of an unchanged project and runs no unit', async () => {
+  it('reuses every verdict of an unchanged project and runs no unit, without Jest once it saved its dry run', async () => {
     let root = await createCacheProject()
     let first = await runCached(root)
-    let second = await runCached(root)
+    let forked = listForked().length
+    let second = await runCached(root, { replay: true })
+    let replayed = listForked().length
+    let warm = await runCached(root)
 
     expect(first.result.cache).toBe(true)
     expect(first.result.diagnostics).toStrictEqual([])
@@ -176,9 +199,69 @@ describe('jestAdapter', { timeout: 300_000 }, () => {
       cached: ['src/limit.js', 'src/size.js'],
       ran: [],
     })
-    expect(second.result.runs).toStrictEqual({ dry: 1 })
+    expect(second.result.runs).toStrictEqual({})
     expect(second.units).toBe(0)
+    expect(forked).toBeGreaterThan(0)
+    expect(replayed).toBe(forked)
+    expect(warm.result.runs).toStrictEqual({ dry: 1 })
+    expect(warm.result.results).toStrictEqual(second.result.results)
+    expect(warm.result.diagnostics).toStrictEqual(second.result.diagnostics)
   })
+
+  it('saves the dry run of a project whose global teardown writes a file only once that file stays as it is, and replays it without global setup or teardown', async () => {
+    let root = await createProject('global')
+    let closed = path.join(root, 'store-closed')
+    await setTimeout(5)
+    let options = { paths: ['src/a-quiet.js'], replay: true }
+    let first = await runCached(root, options)
+    let second = await runCached(root, options)
+    let written = await stat(closed)
+    let forked = listForked().length
+    let third = await runCached(root, options)
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(first.notes).toContain(
+      'Did not save the dry run for later runs, as store-closed was added during the run.',
+    )
+    expect(first.result.runs).toMatchObject({ dry: 1 })
+    expect(second.notes.join('\n')).not.toContain('Did not save')
+    expect(second.result.runs).toMatchObject({ dry: 1 })
+    expect(third.result.runs).toStrictEqual({})
+    expect(listForked()).toHaveLength(forked)
+    await expect(stat(closed)).resolves.toMatchObject({
+      mtimeMs: written.mtimeMs,
+    })
+    expect(third.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      second.result.results.map(summarizeCachedVerdict),
+    )
+  })
+
+  it.each(majors)(
+    'saves no dry run of a run whose global teardown fails, on Jest %i, so the next run starts Jest and fails again',
+    async major => {
+      let root = await createProject('global', major)
+      await writeFile(
+        path.join(root, 'global-teardown.js'),
+        "module.exports = () => {\n  throw new Error('the store is gone')\n}\n",
+      )
+      await setTimeout(5)
+      let options = { paths: ['src/a-quiet.js'], replay: true }
+      let first = await runCached(root, options)
+      let forked = listForked().length
+      let second = await runCached(root, options)
+      let teardown = expect.objectContaining({
+        message: expect.stringContaining('the store is gone') as unknown,
+        code: 'teardown-failed',
+        severity: 'error',
+      }) as unknown
+
+      expect(first.result.diagnostics).toContainEqual(teardown)
+      expect(listForked().length).toBeGreaterThan(forked)
+      expect(second.result.runs).toMatchObject({ dry: 1 })
+      expect(second.result.diagnostics).toContainEqual(teardown)
+      await expect(stat(getDrySnapshotPath(root))).rejects.toThrow('ENOENT')
+    },
+  )
 
   it.each<[string, string, (root: string) => Promise<void>]>([
     [

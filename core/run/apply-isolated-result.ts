@@ -32,9 +32,10 @@ const UNREPORTED = 'The test runner did not report this mutant.'
  * file in the order of `routeIsolated` that has one, once every file before it
  * is done; a timeout waiting for its confirmation or a unit waiting for its
  * retry holds back the evidence of later files, so the verdict does not depend
- * on which files ran together. Kills and reached passes go to the cache of the
- * run, which keeps only what it may reuse. The cost of a unit counts the start
- * of its process too.
+ * on which files ran together. Kills, reached passes and final timeouts go to
+ * the cache of the run, which keeps only what it may reuse; a timeout that
+ * waits for its confirmation does not. The cost of a unit counts the start of
+ * its process too.
  *
  * @param state - State of the run, updated in place.
  * @param planned - The plan the run executed and the requests it was built
@@ -75,13 +76,13 @@ export function applyIsolatedResult(
       request,
       unit,
     })
-    if (verdict !== null) {
+    let evidence = getUnitEvidence(verdict, request)
+    if (verdict !== null && evidence !== 'confirming') {
       state.cache?.recordUnit(mutant, request.file, {
         inputs: found.inputs,
         verdict,
       })
     }
-    let evidence = getUnitEvidence(verdict, request)
     mutant.survived ||= verdict === 'survived'
     mutant.evidence.set(request.file, evidence)
     if (evidence === 'confirming') {

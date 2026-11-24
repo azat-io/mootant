@@ -53,6 +53,8 @@ function create(
     hashes: new Map(),
     reads: new Map(),
     environment: [],
+    switched: 'all',
+    timeouts: true,
     variables: {},
     root: '/',
     now: 10,
@@ -247,12 +249,16 @@ describe('createRunCache', () => {
     ).toBeNull()
   })
 
-  it('stores no timeouts, errors, crashes, test files without a key or runs with unknown inputs', async () => {
+  it('stores no timeouts by the timer, errors, crashes, test files without a key or runs with unknown inputs', async () => {
     let state = await createState()
     let cache = create(state)
     let mutant = state.mutants.get('m1')!
     cache.recordUnit(mutant, '/t/a.test.ts', {
-      verdict: { ...kill, cause: 'hit-limit', status: 'Timeout' },
+      verdict: { ...kill, cause: 'time-limit', status: 'Timeout' },
+      inputs: read,
+    })
+    cache.recordUnit(mutant, '/t/a.test.ts', {
+      verdict: { ...kill, status: 'Timeout', cause: 'hang' },
       inputs: read,
     })
     cache.recordUnit(mutant, '/t/a.test.ts', {
@@ -269,6 +275,96 @@ describe('createRunCache', () => {
 
     expect(cache.entries.size).toBe(0)
     expect(cache.pending.size).toBe(0)
+  })
+
+  it('reuses a timeout by the hit limit only in runs that switch the same files', async () => {
+    let state = await createState()
+    let timeout: MutantVerdict = {
+      ...kill,
+      cause: 'hit-limit',
+      status: 'Timeout',
+    }
+    let writer = create(state)
+    writer.recordUnit(state.mutants.get('m1')!, '/t/a.test.ts', {
+      verdict: timeout,
+      inputs: read,
+    })
+    writer.recordUnit(state.mutants.get('m2')!, '/t/a.test.ts', {
+      verdict: kill,
+      inputs: read,
+    })
+    /**
+     * Reads both mutants back in a run that switches other files.
+     *
+     * @param fields - Inputs of the run that differ from the defaults.
+     * @returns Evidence of `m1` and `m2`.
+     */
+    function readBack(
+      fields: Partial<Parameters<typeof createRunCache>[0]>,
+    ): unknown[] {
+      let reader = create(state, {
+        stored: storedOf(writer.entries),
+        switched: 'some',
+        ...fields,
+      })
+      return ['m1', 'm2'].map(id =>
+        reader.lookupUnit(state.mutants.get(id)!, '/t/a.test.ts'),
+      )
+    }
+
+    expect(readBack({})).toStrictEqual([null, kill])
+    expect(readBack({ incremental: true })).toStrictEqual([null, kill])
+    expect(readBack({ switched: 'all' })).toStrictEqual([timeout, kill])
+
+    let withoutRegion = create(state, { regions: new Map() })
+    withoutRegion.recordUnit(state.mutants.get('m1')!, '/t/a.test.ts', {
+      verdict: timeout,
+      inputs: read,
+    })
+
+    expect(
+      create(state, {
+        stored: storedOf(withoutRegion.entries),
+        regions: new Map(),
+      }).lookupUnit(state.mutants.get('m1')!, '/t/a.test.ts'),
+    ).toStrictEqual(timeout)
+  })
+
+  it('stores and reuses isolated timeouts by the hit limit, but not in fast mode', async () => {
+    let state = await createState()
+    let mutant = state.mutants.get('m1')!
+    let timeout: MutantVerdict = {
+      ...kill,
+      cause: 'hit-limit',
+      status: 'Timeout',
+    }
+    let writer = create(state)
+    writer.recordUnit(mutant, '/t/a.test.ts', {
+      verdict: timeout,
+      inputs: read,
+    })
+    writer.recordBatch(state.mutants.get('m2')!, 'a1', {
+      verdict: timeout,
+      inputs: read,
+    })
+    let fast = create(state, { timeouts: false })
+    fast.recordUnit(mutant, '/t/a.test.ts', { verdict: timeout, inputs: read })
+    let reader = create(state, { stored: storedOf(writer.entries), now: 20 })
+    let fastReader = create(state, {
+      stored: storedOf(writer.entries),
+      timeouts: false,
+    })
+
+    expect(
+      [...writer.entries.values()].map(entry => entry.status),
+    ).toStrictEqual(['Timeout'])
+    expect(fast.entries.size).toBe(0)
+    expect(reader.lookupUnit(mutant, '/t/a.test.ts')).toStrictEqual(timeout)
+    expect([...reader.entries.values()].map(entry => entry.used)).toStrictEqual(
+      [20],
+    )
+    expect(fastReader.lookupUnit(mutant, '/t/a.test.ts')).toBeNull()
+    expect(fastReader.entries.size).toBe(0)
   })
 
   it('keeps what a run read beyond the dry run of its test file', async () => {

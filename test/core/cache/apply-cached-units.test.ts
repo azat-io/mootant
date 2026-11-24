@@ -111,6 +111,41 @@ describe('applyCachedUnits', () => {
     })
   })
 
+  it('decides from a cached timeout as from a fresh one', async () => {
+    let { state } = await createTestRun(world, {
+      mutants: ['m1', 'm2'],
+      isolate: true,
+    })
+    let timeout = {
+      message: 'Too many evaluations',
+      cause: 'hit-limit' as const,
+      status: 'Timeout' as const,
+      file: '/t/a.test.ts',
+      test: 'a1',
+    }
+    state.cache = createCache({
+      'm2 /t/b.test.ts': { ...timeout, file: '/t/b.test.ts', test: 'b1' },
+      'm1 /t/b.test.ts': 'survived',
+      'm1 /t/a.test.ts': timeout,
+    })
+
+    applyCachedUnits(state)
+
+    expect(state.mutants.get('m1')).toMatchObject({
+      verdict: timeout,
+      cached: true,
+      files: [],
+    })
+    expect(state.mutants.get('m2')).toMatchObject({
+      files: ['/t/a.test.ts'],
+      cached: false,
+      verdict: null,
+    })
+    expect(state.mutants.get('m2')!.evidence.get('/t/b.test.ts')).toMatchObject(
+      { status: 'Timeout', test: 'b1' },
+    )
+  })
+
   it('leaves mutants alone without a cache, decided or without files', async () => {
     let { state } = await createTestRun(world, {
       mutants: ['m1', 'm2'],

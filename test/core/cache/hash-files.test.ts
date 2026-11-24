@@ -1,4 +1,5 @@
-import type * as FileSystem from 'node:fs/promises'
+import type * as FilePromises from 'node:fs/promises'
+import type * as FileSystem from 'node:fs'
 
 import {
   beforeEach,
@@ -11,6 +12,7 @@ import {
 } from 'vitest'
 import { writeFile, mkdtemp, mkdir, rm } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
+import { Readable } from 'node:stream'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -24,8 +26,15 @@ vi.mock(import('node:fs/promises'), async importOriginal => ({
   stat: vi.fn(),
 }))
 
+vi.mock(import('node:fs'), async importOriginal => ({
+  ...(await importOriginal()),
+  createReadStream: vi.fn(),
+}))
+
 let { readFile, readdir, stat } = await import('node:fs/promises')
-let actual = await vi.importActual<typeof FileSystem>('node:fs/promises')
+let { createReadStream } = await import('node:fs')
+let actual = await vi.importActual<typeof FilePromises>('node:fs/promises')
+let actualSystem = await vi.importActual<typeof FileSystem>('node:fs')
 
 /**
  * Directory with the files of the tests.
@@ -43,6 +52,10 @@ describe('hashFiles', () => {
   })
 
   beforeEach(() => {
+    vi.mocked(createReadStream).mockReset()
+    vi.mocked(createReadStream).mockImplementation(
+      actualSystem.createReadStream,
+    )
     vi.mocked(readFile).mockReset()
     vi.mocked(readFile).mockImplementation(actual.readFile)
     vi.mocked(readdir).mockReset()
@@ -65,6 +78,7 @@ describe('hashFiles', () => {
     ])
 
     expect(readFile).toHaveBeenCalledTimes(3)
+    expect(createReadStream).not.toHaveBeenCalled()
     expect(hashes.size).toBe(3)
     expect(hashes.get(first)).toMatch(/^[\da-f]{64}$/u)
     expect(hashes.get(path.join(directory, '2.ts'))).toBe(hashes.get(first))
@@ -81,6 +95,34 @@ describe('hashFiles', () => {
     expect([...hashes.values()]).toStrictEqual([null, null])
   })
 
+  it('reads a large file as a stream, with the hash of a whole read', async () => {
+    let file = path.join(directory, 'chunks.txt')
+    await writeFile(file, 'one two three')
+    let whole = (await hashFiles([file])).get(file)
+    let real = await actual.stat(file)
+    vi.mocked(stat).mockResolvedValue(
+      Object.assign(real, { size: 16 * 1024 * 1024 + 1 }),
+    )
+    let streamed = (await hashFiles([file])).get(file)
+    vi.mocked(createReadStream).mockImplementation(
+      () =>
+        Readable.from(
+          ['one ', 'two ', 'three'].map(text => Buffer.from(text)),
+        ) as never,
+    )
+    let chunked = (await hashFiles([file])).get(file)
+    vi.mocked(createReadStream).mockImplementation(
+      () => Readable.from([Buffer.from('one two four')]) as never,
+    )
+    let other = (await hashFiles([file])).get(file)
+    await rm(file)
+
+    expect(whole).toMatch(/^[\da-f]{64}$/u)
+    expect([streamed, chunked]).toStrictEqual([whole, whole])
+    expect(other).not.toBe(whole)
+    expect(createReadStream).toHaveBeenCalledTimes(3)
+  })
+
   it('reads neither a pipe nor a device, which may never end, and tells their content apart from a missing file', async () => {
     let pipe = path.join(directory, 'pipe')
     /* Cspell:disable-next-line */
@@ -92,6 +134,7 @@ describe('hashFiles', () => {
       [pipe]: UNKNOWN_HASH,
     })
     expect(readFile).not.toHaveBeenCalled()
+    expect(createReadStream).not.toHaveBeenCalled()
     expect(readdir).not.toHaveBeenCalled()
   })
 
@@ -126,6 +169,7 @@ describe('hashFiles', () => {
     vi.mocked(stat).mockResolvedValue({
       isDirectory: () => false,
       isFile: () => true,
+      size: 0,
     } as never)
     let reading = 0
     let most = 0

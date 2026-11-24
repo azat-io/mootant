@@ -1,4 +1,5 @@
 import { readFile, readdir, stat } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
 import { createHash } from 'node:crypto'
 
 import { compareCodeUnits } from '../compare-code-units'
@@ -12,13 +13,21 @@ import { runInChunks } from './run-in-chunks'
 const CHUNK_SIZE = 32
 
 /**
- * Hashes the contents of files, each file once, a few at a time; a directory is
- * hashed by the names in it, those of directories marked, so adding, removing
- * or replacing a file with a directory changes it, while a change inside a
- * directory in it does not. A path that is neither a file nor a directory, such
- * as a device, a pipe or a socket, is never read, as reading `/dev/stdin` or a
- * pipe would wait for its writer and `/dev/zero` never ends: its content is
- * unknown, which differs from a missing file.
+ * Size in bytes above which a file is read as a stream rather than whole, so a
+ * large file never sits in memory at once, and one over the 2 GiB that a whole
+ * read takes gets a hash too.
+ */
+const STREAM_SIZE = 16 * 1024 * 1024
+
+/**
+ * Hashes the contents of files, each file once, a few at a time, a large one as
+ * a stream (`STREAM_SIZE`); a directory is hashed by the names in it, those of
+ * directories marked, so adding, removing or replacing a file with a directory
+ * changes it, while a change inside a directory in it does not. A path that is
+ * neither a file nor a directory, such as a device, a pipe or a socket, is
+ * never read, as reading `/dev/stdin` or a pipe would wait for its writer and
+ * `/dev/zero` never ends: its content is unknown, which differs from a missing
+ * file.
  *
  * @param paths - Absolute paths, duplicates allowed.
  * @returns SHA-256 of each file in hex by path, `UNKNOWN_HASH` for a path that
@@ -47,10 +56,17 @@ export async function hashFiles(
 async function hashPath(file: string): Promise<string | null> {
   try {
     let kind = await stat(file)
-    if (kind.isFile()) {
+    if (kind.isFile() && kind.size <= STREAM_SIZE) {
       return createHash('sha256')
         .update(await readFile(file))
         .digest('hex')
+    }
+    if (kind.isFile()) {
+      let hash = createHash('sha256')
+      for await (let chunk of createReadStream(file)) {
+        hash.update(chunk as Buffer)
+      }
+      return hash.digest('hex')
     }
     if (!kind.isDirectory()) {
       return UNKNOWN_HASH

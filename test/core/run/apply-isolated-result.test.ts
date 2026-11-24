@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { IsolatedFacts } from '../../../types/adapter/isolated-result'
 import type { IsolatedRequest } from '../../../types/run/run-state'
 import type { FakeWorld } from '../../helpers/create-fake-adapter'
+import type { RunCache } from '../../../types/cache/run-cache'
 
 import { createHitLimitError } from '../../../core/runtime/create-hit-limit-error'
 import { applyIsolatedResult } from '../../../core/run/apply-isolated-result'
+import { createFakeCache } from '../../helpers/create-fake-cache'
 import { planIsolated } from '../../../core/run/plan-isolated'
 import { createTestRun } from '../../helpers/create-test-run'
 
@@ -18,6 +20,7 @@ import { createTestRun } from '../../helpers/create-test-run'
  * @param options.change - Changes the facts of a unit, or drops them with null.
  * @param options.request - Fields of the requests that differ from a first,
  *   unconfirmed run.
+ * @param options.cache - Cache of the run; none by default.
  * @returns State after the run and the requests for the next one.
  */
 async function apply(
@@ -26,6 +29,7 @@ async function apply(
   options: {
     change?(facts: IsolatedFacts): IsolatedFacts | null
     request?: Partial<IsolatedRequest>
+    cache?: RunCache
   } = {},
 ): Promise<{
   state: Awaited<ReturnType<typeof createTestRun>>['state']
@@ -48,6 +52,7 @@ async function apply(
   let units = result.units
     .map(facts => options.change?.(facts) ?? facts)
     .filter(facts => facts.unit >= 0)
+  state.cache = options.cache ?? null
   let next = applyIsolatedResult(state, { requests, plan }, { units })
   return { state, next }
 }
@@ -228,6 +233,72 @@ describe('applyIsolatedResult', () => {
       cause: 'hit-limit',
       test: 'a1',
     })
+  })
+
+  it('gives the cache final evidence only, not a timeout that waits for its confirmation', async () => {
+    let world: FakeWorld = {
+      tests: [
+        {
+          covers: ['looped', 'passed', 'late'],
+          file: '/t/a.test.ts',
+          loops: ['looped'],
+          id: 'a1',
+        },
+        { file: '/t/a.test.ts', covers: ['lost'], id: 'a2' },
+      ],
+    }
+    /**
+     * Records the evidence a run gives its cache.
+     *
+     * @param options - How the run goes, as `apply` takes it.
+     * @returns Mutant, status and cause of each recorded verdict.
+     */
+    async function record(
+      options: Parameters<typeof apply>[2],
+    ): Promise<unknown[]> {
+      let recordUnit = vi.fn<RunCache['recordUnit']>()
+      await apply(world, ['looped', 'passed', 'late', 'lost', 'unreached'], {
+        ...options,
+        cache: createFakeCache({ recordUnit }),
+      })
+      return recordUnit.mock.calls.map(([mutant, file, { verdict }]) => [
+        mutant.mutant.id,
+        file,
+        typeof verdict === 'string' ? verdict : [verdict.status, verdict.cause],
+      ])
+    }
+    /**
+     * Drops the unit of `lost` and gives `late` hits over its limit.
+     *
+     * @param facts - Facts of a unit.
+     * @returns Changed facts, or a unit the run never reported.
+     */
+    function change(facts: IsolatedFacts): IsolatedFacts {
+      if (facts.unit === 3) {
+        return { ...facts, unit: -1 }
+      }
+      return facts.unit === 2 ?
+          {
+            ...facts,
+            tests: facts.tests.map(test => ({ ...test, hits: 1_000_000 })),
+            hits: 1_000_000,
+          }
+        : facts
+    }
+
+    await expect(record({ change })).resolves.toStrictEqual([
+      ['passed', '/t/a.test.ts', 'survived'],
+    ])
+    await expect(
+      record({ request: { confirming: true }, change }),
+    ).resolves.toStrictEqual([['passed', '/t/a.test.ts', 'survived']])
+    await expect(
+      record({ request: { confirming: true, raised: true }, change }),
+    ).resolves.toStrictEqual([
+      ['looped', '/t/a.test.ts', ['Timeout', 'hit-limit']],
+      ['passed', '/t/a.test.ts', 'survived'],
+      ['late', '/t/a.test.ts', 'survived'],
+    ])
   })
 
   it('keeps a hang of a unit with the raised limit a hang, with its warning', async () => {

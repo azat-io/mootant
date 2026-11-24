@@ -64,6 +64,12 @@ describe('readRunCache', () => {
       key: 'k2',
       used: 2,
     }
+    let timeout: CacheEntry = {
+      ...kill,
+      message: 'Too many evaluations',
+      cause: 'hit-limit',
+      status: 'Timeout',
+    }
     let inputs = {
       environment: [
         ['MODE', 'h1'],
@@ -74,7 +80,7 @@ describe('readRunCache', () => {
     let stored = await read(
       JSON.stringify({
         entries: {
-          s3: { ...kill, status: 'Timeout' },
+          s3: { ...kill, status: 'Error' },
           s12: { ...kill, incremental: 1 },
           s10: { ...kill, inputs: 'i2' },
           s13: { ...kill, first: 'no' },
@@ -85,6 +91,7 @@ describe('readRunCache', () => {
           s5: { ...kill, cause: 1 },
           s7: { ...kill, test: 1 },
           s9: { ...kill, key: 1 },
+          s14: timeout,
           s2: survived,
           s1: kill,
           s0: null,
@@ -104,6 +111,7 @@ describe('readRunCache', () => {
 
     expect([...stored.inputs]).toStrictEqual([['i1', inputs]])
     expect([...stored.entries]).toStrictEqual([
+      ['s14', timeout],
       ['s2', survived],
       ['s1', kill],
     ])

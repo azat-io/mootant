@@ -6,11 +6,12 @@ import type { TryCause } from '../run/try-cause'
  */
 export interface CacheEntry {
   /**
-   * `Killed` with the test of the kill, or `Survived` for an isolated unit that
-   * reached the mutant and passed, or for a batch try that passed, whether it
-   * reached the mutant or not.
+   * `Killed` with the test of the kill; `Timeout` for an isolated unit over its
+   * raised hit limit; or `Survived` for an isolated unit that reached the
+   * mutant and passed, or for a batch try that passed, whether it reached the
+   * mutant or not.
    */
-  status: 'Survived' | 'Killed'
+  status: 'Survived' | 'Timeout' | 'Killed'
 
   /**
    * Path the evidence came from; batch entries are only reused in fast mode.
@@ -25,12 +26,12 @@ export interface CacheEntry {
   incremental: string | null
 
   /**
-   * First line of the failure of a kill, or null.
+   * First line of the failure of a kill or a timeout, or null.
    */
   message: string | null
 
   /**
-   * How the kill was detected, or null for `Survived`.
+   * How the kill or the timeout was detected, or null for `Survived`.
    */
   cause: TryCause | null
 
@@ -41,7 +42,8 @@ export interface CacheEntry {
   inputs: string | null
 
   /**
-   * Id of the test that failed, or null (load-time kills, `Survived`).
+   * Id of the test that failed or ran into the hit limit, or null (load-time
+   * kills and timeouts, `Survived`).
    */
   test: string | null
 

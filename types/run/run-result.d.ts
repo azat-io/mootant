@@ -14,7 +14,8 @@ import type { RunMode } from './run-mode'
  */
 export interface RunResult {
   /**
-   * Test runner runs by kind; kinds that did not run are left out.
+   * Test runner runs by kind; kinds that did not run are left out, the dry run
+   * too when the run reused the dry run of an earlier run.
    */
   runs: Partial<Record<RunKind, number>>
 
@@ -91,7 +92,8 @@ export interface RunResult {
   listedIds: string[]
 
   /**
-   * Tests the dry run saw.
+   * Tests the dry run saw, or the dry run of an earlier run that the run
+   * reused.
    */
   tests: DryTest[]
 

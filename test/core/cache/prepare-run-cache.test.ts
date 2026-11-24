@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
+import type { CacheInputs } from '../../../types/adapter/cache-inputs'
 import type { FileMutants } from '../../../types/mutant/file-mutants'
 import type { StoredCache } from '../../../types/cache/stored-cache'
 import type { Diagnostic } from '../../../types/mutant/diagnostic'
@@ -36,6 +37,7 @@ let root = ''
  * @param run.incremental - Whether the run is incremental; false by default.
  * @param run.parallelUnits - Whether units of one test file run at once; left
  *   out by default.
+ * @param run.fast - Whether the run is in fast mode; false by default.
  * @returns Cache of the run, or the warning of a run left without one.
  */
 async function prepare(
@@ -45,6 +47,7 @@ async function prepare(
     incremental?: boolean
     stored?: StoredCache
     started?: number
+    fast?: boolean
   } = {},
 ): Promise<Awaited<ReturnType<typeof prepareRunCache>>> {
   let {
@@ -52,16 +55,13 @@ async function prepare(
     started = Number.POSITIVE_INFINITY,
     incremental = false,
     parallelUnits,
+    fast = false,
   } = run
   let file = path.join(root, 'a.test.ts')
   let { session, state, fake } = await createTestRun(
     {
-      cacheInputs: {
-        files: [path.join(root, 'vitest.config.ts')],
-        environment: { '': { MODE: 'm1' } },
-        settings: {},
-      },
       tests: [{ covers: ['m1'], id: 'a1', file }],
+      cacheInputs: createInputs(),
       ...world,
     },
     { mutants: ['m1'], isolate: true },
@@ -84,6 +84,7 @@ async function prepare(
       { absolute: path.join(root, 'src/b.ts'), file: 'src/b.ts', source: null },
     ] as FileMutants[],
     setup: { preset: 'recommended', mutators: [], settings: {} },
+    switched: [path.join(root, 'src/a.ts')],
     stored: Promise.resolve(stored),
     analysis: state.analysis,
     adapter: fake.adapter,
@@ -93,6 +94,7 @@ async function prepare(
     session,
     started,
     now: 1,
+    fast,
     root,
     dry,
   })
@@ -145,6 +147,19 @@ function skipped(reason: string): Diagnostic {
     column: null,
     file: null,
     line: null,
+  }
+}
+
+/**
+ * Builds what the simulated session says every verdict depends on by default.
+ *
+ * @returns Cache inputs over the project of the tests.
+ */
+function createInputs(): CacheInputs {
+  return {
+    files: [path.join(root, 'vitest.config.ts')],
+    environment: { '': { MODE: 'm1' } },
+    settings: {},
   }
 }
 
@@ -316,13 +331,18 @@ describe('prepareRunCache', () => {
   it('gives no cache and no warning without cache inputs or test file dependencies', async () => {
     await expect(prepare({ cacheInputs: undefined })).resolves.toStrictEqual({
       warning: null,
+      inputs: null,
       cache: null,
     })
     await expect(
       prepare({
         files: [{ file: path.join(root, 'a.test.ts'), dependencies: null }],
       }),
-    ).resolves.toStrictEqual({ warning: null, cache: null })
+    ).resolves.toStrictEqual({
+      inputs: createInputs(),
+      warning: null,
+      cache: null,
+    })
   })
 
   it('gives no key to what depends on a device or a pipe, whose content is unknown, and no cache, with a warning, when every test file or a file of the environment does', async () => {
@@ -344,19 +364,25 @@ describe('prepareRunCache', () => {
       `${path.relative(root, '/dev/null')} is a device, a pipe or a socket, so mootant cannot tell whether it changed.`,
     )
 
+    let inputs = {
+      files: [path.join(root, 'vitest.config.ts'), '/dev/null'],
+      environment: { '': { MODE: 'm1' } },
+      settings: {},
+    }
+
     expect([...cache!.dependencies.values()]).toStrictEqual([[b]])
     await expect(
       prepare({ files: [{ dependencies: ['/dev/null'], file: a }] }),
-    ).resolves.toStrictEqual({ warning: device, cache: null })
-    await expect(
-      prepare({
-        cacheInputs: {
-          files: [path.join(root, 'vitest.config.ts'), '/dev/null'],
-          environment: { '': { MODE: 'm1' } },
-          settings: {},
-        },
-      }),
-    ).resolves.toStrictEqual({ warning: device, cache: null })
+    ).resolves.toStrictEqual({
+      inputs: createInputs(),
+      warning: device,
+      cache: null,
+    })
+    await expect(prepare({ cacheInputs: inputs })).resolves.toStrictEqual({
+      warning: device,
+      cache: null,
+      inputs,
+    })
   })
 
   it('gives no key to what depends on a file changed during the run', async () => {
@@ -421,6 +447,7 @@ describe('prepareRunCache', () => {
         ),
       ).resolves.toStrictEqual({
         warning: skipped(`helper.ts ${reason}`),
+        inputs: createInputs(),
         cache: null,
       })
 
@@ -433,6 +460,7 @@ describe('prepareRunCache', () => {
         ),
       ).resolves.toStrictEqual({
         warning: skipped(`the root of the project ${reason}`),
+        inputs: createInputs(),
         cache: null,
       })
 
@@ -442,6 +470,7 @@ describe('prepareRunCache', () => {
         prepare({}, { started: Date.now() + 1 }),
       ).resolves.toStrictEqual({
         warning: skipped(`vitest.config.ts ${reason}`),
+        inputs: createInputs(),
         cache: null,
       })
     } finally {

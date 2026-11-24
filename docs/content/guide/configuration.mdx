@@ -394,6 +394,13 @@ Mootant tracks files read by tests, including files outside the project root,
 such as workspace fixtures. Files under `node_modules` are excluded. Directory
 listings above the project root are not tracked.
 
+When nothing has changed since the last run and every verdict is cached, Mootant
+does not start the test runner. It reuses the run without mutants that the last
+run saved. A change of any file in the project, of a file its tests read, of an
+environment variable, of the configuration file, the working directory or the
+concurrency starts the test runner as usual. Runs with `--mutant` or `--since`,
+and runs in [fast mode](#fast) with Vitest, never reuse it.
+
 **When to clear the cache**
 
 Delete the cache directory after changes to:
@@ -419,6 +426,35 @@ A file read only by a Vite plugin is tracked when both conditions hold:
   or `.map?`.
 
 Otherwise, delete the cache directory after changing that file.
+
+</details>
+
+<details>
+<summary>Runs that reuse the last run</summary>
+
+- Every environment variable counts, except a few that differ from one shell to
+  another, such as `PWD`. A run where other variables are set, such as in an
+  editor's terminal, or in CI, where variables change from run to run, starts
+  the test runner.
+- Files that editors and other tools keep in the project, such as `.idea`, count
+  as changes too.
+- A mutant without a cached verdict, such as a `Timeout` of the time limit,
+  starts the test runner too.
+- No tests run, and neither do global setup and teardown: results that depend on
+  what global setup does in each run, such as a server it starts, stay those of
+  the saved run, and a global setup that would fail now goes unnoticed. Tests
+  that depend on time, randomness or the network keep their saved results, and
+  `--verbose` shows no test output.
+- A change outside the project root that no test of the saved run read, such as
+  a workspace package behind a link, goes unnoticed.
+- A run is not saved for reuse when it has errors, when a test file fails and
+  then passes when it runs again, when a file changes while it runs, when the
+  test runner reports a problem as it stops, when Mootant cannot tell which
+  files a test file read, or when it cannot list a directory of the project.
+  When a file changed during the run, a note names it.
+
+To start the test runner and keep the cached verdicts, delete the `dry-v*.json`
+file in `node_modules/.cache/mootant`.
 
 </details>
 
@@ -574,6 +610,11 @@ When a mutant exceeds the limit, for example by creating an endless loop:
 2. If the retry exceeds either limit, the mutant receives a `Timeout` verdict
    and counts as detected in the score. Otherwise, the test results decide its
    verdict.
+
+A `Timeout` of the raised hit limit is [cached](#cache) too, except in fast
+mode, but only a run that mutates exactly the same files reuses it, as hit
+counts cover only those files: a re-check with `--mutant` runs it again. A
+`Timeout` of the time limit is never cached.
 
 In [fast mode](#fast), each test has its own hit limit. Exceeding that limit
 first sends the mutant to a run of the whole test file.

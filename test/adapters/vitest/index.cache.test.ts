@@ -16,10 +16,12 @@ import { setTimeout } from 'node:timers/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
+import type { RunCacheFile } from '../../../types/cache/run-cache-file'
 import type { MutantResult } from '../../../types/run/mutant-result'
 import type { Diagnostic } from '../../../types/mutant/diagnostic'
 import type { RunResult } from '../../../types/run/run-result'
 
+import { getDrySnapshotPath } from '../../../core/cache/get-dry-snapshot-path'
 import { getCachePath } from '../../../core/cache/get-cache-path'
 import { createBuiltIns } from '../../helpers/create-built-ins'
 import { vitestAdapter } from '../../../adapters/vitest/index'
@@ -98,6 +100,16 @@ let bailFixture = path.resolve(import.meta.dirname, '../../fixtures/cache-bail')
 let rankFixture = path.resolve(import.meta.dirname, '../../fixtures/cache-rank')
 
 /**
+ * Fixture project whose test computes a memoized Fibonacci number: a mutant
+ * that drops the memo goes over the hit limit of its unit, and passes in the
+ * confirmation with the raised limit.
+ */
+let hotFixture = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/equivalence/hot',
+)
+
+/**
  * Fixture project whose test file covers `src/math.ts` with a value from
  * `virtual:limits`, a virtual module a plugin of `vitest.config.ts` builds from
  * `limits.json`, which it watches with `this.addWatchFile()`.
@@ -144,6 +156,7 @@ let variables = Object.fromEntries(
   [
     'TERM_SESSION_ID',
     'MOOTANT_PROVIDE',
+    'MOOTANT_TIMEOUT',
     'MOOTANT_FIXTURE',
     'MOOTANT_DEFINE',
     'MOOTANT_CHILD',
@@ -156,6 +169,42 @@ let variables = Object.fromEntries(
  * Copies of the fixture to remove after each test.
  */
 let copies: string[] = []
+
+/**
+ * Runs the mutants of the copy with Vitest and counts the isolated units.
+ *
+ * @param root - Root of the copy.
+ * @param options - Fast mode, the cache setting and whether to replay.
+ * @param options.fast - Whether to run in fast mode.
+ * @param options.cache - Whether to use the cache; on when omitted.
+ * @param options.replay - Whether the run may reuse the dry run an earlier run
+ *   saved; otherwise a run with the cache removes that first, so it starts
+ *   Vitest, as the rows that check the cache keys of fresh dry runs need.
+ * @returns Result of the run and the isolated units it ran.
+ */
+async function run(
+  root: string,
+  options: { replay?: boolean; cache?: boolean; fast?: boolean } = {},
+): Promise<{ result: RunResult; units: number }> {
+  let { replay = false, ...settings } = options
+  if (!replay && settings.cache !== false) {
+    await rm(getDrySnapshotPath(root), { force: true })
+  }
+  let units = 0
+  let result = await runMutants({
+    onProgress: event => {
+      if (event.kind === 'run-start' && event.run === 'isolated') {
+        units += event.units
+      }
+    },
+    builtIns: createBuiltIns('vitest', vitestAdapter()),
+    paths: ['src'],
+    concurrency: 2,
+    cwd: root,
+    ...settings,
+  })
+  return { result, units }
+}
 
 /**
  * Copies the fixture into a temporary directory with a `node_modules` of its
@@ -183,35 +232,6 @@ async function copyFixture(source = fixture): Promise<string> {
    */
   await setTimeout(5)
   return root
-}
-
-/**
- * Runs the mutants of the copy with Vitest and counts the isolated units.
- *
- * @param root - Root of the copy.
- * @param options - Fast mode and the cache setting.
- * @param options.fast - Whether to run in fast mode.
- * @param options.cache - Whether to use the cache; on when omitted.
- * @returns Result of the run and the isolated units it ran.
- */
-async function run(
-  root: string,
-  options: { cache?: boolean; fast?: boolean } = {},
-): Promise<{ result: RunResult; units: number }> {
-  let units = 0
-  let result = await runMutants({
-    onProgress: event => {
-      if (event.kind === 'run-start' && event.run === 'isolated') {
-        units += event.units
-      }
-    },
-    builtIns: createBuiltIns('vitest', vitestAdapter()),
-    paths: ['src'],
-    concurrency: 2,
-    cwd: root,
-    ...options,
-  })
-  return { result, units }
 }
 
 /**
@@ -295,10 +315,11 @@ describe('vitestAdapter', () => {
     )
   })
 
-  it('reuses every verdict of an unchanged project', async () => {
+  it('reuses every verdict of an unchanged project, without Vitest once it saved its dry run', async () => {
     let root = await copyFixture()
     let first = await run(root)
-    let second = await run(root)
+    let second = await run(root, { replay: true })
+    let warm = await run(root)
 
     expect(first.result.cache).toBe(true)
     expect(first.result.diagnostics).toStrictEqual([])
@@ -310,9 +331,38 @@ describe('vitestAdapter', () => {
       cached: ['src/limit.ts', 'src/size.ts'],
       ran: [],
     })
-    expect(second.result.runs).toStrictEqual({ dry: 1 })
+    expect(second.result.runs).toStrictEqual({})
     expect(second.units).toBe(0)
+    expect(warm.result.runs).toStrictEqual({ dry: 1 })
+    expect(warm.result.results).toStrictEqual(second.result.results)
+    expect(warm.result.diagnostics).toStrictEqual(second.result.diagnostics)
   }, 60_000)
+
+  it('starts Vitest again once a variable its configuration reads changes', async () => {
+    let root = await copyFixture()
+    await writeFile(
+      path.join(root, 'vitest.config.ts'),
+      "export default {\n  test: {\n    testTimeout: Number(process.env['MOOTANT_TIMEOUT'] ?? 5000),\n    include: ['test/**/*.test.ts'],\n  },\n}\n",
+    )
+    await setTimeout(5)
+    let first = await run(root)
+    let replayed = await run(root, { replay: true })
+    process.env['MOOTANT_TIMEOUT'] = '6000'
+    let changed = await run(root, { replay: true })
+    let again = await run(root, { replay: true })
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(replayed.result.runs).toStrictEqual({})
+    expect(changed.result.runs).toMatchObject({ dry: 1 })
+    expect(splitCached(changed.result)).toStrictEqual({
+      ran: ['src/limit.ts', 'src/size.ts'],
+      cached: [],
+    })
+    expect(again.result.runs).toStrictEqual({})
+    expect(again.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      changed.result.results.map(summarizeCachedVerdict),
+    )
+  }, 90_000)
 
   it('runs the mutants of a changed source file again', async () => {
     let root = await copyFixture()
@@ -637,6 +687,30 @@ describe('vitestAdapter', () => {
     )
   }, 60_000)
 
+  it('caches no timeout of a mutant that only makes code hotter, whose confirmation passes', async () => {
+    let root = await copyFixture(hotFixture)
+    let first = await run(root)
+    let stored = JSON.parse(
+      await readFile(getCachePath(root), 'utf8'),
+    ) as RunCacheFile
+    let second = await run(root, { replay: true })
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(first.result.runs).toStrictEqual({ isolated: 2, dry: 1 })
+    expect(
+      first.result.results
+        .filter(entry => entry.status === 'Survived')
+        .map(entry => entry.mutant.replacement),
+    ).toStrictEqual(['false', ';'])
+    expect(
+      Object.values(stored.entries).map(entry => entry.status),
+    ).not.toContain('Timeout')
+    expect(second.result.runs).toStrictEqual({})
+    expect(second.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      first.result.results.map(summarizeCachedVerdict),
+    )
+  }, 60_000)
+
   it('decides from a cached kill like a fresh run once an earlier file runs again', async () => {
     let root = await copyFixture(rankFixture)
     let first = await run(root)
@@ -662,6 +736,22 @@ describe('vitestAdapter', () => {
      * that went over the hit limit there.
      */
     expect(cached.units).toBe(3)
+
+    let replayed = await run(root, { replay: true })
+
+    expect(replayed.result.runs).toStrictEqual({})
+    expect(
+      replayed.result.results.map(entry => [
+        entry.status,
+        entry.cause,
+        entry.cached,
+      ]),
+    ).toStrictEqual(
+      fresh.result.results.map(entry => [entry.status, entry.cause, true]),
+    )
+    expect(
+      replayed.result.results.filter(entry => entry.status === 'Timeout'),
+    ).toMatchObject([{ cause: 'hit-limit' }])
   }, 60_000)
 
   it('reuses a batch kill in fast mode only after the tests tried before it pass', async () => {

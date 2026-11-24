@@ -19,6 +19,7 @@ import type { RunResult } from '../../../types/run/run-result'
 import type { RunEvent } from '../../../types/run/run-event'
 
 import { startNodeTestSession } from '../../../adapters/node-test/start-node-test-session'
+import { getDrySnapshotPath } from '../../../core/cache/get-dry-snapshot-path'
 import { createWorkDirectory } from '../../../core/run/create-work-directory'
 import { buildNodeTestPreload } from '../../helpers/build-node-test-preload'
 import { nodeTestAdapter } from '../../../adapters/node-test/index'
@@ -794,7 +795,7 @@ describe('nodeTestAdapter', () => {
       await built.remove()
     })
 
-    it('runs mutants again after a change of a file of the workspace that tests read outside the root', async () => {
+    it('runs mutants again after a change of a file of the workspace that tests read outside the root, and reuses the saved dry run while nothing changed', async () => {
       let workspace = await realpath(
         await mkdtemp(path.join(tmpdir(), 'mootant-workspace-')),
       )
@@ -812,7 +813,9 @@ describe('nodeTestAdapter', () => {
          */
         await setTimeout(5)
         let root = path.join(workspace, 'packages/app')
+        let snapshot = getDrySnapshotPath(root)
         let first = await runCached(root, true)
+        await rm(snapshot)
         let unchanged = await runCached(root, true)
 
         expect(first.diagnostics).toStrictEqual([])
@@ -846,7 +849,10 @@ describe('nodeTestAdapter', () => {
           ['age >= 17', 'Survived', false],
         ])
 
+        await rm(snapshot)
         let again = await runCached(root, true)
+        let started = vi.mocked(startNodeTestSession).mock.calls.length
+        let replayed = await runCached(root, true)
 
         expect(listVerdicts(again)).toStrictEqual(
           listVerdicts(fresh).map(([replacement, status]) => [
@@ -856,6 +862,9 @@ describe('nodeTestAdapter', () => {
           ]),
         )
         expect(again.runs).toStrictEqual({ dry: 1 })
+        expect(replayed.runs).toStrictEqual({})
+        expect(listVerdicts(replayed)).toStrictEqual(listVerdicts(again))
+        expect(vi.mocked(startNodeTestSession).mock.calls).toHaveLength(started)
       } finally {
         await rm(workspace, { recursive: true, force: true })
       }

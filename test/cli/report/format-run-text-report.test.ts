@@ -527,6 +527,19 @@ describe('formatRunTextReport', () => {
     expect(getField(format(report, { verbose: true }), 'runs')).toBe('none')
   })
 
+  it('names the tests of a dry run reused from an earlier run, with no time', () => {
+    let report = createRunReport()
+    report.summary.runs = {}
+
+    expect(getField(format(report), 'dry run')).toBe(
+      '3 tests of an earlier run',
+    )
+
+    report.summary.totalTests = 0
+
+    expect(getField(format(report), 'dry run')).toBe('0 tests in 0.2s')
+  })
+
   it('names the modules with the largest share of test time in a long run', () => {
     let report = createRunReport()
     report.summary.duration.total = 60_000

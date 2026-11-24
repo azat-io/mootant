@@ -70,6 +70,7 @@ describe('prepareRun', () => {
       },
       preset: 'recommended',
       root: '/work',
+      file: null,
       run: {},
     })
     expect(listIds(setup)).toContain('string-literal')
@@ -101,6 +102,7 @@ describe('prepareRun', () => {
 
     expect(setup).toMatchObject({
       settings: { coarseMutants: true, templates: false, timeouts: true },
+      file: path.join(ROOT, 'mootant.config.ts'),
       preset: 'strict',
       root: ROOT,
     })
