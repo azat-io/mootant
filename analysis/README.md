@@ -498,7 +498,9 @@ Stryker создаёт расписание:
 **Ранжированные ускорения** (порядок, трудоёмкость и прогнозы — как в
 `04-performance.md` §4.4). Любое ускорение проверяется на эквивалентность: те
 же статусы у тех же id мутантов на всех проектах стенда
-(`tools/compare-verdicts.mjs`) и тест-сьют Mootant.
+(`tools/compare-verdicts.mjs`) и тест-сьют Mootant. По каждому рангу есть
+самодостаточный промпт — [`perf-prompts/`](perf-prompts/README.md), код в них
+сверен с `main` на bd7af11.
 
 1. **Параллельные юниты одного тест-файла по разрешению** (`run.parallelUnits`,
    прототип P1; M). Измерено: ×1,34–1,75 на всех четырёх проектах, CPU не вырос;
@@ -742,6 +744,7 @@ BUG-800, BUG-820, BUG-850 и BUG-851 перепроверки двумя аге�
 | [`06-ux-and-agents.md`](06-ux-and-agents.md) | Первый запуск, CI, agent skill, `--json` и токены, MCP, документация |
 | [`07-compat-and-release.md`](07-compat-and-release.md) | Матрица поддержки, безопасность, размер пакета, готовность к 1.0 |
 | [`bug-prompts/`](bug-prompts/) | 51 самодостаточный промпт по багам (48 на уникальные баги и 3 на дубли; список — §6) |
+| [`perf-prompts/`](perf-prompts/README.md) | 12 самодостаточных промптов по ускорениям, по одному на ранг `04-performance.md` §4.4; код сверен с `main` на bd7af11 |
 | [`bugs/`](bugs/) | Подробные отчёты по областям: [`instrumentation.md`](bugs/instrumentation.md) — инструментирование; [`verdicts.md`](bugs/verdicts.md) — вердикты против эталона, изоляция; [`static-review.md`](bugs/static-review.md) — статический ревью пути вердикта; [`skips.md`](bugs/skips.md) — ложные пропуски; [`cache-since.md`](bugs/cache-since.md) — кэш, `--incremental`, `--since`; [`cli-env.md`](bugs/cli-env.md) — процессы, окружения, CLI, документация; [`adapters.md`](bugs/adapters.md) — адаптеры; [`architecture.md`](bugs/architecture.md) — архитектура; [`perf.md`](bugs/perf.md) и [`perf-proto.md`](bugs/perf-proto.md) — бенчмарк и прототипы; [`tests.md`](bugs/tests.md) — тесты проекта; [`ux.md`](bugs/ux.md) — UX, CI и агенты; [`release.md`](bugs/release.md) — совместимость и релиз |
 | [`experiments/prototypes.md`](experiments/prototypes.md) | Прототипы ускорения P1–P4: идея, изменения, проверка эквивалентности, риски, трудоёмкость, отрицательный результат P2 |
 | [`experiments/`](experiments/) (`*.diff`) | Diff'ы: [`perf-parallel-units.diff`](experiments/perf-parallel-units.diff) (P1), [`perf-dry-snapshot.diff`](experiments/perf-dry-snapshot.diff) (P3), [`perf-trim-units.diff`](experiments/perf-trim-units.diff) (P2, отрицательный), [`perf-display-width-ascii-fast-path.diff`](experiments/perf-display-width-ascii-fast-path.diff) (ширина ASCII, описание — `perf-display-width.md`), [`bug-repros.diff`](experiments/bug-repros.diff) (падающие тесты-воспроизведения), [`skips-unskip.diff`](experiments/skips-unskip.diff) (проверка ложных пропусков), [`tests-git-gaps.diff`](experiments/tests-git-gaps.diff) и [`tests-terminal-gaps.diff`](experiments/tests-terminal-gaps.diff) (новые тесты `core/git` и `cli/terminal`); рядом — фикстуры прототипов и A/B ширины |
