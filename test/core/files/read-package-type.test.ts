@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
-import { readPackageType } from '../../../adapters/shared/read-package-type'
+import { readPackageType } from '../../../core/files/read-package-type'
 
 /**
  * Directory of the current test.

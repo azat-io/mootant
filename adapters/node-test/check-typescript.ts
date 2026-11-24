@@ -1,7 +1,7 @@
 import path from 'node:path'
 
-import { listPackageFiles } from '../shared/list-package-files'
-import { readPackageType } from '../shared/read-package-type'
+import { listPackageFiles } from '../../core/files/list-package-files'
+import { readPackageType } from '../../core/files/read-package-type'
 import { includesTsx } from './includes-tsx'
 
 /**

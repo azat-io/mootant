@@ -1,6 +1,6 @@
 import type { LoadFnOutput } from 'node:module'
 
-import { readPackageType } from '../../shared/read-package-type'
+import { readPackageType } from '../../../core/files/read-package-type'
 
 /**
  * Format of the translator Node keeps for CommonJS that `require(esm)` reaches:

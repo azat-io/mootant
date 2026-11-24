@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
-import { listPackageFiles } from '../../../adapters/shared/list-package-files'
+import { listPackageFiles } from '../../../core/files/list-package-files'
 
 describe('listPackageFiles', () => {
   it('lists package.json paths up to the first that exists', async () => {

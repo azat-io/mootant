@@ -2,8 +2,8 @@ import path from 'node:path'
 
 import type { JestTimedRecord } from './types/jest-timed-record'
 
+import { listPackageFiles } from '../../core/files/list-package-files'
 import { compareCodeUnits } from '../../core/compare-code-units'
-import { listPackageFiles } from '../shared/list-package-files'
 
 /**
  * Lists what a test file depended on in a unit that ended: the test file, what

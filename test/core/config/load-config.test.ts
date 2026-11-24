@@ -140,6 +140,7 @@ describe('loadConfig', () => {
   it.each(['mootant.config.mjs', 'mootant.config.ts'])(
     'rejects %s with only a comment',
     async name => {
+      await write('package.json', '{ "type": "module" }\n')
       await write(name, '// just a comment\n')
 
       await expect(loadConfig(undefined, directory)).rejects.toThrow(
