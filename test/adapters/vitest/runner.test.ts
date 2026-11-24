@@ -1049,6 +1049,19 @@ describe('Runner', () => {
     }
   })
 
+  it('turns test locations on in a dry run and keeps the setting elsewhere', () => {
+    let modes = (['dry', 'batch', 'isolated'] as const).map(mode => {
+      setOptions(mode)
+      return [mode, createRunner().config.includeTaskLocation]
+    })
+
+    expect(modes).toStrictEqual([
+      ['dry', true],
+      ['batch', undefined],
+      ['isolated', undefined],
+    ])
+  })
+
   it('claims the unit planned for the project of the file', async () => {
     setOptions('batch')
     writeBatchPlan(

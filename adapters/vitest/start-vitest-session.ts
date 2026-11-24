@@ -99,7 +99,6 @@ export async function startVitestSession(
           []
         : [createOutputReporter(onOutput, () => instance)],
       coverage: { enabled: false },
-      includeTaskLocation: true,
       passWithNoTests: true,
       fsModuleCache: false,
       watch: false,

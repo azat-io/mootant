@@ -12,8 +12,9 @@ import { getProjectLabel } from './get-project-label'
  * no shuffled tests, so runs follow the dry run's order (concurrency, retries
  * and repeats stay; the runner makes tests sequential where it switches mutants
  * between tries); snapshots are never written; transformed modules are not
- * cached on disk; test locations are recorded. Changing the pool or isolation
- * adds a `config-overridden` warning. An unsupported setting is recorded as the
+ * cached on disk. Test locations keep the project's setting: the runner turns
+ * them on in dry runs only. Changing the pool or isolation adds a
+ * `config-overridden` warning. An unsupported setting is recorded as the
  * session error instead. Typecheck-only projects are left alone.
  *
  * @param project - Vitest project as resolved from the user's configuration.
@@ -52,7 +53,6 @@ export function configureProject(
   project.globalConfig.snapshotOptions.updateSnapshot = 'none'
   project.vitest.snapshot.options.updateSnapshot = 'none'
   config.fsModuleCache = false
-  config.includeTaskLocation = true
 }
 
 /**

@@ -42,7 +42,7 @@ describe('configureProject', () => {
       sequence: { concurrent: true, shuffle: false },
       snapshotOptions: { updateSnapshot: 'none' },
       runner: '/mootant/runner.ts',
-      includeTaskLocation: true,
+      includeTaskLocation: false,
       poolRunner: state.pool,
       pool: 'mootant-forks',
       fsModuleCache: false,

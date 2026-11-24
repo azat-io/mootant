@@ -91,6 +91,16 @@ let unhandledRoot = path.resolve(
 )
 
 /**
+ * Root of a fixture project that turns test locations on. Its only test reaches
+ * the mutants and checks nothing but its own line, so every mutant survives
+ * when the units see the project's setting.
+ */
+let taskLocationRoot = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/task-location',
+)
+
+/**
  * Summarizes a verdict for comparison.
  *
  * @param result - Verdict of a mutant.
@@ -351,6 +361,26 @@ describe('vitestAdapter', () => {
       'src/settle.ts | comparison-operator | false | Survived | isolated | - | -',
       'src/settle.ts | comparison-operator | true | Survived | isolated | - | -',
       'src/settle.ts | return-value | 0 | Killed | isolated | - | assertion',
+    ])
+  }, 30_000)
+
+  it('keeps the test locations a project turns on in every unit, as a plain run does', async () => {
+    let options = {
+      builtIns: createBuiltIns('vitest', vitestAdapter()),
+      cwd: taskLocationRoot,
+      paths: ['src'],
+      concurrency: 2,
+      cache: false,
+    }
+    let byDefault = await runMutants(options)
+    let quick = await runMutants({ ...options, fast: true })
+
+    expect([byDefault.diagnostics, quick.diagnostics]).toStrictEqual([[], []])
+    expect(byDefault.results.map(summarizeVerdict)).toStrictEqual([
+      'src/sum.ts | arithmetic-operator | left - right | Survived | isolated | - | -',
+    ])
+    expect(quick.results.map(summarizeVerdict)).toStrictEqual([
+      'src/sum.ts | arithmetic-operator | left - right | Survived | isolated | batch-survivor | -',
     ])
   }, 30_000)
 

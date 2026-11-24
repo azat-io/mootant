@@ -469,7 +469,10 @@ export default class Runner extends TestRunner {
    * records the worker's process id, so the main process waits until the worker
    * is gone, and moves the end of the unit to the end of the worker's teardown,
    * after the test environment's teardown, whose error fails the unit like a
-   * failed suite hook.
+   * failed suite hook. A dry run turns test locations on, as the report gives
+   * the line of each test. Batch and isolated runs keep the project's setting:
+   * Vitest finds each location by mapping a stack trace through source maps,
+   * which every unit would pay for each test and suite of its file.
    *
    * @param config - Serialized configuration of the project.
    */
@@ -478,6 +481,9 @@ export default class Runner extends TestRunner {
     this.options = this.injectValue('mootant') as VitestWorkerOptions
     let { directory, repeat, mode } = this.options
     this.sequential = mode === 'batch' || (mode === 'dry' && repeat)
+    if (mode === 'dry') {
+      this.config.includeTaskLocation = true
+    }
     this.beatFile = path.join(directory, 'beat', `${process.pid}.json`)
     closeSync(
       openSync(path.join(directory, 'worker', String(process.pid)), 'w'),

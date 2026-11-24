@@ -138,7 +138,6 @@ describe('startVitestSession', () => {
 
     expect(options).toStrictEqual({
       coverage: { enabled: false },
-      includeTaskLocation: true,
       passWithNoTests: true,
       fsModuleCache: false,
       root: '/project',
