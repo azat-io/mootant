@@ -161,7 +161,7 @@ describe('formatDiffGroups', () => {
         createEntry({
           mutant: {
             ...createEntry().mutant,
-            after: [line.replace('>', '>=')],
+            after: [line.replaceAll('>', '>=')],
             before: [line],
             endColumn: 107,
             cutStart: 0,
