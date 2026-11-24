@@ -17,6 +17,7 @@ import type { AdapterContext } from '../../types/adapter/adapter-context'
 
 import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
 import { createInterleavedSequencer } from './create-interleaved-sequencer'
+import { readPreforkSwitch } from '../shared/read-prefork-switch'
 import { createOutputReporter } from './create-output-reporter'
 import { createMootantPlugin } from './create-mootant-plugin'
 import { createOutputStream } from './create-output-stream'
@@ -54,6 +55,7 @@ export async function startVitestSession(
   options: VitestAdapterOptions,
 ): Promise<AdapterSession> {
   let { root } = context
+  let prefork = readPreforkSwitch()
   let detection = await detectVitest(root)
   if (!detection.available) {
     throw new Error(
@@ -73,7 +75,7 @@ export async function startVitestSession(
   }
   let spawns = new Map<number, number>()
   let state: VitestSessionState = {
-    pool: createForksPool(vitestNode.ForksPoolWorker, spawns),
+    pool: createForksPool(vitestNode.ForksPoolWorker, spawns, prefork),
     mismatched: new Set(),
     instrumented: true,
     outside: new Set(),
@@ -140,13 +142,15 @@ export async function startVitestSession(
   }
   let closed: Promise<void> | null = null
   /**
-   * Closes Vitest, then gives the runtime of this process back its earlier
-   * coverage set, unless something else replaced it meanwhile.
+   * Stops the pool's spare workers, closes Vitest, then gives the runtime of
+   * this process back its earlier coverage set, unless something else replaced
+   * it meanwhile.
    *
    * @returns Resolves when Vitest closed.
    */
   async function closeVitest(): Promise<void> {
     try {
+      await state.pool.drain()
       await vitest.close()
     } finally {
       if (runtime.coverage === state.outside) {

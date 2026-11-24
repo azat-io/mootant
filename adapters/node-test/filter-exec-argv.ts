@@ -1,5 +1,7 @@
 import type { Diagnostic } from '../../types/mutant/diagnostic'
 
+import { readFlagName } from '../shared/read-flag-name'
+
 /**
  * Flags left out without a word: mootant runs every test file as a plain `node`
  * process (no `--test`), reads results from its own hooks instead of reporters,
@@ -47,7 +49,8 @@ const ISOLATION = new Set(['--experimental-test-isolation', '--test-isolation'])
  * `none`; `--test-global-setup` is kept with a warning, since it then runs in
  * every test process; `--test-randomize` without a seed gets a fixed seed, so
  * every process of every run orders tests the same way. Every other flag is
- * kept in order.
+ * kept in order. Names are read as Node's option parser reads them
+ * (`readFlagName`), so `--test_update_snapshots` is left out too.
  *
  * @param flags - Flags of the command, each with its value.
  * @returns Flags of the test processes and `config-overridden` warnings.
@@ -58,7 +61,7 @@ export function filterExecArgv(flags: readonly (readonly string[])[]): {
 } {
   let messages = new Map<string, string>()
   let execArgv: string[] = []
-  let names = flags.map(([flag]) => flag!.split('=', 1)[0]!)
+  let names = flags.map(([flag]) => readFlagName(flag!))
   for (let [index, flag] of flags.entries()) {
     let name = names[index]!
     let value = flag[1] ?? flag[0]!.slice(name.length + 1)

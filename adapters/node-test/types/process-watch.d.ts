@@ -11,13 +11,14 @@ export interface ProcessWatch {
   records: NodeTestRecord[]
 
   /**
-   * Epoch milliseconds when the process was started.
+   * Epoch milliseconds when the process was started, or got its unit as a
+   * spare.
    */
   spawned: number
 
   /**
-   * Epoch milliseconds when the last record arrived, or when the process was
-   * started before any did.
+   * Epoch milliseconds when the last record arrived, or `spawned` before any
+   * did.
    */
   last: number
 }

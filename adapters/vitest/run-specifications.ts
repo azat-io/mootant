@@ -16,7 +16,11 @@ import { waitForWorkers } from './wait-for-workers'
  * died, are expected in mootant's runs, so the exit code Vitest sets for them
  * is restored. When the context allows parallel units, the workers are told so,
  * and a unit of an isolated run does not wait for the unit before it of the
- * same test file.
+ * same test file; the pool then keeps spare workers for the units of the run
+ * (`MootantForksPool.prepare`). Otherwise the worker of a unit starts while the
+ * unit before it runs and waits for it, so spares would only add load. The
+ * spares left stop once Vitest ends the run, as no unit claims them, so the
+ * wait for workers never sees them.
  *
  * @param handle - Live Vitest instance of the session.
  * @param worker - Kind of the run the workers perform and, for a dry run, the
@@ -33,7 +37,7 @@ export async function runSpecifications(
   worker: Omit<VitestWorkerOptions, 'directory' | 'parallel' | 'root'>,
   specifications: TestSpecification[],
 ): Promise<string | null> {
-  let { context, vitest } = handle
+  let { context, vitest, state } = handle
   let { exitCode } = process
   vitest.provide('mootant', {
     ...worker,
@@ -41,8 +45,15 @@ export async function runSpecifications(
     directory: context.workDirectory,
     root: context.root,
   })
+  let parallel = context.parallelUnits === true && worker.mode === 'isolated'
+  state.pool.prepare(parallel ? specifications : [])
   try {
-    let result = await vitest.runTestSpecifications(specifications)
+    let result: Awaited<ReturnType<typeof vitest.runTestSpecifications>>
+    try {
+      result = await vitest.runTestSpecifications(specifications)
+    } finally {
+      await state.pool.drain()
+    }
     await waitForWorkers(context.workDirectory)
     let [error] = result.unhandledErrors
     return error === undefined ? null : getErrorMessage(error)

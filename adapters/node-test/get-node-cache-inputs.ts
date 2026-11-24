@@ -5,7 +5,7 @@ import type { CacheInputs } from '../../types/adapter/cache-inputs'
 import { VERDICT_VARIABLE_PATTERN } from '../shared/verdict-variable-pattern'
 import { listTsconfigFiles } from '../shared/list-tsconfig-files'
 import { hashEnvironment } from '../shared/hash-environment'
-import { listFlagValues } from './list-flag-values'
+import { listFlagValues } from '../shared/list-flag-values'
 
 /**
  * Flags whose value is a file Node reads itself: `.env` files and the Node

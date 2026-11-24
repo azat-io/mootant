@@ -7,21 +7,25 @@ import type { AdapterSession } from '../../types/adapter/adapter-session'
 import type { AdapterContext } from '../../types/adapter/adapter-context'
 import type { NodeTestHandle } from './types/node-test-handle'
 
+import { readPreforkSwitch } from '../shared/read-prefork-switch'
 import { stopProcessGroup } from '../shared/stop-process-group'
+import { readNodeOptions } from '../shared/read-node-options'
 import { getNodeCacheInputs } from './get-node-cache-inputs'
 import { getDefaultPatterns } from './get-default-patterns'
+import { listFlagValues } from '../shared/list-flag-values'
 import { listNodeTestFiles } from './list-node-test-files'
+import { getSpareLimit } from '../shared/get-spare-limit'
 import { checkNodeSupport } from './check-node-support'
+import { allowsSpares } from '../shared/allows-spares'
 import { readNodeRuntime } from './read-node-runtime'
 import { findTestCommand } from './find-test-command'
 import { readTestTimeout } from './read-test-timeout'
+import { LOADER_FLAGS } from '../shared/loader-flags'
 import { checkTypeScript } from './check-typescript'
 import { filterExecArgv } from './filter-exec-argv'
-import { listFlagValues } from './list-flag-values'
 import { listSetupFiles } from './list-setup-files'
 import { getPreloadPath } from './get-preload-path'
 import { placePreload } from './place-preload'
-import { LOADER_FLAGS } from './loader-flags'
 import { includesTsx } from './includes-tsx'
 import { runIsolated } from './run-isolated'
 import { resolveTsx } from './resolve-tsx'
@@ -52,8 +56,14 @@ const TEST_CONTEXT = 'mootant'
  * modules the project loads first (`placePreload`), the filtered flags and the
  * extra flags of the options, mootant's reporter and the spec reporter, then
  * one test file, in the project root, with the variables of mootant's process,
- * the command and the options, and mootant's own `NODE_TEST_CONTEXT`. Closing
- * the session stops the test processes that still run.
+ * the command and the options, and mootant's own `NODE_TEST_CONTEXT`. A test
+ * process gets its unit through file descriptor 3, except on Windows, where it
+ * gets it in a variable. Isolated runs start spare test processes
+ * (`createSpareProcesses`), up to the cores the running units leave free
+ * (`getSpareLimit`), unless `MOOTANT_PREFORK=0` (`readPreforkSwitch`), Windows,
+ * a legacy loader, whose code runs before mootant's preload, or flags that load
+ * code from a file first or watch the process (`allowsSpares`) rule them out.
+ * Closing the session stops the test processes that still run, spares too.
  *
  * @param context - Switched files, work directory, concurrency and root.
  * @param options - Options of the adapter.
@@ -67,6 +77,7 @@ export async function startNodeTestSession(
   options: NodeTestAdapterOptions,
 ): Promise<AdapterSession> {
   let { root } = context
+  let prefork = readPreforkSwitch()
   let node = options.node ?? process.execPath
   let command = await findTestCommand(root, options.command)
   let runtime = await readNodeRuntime(node, context.workDirectory)
@@ -115,12 +126,14 @@ export async function startNodeTestSession(
     NODE_TEST_CONTEXT: TEST_CONTEXT,
   }
   delete environment['MOOTANT_UNIT']
+  delete environment['MOOTANT_UNIT_FD']
   let flags = [
-    ...(environment['NODE_OPTIONS'] ?? '').split(/\s+/u).filter(Boolean),
+    ...readNodeOptions(environment['NODE_OPTIONS'] ?? ''),
     ...execArgv,
   ]
   let loaders = listFlagValues(flags, LOADER_FLAGS)
-  for (let loader of listFlagValues(flags, LEGACY_LOADER_FLAGS)) {
+  let legacy = listFlagValues(flags, LEGACY_LOADER_FLAGS)
+  for (let loader of legacy) {
     diagnostics.push({
       message: `The loader ${loader} runs before mootant's module hooks, so mootant cannot switch the modules it changes.`,
       code: 'config-overridden',
@@ -169,6 +182,8 @@ export async function startNodeTestSession(
   if (placed.nodeOptions !== '') {
     environment['NODE_OPTIONS'] = placed.nodeOptions
   }
+  let workers = Math.max(1, context.concurrency ?? availableParallelism() - 1)
+  let pipe = process.platform !== 'win32'
   let reporter = path.join(
     path.dirname(preload),
     `reporter${path.extname(preload)}`,
@@ -192,15 +207,20 @@ export async function startNodeTestSession(
       plan: null,
       count: 0,
     },
-    workers: Math.max(1, context.concurrency ?? availableParallelism() - 1),
+    spares:
+      pipe && prefork && legacy.length === 0 && allowsSpares(flags) ?
+        getSpareLimit(workers)
+      : 0,
     testTimeout: readTestTimeout(execArgv),
     commonjs: !runtime.compiles,
     checkTypeScript: check,
     groups: new Set(),
     env: environment,
+    workers,
     preload,
     context,
     files,
+    pipe,
     node,
     tsx,
   }

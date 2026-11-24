@@ -41,10 +41,11 @@ describe('listVariableHashes', () => {
     expect(hashes[0]![1]).toMatch(/^[\da-f]{64}$/u)
   })
 
-  it('changes * with any variable but those that change from shell to shell', () => {
+  it('changes * with any variable but those that change from shell to shell or tests never see', () => {
     let first = hashAll({ UNSET: undefined, OTHER: 'x', PWD: '/a', _: 'a' })
 
     expect(hashAll({ OTHER: 'x', SHLVL: '2', PWD: '/b' })).toBe(first)
+    expect(hashAll({ MOOTANT_PREFORK: '0', OTHER: 'x' })).toBe(first)
     expect(hashAll({ OTHER: 'y', PWD: '/a' })).not.toBe(first)
     expect(hashAll({ OTHER: 'x', NEW: '' })).not.toBe(first)
     expect(hashAll({})).not.toBe(first)

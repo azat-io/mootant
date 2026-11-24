@@ -1,8 +1,9 @@
-import type { PoolRunnerInitializer, Vitest } from 'vitest/node'
+import type { Vitest } from 'vitest/node'
 
 import type { AdapterContext } from '../../../types/adapter/adapter-context'
 import type { SwitchedFile } from '../../../types/adapter/switched-file'
 import type { Diagnostic } from '../../../types/mutant/diagnostic'
+import type { MootantForksPool } from './mootant-forks-pool'
 
 /**
  * State shared by the Vitest session, its Vite plugin and the project
@@ -22,15 +23,10 @@ export interface VitestSessionState {
   files: Map<string, SwitchedFile> | null
 
   /**
-   * Epoch milliseconds at which the pool started each worker process of the
-   * current run, by process id (`createForksPool`).
+   * Epoch milliseconds at which each task of the current run got its worker
+   * process, by process id (`createForksPool`).
    */
   spawns: Map<number, number>
-
-  /**
-   * Pool the projects run with (`createForksPool`).
-   */
-  pool: PoolRunnerInitializer
 
   /**
    * Real paths of the module ids the plugin has seen, by id.
@@ -46,6 +42,11 @@ export interface VitestSessionState {
    * Switched files whose loaded text differed from the listed one.
    */
   mismatched: Set<string>
+
+  /**
+   * Pool the projects run with (`createForksPool`).
+   */
+  pool: MootantForksPool
 
   /**
    * Whether the plugin serves switched texts; false while a dry run checks the

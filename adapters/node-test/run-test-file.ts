@@ -1,3 +1,5 @@
+import type { ChildProcess } from 'node:child_process'
+
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import path from 'node:path'
 
@@ -11,26 +13,34 @@ import { runTestProcess } from './run-test-process'
 /**
  * Runs one test file in a test process of the session (`runTestProcess`):
  * mootant's preload and the project's flags, then the test file, in the project
- * root, with the unit in `MOOTANT_UNIT` and an out file of its own in the work
- * directory, removed once read. What the process writes goes to the context's
- * `onOutput` with the test file.
+ * root, with an out file of its own in the work directory, removed once read.
+ * The process gets its unit as a line on file descriptor 3, or, where the
+ * session sends none that way (`NodeTestHandle.pipe`), in `MOOTANT_UNIT`; a
+ * spare process of the test file, started before, may run it instead. What the
+ * process writes goes to the context's `onOutput` with the test file.
  *
  * @param handle - Live session.
- * @param input - Test file, what the process runs and its deadline.
+ * @param input - Test file, what the process runs, its deadline and a spare
+ *   process, if any.
  * @param input.file - Real absolute path of the test file.
  * @param input.deadline - Deadline of the watchdog from what is known of the
  *   process.
+ * @param input.spare - Spare process of the test file to run in, if any.
  * @returns What the process left behind.
  */
 export async function runTestFile(
   handle: NodeTestHandle,
-  input: { deadline(watch: ProcessWatch): number; file: string } & Pick<
+  input: {
+    deadline(watch: ProcessWatch): number
+    spare?: ChildProcess
+    file: string
+  } & Pick<
     NodeTestUnit,
     'expected' | 'hitLimit' | 'mutant' | 'mode' | 'bail' | 'plan'
   >,
 ): Promise<TestProcessOutcome> {
   let { context, state } = handle
-  let { deadline, file, ...fields } = input
+  let { deadline, spare, file, ...fields } = input
   let directory = path.join(context.workDirectory, 'out')
   mkdirSync(directory, { recursive: true })
   let out = path.join(directory, `${state.count}.jsonl`)
@@ -44,14 +54,20 @@ export async function runTestFile(
     out,
   }
   let { onOutput } = context
+  let text = JSON.stringify(unit)
   try {
     return await runTestProcess({
       ...(onOutput !== undefined && {
-        onOutput: text => {
-          onOutput(text, file)
+        onOutput: output => {
+          onOutput(output, file)
         },
       }),
-      env: { ...handle.env, MOOTANT_UNIT: JSON.stringify(unit) },
+      ...(handle.pipe && { unit: text }),
+      ...(spare !== undefined && { spare }),
+      env: {
+        ...handle.env,
+        ...(handle.pipe ? { MOOTANT_UNIT_FD: '3' } : { MOOTANT_UNIT: text }),
+      },
       args: [...handle.args, file],
       groups: handle.groups,
       node: handle.node,

@@ -13,5 +13,13 @@ export function createTestProcessOutcome(
   records: NodeTestRecord[],
   fields: Partial<TestProcessOutcome> = {},
 ): TestProcessOutcome {
-  return { signal: null, hung: false, spawned: 0, code: 0, records, ...fields }
+  return {
+    lingering: false,
+    signal: null,
+    hung: false,
+    spawned: 0,
+    code: 0,
+    records,
+    ...fields,
+  }
 }

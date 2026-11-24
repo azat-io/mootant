@@ -10,9 +10,10 @@ import { isTimeoutMessage } from './worker/is-timeout-message'
  * stopped its worker, else `crash`. A failed cleanup of worker-scoped fixtures
  * or a failed teardown of the test environment is the unit's hook error; a
  * suite hook that hit Vitest's hook timeout marks the unit as timed out. A unit
- * that ended reports how long its process took to start: from the moment the
- * pool started the worker to the moment the worker began the unit, before it
- * waited for its turn.
+ * that ended reports how long its process took to start: from the moment its
+ * task got the worker from the pool, a spare one included, to the moment the
+ * worker began the unit, before it waited for its turn, both on the wall
+ * clock.
  *
  * @param handle - Live Vitest instance of the session.
  * @param unit - Index of the unit in the plan.

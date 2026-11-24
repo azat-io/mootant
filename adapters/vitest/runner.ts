@@ -184,6 +184,13 @@ const MAX_BUDGET = 2 ** 31 - 1
 let clock = captureClock()
 
 /**
+ * Wall clock of the worker, captured when the runner loads, so it reads epoch
+ * milliseconds as the main process does, also after setup files and tests fake
+ * `Date`.
+ */
+let readDate = Date.now.bind(Date)
+
+/**
  * Vitest runner of mootant's workers. In a dry run it runs every test once, or
  * twice in a row with `repeat`, and records which mutant sites each try
  * evaluated. In a batch run it claims one unit of the test file and tries the
@@ -524,7 +531,7 @@ export default class Runner extends TestRunner {
     let file = paths[0]!
     this.file = file
     this.started = clock.now()
-    this.booted = performance.timeOrigin + this.started
+    this.booted = readDate()
     runtime.hitLimit = Infinity
     runtime.coverage = null
     runtime.reached = false

@@ -64,6 +64,10 @@ your configuration. It does not support:
 
 Any of these in one project stops the whole run with an error.
 
+With `--parallel-units`, a worker process may start before Vitest gives it a
+test file, but loads no code of the project until then; `process.uptime()` and
+`performance.now()` count from its start.
+
 For a custom Vitest configuration path, use
 [`vitestAdapter`](/guide/configuration#runner).
 
@@ -170,7 +174,10 @@ Mootant detects Node Test when test scripts use `node --test`, `tsx --test`,
 likely, such as tests that import `node:test` in a project with Vitest
 installed, Mootant uses the first of Vitest, Jest and Node Test and prints a
 note; set [`run.runner`](/guide/configuration#runner) to choose. Each mutant
-runs a test file in its own process. `--fast` has no effect with this runner.
+runs a test file in its own process, which may start before the mutant is known,
+but loads no code of the project until then; `process.uptime()` and
+`performance.now()` count from its start. `--fast` has no effect with this
+runner.
 
 TypeScript needs Node.js type stripping or tsx. Other loaders, such as ts-node,
 and tsx with `.cts` files or with `.ts` files whose nearest `package.json` lacks

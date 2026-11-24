@@ -347,7 +347,9 @@ is 1. No threshold by default. The `--threshold` option sets it for one run.
 
 The most test files to run at once. By default, the `maxWorkers` of Vitest or
 Jest, or the number of CPU cores minus one for Node Test. The `--concurrency`
-option sets it for one run.
+option sets it for one run. On top of it, up to as many idle processes may start
+early for the next test files, no more than the CPU cores the running ones leave
+free, but at least one.
 
 ### `fast`
 

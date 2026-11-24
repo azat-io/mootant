@@ -52,8 +52,10 @@ async function createHandle(): Promise<NodeTestHandle> {
     commonjs: false,
     testTimeout: 0,
     node: 'node',
+    pipe: false,
     workers: 2,
     tsx: false,
+    spares: 0,
     args: [],
     env: {},
   }

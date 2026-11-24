@@ -24,6 +24,7 @@ export default defineConfig({
     'numstat',
     'okhsv',
     'oldpwd',
+    'prefork',
     'preorder',
     'quasis',
     'rolldown',

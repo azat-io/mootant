@@ -1,8 +1,8 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
-import { listFlagValues } from './list-flag-values'
-import { LOADER_FLAGS } from './loader-flags'
+import { listFlagValues } from '../shared/list-flag-values'
+import { LOADER_FLAGS } from '../shared/loader-flags'
 
 /**
  * Flag that names the global setup module of node:test.

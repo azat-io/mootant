@@ -11,9 +11,11 @@ import type { AdapterContext } from '../../../types/adapter/adapter-context'
 
 import { startNodeTestSession } from '../../../adapters/node-test/start-node-test-session'
 import { trackProcessGroup } from '../../../adapters/shared/track-process-group'
+import { readPreforkSwitch } from '../../../adapters/shared/read-prefork-switch'
 import { readNodeRuntime } from '../../../adapters/node-test/read-node-runtime'
 import { stopProcessGroup } from '../../../adapters/shared/stop-process-group'
 import { getPreloadPath } from '../../../adapters/node-test/get-preload-path'
+import { getSpareLimit } from '../../../adapters/shared/get-spare-limit'
 import { runIsolated } from '../../../adapters/node-test/run-isolated'
 import { runDry } from '../../../adapters/node-test/run-dry'
 
@@ -27,6 +29,14 @@ vi.mock(import('../../../adapters/node-test/run-dry'), () => ({
 
 vi.mock(import('../../../adapters/node-test/run-isolated'), () => ({
   runIsolated: vi.fn(),
+}))
+
+vi.mock(import('../../../adapters/shared/read-prefork-switch'), () => ({
+  readPreforkSwitch: vi.fn(() => true),
+}))
+
+vi.mock(import('../../../adapters/shared/get-spare-limit'), () => ({
+  getSpareLimit: vi.fn(() => 2),
 }))
 
 /**
@@ -227,11 +237,55 @@ describe('startNodeTestSession', () => {
     expect(handle.env).toMatchObject({ A: '1' })
     expect(handle.env['NODE_TEST_CONTEXT']).toBe('mootant')
     expect(handle.env['MOOTANT_UNIT']).toBeUndefined()
+    expect(handle.env['MOOTANT_UNIT_FD']).toBeUndefined()
     expect(handle).toMatchObject({
       node: process.execPath,
+      pipe: true,
       workers: 2,
       tsx: false,
+      spares: 2,
     })
+    expect(getSpareLimit).toHaveBeenCalledWith(2)
+  })
+
+  it('starts no spare processes when switched off, on Windows, with a legacy loader, or with flags that load a file first or watch the process', async () => {
+    let context = await createProject({}, ['a.test.js'])
+    mockRuntime('v22.12.0')
+    process.env['MOOTANT_UNIT_FD'] = '3'
+    let handle = await readHandle(context)
+
+    expect(handle.env['MOOTANT_UNIT_FD']).toBeUndefined()
+    expect(handle.spares).toBe(2)
+
+    vi.mocked(readPreforkSwitch).mockReturnValueOnce(false)
+
+    await expect(readHandle(context)).resolves.toMatchObject({
+      pipe: true,
+      spares: 0,
+    })
+
+    await [
+      ['--loader', './loader.mjs'],
+      ['--experimental_loader', './loader.mjs'],
+      ['--process-timeout=30s'],
+      ['--env-file=.env'],
+      ['--inspect'],
+    ].reduce(async (previous, execArgv) => {
+      await previous
+      await expect(readHandle(context, { execArgv })).resolves.toMatchObject({
+        spares: 0,
+      })
+    }, Promise.resolve())
+    let platform = Object.getOwnPropertyDescriptor(process, 'platform')!
+    Object.defineProperty(process, 'platform', { value: 'win32' })
+    try {
+      await expect(readHandle(context)).resolves.toMatchObject({
+        pipe: false,
+        spares: 0,
+      })
+    } finally {
+      Object.defineProperty(process, 'platform', platform)
+    }
   })
 
   it('stops the groups of its own test processes when it closes, and leaves those of another session', async () => {
@@ -351,13 +405,19 @@ describe('startNodeTestSession', () => {
     ])
   })
 
-  it('reads the loaders of NODE_OPTIONS', async () => {
-    process.env['NODE_OPTIONS'] = '--require ts-node/register'
+  it('reads the loaders of NODE_OPTIONS as Node does, quotes included', async () => {
     let context = await createProject({ type: 'module' }, ['a.test.ts'])
     mockRuntime('v26.11.1', true)
 
-    await expect(startNodeTestSession(context, {})).rejects.toThrow(
-      'so it cannot run the tests of',
+    await ['--require ts-node/register', '"--require" ts-node/register'].reduce(
+      async (previous, nodeOptions) => {
+        await previous
+        process.env['NODE_OPTIONS'] = nodeOptions
+        await expect(startNodeTestSession(context, {})).rejects.toThrow(
+          'so it cannot run the tests of',
+        )
+      },
+      Promise.resolve(),
     )
   })
 

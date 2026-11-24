@@ -27,17 +27,18 @@ const NODE_TEST_VARIABLES = ['NODE_TEST_CONTEXT', 'FORCE_COLOR']
  * process, or its first `--require` when the project's flags require modules,
  * since Node runs every `--require` before any `--import`; it has no top-level
  * `await`, so `require()` can load it. In the process of a unit it captures the
- * clock, sets the mutant runtime up, installs the module hooks that switch
- * modules, starts recording what the code reads, takes the records of mootant's
- * reporter, passing its todo tests to the tracker, and registers a root
- * `beforeEach` hook that tracks tries and listeners for uncaught errors and the
- * exit. In any other process or thread that loads it, such as one the test code
- * forked, it does nothing.
+ * clock, reads the unit, which the process may wait for (`readUnit`), and only
+ * then notes the start, sets the mutant runtime up, installs the module hooks
+ * that switch modules, starts recording what the code reads, takes the records
+ * of mootant's reporter, passing its todo tests to the tracker, and registers a
+ * root `beforeEach` hook that tracks tries and listeners for uncaught errors
+ * and the exit. In any other process or thread that loads it, such as one the
+ * test code forked, it does nothing.
  */
-let time = Date.now()
 let clock = captureClock()
+let unit = readUnit(process, isMainThread)
+let time = Date.now()
 let started = clock.now()
-let unit = readUnit(process.env, isMainThread)
 if (unit !== null) {
   let write = createRecordWriter(unit.out)
   let tracker = createTryTracker({

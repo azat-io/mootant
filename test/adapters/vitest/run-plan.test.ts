@@ -8,6 +8,7 @@ import type { VitestHeartbeat } from '../../../adapters/vitest/types/vitest-work
 import type { IsolatedFacts } from '../../../types/adapter/isolated-result'
 import type { IsolatedUnit } from '../../../types/adapter/isolated-plan'
 
+import { createVitestSessionState } from '../../helpers/create-vitest-session-state'
 import { watchHeartbeats } from '../../../adapters/vitest/watch-heartbeats'
 import { getFileHash } from '../../../adapters/vitest/worker/get-file-hash'
 import { encodeStray } from '../../../adapters/vitest/worker/encode-stray'
@@ -103,8 +104,11 @@ describe('runPlan', () => {
         state: { onUnhandledError },
         provide: vi.fn(),
       },
+      state: {
+        pool: createVitestSessionState().pool,
+        spawns,
+      } as Partial<VitestSessionState>,
       context: { workDirectory: directory, onUnitEnd },
-      state: { spawns } as Partial<VitestSessionState>,
     } as never
     let limits = { hitLimit: 1, timeout: 1 }
     let units: IsolatedUnit[] = [
@@ -186,8 +190,8 @@ describe('runPlan', () => {
         projects: [],
         state: {},
       },
+      state: { pool: createVitestSessionState().pool, spawns: new Map() },
       context: { workDirectory: directory, onUnitEnd },
-      state: { spawns: new Map() },
     } as never
     let unit = {
       limits: { load: { hitLimit: 1, timeout: 1 }, tests: [], total: 1 },
@@ -213,8 +217,8 @@ describe('runPlan', () => {
         provide: vi.fn(),
         projects: [],
       },
+      state: { pool: createVitestSessionState().pool, spawns: new Map() },
       context: { workDirectory: directory },
-      state: { spawns: new Map() },
     } as never
 
     await expect(runPlan(handle, { mode: 'batch', units: [] })).rejects.toThrow(

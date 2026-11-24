@@ -4,12 +4,17 @@ import type { VitestSessionState } from '../../adapters/vitest/types/vitest-sess
  * Builds the state of a Vitest session that has not run yet: the plugin serves
  * switched texts but has served none, and nothing is recorded or reported.
  *
- * @returns Session state with the pool `mootant-forks` and the runner
- *   `/mootant/runner.ts`.
+ * @returns Session state with the pool `mootant-forks`, which keeps no spare
+ *   workers, and the runner `/mootant/runner.ts`.
  */
 export function createVitestSessionState(): VitestSessionState {
   return {
-    pool: { createPoolWorker: () => null as never, name: 'mootant-forks' },
+    pool: {
+      createPoolWorker: () => null as never,
+      drain: () => Promise.resolve(),
+      name: 'mootant-forks',
+      prepare: () => {},
+    },
     runnerPath: '/mootant/runner.ts',
     mismatched: new Set(),
     instrumented: true,

@@ -1,3 +1,5 @@
+import type { ChildProcess } from 'node:child_process'
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
@@ -24,10 +26,12 @@ let directory = ''
  * Creates a session handle with a fresh work directory.
  *
  * @param context - Fields of the context that differ.
+ * @param pipe - Whether test processes get their unit on file descriptor 3.
  * @returns Handle whose processes write into a fresh work directory.
  */
 async function createHandle(
   context: Partial<NodeTestHandle['context']> = {},
+  pipe = false,
 ): Promise<NodeTestHandle> {
   directory = await mkdtemp(path.join(tmpdir(), 'mootant-file-'))
   return {
@@ -56,6 +60,8 @@ async function createHandle(
     workers: 1,
     tsx: false,
     files: [],
+    spares: 0,
+    pipe,
   }
 }
 
@@ -100,6 +106,7 @@ describe('runTestFile', () => {
         deadline,
       }),
     ).resolves.toMatchObject({ code: 0 })
+    expect(vi.mocked(runTestProcess).mock.calls[0]![0].unit).toBeUndefined()
     expect(vi.mocked(runTestProcess).mock.calls[0]![0]).toMatchObject({
       args: ['--import', 'preload', '/project/a.test.js'],
       groups: handle.groups,
@@ -125,6 +132,37 @@ describe('runTestFile', () => {
     await expect(readdir(path.join(directory, 'out'))).resolves.toStrictEqual(
       [],
     )
+  })
+
+  it('sends the unit on file descriptor 3 where the session can, to a spare process too', async () => {
+    let handle = await createHandle({}, true)
+    let spare: ChildProcess = { pid: 9 } as never
+    vi.mocked(runTestProcess).mockResolvedValue(createTestProcessOutcome([]))
+    await [undefined, spare].reduce(async (previous, taken) => {
+      await previous
+      await runTestFile(handle, {
+        file: '/project/a.test.js',
+        deadline: () => Infinity,
+        ...(taken !== undefined && { spare: taken }),
+        mode: 'isolated',
+        plan: '/plan',
+        mutant: 'm1',
+        expected: [],
+        hitLimit: 10,
+        bail: true,
+      })
+    }, Promise.resolve())
+    let [fresh, spared] = vi
+      .mocked(runTestProcess)
+      .mock.calls.map(([options]) => options)
+
+    expect(fresh!.env).toStrictEqual({ MOOTANT_UNIT_FD: '3', A: '1' })
+    expect(JSON.parse(fresh!.unit!)).toMatchObject({ mutant: 'm1', bail: true })
+    expect(fresh!.spare).toBeUndefined()
+    expect(spared!.spare).toBe(spare)
+    expect(JSON.parse(spared!.unit!)).toMatchObject({
+      out: path.join(directory, 'out', '4.jsonl'),
+    })
   })
 
   it('drops output without a receiver and cleans up after a failure', async () => {

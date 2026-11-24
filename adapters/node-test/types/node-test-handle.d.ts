@@ -21,7 +21,8 @@ export interface NodeTestHandle {
   context: AdapterContext
 
   /**
-   * Environment variables of every test process, before `MOOTANT_UNIT`.
+   * Environment variables of every test process, before `MOOTANT_UNIT` or
+   * `MOOTANT_UNIT_FD`.
    */
   env: NodeJS.ProcessEnv
 
@@ -66,11 +67,23 @@ export interface NodeTestHandle {
   workers: number
 
   /**
+   * Most spare test processes of an isolated run at once
+   * (`createSpareProcesses`), or 0 for none.
+   */
+  spares: number
+
+  /**
    * Flags of every test process before its test file: mootant's preload first,
    * unless `NODE_OPTIONS` loads modules and carries it, then the command's
    * filtered flags and the extra ones of the options.
    */
   args: string[]
+
+  /**
+   * Whether test processes get their unit as a line on file descriptor 3 rather
+   * than in `MOOTANT_UNIT`; not on Windows.
+   */
+  pipe: boolean
 
   /**
    * Whether the test processes load tsx, so `tsconfig.json` files decide how

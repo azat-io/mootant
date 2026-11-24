@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { readFile, readdir, mkdtemp, mkdir, rm } from 'node:fs/promises'
+import { describe, expect, it, vi } from 'vitest'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 
+import type * as ForksPool from '../../../adapters/vitest/create-forks-pool'
 import type { MutantResult } from '../../../types/run/mutant-result'
 import type { Diagnostic } from '../../../types/mutant/diagnostic'
 
+import { readPreforkSwitch } from '../../../adapters/shared/read-prefork-switch'
+import { createForksPool } from '../../../adapters/vitest/create-forks-pool'
 import { runReferenceMutants } from '../../helpers/run-reference-mutants'
 import { compareCodeUnits } from '../../../core/compare-code-units'
 import { classifyVerdict } from '../../helpers/classify-verdict'
@@ -19,6 +24,18 @@ import { runMutants } from '../../../core/run-mutants'
  * the batch path; projects in subdirectories hold risks that need a project of
  * their own.
  */
+vi.mock(import('../../../adapters/shared/read-prefork-switch'), () => ({
+  readPreforkSwitch: vi.fn(() => true),
+}))
+
+vi.mock(
+  import('../../../adapters/vitest/create-forks-pool'),
+  async importOriginal => {
+    let actual = await importOriginal()
+    return { createForksPool: vi.fn(actual.createForksPool) }
+  },
+)
+
 let equivalenceRoot = path.resolve(
   import.meta.dirname,
   '../../fixtures/equivalence',
@@ -582,6 +599,138 @@ describe('vitestAdapter', () => {
     expect(parallel.diagnostics).toStrictEqual([])
     expect(parallel.runs).toStrictEqual(serial.runs)
     expect(listVerdicts(parallel)).toStrictEqual(listVerdicts(serial))
+  }, 60_000)
+
+  it('runs no module of the project in a spare worker before its unit, and shows tests what a new worker shows', async () => {
+    let journal = await mkdtemp(path.join(tmpdir(), 'mootant-spare-'))
+    vi.stubEnv('SPARE_JOURNAL', journal)
+    vi.stubEnv('VITEST_WORKER_ID', undefined)
+    vi.stubEnv('VITEST_POOL_ID', undefined)
+    /**
+     * Runs the mutants of the fixture with parallel units, with or without
+     * spare workers.
+     *
+     * @param spares - Whether the session may keep spare workers.
+     * @returns The verdicts, the loads of the setup file, what every worker
+     *   showed its tests apart from the ids of its slot, and how many slots the
+     *   workers had.
+     */
+    async function observe(spares: boolean): Promise<{
+      environments: string[]
+      verdicts: string[][]
+      setups: string[]
+      seen: string[]
+      taken: number
+      slots: number
+    }> {
+      let workers: { started: boolean }[] = []
+      let { createForksPool: create } = await vi.importActual<typeof ForksPool>(
+        '../../../adapters/vitest/create-forks-pool',
+      )
+      vi.mocked(createForksPool).mockImplementationOnce((Worker, ...rest) => {
+        /**
+         * Forks worker that notes whether it started a process.
+         */
+        class NotedWorker extends Worker {
+          /**
+           * Whether this worker started a process.
+           */
+          private readonly noted = { started: false }
+
+          /**
+           * Notes the worker.
+           *
+           * @param options - Pool options.
+           */
+          public constructor(options: ConstructorParameters<typeof Worker>[0]) {
+            super(options)
+            workers.push(this.noted)
+          }
+
+          /**
+           * Notes and starts the process.
+           *
+           * @returns Resolves when it started.
+           */
+          public override start(): Promise<void> {
+            this.noted.started = true
+            return super.start()
+          }
+        }
+        return create(NotedWorker, ...rest)
+      })
+      vi.mocked(readPreforkSwitch).mockReturnValueOnce(spares)
+      await rm(journal, { recursive: true, force: true })
+      await mkdir(journal)
+      let result = await runMutants({
+        builtIns: createBuiltIns('vitest', vitestAdapter()),
+        cwd: path.join(equivalenceRoot, 'spare'),
+        parallelUnits: true,
+        paths: ['src'],
+        concurrency: 2,
+        cache: false,
+      })
+      let names = await readdir(journal)
+      let records = await Promise.all(
+        names
+          .filter(name => name.endsWith('.json'))
+          .map(
+            async name =>
+              JSON.parse(await readFile(path.join(journal, name), 'utf8')) as {
+                env: [string, string][]
+              },
+          ),
+      )
+      let slots = new Set<string>()
+      return {
+        seen: records
+          .map(record => {
+            let env = record.env.filter(([name, value]) => {
+              if (name === 'VITEST_POOL_ID') {
+                slots.add(value)
+              }
+              return name !== 'VITEST_POOL_ID' && name !== 'VITEST_WORKER_ID'
+            })
+            return JSON.stringify({ ...record, env })
+          })
+          .toSorted(),
+        environments: (
+          await readFile(path.join(journal, 'environment.jsonl'), 'utf8')
+        )
+          .trim()
+          .split('\n'),
+        setups: (await readFile(path.join(journal, 'setup.jsonl'), 'utf8'))
+          .trim()
+          .split('\n'),
+        verdicts: result.results.map(entry => [
+          describeMutant(entry),
+          entry.status,
+        ]),
+        taken: workers.filter(worker => !worker.started).length,
+        slots: slots.size,
+      }
+    }
+
+    try {
+      let fresh = await observe(false)
+      let spared = await observe(true)
+
+      expect(fresh.taken).toBe(0)
+      expect(spared.taken).toBeGreaterThan(0)
+      expect(spared.verdicts).toStrictEqual(fresh.verdicts)
+      expect(fresh.verdicts.length).toBeGreaterThan(1)
+      expect(spared.setups).toStrictEqual(fresh.setups)
+      expect(spared.environments).toStrictEqual(fresh.environments)
+      expect(new Set([...spared.setups, ...spared.environments])).toStrictEqual(
+        new Set([JSON.stringify({ task: true })]),
+      )
+      expect(spared.seen).toStrictEqual(fresh.seen)
+      expect(spared.slots).toBe(fresh.slots)
+    } finally {
+      /* Cspell:disable-next-line */
+      vi.unstubAllEnvs()
+      await rm(journal, { recursive: true, force: true })
+    }
   }, 60_000)
 
   it('never runs a test file twice at once', async () => {

@@ -1,3 +1,5 @@
+import type { ChildProcess } from 'node:child_process'
+
 import path from 'node:path'
 
 import type {
@@ -9,6 +11,7 @@ import type { IsolatedPlan } from '../../types/adapter/isolated-plan'
 import type { NodeTestHandle } from './types/node-test-handle'
 
 import { collectNodeDependencies } from './collect-node-dependencies'
+import { createSpareProcesses } from './create-spare-processes'
 import { writeSwitchPlan } from '../shared/write-switch-plan'
 import { buildIsolatedFacts } from './build-isolated-facts'
 import { getUnitDeadline } from './get-unit-deadline'
@@ -27,10 +30,17 @@ import { runTestFile } from './run-test-file'
  * in the file's dry run of a process that still exited with 0 never count. A
  * unit that stopped for a failure that turned out a todo test, as one that only
  * the mutant made todo, runs again without stopping (`checkTodoBail`). A
- * watchdog stops a unit past its timeout (`getUnitDeadline`). Every unit
- * reports its facts (`buildIsolatedFacts`) and, once its process reached its
- * end, what it read, to the result and, as it ends, to the context's
- * `onUnitEnd`.
+ * watchdog stops a unit past its timeout (`getUnitDeadline`). A unit runs in a
+ * spare process of its test file when one is ready (`createSpareProcesses`),
+ * except right after a unit whose processes outlived it or hung
+ * (`TestProcessOutcome.lingering`): the next unit to start, and the next unit
+ * of the same test file, start a process of their own then, so what those
+ * processes held is free for as long as a process takes to start, as without
+ * spares. A unit whose spare ended before it began the unit runs again in a
+ * process of its own, as a run again after a todo test does. The spares no unit
+ * took stop once the run is over. Every unit reports its facts
+ * (`buildIsolatedFacts`) and, once its process reached its end, what it read,
+ * to the result and, as it ends, to the context's `onUnitEnd`.
  *
  * @param handle - Live session.
  * @param plan - Units to run.
@@ -46,58 +56,94 @@ export async function runIsolated(
     writeSwitchPlan(path.join(context.workDirectory, 'switched'), context.files)
   state.plan = switchPlan
   let cache = { tsconfigs: new Map(), packages: new Map() }
-  let units = await runInPool(
-    plan.units.map((unit, index) => ({
-      run: async (): Promise<IsolatedFacts> => {
-        let { mutant, limits, file } = unit
-        /**
-         * Runs the unit's test process.
-         *
-         * @param bail - Whether it stops starting tests after a failure.
-         * @returns What the process left behind.
-         */
-        function run(bail: boolean): Promise<TestProcessOutcome> {
-          return runTestFile(handle, {
-            deadline: watch => getUnitDeadline(watch, limits.timeout),
-            expected: state.expected.get(file) ?? [],
-            hitLimit: limits.hitLimit,
-            mode: 'isolated',
-            plan: switchPlan,
+  let keys = plan.units.map((unit, index) =>
+    context.parallelUnits === true ? String(index) : unit.file,
+  )
+  let lingering = { files: new Set<string>(), jobs: 0 }
+  let spares = createSpareProcesses(
+    handle,
+    plan.units.map((unit, index) => ({ key: keys[index]!, file: unit.file })),
+  )
+  let units: IsolatedFacts[]
+  try {
+    units = await runInPool(
+      plan.units.map((unit, index) => ({
+        run: async (): Promise<IsolatedFacts> => {
+          let { mutant, limits, file } = unit
+          /**
+           * Runs the unit's test process and notes whether its processes
+           * outlived it.
+           *
+           * @param bail - Whether it stops starting tests after a failure.
+           * @param spare - Spare process of the test file to run in, if any.
+           * @returns What the process left behind.
+           */
+          async function run(
+            bail: boolean,
+            spare?: ChildProcess,
+          ): Promise<TestProcessOutcome> {
+            let ran = await runTestFile(handle, {
+              deadline: watch => getUnitDeadline(watch, limits.timeout),
+              expected: state.expected.get(file) ?? [],
+              ...(spare !== undefined && { spare }),
+              hitLimit: limits.hitLimit,
+              mode: 'isolated',
+              plan: switchPlan,
+              mutant,
+              bail,
+              file,
+            })
+            if (ran.lingering) {
+              lingering.files.add(file)
+              lingering.jobs += 1
+            } else {
+              lingering.files.delete(file)
+            }
+            return ran
+          }
+          let bail = state.todo.get(file) !== true
+          let fresh = lingering.jobs > 0 || lingering.files.has(file)
+          lingering.jobs = Math.max(0, lingering.jobs - 1)
+          let spare = spares.take(index, fresh) ?? undefined
+          let outcome = await run(bail, spare)
+          if (
+            spare !== undefined &&
+            outcome.records.every(record => record.kind !== 'start')
+          ) {
+            outcome = await run(bail)
+          }
+          if (checkTodoBail(outcome.records)) {
+            outcome = await run(false)
+          }
+          let facts = buildIsolatedFacts(outcome, {
+            root: context.root,
+            unit: index,
             mutant,
-            bail,
             file,
           })
-        }
-        let outcome = await run(state.todo.get(file) !== true)
-        if (checkTodoBail(outcome.records)) {
-          outcome = await run(false)
-        }
-        let facts = buildIsolatedFacts(outcome, {
-          root: context.root,
-          unit: index,
-          mutant,
-          file,
-        })
-        let end = outcome.records.find(record => record.kind === 'end')
-        facts.inputs =
-          end === undefined ? null : (
-            {
-              dependencies: collectNodeDependencies({
-                records: outcome.records,
-                preload: handle.preload,
-                tsx: handle.tsx,
-                cache,
-                file,
-              })!,
-              environment: end.environment,
-            }
-          )
-        context.onUnitEnd?.({ unit: index, facts })
-        return facts
-      },
-      key: context.parallelUnits === true ? String(index) : unit.file,
-    })),
-    handle.workers,
-  )
+          let end = outcome.records.find(record => record.kind === 'end')
+          facts.inputs =
+            end === undefined ? null : (
+              {
+                dependencies: collectNodeDependencies({
+                  records: outcome.records,
+                  preload: handle.preload,
+                  tsx: handle.tsx,
+                  cache,
+                  file,
+                })!,
+                environment: end.environment,
+              }
+            )
+          context.onUnitEnd?.({ unit: index, facts })
+          return facts
+        },
+        key: keys[index]!,
+      })),
+      handle.workers,
+    )
+  } finally {
+    spares.stop()
+  }
   return { units }
 }

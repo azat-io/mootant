@@ -1,4 +1,14 @@
 import {
+  writeFile,
+  realpath,
+  readFile,
+  readdir,
+  mkdtemp,
+  mkdir,
+  cp,
+  rm,
+} from 'node:fs/promises'
+import {
   beforeAll,
   afterEach,
   describe,
@@ -7,18 +17,22 @@ import {
   it,
   vi,
 } from 'vitest'
-import { writeFile, realpath, mkdtemp, cp, rm } from 'node:fs/promises'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { setTimeout } from 'node:timers/promises'
+import { pathToFileURL } from 'node:url'
+import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
+import type * as SpareProcesses from '../../../adapters/node-test/create-spare-processes'
 import type { AdapterSession } from '../../../types/adapter/adapter-session'
 import type { MutantResult } from '../../../types/run/mutant-result'
 import type { RunResult } from '../../../types/run/run-result'
 import type { RunEvent } from '../../../types/run/run-event'
 
 import { startNodeTestSession } from '../../../adapters/node-test/start-node-test-session'
+import { createSpareProcesses } from '../../../adapters/node-test/create-spare-processes'
+import { readPreforkSwitch } from '../../../adapters/shared/read-prefork-switch'
 import { getDrySnapshotPath } from '../../../core/cache/get-dry-snapshot-path'
 import { createWorkDirectory } from '../../../core/run/create-work-directory'
 import { buildNodeTestPreload } from '../../helpers/build-node-test-preload'
@@ -36,6 +50,18 @@ import { version } from '../../../package.json'
  * Path of the built preload, set before the first test.
  */
 let preload = vi.hoisted(() => ({ path: '' }))
+
+vi.mock(import('../../../adapters/shared/read-prefork-switch'), () => ({
+  readPreforkSwitch: vi.fn(() => true),
+}))
+
+vi.mock(
+  import('../../../adapters/node-test/create-spare-processes'),
+  async importOriginal => {
+    let actual = await importOriginal()
+    return { createSpareProcesses: vi.fn(actual.createSpareProcesses) }
+  },
+)
 
 vi.mock(import('../../../adapters/node-test/get-preload-path'), () => ({
   getPreloadPath: () => preload.path,
@@ -614,6 +640,157 @@ describe('nodeTestAdapter', () => {
         expect.objectContaining({ reference: 'survived' }),
       ])
     }, 60_000)
+
+    it('runs no module of the project in a spare process before its unit, and shows tests what a new process shows', async () => {
+      let journal = await mkdtemp(path.join(tmpdir(), 'mootant-spare-'))
+      /**
+       * Runs the mutants of the fixture with or without spare processes.
+       *
+       * @param spares - Whether the session may start spare processes.
+       * @returns The verdicts, what every test process showed its tests, and
+       *   whether one found the lock of another taken.
+       */
+      async function observe(spares: boolean): Promise<{
+        verdicts: string[][]
+        contended: boolean
+        seen: string[]
+        taken: number
+      }> {
+        let taken = 0
+        let { createSpareProcesses: create } = await vi.importActual<
+          typeof SpareProcesses
+        >('../../../adapters/node-test/create-spare-processes')
+        vi.mocked(createSpareProcesses).mockImplementation((handle, jobs) => {
+          let created = create(handle, jobs)
+          return {
+            take: (index, fresh) => {
+              let spare = created.take(index, fresh)
+              taken += spare === null ? 0 : 1
+              return spare
+            },
+            stop: created.stop,
+          }
+        })
+        vi.mocked(readPreforkSwitch).mockReturnValueOnce(spares)
+        await rm(journal, { recursive: true, force: true })
+        await mkdir(journal)
+        let result = await runMutants({
+          builtIns: createBuiltIns(
+            'node-test',
+            nodeTestAdapter({ env: { SPARE_JOURNAL: journal }, node }),
+          ),
+          cwd: path.join(fixtures, 'spare'),
+          paths: ['src'],
+          concurrency: 2,
+          cache: false,
+        })
+        let names = await readdir(journal)
+        return {
+          seen: (
+            await Promise.all(
+              names
+                .filter(name => name.endsWith('.json'))
+                .map(name => readFile(path.join(journal, name), 'utf8')),
+            )
+          ).toSorted(),
+          verdicts: result.results.map(entry => [
+            describeMutant(entry),
+            entry.status,
+          ]),
+          contended: names.includes('contended'),
+          taken,
+        }
+      }
+
+      try {
+        let fresh = await observe(false)
+        let spared = await observe(true)
+
+        expect(fresh.taken).toBe(0)
+        expect(spared.taken).toBeGreaterThan(0)
+        expect(fresh.contended).toBe(false)
+        expect(spared.contended).toBe(false)
+        expect(spared.verdicts).toStrictEqual(fresh.verdicts)
+        expect(fresh.verdicts.length).toBeGreaterThan(1)
+        expect(spared.seen).toStrictEqual(fresh.seen)
+        expect(JSON.parse(fresh.seen[0]!)).toMatchObject({
+          execArgv: expect.arrayContaining(['./lock.js']) as unknown,
+          send: 'undefined',
+          connected: null,
+          third: 'open',
+        })
+      } finally {
+        vi.mocked(createSpareProcesses).mockReset()
+        await rm(journal, { recursive: true, force: true })
+      }
+    }, 60_000)
+
+    it('ends a spare process before any module of the project loads once mootant is gone', async () => {
+      let directory = await mkdtemp(path.join(tmpdir(), 'mootant-orphan-'))
+      let loaded = path.join(directory, 'loaded')
+      let file = path.join(directory, 'a.test.mjs')
+      await writeFile(
+        file,
+        `import { writeFileSync } from 'node:fs'\nwriteFileSync(${JSON.stringify(loaded)}, '')\n`,
+      )
+      let parent = spawn(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          `import { spawn } from 'node:child_process'
+          let child = spawn(${JSON.stringify(node)}, ['--import', ${JSON.stringify(pathToFileURL(built.path).href)}, ${JSON.stringify(file)}], {
+            env: { ...process.env, MOOTANT_UNIT_FD: '3' },
+            stdio: ['ignore', 'ignore', 'ignore', 'pipe'],
+            detached: true,
+          })
+          console.log(child.pid)
+          setInterval(() => {}, 1000)`,
+        ],
+        { stdio: ['ignore', 'pipe', 'inherit'] },
+      )
+      let pid = await new Promise<number>(resolve => {
+        parent.stdout.once('data', (text: Buffer) => {
+          resolve(Number(text.toString()))
+        })
+      })
+      /**
+       * Tells whether the spare still runs.
+       *
+       * @returns Whether its process exists.
+       */
+      function isAlive(): boolean {
+        try {
+          process.kill(pid, 0)
+          return true
+        } catch {
+          return false
+        }
+      }
+      await setTimeout(500)
+
+      expect(isAlive()).toBe(true)
+
+      parent.kill('SIGKILL')
+      let deadline = Date.now() + 2000
+      /**
+       * Waits until the spare ended or two seconds passed.
+       *
+       * @returns Resolves then.
+       */
+      async function waitForEnd(): Promise<void> {
+        if (isAlive() && Date.now() < deadline) {
+          await setTimeout(50)
+          await waitForEnd()
+        }
+      }
+      await waitForEnd()
+
+      expect(isAlive()).toBe(false)
+      expect(existsSync(loaded)).toBe(false)
+
+      await rm(directory, { recursive: true, force: true })
+    }, 20_000)
 
     it('gives the verdicts of the default mode with parallel units where no test shares a resource', async () => {
       /**

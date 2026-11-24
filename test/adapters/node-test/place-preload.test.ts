@@ -45,4 +45,19 @@ describe('placePreload', () => {
       args: ['-r', './a.cjs'],
     })
   })
+
+  it('reads NODE_OPTIONS as Node does, quotes included', () => {
+    expect(placePreload(PRELOAD, [], '"--require" ./b.cjs')).toStrictEqual({
+      nodeOptions: '--require="/m t/preload.js" "--require" ./b.cjs',
+      args: [],
+    })
+    expect(placePreload(PRELOAD, [], '--imp"ort"=tsx')).toStrictEqual({
+      nodeOptions: `--import=${PRELOAD_URL} --imp"ort"=tsx`,
+      args: [],
+    })
+    expect(placePreload(PRELOAD, [], '--title="a --import"')).toStrictEqual({
+      nodeOptions: '--title="a --import"',
+      args: ['--import', PRELOAD_URL],
+    })
+  })
 })

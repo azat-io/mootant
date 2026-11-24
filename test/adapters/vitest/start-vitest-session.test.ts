@@ -174,7 +174,11 @@ describe('startVitestSession', () => {
       files: [],
     })
     let [handle] = vi.mocked(runDry).mock.calls[0]!
-    let worker = handle.state.pool.createPoolWorker({} as never)
+    let worker = handle.state.pool.createPoolWorker({
+      distPath: '/vitest/dist',
+      execArgv: [],
+      env: {},
+    } as never)
 
     expect(runDry).toHaveBeenCalledWith(handle, request)
     expect(runBatch).toHaveBeenCalledWith(handle, { units: [] })
@@ -192,10 +196,16 @@ describe('startVitestSession', () => {
     expect(handle.state.pool.name).toBe('mootant-forks')
     expect(worker.name).toBe('forks')
 
+    let drain = vi.spyOn(handle.state.pool, 'drain')
+    vi.mocked(vitest.close).mockImplementationOnce(() => {
+      expect(drain).toHaveBeenCalledExactlyOnceWith()
+      return Promise.resolve()
+    })
     await session.close()
     await session.close()
 
     expect(vitest.close).toHaveBeenCalledExactlyOnceWith()
+    expect(drain).toHaveBeenCalledExactlyOnceWith()
     expect(installMutantRuntime().coverage).toBeNull()
   })
 

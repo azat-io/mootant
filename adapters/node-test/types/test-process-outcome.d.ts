@@ -21,7 +21,14 @@ export interface TestProcessOutcome {
   code: number | null
 
   /**
-   * Epoch milliseconds when it was started.
+   * Whether a process of its group outlived it, or the watchdog stopped it:
+   * either way what that group held, such as a port, may stay taken for a
+   * moment after the group was stopped.
+   */
+  lingering: boolean
+
+  /**
+   * Epoch milliseconds when it was started, or got its unit as a spare.
    */
   spawned: number
 

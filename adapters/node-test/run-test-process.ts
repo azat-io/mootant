@@ -1,14 +1,15 @@
 import type { ChildProcess } from 'node:child_process'
+import type { Writable } from 'node:stream'
 
 import { closeSync, fstatSync, openSync, readSync } from 'node:fs'
-import { spawn } from 'node:child_process'
 
 import type { TestProcessOutcome } from './types/test-process-outcome'
 import type { NodeTestRecord } from './types/node-test-record'
 import type { ProcessWatch } from './types/process-watch'
 
-import { trackProcessGroup } from '../shared/track-process-group'
 import { stopProcessGroup } from '../shared/stop-process-group'
+import { startTestProcess } from './start-test-process'
+import { isGroupAlive } from './is-group-alive'
 
 /**
  * Milliseconds between two reads of the out file.
@@ -44,6 +45,12 @@ interface TestProcessOptions {
   env: NodeJS.ProcessEnv
 
   /**
+   * Spare process of the test file, started with file descriptor 3, to run
+   * instead of a new one.
+   */
+  spare?: ChildProcess
+
+  /**
    * Process groups of the session's test processes that run, which holds this
    * one's while it runs.
    */
@@ -53,6 +60,12 @@ interface TestProcessOptions {
    * Arguments after the Node binary.
    */
   args: string[]
+
+  /**
+   * The unit as JSON, sent on file descriptor 3 of the process; without it the
+   * environment carries the unit, and the process gets no descriptor 3.
+   */
+  unit?: string
 
   /**
    * Node binary.
@@ -73,20 +86,26 @@ interface TestProcessOptions {
 
 /**
  * Runs one test process and collects the records it appends to its out file.
- * The process starts detached, as the leader of a process group, without stdin.
- * The out file is read every 50 ms; when the time passes the deadline the
- * options compute from the records so far, the watchdog stops the whole process
- * group (`stopProcessGroup`). Once the process exits, what is left of its group
- * is stopped too, the deadline no longer applies, and the output gets 300 ms to
- * close before it is dropped, so a process the tests detached into a group of
- * its own cannot hold the outcome back. While the process runs, it is stopped
- * when mootant exits or gets SIGINT or SIGTERM (`trackProcessGroup`), and its
- * group is in `groups`, which the session stops when it closes. A line that is
- * not JSON, as the last line of a stopped process, is ignored.
+ * The process starts detached, as the leader of a process group, without stdin
+ * (`startTestProcess`), or a spare process of the test file, started before,
+ * runs instead. With a unit in the options, the process gets it as a line on
+ * file descriptor 3, which is closed after it. Either way the start time is
+ * now, so the deadline and the start-up of a spare count from the moment it got
+ * its unit. The out file is read every 50 ms; when the time passes the deadline
+ * the options compute from the records so far, the watchdog stops the whole
+ * process group (`stopProcessGroup`). Once the process exits, what is left of
+ * its group is stopped too, and the outcome tells whether anything was left or
+ * the watchdog stopped it (`lingering`); the deadline no longer applies, and
+ * the output gets 300 ms to close before it is dropped, so a process the tests
+ * detached into a group of its own cannot hold the outcome back. While the
+ * process runs, its group is in `groups`, which the session stops when it
+ * closes. A line that is not JSON, as the last line of a stopped process, is
+ * ignored.
  *
- * @param options - Binary, arguments, environment, out file and deadline.
- * @returns Records, exit code or signal, start time and whether the watchdog
- *   stopped the process.
+ * @param options - Binary, arguments, environment, out file, deadline, the unit
+ *   for file descriptor 3 and a spare process, if any.
+ * @returns Records, exit code or signal, start time, whether the watchdog
+ *   stopped the process and whether its group outlived it.
  * @throws {Error} When the process cannot start.
  */
 export function runTestProcess(
@@ -120,24 +139,28 @@ export function runTestProcess(
     }
     watch.last = Date.now()
   }
-  let output: 'ignore' | 'pipe' = onOutput === undefined ? 'ignore' : 'pipe'
-  let child: ChildProcess = spawn(options.node, options.args, {
-    stdio: ['ignore', output, output],
-    windowsHide: true,
-    cwd: options.cwd,
-    env: options.env,
-    detached: true,
-  })
+  let { unit } = options
+  let child =
+    options.spare ??
+    startTestProcess({
+      output: onOutput === undefined ? 'ignore' : 'pipe',
+      pipe: unit !== undefined,
+      groups: options.groups,
+      node: options.node,
+      args: options.args,
+      cwd: options.cwd,
+      env: options.env,
+    })
+  if (unit !== undefined && child.pid !== undefined) {
+    let pipe = child.stdio[3] as Writable | null
+    pipe?.on('error', () => {})
+    pipe?.end(`${unit}\n`)
+  }
   for (let stream of [child.stdout, child.stderr]) {
     stream?.setEncoding('utf8')
     stream?.on('data', (text: string) => {
       onOutput!(text)
     })
-  }
-  let untrack =
-    child.pid === undefined ? () => {} : trackProcessGroup(child.pid)
-  if (child.pid !== undefined) {
-    options.groups.add(child.pid)
   }
   let exited = false
   let timer = setInterval(() => {
@@ -159,32 +182,38 @@ export function runTestProcess(
     }
     finished = true
     clearInterval(timer)
-    untrack()
-    options.groups.delete(child.pid!)
     read()
     closeSync(descriptor)
     return true
   }
+  let lingering = false
   return new Promise((resolve, reject) => {
+    /**
+     * Resolves with the outcome once.
+     *
+     * @param code - Exit code, or null.
+     * @param signal - Signal that ended the process, or null.
+     */
+    function settle(code: number | null, signal: NodeJS.Signals | null): void {
+      if (finish()) {
+        resolve({ lingering, spawned, records, signal, code, hung })
+      }
+    }
     child.on('error', error => {
       finish()
       reject(error)
     })
     child.on('exit', (code, signal) => {
       exited = true
+      lingering = hung || isGroupAlive(child.pid!)
       stopProcessGroup(child.pid!)
       setTimeout(() => {
-        child.stdout?.destroy()
-        child.stderr?.destroy()
-        if (finish()) {
-          resolve({ spawned, records, signal, code, hung })
+        for (let stream of child.stdio) {
+          stream?.destroy()
         }
+        settle(code, signal)
       }, CLOSE_GRACE)
     })
-    child.on('close', (code, signal) => {
-      if (finish()) {
-        resolve({ spawned, records, signal, code, hung })
-      }
-    })
+    child.on('close', settle)
   })
 }

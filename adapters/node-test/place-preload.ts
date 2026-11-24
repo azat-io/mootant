@@ -1,20 +1,17 @@
 import { pathToFileURL } from 'node:url'
 
-/**
- * Flag that requires a module in `NODE_OPTIONS`.
- */
-const REQUIRE_OPTION = /(?:^|\s)(?:--require|-r)(?:[\s=]|$)/u
+import { readNodeOptions } from '../shared/read-node-options'
+import { readFlagName } from '../shared/read-flag-name'
 
 /**
- * Flag that loads a module in `NODE_OPTIONS`.
- */
-const LOADING_OPTION =
-  /(?:^|\s)(?:--experimental-loader|--import|--loader)(?:[\s=]|$)/u
-
-/**
- * Flags that require a module on the command line.
+ * Flags that require a module.
  */
 const REQUIRE_FLAGS = new Set(['--require', '-r'])
+
+/**
+ * Flags that load a module through the ES module loader.
+ */
+const LOADING_FLAGS = new Set(['--experimental-loader', '--import', '--loader'])
 
 /**
  * Puts mootant's preload where it runs before every module the project loads
@@ -22,7 +19,8 @@ const REQUIRE_FLAGS = new Set(['--require', '-r'])
  * `NODE_OPTIONS` before those of the command line, so: when the project
  * requires modules, the preload is the first `--require` (of `NODE_OPTIONS` if
  * they require one); otherwise it is the first `--import`, of `NODE_OPTIONS`
- * when they load modules, else of the command line.
+ * when they load modules, else of the command line. `NODE_OPTIONS` are read as
+ * Node reads them (`readNodeOptions`, `readFlagName`), quotes included.
  *
  * @param preload - Absolute path of the preload.
  * @param execArgv - Flags of the test processes.
@@ -38,7 +36,8 @@ export function placePreload(
   let required = execArgv.some(flag =>
     REQUIRE_FLAGS.has(flag.split('=', 1)[0]!),
   )
-  if (REQUIRE_OPTION.test(nodeOptions)) {
+  let options = readNodeOptions(nodeOptions).map(readFlagName)
+  if (options.some(name => REQUIRE_FLAGS.has(name))) {
     return {
       nodeOptions: `--require=${JSON.stringify(preload)} ${nodeOptions}`,
       args: [...execArgv],
@@ -47,7 +46,7 @@ export function placePreload(
   if (required) {
     return { args: ['--require', preload, ...execArgv], nodeOptions }
   }
-  if (LOADING_OPTION.test(nodeOptions)) {
+  if (options.some(name => LOADING_FLAGS.has(name))) {
     return {
       nodeOptions: `--import=${url} ${nodeOptions}`,
       args: [...execArgv],

@@ -77,6 +77,27 @@ describe('filterExecArgv', () => {
     })
   })
 
+  it('reads names as Node does, with underscores as dashes', () => {
+    expect(
+      filterExecArgv([
+        ['--test_reporter=dot'],
+        ['--test_update_snapshots'],
+        ['--test_isolation', 'none'],
+        ['--test_randomize'],
+      ]),
+    ).toStrictEqual({
+      diagnostics: [
+        warning(
+          'mootant never writes snapshots, so it ignores --test-update-snapshots of the test command.',
+        ),
+        warning(
+          'mootant runs every test file in a process of its own, so it ignores --test-isolation=none of the test command.',
+        ),
+      ],
+      execArgv: ['--test_randomize', '--test-random-seed=1'],
+    })
+  })
+
   it('pins the seed of random order unless the command gives one', () => {
     expect(filterExecArgv([['--test-randomize']]).execArgv).toStrictEqual([
       '--test-randomize',
