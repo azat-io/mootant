@@ -31,14 +31,14 @@ const INPUTS: Parameters<typeof getDrySnapshotKey>[0] = {
  */
 function getKey(
   fields: Partial<Parameters<typeof getDrySnapshotKey>[0]> = {},
-): Promise<string> {
+): string {
   return getDrySnapshotKey({ ...INPUTS, ...fields })
 }
 
 describe('getDrySnapshotKey', () => {
-  it('is the same for the same inputs', async () => {
-    await expect(getKey()).resolves.toMatch(/^[\da-f]{64}$/u)
-    await expect(getKey()).resolves.toBe(await getKey())
+  it('is the same for the same inputs', () => {
+    expect(getKey()).toMatch(/^[\da-f]{64}$/u)
+    expect(getKey()).toBe(getKey())
   })
 
   it.each<[string, Partial<Parameters<typeof getDrySnapshotKey>[0]>]>([
@@ -84,15 +84,15 @@ describe('getDrySnapshotKey', () => {
     ['parallel units', { context: { ...INPUTS.context, parallelUnits: true } }],
     ['the adapter', { adapter: { name: 'jest' } as never }],
     ['the root', { root: '/q' }],
-  ])('changes with %s', async (_name, fields) => {
-    await expect(getKey(fields)).resolves.not.toBe(await getKey())
+  ])('changes with %s', (_name, fields) => {
+    expect(getKey(fields)).not.toBe(getKey())
   })
 
-  it('changes with the working directory', async () => {
-    let before = await getKey()
+  it('changes with the working directory', () => {
+    let before = getKey()
     vi.spyOn(process, 'cwd').mockReturnValueOnce('/p/src')
 
-    await expect(getKey()).resolves.not.toBe(before)
-    await expect(getKey()).resolves.toBe(before)
+    expect(getKey()).not.toBe(before)
+    expect(getKey()).toBe(before)
   })
 })

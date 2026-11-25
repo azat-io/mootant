@@ -1,6 +1,5 @@
 import { availableParallelism } from 'node:os'
 import { createHash } from 'node:crypto'
-import { stat } from 'node:fs/promises'
 
 import type { ActiveMutator } from '../../types/mutator/active-mutator'
 import type { SwitchedFile } from '../../types/adapter/switched-file'
@@ -13,6 +12,7 @@ import { getPortablePath } from './get-portable-path'
 import { CACHE_VERSION } from './cache-version'
 import { createDigest } from './create-digest'
 import { version } from '../../package.json'
+import { getBuildId } from './get-build-id'
 
 /**
  * Builds the key of a saved dry run (`DrySnapshot`) over what the dry run was
@@ -40,7 +40,7 @@ import { version } from '../../package.json'
  * @param input.root - Project root.
  * @returns SHA-256 in hex.
  */
-export async function getDrySnapshotKey(input: {
+export function getDrySnapshotKey(input: {
   setup: {
     mutators: ActiveMutator[]
     file: string | null
@@ -53,12 +53,12 @@ export async function getDrySnapshotKey(input: {
   limits: LimitSettings
   adapter: TestAdapter
   root: string
-}): Promise<string> {
+}): string {
   let { context, setup, root } = input
   return createDigest([
     CACHE_VERSION,
     version,
-    (await stat(import.meta.filename)).mtimeMs,
+    getBuildId(),
     INSTRUMENTER_VERSION,
     RUNTIME_VERSION,
     [input.adapter.name, input.adapter.version ?? null],

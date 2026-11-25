@@ -575,7 +575,7 @@ async function execute(context: {
   let related = built.switched.map(entry => entry.file)
   let key =
     snapshots === null ? null : (
-      await getDrySnapshotKey({
+      getDrySnapshotKey({
         context: {
           concurrency: runSettings.concurrency,
           parallelUnits: context.parallelUnits,

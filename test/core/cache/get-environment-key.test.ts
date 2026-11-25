@@ -22,8 +22,8 @@ const INPUTS: Parameters<typeof getEnvironmentKey>[0] = {
   files: ['/p/vitest.config.ts', '/p/.env'],
   settings: [{ pool: 'forks' }],
   limits: TEST_LIMITS,
+  build: 'b1',
   root: '/p',
-  build: 1,
 }
 
 /**
@@ -63,7 +63,7 @@ describe('getEnvironmentKey', () => {
       'the limits',
       { limits: { ...TEST_LIMITS, timeout: { constant: 1, factor: 3 } } },
     ],
-    ['the build', { build: 2 }],
+    ['the build', { build: 'b2' }],
     ['parallel units', { parallelUnits: true }],
   ])('changes with %s', (_name, fields) => {
     expect(getKey(fields)).not.toBe(getKey())

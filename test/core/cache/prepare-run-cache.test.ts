@@ -1,12 +1,15 @@
+import type * as FileSystem from 'node:fs/promises'
+
 import {
   writeFile,
   realpath,
   mkdtemp,
   utimes,
   mkdir,
+  stat,
   rm,
 } from 'node:fs/promises'
-import { beforeAll, afterAll, describe, expect, it } from 'vitest'
+import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -20,6 +23,13 @@ import type { RunCache } from '../../../types/cache/run-cache'
 
 import { createTestRun, TEST_LIMITS } from '../../helpers/create-test-run'
 import { prepareRunCache } from '../../../core/cache/prepare-run-cache'
+
+vi.mock(import('node:fs/promises'), async importOriginal => {
+  let actual = await importOriginal()
+  return { ...actual, stat: vi.fn(actual.stat) as never }
+})
+
+let actual = await vi.importActual<typeof FileSystem>('node:fs/promises')
 
 /**
  * Real path of the temporary project of the tests.
@@ -200,6 +210,27 @@ describe('prepareRunCache', () => {
         })
       ).cache,
     ).not.toBeNull()
+  })
+
+  it('reuses evidence after a reinstall of mootant, which gives its files other times', async () => {
+    let own = path.resolve(
+      import.meta.dirname,
+      '../../../core/cache/prepare-run-cache.ts',
+    )
+    let time = 1
+    vi.mocked(stat).mockImplementation(async (file, options) =>
+      file === own ?
+        Object.assign(await actual.stat(own), { mtimeMs: time })
+      : actual.stat(file, options),
+    )
+    try {
+      let { cache } = await prepare({})
+      time = 2
+
+      await expect(reuses(cache!)).resolves.toBe(true)
+    } finally {
+      vi.mocked(stat).mockReset()
+    }
   })
 
   it('keeps the evidence of runs with parallel units apart from the others', async () => {

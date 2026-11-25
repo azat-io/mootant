@@ -1,4 +1,4 @@
-import { readdir, stat } from 'node:fs/promises'
+import { readdir } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
 
@@ -25,6 +25,7 @@ import { createRunCache } from './create-run-cache'
 import { findLockfile } from './find-lockfile'
 import { createDigest } from './create-digest'
 import { UNKNOWN_HASH } from './unknown-hash'
+import { getBuildId } from './get-build-id'
 import { hashFiles } from './hash-files'
 
 /**
@@ -256,10 +257,10 @@ export async function prepareRunCache(
       runner: session.version ?? null,
       adapter: input.adapter.name,
     },
-    build: (await stat(import.meta.filename)).mtimeMs,
     parallelUnits: input.parallelUnits === true,
     settings: inputs.settings,
     limits: input.limits,
+    build: getBuildId(),
     hashes,
     files,
     root,

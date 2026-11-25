@@ -4,8 +4,11 @@ import type { BuildOptions } from 'vite'
 
 import { parseSync, Visitor } from 'oxc-parser'
 import { defineConfig, build } from 'vite'
+import { createHash } from 'node:crypto'
 import dts from 'vite-plugin-dts'
 import path from 'node:path'
+
+import { BUILD_HASH } from './core/cache/build-hash.ts'
 
 /**
  * Add `.js` to the relative module specifiers of an emitted declaration file,
@@ -135,6 +138,43 @@ function inlineBundle(): Plugin {
 }
 
 /**
+ * Hashes the name and code of every file of the bundle, as the other plugins
+ * leave them, and writes the hash in place of `BUILD_HASH`.
+ *
+ * @returns Vite plugin.
+ */
+function buildHash(): Plugin {
+  return {
+    generateBundle: {
+      handler(_options, bundle) {
+        let hash = createHash('sha256')
+        for (let name of Object.keys(bundle).toSorted()) {
+          let file = bundle[name]!
+          hash
+            .update(`${name}\0`)
+            .update(file.type === 'chunk' ? file.code : file.source)
+            .update('\0')
+        }
+        let value = hash.digest('hex')
+        let found = false
+        for (let file of Object.values(bundle)) {
+          if (file.type === 'chunk' && file.code.includes(BUILD_HASH)) {
+            file.code = file.code.replaceAll(BUILD_HASH, value)
+            found = true
+          }
+        }
+        if (!found) {
+          throw new Error(`Cannot find ${BUILD_HASH} in the build.`)
+        }
+      },
+      order: 'post',
+    },
+    name: 'mootant:build-hash',
+    apply: 'build',
+  }
+}
+
+/**
  * Vite configuration.
  */
 export default defineConfig({
@@ -171,6 +211,7 @@ export default defineConfig({
   },
   plugins: [
     inlineBundle(),
+    buildHash(),
     dts({
       include: ['adapters', 'cli', 'core', 'types'],
       copyDtsFiles: true,

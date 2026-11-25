@@ -51,10 +51,9 @@ interface EnvironmentInput {
   files: string[]
 
   /**
-   * Stamp of mootant's own build, so a rebuild of an unreleased version does
-   * not reuse verdicts of the previous build.
+   * Id of mootant's own code (`getBuildId`).
    */
-  build: number
+  build: string
 
   /**
    * Project root; paths are hashed relative to it.
