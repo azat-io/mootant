@@ -5,6 +5,7 @@ import type { OpenGraphCard } from '../../utils/render-open-graph'
 import { frontmatter as agentSkillPage } from '../../content/agent-skill.md'
 import { frontmatter as mutatorsPage } from '../../content/mutators.md'
 import { renderOpenGraph } from '../../utils/render-open-graph'
+import { communityPages } from '../../utils/community-pages'
 
 interface Path {
   params: {
@@ -16,7 +17,7 @@ interface Path {
 /**
  * Lists the Open Graph images of the docs, one next to each page: the home page
  * with the title and the slogan of its hero, then the guide, the agent skill
- * page, the page that lists the mutators and the mutators.
+ * page, the page that lists the mutators, the mutators and Community.
  *
  * @returns Path and text of each image.
  */
@@ -71,6 +72,10 @@ export async function getStaticPaths(): Promise<Path[]> {
       params: {
         path: `mutators/${id}`,
       },
+    })),
+    ...Object.values(communityPages).map(({ description, title, url }) => ({
+      props: { label: 'Community', description, title },
+      params: { path: url.slice(1) },
     })),
   ]
 }

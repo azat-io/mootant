@@ -1,5 +1,7 @@
 import { getCollection } from 'astro:content'
 
+import { communityPages } from './community-pages'
+
 interface Section {
   links: Page[]
   title: string
@@ -55,6 +57,17 @@ export let pages: Section[] = [
       .toSorted(({ title: a }, { title: b }) => a.localeCompare(b)),
     title: 'Mutators',
     url: '/mutators',
+  },
+  {
+    links: [
+      communityPages.branding,
+      communityPages.contributing,
+      communityPages.changelog,
+    ].map(({ title, url }) => ({
+      title,
+      url,
+    })),
+    title: 'Community',
   },
 ]
 

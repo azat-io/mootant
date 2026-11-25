@@ -1,6 +1,15 @@
 import type { RemarkPlugin } from '@astrojs/markdown-remark'
 
+import { fileURLToPath } from 'node:url'
+
 import type { MarkdownNode } from './markdown-node'
+
+/**
+ * The repository guide has its own H1 and a short welcome before the details.
+ */
+const CONTRIBUTING_PATH = fileURLToPath(
+  new URL('../../contributing.md', import.meta.url),
+)
 
 /**
  * Start of the sentence that tells how tests catch the mutants of a mutator.
@@ -15,11 +24,15 @@ const TESTS_CATCH_PATTERN = /Tests\s+catch/u
  *
  * @returns Transformer that marks the lead of a page.
  */
-export let remarkPageLead: RemarkPlugin = () => tree => {
+export let remarkPageLead: RemarkPlugin = () => (tree, file) => {
   let children = (tree as MarkdownNode).children ?? []
   let index = children.findIndex(({ type }) => type === 'paragraph')
   let heading = children.findIndex(({ type }) => type === 'heading')
   let paragraph = children[index]
+  if (paragraph && file.path === CONTRIBUTING_PATH) {
+    markLead(paragraph)
+    return
+  }
   if (!paragraph || (heading !== -1 && heading < index)) {
     return
   }

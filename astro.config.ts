@@ -16,7 +16,10 @@ import { rehypeHeadingAnchors } from './docs/plugins/rehype-heading-anchors'
 import { rehypeMutantChanges } from './docs/plugins/rehype-mutant-changes'
 import { rehypeCopyButtons } from './docs/plugins/rehype-copy-buttons'
 import { remarkKillSection } from './docs/plugins/remark-kill-section'
+import { rehypeChangelog } from './docs/plugins/rehype-changelog'
+import { remarkChangelog } from './docs/plugins/remark-changelog'
 import { remarkPageLead } from './docs/plugins/remark-page-lead'
+import { watchMarkdown } from './docs/plugins/watch-markdown'
 import { rehypeTables } from './docs/plugins/rehype-tables'
 import { reportDemo } from './docs/plugins/report-demo'
 import { shikiTheme } from './docs/utils/shiki-theme'
@@ -34,6 +37,7 @@ export default defineConfig({
             target: '_blank',
           },
         ],
+        rehypeChangelog,
         rehypeHeadingIds,
         rehypeSearchSections,
         rehypeHeadingAnchors,
@@ -41,7 +45,12 @@ export default defineConfig({
         rehypeMutantChanges,
         rehypeTables,
       ],
-      remarkPlugins: [remarkPageLead, remarkKillSection, remarkSectionize],
+      remarkPlugins: [
+        remarkChangelog,
+        remarkPageLead,
+        remarkKillSection,
+        remarkSectionize,
+      ],
     }),
     shikiConfig: {
       transformers: [
@@ -75,7 +84,7 @@ export default defineConfig({
     inlineStylesheets: 'always',
     format: 'file',
   },
-  integrations: [sitemap(), reportDemo(), mdx()],
+  integrations: [sitemap(), reportDemo(), watchMarkdown(), mdx()],
   prefetch: {
     defaultStrategy: 'hover',
   },

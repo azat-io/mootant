@@ -1,0 +1,16 @@
+---
+import { getHeadings, Content } from '../../../contributing.md'
+import { communityPages } from '../../utils/community-pages'
+import ContentLayout from '../../layouts/Content.astro'
+
+let { description, title } = communityPages.contributing
+---
+
+<ContentLayout
+  editLink="https://github.com/azat-io/mootant/edit/main/contributing.md"
+  headings={getHeadings()}
+  {description}
+  {title}
+>
+  <Content />
+</ContentLayout>

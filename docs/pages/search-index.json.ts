@@ -6,14 +6,18 @@ import { getCollection, render } from 'astro:content'
 import type { SearchSection } from '../plugins/rehype-search-sections'
 import type { SearchDocument } from '../utils/search-document'
 
+import { frontmatter as brandingPage } from '../content/community/branding.mdx'
 import { frontmatter as agentSkillPage } from '../content/agent-skill.md'
+import { frontmatter as contributingPage } from '../../contributing.md'
 import { frontmatter as mutatorsPage } from '../content/mutators.md'
+import { frontmatter as changelogPage } from '../../changelog.md'
+import { communityPages } from '../utils/community-pages'
 import { pages } from '../utils/pages'
 
 /**
  * Builds the index that the docs search loads: every section of every guide and
- * mutator page, of the page that lists the mutators and of the agent skill
- * page, as the `rehypeSearchSections` Markdown plugin splits them.
+ * mutator page, of the page that lists the mutators and of the agent skill page
+ * and Community, as the `rehypeSearchSections` plugin splits them.
  *
  * @returns JSON array of search documents.
  */
@@ -40,6 +44,21 @@ export const GET: APIRoute = async () => {
     ...documents.flat(),
     ...listDocuments,
     ...skillDocuments,
+    ...getDocuments(
+      brandingPage['searchSections'] as SearchSection[],
+      communityPages.branding.url,
+      ['Community', communityPages.branding.title],
+    ),
+    ...getDocuments(
+      contributingPage['searchSections'] as SearchSection[],
+      communityPages.contributing.url,
+      ['Community', communityPages.contributing.title],
+    ),
+    ...getDocuments(
+      changelogPage['searchSections'] as SearchSection[],
+      communityPages.changelog.url,
+      ['Community', communityPages.changelog.title],
+    ),
   ])
 }
 

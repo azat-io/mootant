@@ -1,0 +1,97 @@
+---
+interface Props {
+  kind: 'wordmark' | 'logo'
+}
+
+let { kind } = Astro.props
+let name = kind === 'logo' ? 'logo' : 'wordmark'
+---
+
+<div class="logos">
+  {(['light', 'dark'] as const).map(theme => (
+    <div class="asset">
+      <div class:list={['preview', theme, kind]}>
+        <img
+          alt={`Mootant ${name} for ${theme} backgrounds`}
+          src={`/branding/${kind}-${theme}.svg`}
+          width={kind === 'logo' ? 256 : 1063}
+          loading="lazy"
+          height="256"
+        />
+      </div>
+      <div class="caption">
+        <span>For {theme} backgrounds</span>
+        <a
+          aria-label={`Download Mootant ${name} for ${theme} backgrounds as SVG`}
+          download={`mootant-${kind}-${theme}.svg`}
+          href={`/branding/${kind}-${theme}.svg`}
+          data-astro-prefetch="false"
+        >
+          Download SVG
+        </a>
+      </div>
+    </div>
+  ))}
+</div>
+
+<style>
+  .logos {
+    display: grid;
+    gap: var(--space-m);
+    margin-block: var(--space-l);
+
+    @container (inline-size >= 480px) {
+      grid-template-columns: repeat(2, [asset] minmax(0, 1fr));
+    }
+  }
+
+  .asset {
+    overflow: hidden;
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius-m);
+  }
+
+  .preview {
+    display: grid;
+    place-items: center;
+    min-block-size: 14rem;
+    padding: var(--space-l);
+  }
+
+  .light {
+    background: oklch(96% 0.0083 91.48deg);
+  }
+
+  .dark {
+    background: oklch(20.5% 0.0081 274.52deg);
+  }
+
+  img {
+    inline-size: 100%;
+    block-size: auto;
+
+    .logo & {
+      max-inline-size: 12rem;
+    }
+
+    .wordmark & {
+      max-inline-size: 24rem;
+    }
+  }
+
+  .caption {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    align-items: start;
+    padding: var(--space-m);
+    font: var(--font-xs);
+    border-block-start: 1px solid var(--color-border-primary);
+  }
+
+  a {
+    padding-block: var(--space-2xs);
+    color: var(--color-content-primary);
+    text-underline-offset: 0.2em;
+  }
+</style>

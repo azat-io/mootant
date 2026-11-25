@@ -1,0 +1,119 @@
+---
+import { getHeadings, Content } from '../../../changelog.md'
+import { communityPages } from '../../utils/community-pages'
+import ContentLayout from '../../layouts/Content.astro'
+---
+
+<ContentLayout
+  editLink="https://github.com/azat-io/mootant/edit/main/changelog.md"
+  description={communityPages.changelog.description}
+  title={communityPages.changelog.title}
+  headings={getHeadings()}
+>
+  <div class="changelog">
+    <Content />
+  </div>
+</ContentLayout>
+
+<style>
+  .changelog {
+    & :global(.release) {
+      margin-block-start: var(--space-xl);
+    }
+
+    & :global(.release-header) {
+      display: flex;
+      flex-flow: row wrap;
+      gap: var(--space-xs) var(--space-m);
+      align-items: baseline;
+    }
+
+    & :global(.release-header > .heading) {
+      flex-basis: 100%;
+    }
+
+    & :global(.release h2) {
+      margin-block-end: var(--space-xs);
+      font-size: var(--font-size-2xl);
+    }
+
+    & :global(.release-compare) {
+      order: 2;
+      margin: 0;
+      font: var(--font-xs);
+    }
+
+    & :global(.release-compare a) {
+      text-underline-offset: 0.2em;
+    }
+
+    & :global(.release-summary) {
+      display: flex;
+      flex-flow: row wrap;
+      gap: var(--space-2xs) var(--space-s);
+      padding: 0;
+      margin: 0;
+      font: var(--font-xs);
+      list-style: '';
+    }
+
+    & :global(.release-summary li) {
+      margin: 0;
+    }
+
+    & :global(.release h3) {
+      display: flex;
+      flex-flow: row nowrap;
+      gap: var(--space-xs);
+      align-items: center;
+    }
+
+    & :global(.release-icon) {
+      flex-shrink: 0;
+      inline-size: 1em;
+      block-size: 1em;
+      color: var(--color-content-brand);
+    }
+
+    & :global(a.release-commit) {
+      color: var(--color-content-secondary);
+      white-space: nowrap;
+      text-decoration: none;
+
+      &:focus-visible {
+        color: var(--color-content-primary);
+      }
+
+      @media (hover: hover) {
+        &:hover {
+          color: var(--color-content-primary);
+        }
+      }
+    }
+
+    & :global(a.release-commit:focus-visible code) {
+      background: transparent;
+    }
+
+    & :global(.release-breaking) {
+      margin-block: var(--space-l);
+    }
+
+    & :global(.release-breaking h3) {
+      margin-block: 0 var(--space-s);
+    }
+
+    & :global(.release-breaking .heading-anchor) {
+      display: none;
+    }
+
+    & :global(.release-breaking .release-changes) {
+      margin-block: 0;
+    }
+
+    & :global(.release-summary li + li)::before {
+      margin-inline-end: var(--space-s);
+      content: '·';
+    }
+  }
+</style>

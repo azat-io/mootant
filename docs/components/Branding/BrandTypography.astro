@@ -1,0 +1,116 @@
+<div class="specimens">
+  <div class="specimen sora">
+    <div class="caption">
+      <span>Headings & body</span>
+      <a
+        href="https://fonts.google.com/specimen/Sora"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        Sora
+      </a>
+    </div>
+    <p class="sample">
+      A small change.
+      <br />A better test.
+    </p>
+    <p class="alphabet">
+      Aa Bb Cc Dd Ee Ff Gg
+      <br />
+      0123456789
+    </p>
+    <span class="weights">Regular / Bold</span>
+  </div>
+  <div class="specimen mono">
+    <div class="caption">
+      <span>Code & commands</span>
+      <a
+        href="https://www.jetbrains.com/lp/mono/"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        JetBrains Mono
+      </a>
+    </div>
+    <p class="sample">
+      npx mootant
+      <br />
+      run src
+    </p>
+    <p class="alphabet">
+      {'() {} [] => !=='}
+      <br />
+      0123456789
+    </p>
+    <span class="weights">Regular</span>
+  </div>
+</div>
+
+<style>
+  .specimens {
+    display: grid;
+    margin-block: var(--space-l);
+    overflow: hidden;
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius-m);
+
+    @container (inline-size >= 600px) {
+      grid-template-columns: repeat(2, [specimen] minmax(0, 1fr));
+    }
+  }
+
+  .specimen {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-l);
+    padding: var(--space-l);
+  }
+
+  .caption {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    align-items: start;
+    font: var(--font-xs);
+
+    & a {
+      font-weight: 600;
+      color: var(--color-content-primary);
+    }
+  }
+
+  .sample {
+    margin-block: auto 0;
+    font: 600 var(--font-size-xl) / 1.4 var(--font-family-title);
+    color: var(--color-content-primary);
+  }
+
+  .alphabet {
+    margin-block: 0;
+    font: var(--font-l);
+  }
+
+  .weights {
+    font: var(--font-xs);
+  }
+
+  .mono {
+    background: var(--color-background-secondary);
+    border-block-start: 1px solid var(--color-border-primary);
+
+    @container (inline-size >= 600px) {
+      border-block-start: none;
+      border-inline-start: 1px solid var(--color-border-primary);
+    }
+
+    & .sample {
+      font-weight: normal;
+      color: var(--color-content-brand);
+    }
+
+    & :is(.sample, .alphabet) {
+      font-family: var(--font-family-code);
+      font-variant-ligatures: none;
+    }
+  }
+</style>
