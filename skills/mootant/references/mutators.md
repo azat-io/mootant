@@ -1,7 +1,8 @@
 # Mutators
 
 How to write a test that kills a surviving mutant of each built-in mutator. The
-page of each mutator has examples: `https://mootant.org/mutators/<id>`.
+page of each mutator has examples, in Markdown at
+`https://mootant.org/mutators/<id>.md`.
 
 | Mutator               | Kill it with                                                                                                                                                                                                                                                                                                                                                                        |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

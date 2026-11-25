@@ -1,21 +1,13 @@
 ---
+import { getChangedRange } from '../utils/get-changed-range'
 import Typography from './Typography.astro'
 import Container from './Container.astro'
+import { COVERAGE } from '../data/home'
 import Lead from './Lead.astro'
 
-/**
- * Files of `vitest run --coverage` on the example project. Each of them is
- * fully covered, so every metric shows 100%. The functions column is left out
- * to keep the table narrow on phones.
- */
-let files = ['cart.ts', 'discount.ts', 'shipping.ts']
+let { mutation, coverage, title, lead } = COVERAGE
 
-let metrics = ['Stmts', 'Branch', 'Lines']
-
-/**
- * The file where the mutant survived, highlighted in the table.
- */
-let survivedFile = 'discount.ts'
+let change = getChangedRange(mutation.before, mutation.after)
 ---
 
 <section class="coverage">
@@ -30,39 +22,39 @@ let survivedFile = 'discount.ts'
         mbe="m"
         bold
       >
-        Coverage lies
+        {title}
       </Typography>
       <Lead
-        muted="Coverage shows which lines ran."
+        muted={lead.muted}
         color="primary"
         quote
       >
-        It can't tell whether any test would notice them change.
+        {lead.text}
       </Lead>
     </div>
     <div class="comparison">
       <div class="stat">
         <div class="stat-header">
-          <span class="label">Code coverage</span>
-          <span class="source">vitest run --coverage</span>
+          <span class="label">{coverage.label}</span>
+          <span class="source">{coverage.command}</span>
         </div>
-        <span class="value value-muted">100%</span>
-        <span class="caption">Every statement, branch and line ran.</span>
+        <span class="value value-muted">{coverage.value}</span>
+        <span class="caption">{coverage.caption}</span>
         <table class="table">
           <thead>
             <tr>
               <th scope="col">File</th>
-              {metrics.map(metric => (
+              {coverage.metrics.map(metric => (
                 <th scope="col">{metric}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {files.map(file => (
-              <tr class:list={{ survived: file === survivedFile }}>
+            {coverage.files.map(file => (
+              <tr class:list={{ survived: file === coverage.survived }}>
                 <th scope="row">{file}</th>
-                {metrics.map(() => (
-                  <td>100%</td>
+                {coverage.metrics.map(() => (
+                  <td>{coverage.value}</td>
                 ))}
               </tr>
             ))}
@@ -71,23 +63,21 @@ let survivedFile = 'discount.ts'
       </div>
       <div class="stat">
         <div class="stat-header">
-          <span class="label">Mutation testing</span>
-          <span class="source">mootant run src</span>
+          <span class="label">{mutation.label}</span>
+          <span class="source">{mutation.command}</span>
         </div>
-        <span class="value value-survived">1 survived</span>
+        <span class="value value-survived">{mutation.value}</span>
         <span class="caption">
-          of 26 mutants · <span class="score">score 96.15%</span>
+          {mutation.caption} · <span class="score">{mutation.score}</span>
         </span>
         <figure class="diff">
           <figcaption class="file">
-            src/discount.ts<span class="location">:2:7</span>
+            {[mutation.file, <span class="location">{mutation.location}</span>]}
           </figcaption>
-          <pre class="code"><code><span class="removed"><span class="marker">-</span> if (total <span class="change">&gt;=</span> 100 || isMember) &#123;</span>
-<span class="added"><span class="marker">+</span> if (total <span class="change">&gt;</span> 100 || isMember) &#123;</span></code></pre>
+          <pre class="code"><code><span class="removed"><span class="marker">-</span> {change.prefix}<span class="change">{change.before}</span>{change.suffix}</span>
+<span class="added"><span class="marker">+</span> {change.prefix}<span class="change">{change.after}</span>{change.suffix}</span></code></pre>
         </figure>
-        <span class="caption">
-          No test checks an order of exactly 100, so all 11 tests still pass.
-        </span>
+        <span class="caption">{mutation.verdict}</span>
       </div>
     </div>
   </Container>

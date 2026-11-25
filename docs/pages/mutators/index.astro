@@ -1,11 +1,6 @@
 ---
-import { getCollection } from 'astro:content'
-
-import { getHeadings, frontmatter, Content } from '../../content/mutators.md'
-import MutantDiff from '../../components/MutantDiff.astro'
+import { getHeadings, frontmatter, Content } from '../../content/mutators.mdx'
 import ContentLayout from '../../layouts/Content.astro'
-import Cards from '../../components/Cards.astro'
-import Card from '../../components/Card.astro'
 
 interface Frontmatter {
   description: string
@@ -14,45 +9,15 @@ interface Frontmatter {
 }
 
 let { description, keywords, title } = frontmatter as Frontmatter
-
-let mutators = (await getCollection('mutators')).toSorted(
-  ({ data: { title: a } }, { data: { title: b } }) => a.localeCompare(b),
-)
 ---
 
 <ContentLayout
-  editLink="https://github.com/azat-io/mootant/edit/main/docs/content/mutators.md"
+  editLink="https://github.com/azat-io/mootant/edit/main/docs/content/mutators.mdx"
   headings={getHeadings()}
   {description}
   {keywords}
   {title}
 >
   <h1>{title}</h1>
-  <p class="lead">
-    A mutator makes one kind of change to your code, such as <code>+</code> to
-    <code>-</code>.{' '}
-    <strong>Each mutant in a report names the mutator that made it.</strong>
-    The page of a mutator shows its changes, a test that catches them and the
-    changes it skips.
-  </p>
-  <p>
-    Mootant has 20 built-in mutators, and both
-    <a href="/guide/configuration#presets">presets</a> turn all of them on.
-    <code>strict</code> also turns on all mutator options but
-    <code>jsxAttributes</code>, the mutants that may cause timeouts and the
-    <a href="/guide/configuration#coarsemutants">coarse mutants</a> that
-    <code>recommended</code> drops.
-  </p>
-  <Cards>
-    {mutators.map(({ data, id }) => (
-      <Card
-        href={`/mutators/${id}`}
-        title={data.title}
-      >
-        <MutantDiff {...data.example} />
-        <p>{data.shortDescription}</p>
-      </Card>
-    ))}
-  </Cards>
   <Content />
 </ContentLayout>

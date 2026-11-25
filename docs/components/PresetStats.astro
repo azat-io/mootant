@@ -1,19 +1,11 @@
 ---
+import { PRESET_STATS } from '../data/guide'
 import DemoLink from './DemoLink.astro'
-
-/**
- * Mutants of the sample shop in `docs/demo`, from `mootant list src` with each
- * preset.
- */
-let presets = [
-  { command: 'mootant list src', name: 'recommended', mutants: 100 },
-  { command: 'mootant list src --preset strict', name: 'strict', mutants: 142 },
-]
 ---
 
 <figure class="stats">
   <div class="grid">
-    {presets.map(({ command, mutants, name }) => (
+    {PRESET_STATS.map(({ command, mutants, name }) => (
       <div class="stat">
         <span class="name">{name}</span>
         <span class="value">

@@ -9,7 +9,9 @@ onlyBuiltDependenciesFile: node_modules/.pnpm-config/@pnpm/plugin-trusted-deps/a
 allowBuilds:
   '@parcel/watcher': false
   esbuild: false
+  netlify-cli: false
   simple-git-hooks: true
+  unix-dgram: false
 
 sideEffectsCache: false
 

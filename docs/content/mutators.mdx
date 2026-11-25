@@ -13,6 +13,20 @@ keywords:
   - typescript
 ---
 
+import MutatorCards from '../components/MutatorCards.astro'
+
+A mutator makes one kind of change to your code, such as `+` to `-`. **Each
+mutant in a report names the mutator that made it.** The page of a mutator shows
+its changes, a test that catches them and the changes it skips.
+
+Mootant has 20 built-in mutators, and both
+[presets](/guide/configuration#presets) turn all of them on. `strict` also turns
+on all mutator options but `jsxAttributes`, the mutants that may cause timeouts
+and the [coarse mutants](/guide/configuration#coarsemutants) that `recommended`
+drops.
+
+<MutatorCards />
+
 ## Surviving mutants
 
 A surviving mutant means that the tests did not detect its change. Before you

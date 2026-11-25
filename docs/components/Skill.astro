@@ -4,6 +4,7 @@ import Typography from './Typography.astro'
 import Container from './Container.astro'
 import Terminal from './Terminal.astro'
 import Command from './Command.astro'
+import { SKILL } from '../data/home'
 import Logo from './Logo.astro'
 ---
 
@@ -19,24 +20,18 @@ import Logo from './Logo.astro'
         tag="h2"
         bold
       >
-        Ships with an agent skill
+        {SKILL.title}
       </Typography>
-      <Typography
-        align="start"
-        size="m"
-      >
-        Mutation testing produces a to-do list that nobody wants to work through
-        by hand.
-      </Typography>
-      <Typography
-        align="start"
-        size="m"
-      >
-        The skill reads the report, writes the missing tests and asks Mootant to
-        confirm each kill. You review the new tests.
-      </Typography>
+      {SKILL.paragraphs.map(paragraph => (
+        <Typography
+          align="start"
+          size="m"
+        >
+          {paragraph}
+        </Typography>
+      ))}
       <Command
-        command="npx skills add azat-io/mootant"
+        command={SKILL.install}
         class="install"
       />
     </div>

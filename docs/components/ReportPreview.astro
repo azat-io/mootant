@@ -1,8 +1,8 @@
 ---
 import IconExternalLink from '../icons/external-link.svg'
+import { REPORT_PREVIEW } from '../data/guide'
 
-let description =
-  'Overview page of the report of a sample shop: mutation score 67.35%, 99 mutants in 8 files, 21 of them survived.'
+let { description, action } = REPORT_PREVIEW
 ---
 
 <a
@@ -30,7 +30,7 @@ let description =
     width="2400"
   />
   <span class="action">
-    View the demo report
+    {action}
     <IconExternalLink
       aria-hidden="true"
       class="icon"

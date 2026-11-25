@@ -1,52 +1,8 @@
 ---
-import IconGitPullRequest from '../icons/git-pull-request.svg'
-import IconFilter from '../icons/filter.svg'
-import IconShield from '../icons/shield.svg'
-import IconPuzzle from '../icons/puzzle.svg'
 import Typography from './Typography.astro'
 import Container from './Container.astro'
-import IconHook from '../icons/hook.svg'
-import IconBolt from '../icons/bolt.svg'
+import { WHY } from '../data/home'
 import Lead from './Lead.astro'
-
-let cards = [
-  {
-    description:
-      'Mootant skips duplicate, likely equivalent, and likely hanging mutants, so you spend less time investigating false alarms.',
-    title: 'Less noise',
-    icon: IconFilter,
-  },
-  {
-    description:
-      'Mootant mutates numbers, return values, and awaits-not just operators-to expose tests that miss changes in behavior.',
-    title: 'Finds hidden gaps',
-    icon: IconHook,
-  },
-  {
-    description:
-      "Mootant caches results and tracks their dependencies. Mutants unaffected by your changes don't need to run again.",
-    title: 'Fast reruns',
-    icon: IconBolt,
-  },
-  {
-    description:
-      'Test only the lines changed in a pull request, and fail CI when the mutation score falls below your threshold.',
-    icon: IconGitPullRequest,
-    title: 'Ready for CI',
-  },
-  {
-    description:
-      'Every survivor shows the code change and a suggested test file to improve. Uncovered mutants are reported separately.',
-    title: 'Actionable reports',
-    icon: IconShield,
-  },
-  {
-    description:
-      'Use your existing Vitest, Jest or Node Test setup. JavaScript and TypeScript work with all three, Vue and Svelte with Vitest.',
-    title: 'Fits your stack',
-    icon: IconPuzzle,
-  },
-]
 ---
 
 <section class="why">
@@ -61,17 +17,17 @@ let cards = [
         mbe="m"
         bold
       >
-        Why Mootant
+        {WHY.title}
       </Typography>
       <Lead
-        muted="Mutation testing is often slow, noisy, and hard to act on."
+        muted={WHY.lead.muted}
         quote
       >
-        Mootant was built to fix all three.
+        {WHY.lead.text}
       </Lead>
     </div>
     <ul class="cards">
-      {cards.map(({ description, icon: Icon, title }) => (
+      {WHY.cards.map(({ description, icon: Icon, title }) => (
         <li class="card">
           <div class="card-header">
             <Typography

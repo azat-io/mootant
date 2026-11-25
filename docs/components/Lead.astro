@@ -17,7 +17,7 @@ let { class: className, color = 'brand', quote = false, muted } = Astro.props
   align="start"
   size="l"
 >
-  {muted && <span class="muted">{muted}</span>}
+  {muted && [<span class="muted">{muted}</span>, ' ']}
   <slot />
 </Typography>
 

@@ -60,27 +60,19 @@
 </figure>
 
 <script>
-  /* The two versions of `getDiscount` from the sample shop, for a non-member. */
-  let getOriginal = (total: number): number => (total >= 100 ? total * 0.1 : 0)
-  let getMutant = (total: number): number => (total > 100 ? total * 0.1 : 0)
-
-  /* `101 * 0.1` is 10.100000000000001, which only the display rounds. */
-  let formatAmount = (amount: number): string =>
-    String(Number(amount.toFixed(2)))
+  import { getProbeResult } from '../utils/get-probe-result'
 
   let update = (probe: HTMLElement, total: number): void => {
-    let original = getOriginal(total)
-    let mutant = getMutant(total)
-    let isKilled = original !== mutant
+    let { original, mutant, killed } = getProbeResult(total)
     probe.querySelector('[data-total]')!.textContent = String(total)
-    probe.querySelector('[data-original]')!.textContent = formatAmount(original)
-    probe.querySelector('[data-mutant]')!.textContent = formatAmount(mutant)
-    if (probe.hasAttribute('data-killed') !== isKilled) {
-      probe.toggleAttribute('data-killed', isKilled)
+    probe.querySelector('[data-original]')!.textContent = original
+    probe.querySelector('[data-mutant]')!.textContent = mutant
+    if (probe.hasAttribute('data-killed') !== killed) {
+      probe.toggleAttribute('data-killed', killed)
       probe.querySelector('.status')!.textContent =
-        isKilled ? 'killed' : 'survived'
+        killed ? 'killed' : 'survived'
       probe.querySelector('[data-text]')!.textContent =
-        isKilled ?
+        killed ?
           'Different results, so a test with this total catches the mutant.'
         : "Same result, so a test with this total can't tell them apart."
     }

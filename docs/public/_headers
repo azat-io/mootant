@@ -1,3 +1,33 @@
+/
+  Link: </llms.txt>; rel="describedby"; type="text/plain"
+  Link: </index.md>; rel="alternate"; type="text/markdown"
+  Link: </guide/getting-started>; rel="service-doc"; type="text/html"
+  Vary: Accept
+
+/404
+  Vary: Accept
+
+/agent-skill
+  Vary: Accept
+
+/community/*
+  Vary: Accept
+
+/guide/*
+  Vary: Accept
+
+/mutators
+  Vary: Accept
+
+/mutators/*
+  Vary: Accept
+
+/.well-known/agent-skills/*
+  Access-Control-Allow-Origin: *
+
+/.well-known/agent-skills/*.tar.gz
+  Content-Type: application/gzip
+
 /_astro/*
   cache-control: max-age=31536000, immutable
 

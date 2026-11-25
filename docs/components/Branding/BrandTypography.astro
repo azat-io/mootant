@@ -1,49 +1,35 @@
+---
+import { BRAND_TYPEFACES } from '../../data/brand-typefaces'
+---
+
 <div class="specimens">
-  <div class="specimen sora">
-    <div class="caption">
-      <span>Headings & body</span>
-      <a
-        href="https://fonts.google.com/specimen/Sora"
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        Sora
-      </a>
-    </div>
-    <p class="sample">
-      A small change.
-      <br />A better test.
-    </p>
-    <p class="alphabet">
-      Aa Bb Cc Dd Ee Ff Gg
-      <br />
-      0123456789
-    </p>
-    <span class="weights">Regular / Bold</span>
-  </div>
-  <div class="specimen mono">
-    <div class="caption">
-      <span>Code & commands</span>
-      <a
-        href="https://www.jetbrains.com/lp/mono/"
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        JetBrains Mono
-      </a>
-    </div>
-    <p class="sample">
-      npx mootant
-      <br />
-      run src
-    </p>
-    <p class="alphabet">
-      {'() {} [] => !=='}
-      <br />
-      0123456789
-    </p>
-    <span class="weights">Regular</span>
-  </div>
+  {BRAND_TYPEFACES.map(
+    ({ className, alphabet, weights, sample, role, name, url }) => (
+      <div class:list={['specimen', className]}>
+        <div class="caption">
+          <span>{role}</span>
+          <a
+            rel="noopener noreferrer"
+            target="_blank"
+            href={url}
+          >
+            {name}
+          </a>
+        </div>
+        <p class="sample">
+          {sample[0]}
+          <br />
+          {sample[1]}
+        </p>
+        <p class="alphabet">
+          {alphabet[0]}
+          <br />
+          {alphabet[1]}
+        </p>
+        <span class="weights">{weights}</span>
+      </div>
+    ),
+  )}
 </div>
 
 <style>

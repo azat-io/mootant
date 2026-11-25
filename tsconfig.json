@@ -1,5 +1,5 @@
 {
   "exclude": ["test/fixtures", "coverage"],
   "extends": "@azat-io/typescript-config",
-  "include": ["**/*.ts", "**/*.astro"]
+  "include": ["**/*.ts", "**/*.astro", "docs/pages/.well-known/**/*.ts"]
 }

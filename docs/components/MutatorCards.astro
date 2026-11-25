@@ -1,0 +1,23 @@
+---
+import { getCollection } from 'astro:content'
+
+import MutantDiff from './MutantDiff.astro'
+import Cards from './Cards.astro'
+import Card from './Card.astro'
+
+let mutators = (await getCollection('mutators')).toSorted(
+  ({ data: { title: a } }, { data: { title: b } }) => a.localeCompare(b),
+)
+---
+
+<Cards>
+  {mutators.map(({ data, id }) => (
+    <Card
+      href={`/mutators/${id}`}
+      title={data.title}
+    >
+      <MutantDiff {...data.example} />
+      <p>{data.shortDescription}</p>
+    </Card>
+  ))}
+</Cards>

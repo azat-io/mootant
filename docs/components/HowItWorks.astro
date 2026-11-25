@@ -1,27 +1,7 @@
 ---
+import { HOW_IT_WORKS } from '../data/home'
 import Typography from './Typography.astro'
 import Container from './Container.astro'
-
-let steps = [
-  {
-    description:
-      'Mootant picks the changes worth testing and compiles them all into your code in memory, each behind a switch. Your files stay untouched.',
-    title: 'Built once, switched at runtime',
-    label: '01 · Instrument',
-  },
-  {
-    description:
-      'A dry run maps which test files reach which mutant. Then every mutant runs alone, on a fresh module graph, with only those files, until a test fails.',
-    title: 'Each mutant on its own',
-    label: '02 · Run',
-  },
-  {
-    description:
-      'Each survivor comes with a diff, the test file to extend and a command to re-check it. Fix it yourself or hand it to the agent skill.',
-    title: 'Survivors become tests',
-    label: '03 · Fix',
-  },
-]
 ---
 
 <section
@@ -37,10 +17,10 @@ let steps = [
       tag="h2"
       bold
     >
-      How it works
+      {HOW_IT_WORKS.title}
     </Typography>
     <ol class="steps">
-      {steps.map(({ description, title, label }) => (
+      {HOW_IT_WORKS.steps.map(({ description, title, label }) => (
         <li class="step">
           <span class="label">{label}</span>
           <Typography

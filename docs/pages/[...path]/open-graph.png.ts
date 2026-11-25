@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content'
 import type { OpenGraphCard } from '../../utils/render-open-graph'
 
 import { frontmatter as agentSkillPage } from '../../content/agent-skill.md'
-import { frontmatter as mutatorsPage } from '../../content/mutators.md'
+import { frontmatter as mutatorsPage } from '../../content/mutators.mdx'
 import { renderOpenGraph } from '../../utils/render-open-graph'
 import { communityPages } from '../../utils/community-pages'
 

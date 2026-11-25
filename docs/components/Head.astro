@@ -22,6 +22,14 @@ if (canonicalPathname === '/index') {
 }
 let canonicalURL = new URL(canonicalPathname, Astro.site)
 
+/* The Markdown version of a page, which agents read, has `.md` at the end. */
+let markdownURL = new URL(
+  canonicalPathname === '/' ? '/index.md' : (
+    `${canonicalPathname.replace(/\/$/u, '')}.md`
+  ),
+  Astro.site,
+)
+
 let { type = 'website', description, keywords, title } = Astro.props
 let websiteName = 'Mootant'
 
@@ -114,6 +122,11 @@ let isProduction = import.meta.env.PROD
   <link
     href={canonicalURL}
     rel="canonical"
+  />
+  <link
+    type="text/markdown"
+    href={markdownURL}
+    rel="alternate"
   />
 
   <title>{pageTitle}</title>
