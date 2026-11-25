@@ -22,6 +22,18 @@
 /mutators/*
   Vary: Accept
 
+/*.md
+  X-Robots-Tag: noindex
+
+/community/*.md
+  X-Robots-Tag: noindex
+
+/guide/*.md
+  X-Robots-Tag: noindex
+
+/mutators/*.md
+  X-Robots-Tag: noindex
+
 /.well-known/agent-skills/*
   Access-Control-Allow-Origin: *
 
