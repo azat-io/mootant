@@ -1,0 +1,50 @@
+---
+interface Props {
+  title: string
+}
+
+let { title } = Astro.props
+---
+
+<li class="step">
+  <h3 class="title">{title}</h3>
+  <div class="text">
+    <slot />
+  </div>
+</li>
+
+<style>
+  .step {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-xs);
+    padding-block-start: var(--space-m);
+    margin-block: 0;
+    counter-increment: step;
+    border-block-start: 2px solid var(--color-border-primary);
+
+    &::before {
+      font: 600 var(--font-size-2xs) / 1.5 var(--font-family-code);
+      color: var(--color-content-secondary);
+      content: counter(step, decimal-leading-zero);
+    }
+
+    &:last-child {
+      border-block-start-color: var(--color-border-brand);
+    }
+  }
+
+  .title {
+    margin-block: 0;
+    font: 600 var(--font-size-l) / 1.2 var(--font-family-title);
+    color: var(--color-content-primary);
+  }
+
+  .text {
+    font: var(--font-s);
+
+    & :global(p) {
+      margin-block: 0;
+    }
+  }
+</style>

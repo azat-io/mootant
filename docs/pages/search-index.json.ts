@@ -7,7 +7,7 @@ import type { SearchSection } from '../plugins/rehype-search-sections'
 import type { SearchDocument } from '../utils/search-document'
 
 import { frontmatter as brandingPage } from '../content/community/branding.mdx'
-import { frontmatter as agentSkillPage } from '../content/agent-skill.md'
+import { frontmatter as agentSkillPage } from '../content/agent-skill.mdx'
 import { frontmatter as contributingPage } from '../../contributing.md'
 import { frontmatter as mutatorsPage } from '../content/mutators.mdx'
 import { frontmatter as changelogPage } from '../../changelog.md'

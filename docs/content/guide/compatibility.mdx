@@ -34,6 +34,12 @@ Mootant supports Node.js 20 from 20.19.0, and Node.js 22.12.0 or later:
 `^22.12.0 || ^24.0.0 || >=26.0.0`, so Node.js 20 works only with Jest and Node
 Test.
 
+The installer of the [agent skill](/agent-skill), `npx skills`, needs Node.js
+22.20 or later. On an older version, copy `skills/mootant` from the
+[repository](https://github.com/azat-io/mootant) to `.claude/skills/mootant` for
+Claude Code, or to `.agents/skills/mootant` for Codex, Cursor and GitHub
+Copilot.
+
 ## Source files
 
 | Source     | Extensions                    | Support                                                                        |
@@ -152,6 +158,10 @@ Delete the [cache](/guide/configuration#cache) directory after changing:
 - A file or environment variable read only by global setup.
 - An environment variable read only by a transformer's configuration, a test
   environment or a resolver.
+- A transformer without `getCacheKey`, or a plugin or preset of a transformer,
+  such as Babel's: Jest keeps the transforms it cached.
+- A file in `node_modules` that tests read other than by loading it as a module,
+  such as a data file.
 - File or directory names in the project root.
 
 ### Test commands

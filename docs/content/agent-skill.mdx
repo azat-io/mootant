@@ -1,0 +1,166 @@
+---
+title: Agent skill
+description:
+  Install the Mootant agent skill, which turns surviving mutants into tests and
+  asks Mootant to confirm each kill, and see what the skill changes in your
+  project.
+keywords:
+  - mutation testing
+  - agent skill
+  - ai agents
+  - claude code
+  - codex
+  - cursor
+---
+
+import IconGitPullRequest from '../icons/git-pull-request.svg'
+import session from '../components/coupon-session.ansi?raw'
+import AgentBadges from '../components/AgentBadges.astro'
+import SkillReport from '../components/SkillReport.astro'
+import Terminal from '../components/Terminal.astro'
+import IconTestPipe from '../icons/test-pipe.svg'
+import Steps from '../components/Steps.astro'
+import Cards from '../components/Cards.astro'
+import Step from '../components/Step.astro'
+import Card from '../components/Card.astro'
+import IconLock from '../icons/lock.svg'
+import IconEye from '../icons/eye.svg'
+
+**Give your agent a third eye.** The skill reads the Mootant report, writes the
+missing tests and asks Mootant to confirm each kill. You review the new tests.
+
+```sh
+npx skills add azat-io/mootant
+```
+
+The installer asks which agents get the skill. Add `-g` to install it for all
+your projects. The skill runs your project's Mootant, so install it there too
+with `npm install -D mootant`.
+
+<AgentBadges />
+
+## How it works
+
+<Steps>
+  <Step title="Runs Mootant">
+    Your project's Mootant, with your config and test runner. The agent reads
+    the JSON report: the mutants that survived and the ones no test reached.
+  </Step>
+  <Step title="Looks for an input">
+    One on which your code and the mutant behave differently. An equivalent
+    mutant has none, and the agent says why.
+  </Step>
+  <Step title="Writes a test">
+    An assertion in the test that already uses that input, or the smallest new
+    test in the file that Mootant suggests.
+  </Step>
+  <Step title="Confirms the kill">
+    Mootant runs those mutants again. A kill counts only when Mootant reports
+    it.
+  </Step>
+</Steps>
+
+The agent goes function by function. At the end, it runs the tests it changed
+and your type check and lint scripts when you have them, then Mootant once more,
+and writes the report.
+
+## A real session
+
+Here is a session on `src/coupon.ts` of the sample shop. Mootant found 9
+surviving mutants there, and this is one of them.
+
+The existing test rejects a 60% discount. It still passes when the limit changes
+from 50 to 51, so the mutant survived. The agent added the missing boundary
+case, `SAVE-51`, and Mootant confirmed the kill:
+
+<Terminal output={session} />
+
+The agent ended the whole session with this report:
+
+<SkillReport />
+
+The report also lists suspected bugs, anything the agent could not verify, and
+the files it changed.
+
+## What it changes
+
+The skill writes tests and leaves the rest to you.
+
+<Cards>
+  <Card
+    icon={IconTestPipe}
+    title="Only tests"
+  >
+    Adds tests and assertions to your test files. Never disables, loosens or
+    deletes a test you had.
+  </Card>
+  <Card
+    title="Not your code"
+    icon={IconLock}
+  >
+    Never edits the code under test, the Mootant or runner config, thresholds or
+    scripts. An ignore comment goes in only after you approve it.
+  </Card>
+  <Card
+    title="Assumptions stay visible"
+    icon={IconEye}
+  >
+    Tests that only the code backs are flagged as pinned for your review. If a
+    requirement disagrees with the code, the agent reports a suspected bug.
+  </Card>
+  <Card
+    icon={IconGitPullRequest}
+    title="Commits on request"
+  >
+    Commits, pushes and opens pull requests only when you ask. Its notes stay in
+    `.mootant/`, hidden from Git.
+  </Card>
+</Cards>
+
+## Ask your agent
+
+Ask in your own words. The request sets the scope of the run:
+
+<details>
+  <summary>Fix the surviving mutants in src.</summary>
+
+The agent runs Mootant on `src`, works through every mutant that survived or
+that no test reached, and runs `src` again at the end.
+
+</details>
+
+<details>
+  <summary>Would the tests catch a bug in my changes?</summary>
+
+The agent runs Mootant with `--since` and the base branch you name, else
+`origin/HEAD`, so only the lines you changed count. Then it adds tests for the
+gaps it finds.
+
+</details>
+
+<details>
+  <summary>Kill mutant q31p.</summary>
+
+The agent runs only that mutant, with `--mutant`, and writes a test for it. If
+the mutant still survives after two tries, the report says so.
+
+</details>
+
+<details>
+  <summary>Explain this report.</summary>
+
+The agent reads the report and the code it points to, and runs nothing.
+
+</details>
+
+You can also call the skill by name: `/mootant` in Claude Code, Cursor and
+GitHub Copilot, `$mootant` in Codex.
+
+## Update
+
+`npx skills check` shows whether a newer version of the skill exists. Install it
+with:
+
+```sh
+npx skills update mootant
+```

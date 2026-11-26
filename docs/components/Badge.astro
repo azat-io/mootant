@@ -5,20 +5,20 @@ import Typography from './Typography.astro'
 
 type Props =
   | {
+      icon?: SvgComponent
+      title?: never
+      text?: never
+    }
+  | {
       icon: SvgComponent
       title: string
       text: string
-    }
-  | {
-      title?: never
-      icon?: never
-      text?: never
     }
 
 let { icon: Icon, title, text } = Astro.props
 ---
 
-{Icon ?
+{Icon && title ?
   <div class="card">
     <Icon
       aria-hidden="true"
@@ -42,6 +42,12 @@ let { icon: Icon, title, text } = Astro.props
     </div>
   </div>
 : <span class="badge">
+    {Icon && (
+      <Icon
+        aria-hidden="true"
+        class="badge-icon"
+      />
+    )}
     <slot />
   </span>
 }
@@ -78,7 +84,10 @@ let { icon: Icon, title, text } = Astro.props
   }
 
   .badge {
-    display: inline-block;
+    display: inline-flex;
+    flex-flow: row nowrap;
+    gap: var(--space-2xs);
+    align-items: center;
     padding: var(--space-2xs) var(--space-xs);
     font: 600 var(--font-size-2xs) / 1 var(--font-family-code);
     color: var(--color-content-primary);
@@ -86,5 +95,11 @@ let { icon: Icon, title, text } = Astro.props
     background: var(--color-background-secondary);
     border: 1px solid var(--color-border-primary);
     border-radius: var(--border-radius-s);
+  }
+
+  .badge-icon {
+    flex-shrink: 0;
+    inline-size: var(--size-icon-xs);
+    block-size: var(--size-icon-xs);
   }
 </style>

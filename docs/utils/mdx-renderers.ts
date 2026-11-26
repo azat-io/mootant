@@ -4,6 +4,7 @@ import { getCollection } from 'astro:content'
 import type { MdxRenderer } from './mdx-to-markdown'
 
 import { REPORT_PREVIEW, PRESET_STATS } from '../data/guide'
+import { SKILL_REPORT, AGENTS } from '../data/agent-skill'
 import { BRAND_TYPEFACES } from '../data/brand-typefaces'
 import { getProbeResult } from './get-probe-result'
 import { BRAND_COLORS } from '../data/brand-colors'
@@ -23,6 +24,17 @@ const PROBE_TOTALS = [99, 100, 101]
  * Markdown.
  */
 export let mdxRenderers: Record<string, MdxRenderer | undefined> = {
+  SkillReport: () =>
+    [
+      `${SKILL_REPORT.label} of ${toInlineCode(SKILL_REPORT.scope)}: ${SKILL_REPORT.score.after}%, from ${SKILL_REPORT.score.before}%. ${SKILL_REPORT.tests}.`,
+      SKILL_REPORT.counts
+        .map(({ label, value, note }) => `- ${label}: ${value}, ${note}`)
+        .join('\n'),
+      `${SKILL_REPORT.decisionsLabel}:`,
+      SKILL_REPORT.decisions
+        .map(({ title, kind, text }) => `- ${kind}: ${title}. ${text}`)
+        .join('\n'),
+    ].join('\n\n'),
   MutatorCards: async () => {
     let mutators = (await getCollection('mutators')).toSorted(
       ({ data: { title: a } }, { data: { title: b } }) => a.localeCompare(b),
@@ -73,21 +85,27 @@ export let mdxRenderers: Record<string, MdxRenderer | undefined> = {
           `- [Mootant ${kind} for ${theme} backgrounds](/branding/${kind}-${theme}.svg)`,
       )
       .join('\n'),
+  Card: ({ children, props }) =>
+    `- ${props['href'] ? `[${props['title']}](${props['href']})` : `**${props['title']}**`}: ${children.join(' ').replaceAll(/\s+/gu, ' ')}`,
   BrandTypography: () =>
     BRAND_TYPEFACES.map(
       ({ weights, role, name, url }) =>
         `- ${role}: [${name}](${url}), ${weights}`,
     ).join('\n'),
-  Card: ({ children, props }) =>
-    `- [${props['title']}](${props['href']}): ${children.join(' ').replaceAll(/\s+/gu, ' ')}`,
+  AgentBadges: () =>
+    `${AGENTS.label}: ${AGENTS.list.map(({ title }) => title).join(', ')} [${AGENTS.more.text}](${AGENTS.more.url}).`,
   div: ({ children }) =>
     children.join(
       children.every(child => child.startsWith('- ')) ? '\n' : '\n\n',
     ),
+  Step: ({ children, props }) =>
+    `**${props['title']}**: ${children.join(' ').replaceAll(/\s+/gu, ' ')}`,
   ReportPreview: () =>
     `[${REPORT_PREVIEW.action}](/report/demo): ${REPORT_PREVIEW.description}`,
   Terminal: ({ props }) =>
     toCodeBlock(stripVTControlCharacters(props['output'] ?? ''), 'text'),
+  Steps: ({ children }) =>
+    children.map((child, index) => `${index + 1}. ${child}`).join('\n'),
   DemoLink: ({ children, props }) =>
     `[${children.join('')}](/report/demo${props['route']})`,
   Badge: ({ props }) => `- **${props['title']}**: ${props['text']}`,

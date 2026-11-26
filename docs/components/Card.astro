@@ -3,25 +3,27 @@ import type { SvgComponent } from 'astro/types'
 
 interface Props {
   icon?: SvgComponent
+  href?: string
   title: string
-  href: string
 }
 
 let { icon: Icon, title, href } = Astro.props
+
+let Tag: 'div' | 'a' = href ? 'a' : 'div'
 
 /**
  * The demo report opens in a new tab, and hovering its link must not make the
  * dev server build it.
  */
 let demoProps =
-  href.startsWith('/report/demo') ?
+  href?.startsWith('/report/demo') ?
     { 'data-astro-prefetch': 'false', target: '_blank' }
   : {}
 ---
 
 <li class="item">
-  <a
-    class="card card-link"
+  <Tag
+    class:list={['card', { 'card-link': href, static: !href }]}
     {href}
     {...demoProps}
   >
@@ -37,7 +39,7 @@ let demoProps =
     <div class="text">
       <slot />
     </div>
-  </a>
+  </Tag>
 </li>
 
 <style>
@@ -53,6 +55,12 @@ let demoProps =
     padding: var(--space-m);
     color: inherit;
     text-decoration: none;
+  }
+
+  .static {
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius-m);
   }
 
   .header {

@@ -516,7 +516,8 @@ article {
       --category-color: var(--color-code-ansi-cyan);
     }
 
-    &[data-category='noise'] {
+    &[data-category='noise'],
+    &[data-category='pinned'] {
       --category-color: var(--color-code-ansi-yellow);
     }
 

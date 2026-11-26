@@ -1,0 +1,21 @@
+---
+---
+
+<ol class="steps">
+  <slot />
+</ol>
+
+<style>
+  .steps {
+    display: grid;
+    gap: var(--space-l);
+    padding-inline-start: 0;
+    margin-block: var(--space-l) 0;
+    list-style-type: '';
+    counter-reset: step;
+
+    @container (inline-size >= 600px) {
+      grid-template-columns: repeat(2, [step] minmax(0, 1fr));
+    }
+  }
+</style>

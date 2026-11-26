@@ -65,7 +65,7 @@ let files: Record<string, undefined | string> = {
   [communityPages.branding.url]: 'docs/content/community/branding.mdx',
   [communityPages.contributing.url]: 'contributing.md',
   [communityPages.changelog.url]: 'changelog.md',
-  '/agent-skill': 'docs/content/agent-skill.md',
+  '/agent-skill': 'docs/content/agent-skill.mdx',
   '/mutators': 'docs/content/mutators.mdx',
 }
 

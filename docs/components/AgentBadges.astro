@@ -1,0 +1,77 @@
+---
+import { AGENTS } from '../data/agent-skill'
+import Badge from './Badge.astro'
+
+let { label, list, more } = AGENTS
+---
+
+<div class="agents">
+  <p
+    id="agents-label"
+    class="label"
+  >
+    {label}
+  </p>
+  <ul
+    aria-labelledby="agents-label"
+    class="list"
+  >
+    {list.map(({ title, icon }) => (
+      <li class="item">
+        <Badge {icon}>{title}</Badge>
+      </li>
+    ))}
+    <li class="more">
+      <a
+        rel="noopener noreferrer"
+        href={more.url}
+        target="_blank"
+        class="link"
+      >
+        {more.text}
+      </a>
+    </li>
+  </ul>
+</div>
+
+<style>
+  .agents {
+    margin-block: var(--space-xl) var(--space-l);
+  }
+
+  .label {
+    margin-block: 0 var(--space-xs);
+    font: 600 var(--font-size-2xs) / 1.5 var(--font-family-code);
+    color: var(--color-content-secondary);
+  }
+
+  .list {
+    padding-inline-start: 0;
+    margin-block: 0;
+    font: var(--font-xs);
+    list-style-type: '';
+  }
+
+  .item {
+    display: inline-flex;
+    flex-flow: row nowrap;
+    margin-block: calc(var(--space-xs) / 2);
+    margin-inline: 0 var(--space-xs);
+    vertical-align: middle;
+  }
+
+  .more {
+    display: inline;
+  }
+
+  .link {
+    color: var(--color-content-secondary);
+    text-decoration-color: var(--color-border-secondary);
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-content-primary);
+      }
+    }
+  }
+</style>

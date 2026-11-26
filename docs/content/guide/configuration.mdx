@@ -395,8 +395,10 @@ verdict is reused while the mutated file and the files and environment variables
 read by its tests stay unchanged.
 
 Mootant tracks files read by tests, including files outside the project root,
-such as workspace fixtures. Files under `node_modules` are excluded. Directory
-listings above the project root are not tracked.
+such as workspace fixtures, and files of installed packages. Directory listings
+above the project root, what recursive listings find in `node_modules`, and
+files that `fs.cp` with a `filter` copies from a `node_modules` directory inside
+the copied directory are not tracked.
 
 When nothing has changed since the last run and every verdict is cached, Mootant
 does not start the test runner. It reuses the run without mutants that the last
@@ -410,7 +412,13 @@ and runs in [fast mode](#fast) with Vitest, never reuse it.
 Delete the cache directory after changes to:
 
 - Inputs that only child processes or workers read, or data from the network.
-- Files under `node_modules` or directory listings above the project root.
+- Installed packages that only the test runner loads, such as Vite plugins,
+  packages that global setup imports, a test environment or Jest's transformers,
+  made by hand or by a script such as `patch-package`.
+- Directory listings above the project root, or what recursive listings find in
+  `node_modules`.
+- Files that `fs.cp` with a `filter` copies from a `node_modules` directory
+  inside the copied directory.
 - Files read only by a Vite plugin, unless they are tracked as described below.
 
 For Jest, also check its

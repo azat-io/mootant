@@ -1,0 +1,221 @@
+---
+import { SKILL_REPORT } from '../data/agent-skill'
+
+let { decisionsLabel, decisions, counts, label, scope, score, tests } =
+  SKILL_REPORT
+---
+
+<div class="report">
+  <div class="score">
+    <div class="header">
+      <span>{label}</span>
+      <code class="scope">{scope}</code>
+    </div>
+    <p class="value">
+      <span class="after">{score.after}%</span>
+      <span class="before">from {score.before}%</span>
+    </p>
+    <div
+      style={`--before: ${score.before}%; --after: ${score.after}%`}
+      aria-hidden="true"
+      class="bar"
+    />
+    <p class="tests">
+      {tests
+        .split('`')
+        .map((part, index) => (index % 2 === 1 ? <code>{part}</code> : part))}
+    </p>
+  </div>
+  <dl class="counts">
+    {counts.map(({ label: name, value, note }) => (
+      <div class="count">
+        <dt>{name}</dt>
+        <dd class="number">{value}</dd>
+        <dd class="note">{note}</dd>
+      </div>
+    ))}
+  </dl>
+  <div class="decisions">
+    <p class="label">{decisionsLabel}</p>
+    <ul class="list">
+      {decisions.map(({ title, kind, text }) => (
+        <li class="decision">
+          <span
+            data-category={kind}
+            class="category"
+          >
+            {kind}
+          </span>
+          <p class="title">
+            {title
+              .split('`')
+              .map((part, index) =>
+                index % 2 === 1 ? <code>{part}</code> : part,
+              )}
+          </p>
+          <p class="text">
+            {text
+              .split('`')
+              .map((part, index) =>
+                index % 2 === 1 ? <code>{part}</code> : part,
+              )}
+          </p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</div>
+
+<style>
+  .report {
+    margin-block: var(--space-l);
+    overflow: hidden;
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--border-radius-m);
+  }
+
+  .score {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-xs);
+    padding: var(--space-m) var(--space-l);
+  }
+
+  .header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    align-items: baseline;
+    justify-content: space-between;
+    font: var(--font-s);
+  }
+
+  .scope {
+    padding: 0;
+    font: 600 var(--font-size-2xs) / 1.5 var(--font-family-code);
+    color: var(--color-content-secondary);
+    background: none;
+  }
+
+  .value {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    align-items: baseline;
+    margin-block: 0;
+  }
+
+  .after {
+    font: 600 var(--font-size-3xl) / 1.2 var(--font-family-title);
+    color: var(--color-content-primary);
+  }
+
+  .before {
+    font: var(--font-s);
+  }
+
+  .bar {
+    block-size: 6px;
+    background: linear-gradient(
+      to right,
+      var(--color-content-secondary) 0 var(--before),
+      var(--color-border-brand) var(--before) var(--after),
+      var(--color-border-primary) var(--after)
+    );
+    border-radius: 3px;
+  }
+
+  .tests {
+    margin-block: var(--space-2xs) 0;
+    font: var(--font-xs);
+  }
+
+  .counts {
+    display: grid;
+    margin-block: 0;
+    border-block: 1px solid var(--color-border-primary);
+
+    @container (inline-size >= 600px) {
+      grid-template-columns: repeat(3, [count] minmax(0, 1fr));
+    }
+  }
+
+  .count {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-4xs);
+    padding: var(--space-m) var(--space-l);
+    border-block-start: 1px solid var(--color-border-primary);
+
+    &:first-child {
+      border-block-start: none;
+    }
+
+    @container (inline-size >= 600px) {
+      border-block-start: none;
+      border-inline-start: 1px solid var(--color-border-primary);
+
+      &:first-child {
+        border-inline-start: none;
+      }
+    }
+  }
+
+  dt {
+    font: var(--font-xs);
+  }
+
+  dd {
+    margin-inline-start: 0;
+  }
+
+  .number {
+    font: 600 var(--font-size-xl) / 1.3 var(--font-family-code);
+    color: var(--color-content-primary);
+  }
+
+  .note {
+    font: var(--font-2xs);
+  }
+
+  .decisions {
+    padding: var(--space-m) var(--space-l);
+  }
+
+  .label {
+    margin-block: 0 var(--space-s);
+    font: 600 var(--font-size-2xs) / 1.5 var(--font-family-code);
+    color: var(--color-content-secondary);
+  }
+
+  .list {
+    display: grid;
+    gap: var(--space-m);
+    padding-inline-start: 0;
+    margin-block: 0;
+    list-style-type: '';
+  }
+
+  .decision {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: var(--space-4xs);
+    margin-block: 0;
+  }
+
+  .title {
+    margin-block: var(--space-4xs) 0;
+    font: var(--font-s);
+    color: var(--color-content-primary);
+
+    & code {
+      white-space: nowrap;
+    }
+  }
+
+  .text {
+    margin-block: 0;
+    font: var(--font-xs);
+  }
+</style>

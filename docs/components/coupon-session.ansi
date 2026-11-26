@@ -1,0 +1,23 @@
+[92m>[39m Fix the surviving mutants in src/coupon.ts
+
+[90m$[39m mootant run src/coupon.ts --json
+[90m{ "summary": { "score": 64, "totalSurvived": 9,[39m
+[90m    "totalMutants": 25, … }, …,[39m
+[90m  "mutants": [{ "mutator": "comparison-operator", …,[39m
+[90m    "before": ["  if (percent === 0 || percent > [31m50[90m) {"],[39m
+[90m    "after": ["  if (percent === 0 || percent > [32m51[90m) {"],[39m
+[90m    "file": "src/coupon.ts", "line": 14, "id": "73h12thgqqnp",[39m
+[90m    "testFiles": { "test/coupon.test.ts": 2 }, … }, …] }[39m
+
+[1mtest/coupon.test.ts[22m
+[32m+[39m it('rejects 51% off', () => {
+[32m+[39m   expect(parseCoupon('SAVE-51')).toBeNull()
+[32m+[39m })
+
+[90m$[39m mootant run src/coupon.ts --mutant 73h12thgqqnp --json --all
+[90m{ …, "mutants": [{ …, "id": "73h12thgqqnp",[39m
+[90m    "status": "Killed" }, …] }[39m
+
+[90m$[39m mootant run src/coupon.ts --json --all
+[90m{ "summary": { "score": 96, "totalSurvived": 1,[39m
+[90m    "totalMutants": 25, "totalKilled": 24, … }, … }[39m
