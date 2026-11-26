@@ -116,6 +116,7 @@ function createChannel(): {
       written.push([token, record])
     },
     enterEnvironment() {},
+    loads: new Set(),
     begin: () => 0,
     unit: null,
     end() {},

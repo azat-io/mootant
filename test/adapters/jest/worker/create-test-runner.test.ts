@@ -60,6 +60,7 @@ interface FakeEnvironment {
  * @param options.environment - Environment of the test file.
  * @param options.mutant - Active mutant of the unit, or null.
  * @param options.dead - `Error` of the vm of each unit that ended.
+ * @param options.runtime - Jest's runtime of the unit.
  * @returns The channel, what the real test framework got and returned, and what
  *   the side and the wrapper were given.
  */
@@ -69,6 +70,7 @@ async function run(
     mutant?: string | null
     dead?: WeakSet<object>
     opened?: boolean
+    runtime?: object
   } = {},
 ): Promise<{
   windows: { framework?: true; after?: true; load?: true }
@@ -145,7 +147,7 @@ async function run(
     { globalConfig: true },
     config,
     environment,
-    { runtime: true },
+    options.runtime ?? { runtime: true },
     '/a.test.js',
     () => {},
   ]
@@ -263,6 +265,15 @@ describe('createTestRunner', () => {
     )
     expect(real).toHaveBeenCalledExactlyOnceWith(...parameters)
     expect(result).toBe('the result')
+  })
+
+  it('gives the channel the files the runtime of the unit loaded once the framework returned', async () => {
+    let buffers = new Map([['/p/node_modules/a/index.js', Buffer.from('')]])
+    let { channel } = await run({
+      runtime: { fileCache: { strings: new Map(), buffers } },
+    })
+
+    expect(channel.loads).toStrictEqual(new Set(['/p/node_modules/a/index.js']))
   })
 
   it('tracks the events of a unit in the file of the unit', async () => {

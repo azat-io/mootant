@@ -128,6 +128,27 @@ describe('collectJestDependencies', () => {
     ])
   })
 
+  it('lists the manifest of the package of a file under node_modules that a nested package.json gives its format', async () => {
+    let esm = inRoot('node_modules/@s/p/dist/esm')
+    await mkdir(esm, { recursive: true })
+    await writeFile(path.join(esm, 'package.json'), '{ "type": "module" }')
+    let file = inRoot('sum.test.js')
+
+    expect(
+      collectJestDependencies(
+        createRecords({ reads: [path.join(esm, 'm.js')] }),
+        file,
+      ),
+    ).toStrictEqual([
+      inRoot('__snapshots__/sum.test.js.snap'),
+      path.join(esm, 'm.js'),
+      path.join(esm, 'package.json'),
+      inRoot('node_modules/@s/p/package.json'),
+      inRoot('package.json'),
+      file,
+    ])
+  })
+
   it('knows nothing of a unit that left no finish', () => {
     expect(
       collectJestDependencies(

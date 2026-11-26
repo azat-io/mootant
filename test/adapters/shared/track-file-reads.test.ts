@@ -185,6 +185,8 @@ describe('trackFileReads', () => {
       'source',
       'source/deep',
       'source/deep/n.txt',
+      'source/deep/node_modules',
+      'source/deep/node_modules/x.js',
       'source/deep/n.txt',
       'source/deep/n.txt',
       'one.txt',
@@ -199,6 +201,8 @@ describe('trackFileReads', () => {
       'copy',
       'copy/deep',
       'copy/deep/n.txt',
+      'copy/deep/node_modules',
+      'copy/deep/node_modules/x.js',
       'one.txt',
       'one.txt',
       'one.txt',
@@ -210,6 +214,20 @@ describe('trackFileReads', () => {
       'copy',
       'made/inner',
     ])
+  })
+
+  it('reports no read in node_modules for a cp with a filter, which the walk cannot ask', () => {
+    let source = path.join(directory, 'project')
+    mkdirSync(path.join(source, 'node_modules', 'a'), { recursive: true })
+    writeFileSync(path.join(source, 'node_modules', 'a', 'index.js'), '')
+    writeFileSync(path.join(source, 'n.txt'), '1')
+    let paths = record()
+    cpSync(source, path.join(directory, 'copy'), {
+      filter: file => !file.includes('node_modules'),
+      recursive: true,
+    })
+
+    expect(paths.read).toStrictEqual(['project', 'project/n.txt'])
   })
 
   it('reports the copies of cp once it succeeded, and none that a filter, force: false or verbatimSymlinks may make other than its source', async () => {

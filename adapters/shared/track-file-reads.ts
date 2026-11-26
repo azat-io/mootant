@@ -72,7 +72,14 @@ const WALKERS = new Set(['glob', 'cp'])
  * Directories a recursive copy of a directory does not walk into for the files
  * it reads.
  */
-const SKIPPED = new Set(['node_modules', '.git'])
+const SKIPPED = new Set(['.git'])
+
+/**
+ * Directories a recursive copy with a `filter` does not walk into either: the
+ * walk cannot ask the filter, which often leaves installed packages out, and a
+ * copy of a project that does would read every one of them.
+ */
+const FILTERED_SKIPPED = new Set([...SKIPPED, 'node_modules'])
 
 /**
  * Characters that make a segment of a glob pattern match more than one name.
@@ -187,18 +194,19 @@ interface FileAccess {
  * `open` reads unless its flags create, empty or append to the file, as `w`,
  * `a` or `O_CREAT` do; `r+` reads. The source of a copy, a move or a link is
  * read, and so is every file and directory in a directory `cp` copies, outside
- * `node_modules` and `.git`, whose copies it writes once it succeeded, unless a
- * `filter`, `force: false` or `verbatimSymlinks` may make a copy other than its
- * source (`listCopies`); `mkdir` writes only the directories that did not
- * exist. `mkdtemp` and `mkdtempDisposable` write the directory they made once
- * they give it. A recursive `readdir` or `opendir` reads the directory and
- * every directory in it, each listed by its own names, so adding a file
- * anywhere in the tree changes what was read; `readdir` also reads the
- * directories behind the links it follows. `glob` reads the same of the
- * directory where each pattern's fixed part ends. Calls of `node:fs` that a
- * wrapped function makes while it runs report nothing, and neither do those of
- * the asynchronous work of `glob` and `cp`, but those of their callbacks do.
- * Descriptors and file handles are not paths and are not reported.
+ * `.git`, and outside `node_modules` too with a `filter`, whose copies it
+ * writes once it succeeded, unless a `filter`, `force: false` or
+ * `verbatimSymlinks` may make a copy other than its source (`listCopies`);
+ * `mkdir` writes only the directories that did not exist. `mkdtemp` and
+ * `mkdtempDisposable` write the directory they made once they give it. A
+ * recursive `readdir` or `opendir` reads the directory and every directory in
+ * it, each listed by its own names, so adding a file anywhere in the tree
+ * changes what was read; `readdir` also reads the directories behind the links
+ * it follows. `glob` reads the same of the directory where each pattern's fixed
+ * part ends. Calls of `node:fs` that a wrapped function makes while it runs
+ * report nothing, and neither do those of the asynchronous work of `glob` and
+ * `cp`, but those of their callbacks do. Descriptors and file handles are not
+ * paths and are not reported.
  *
  * @param receiver - Receives the paths while it is the current receiver; the
  *   next call replaces it, and null stops recording.
@@ -398,7 +406,8 @@ function callThen(
  * follows links to directories, so with `follow` such a link is listed and
  * walked into by its own path, once per real directory, so a loop of links
  * ends; `opendir` and `glob` do not follow links. `node_modules` is listed but
- * not walked into, as no path in it is a project file.
+ * not walked into, as a listing of a project would read every installed package
+ * then, while the files of packages count where they are read.
  *
  * @param file - Absolute path of the listed directory.
  * @param slot - Tracking state of the process, with the functions as Node made
@@ -442,6 +451,88 @@ function walkDirectories(
     }
   }
   return read
+}
+
+/**
+ * Lists a path a copy reads: a file, or a directory with every file and
+ * directory in it, outside the skipped directories; links in it are listed, not
+ * followed.
+ *
+ * @param file - Absolute path of the source.
+ * @param slot - Tracking state of the process, with the functions as Node made
+ *   them.
+ * @param skipped - Names of the directories not walked into.
+ * @returns Absolute paths, the source first.
+ */
+function walk(
+  file: string,
+  slot: FileSlot,
+  skipped: ReadonlySet<string>,
+): string[] {
+  let read = [file]
+  let directories: string[] = []
+  try {
+    if (slot.original.statSync(file).isDirectory()) {
+      directories.push(file)
+    }
+  } catch {}
+  while (directories.length > 0) {
+    let directory = directories.shift()!
+    let entries: Dirent[] = []
+    try {
+      entries = slot.original.readdirSync(directory, { withFileTypes: true })
+    } catch {}
+    for (let entry of entries) {
+      if (!skipped.has(entry.name)) {
+        let child = joinPaths(directory, entry.name)
+        read.push(child)
+        if (entry.isDirectory()) {
+          directories.push(child)
+        }
+      }
+    }
+  }
+  return read
+}
+
+/**
+ * Lists the paths a call of a function of `node:fs` that changes paths reads
+ * besides them: the source of a copy, a move or a hard link, with every file
+ * and directory in a directory `cp` copies, and the target of a symbolic link,
+ * relative to the link's directory.
+ *
+ * @param base - Name of the function without `Sync`, such as `copyFile`.
+ * @param parameters - Arguments of the call.
+ * @param slot - Tracking state of the process, with the functions as Node made
+ *   them.
+ * @returns Absolute paths read, none for a function that reads no source.
+ */
+function listSourceReads(
+  base: string,
+  parameters: unknown[],
+  slot: FileSlot,
+): string[] {
+  let first = toPath(parameters[0])
+  if (first === null || !SOURCES.has(base)) {
+    return []
+  }
+  if (base === 'symlink') {
+    let link = toPath(parameters[1])
+    return [
+      link === null || typeof parameters[0] !== 'string' ?
+        first
+      : resolvePath(getDirectory(link), parameters[0]),
+    ]
+  }
+  if (base === 'cp') {
+    let options: unknown = parameters[2]
+    let filtered =
+      typeof options === 'object' &&
+      options !== null &&
+      Reflect.get(options, 'filter') !== undefined
+    return walk(first, slot, filtered ? FILTERED_SKIPPED : SKIPPED)
+  }
+  return [first]
 }
 
 /**
@@ -493,42 +584,6 @@ function listCopies(
 }
 
 /**
- * Lists a path a copy reads: a file, or a directory with every file and
- * directory in it, outside `node_modules` and `.git`; links in it are listed,
- * not followed.
- *
- * @param file - Absolute path of the source.
- * @param slot - Tracking state of the process, with the functions as Node made
- *   them.
- * @param read - Receives the paths.
- */
-function walk(file: string, slot: FileSlot, read: string[]): void {
-  read.push(file)
-  let directories: string[] = []
-  try {
-    if (slot.original.statSync(file).isDirectory()) {
-      directories.push(file)
-    }
-  } catch {}
-  while (directories.length > 0) {
-    let directory = directories.shift()!
-    let entries: Dirent[] = []
-    try {
-      entries = slot.original.readdirSync(directory, { withFileTypes: true })
-    } catch {}
-    for (let entry of entries) {
-      if (!SKIPPED.has(entry.name)) {
-        let child = joinPaths(directory, entry.name)
-        read.push(child)
-        if (entry.isDirectory()) {
-          directories.push(child)
-        }
-      }
-    }
-  }
-}
-
-/**
  * Finds the paths a call of a function of `node:fs` reads and changes when the
  * function reads a path given first: `open` changes the path unless its flags
  * leave the file as it is, a recursive `readdir` or `opendir` reads the path
@@ -564,43 +619,6 @@ function getReaderAccess(
     access.read.push(first)
   }
   return access
-}
-
-/**
- * Lists the paths a call of a function of `node:fs` that changes paths reads
- * besides them: the source of a copy, a move or a hard link, with every file
- * and directory in a directory `cp` copies, and the target of a symbolic link,
- * relative to the link's directory.
- *
- * @param base - Name of the function without `Sync`, such as `copyFile`.
- * @param parameters - Arguments of the call.
- * @param slot - Tracking state of the process, with the functions as Node made
- *   them.
- * @returns Absolute paths read, none for a function that reads no source.
- */
-function listSourceReads(
-  base: string,
-  parameters: unknown[],
-  slot: FileSlot,
-): string[] {
-  let first = toPath(parameters[0])
-  if (first === null || !SOURCES.has(base)) {
-    return []
-  }
-  if (base === 'symlink') {
-    let link = toPath(parameters[1])
-    return [
-      link === null || typeof parameters[0] !== 'string' ?
-        first
-      : resolvePath(getDirectory(link), parameters[0]),
-    ]
-  }
-  if (base === 'cp') {
-    let read: string[] = []
-    walk(first, slot, read)
-    return read
-  }
-  return [first]
 }
 
 /**

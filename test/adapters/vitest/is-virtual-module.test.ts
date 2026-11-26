@@ -9,17 +9,12 @@ describe('isVirtualModule', () => {
     'virtual:limits?raw',
     '\0virtual:limits?source=/p/node_modules/pkg/data',
     'virtual:limits#/p/node_modules/pkg/data',
+    '\0/p/node_modules/x/index.js?commonjs-proxy',
   ])('accepts %s', id => {
     expect(isVirtualModule(id)).toBe(true)
   })
 
-  it.each([
-    '',
-    '/p/limits.json',
-    'node:fs',
-    'fs',
-    '\0/p/node_modules/x/index.js?commonjs-proxy',
-  ])('rejects %s', id => {
+  it.each(['', '/p/limits.json', 'node:fs', 'fs'])('rejects %s', id => {
     expect(isVirtualModule(id)).toBe(false)
   })
 })

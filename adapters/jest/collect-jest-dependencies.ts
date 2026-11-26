@@ -2,6 +2,7 @@ import path from 'node:path'
 
 import type { JestTimedRecord } from './types/jest-timed-record'
 
+import { getPackageManifest } from '../../core/files/get-package-manifest'
 import { listPackageFiles } from '../../core/files/list-package-files'
 import { compareCodeUnits } from '../../core/compare-code-units'
 
@@ -10,12 +11,14 @@ import { compareCodeUnits } from '../../core/compare-code-units'
  * the unit read, the CommonJS modules its worker loaded in its own realm, such
  * as a transformer and what it imports, which a warm worker no longer reads,
  * the `package.json` files that decide the format and the `#` imports of the
- * files in the directory of each of them (`listPackageFiles`), and the snapshot
- * file Jest resolves for the test file by default, `__snapshots__/<name>.snap`
- * beside it, whether it exists or not. The file a custom snapshot resolver
- * gives is among the reads, as Jest looks for it when the unit starts. The
- * worker leaves out of the reads what is under `node_modules`, which the
- * lockfile stands for, mootant's own files and, outside the directories of the
+ * files in the directory of each of them (`listPackageFiles`), for a file of an
+ * installed package the `package.json` that decides what an import of the
+ * package resolves to (`getPackageManifest`), and the snapshot file Jest
+ * resolves for the test file by default, `__snapshots__/<name>.snap` beside it,
+ * whether it exists or not. The file a custom snapshot resolver gives is among
+ * the reads, as Jest looks for it when the unit starts. The worker leaves out
+ * of the reads what lies under `node_modules` but the modules Jest's runtime
+ * loaded for the vm, mootant's own files and, outside the directories of the
  * session, the root itself and what `createInputFilter` leaves out, what Jest's
  * resolver read, as a real load is read anyway, and what only the transformers,
  * the test environment and the test runner in their own calls, or a project's
@@ -46,6 +49,12 @@ export function collectJestDependencies(
       `${path.basename(file)}.snap`,
     ),
   ])
+  for (let entry of read) {
+    let manifest = getPackageManifest(entry)
+    if (manifest !== null) {
+      files.add(manifest)
+    }
+  }
   let directories = new Set(read.map(entry => path.dirname(entry)))
   let packages = new Map<string, string[]>()
   for (let directory of directories) {

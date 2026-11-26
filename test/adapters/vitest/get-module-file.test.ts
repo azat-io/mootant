@@ -9,12 +9,13 @@ describe('getModuleFile', () => {
     expect(getModuleFile('/p/a.ts#x')).toBe('/p/a.ts')
   })
 
-  it.each([
-    'node:fs',
-    'virtual:x',
-    '\0virtual:x',
-    '/p/node_modules/x/index.js',
-  ])('rejects %s', id => {
+  it('keeps a file under node_modules', () => {
+    expect(getModuleFile('/p/node_modules/x/index.js?v=1')).toBe(
+      '/p/node_modules/x/index.js',
+    )
+  })
+
+  it.each(['node:fs', 'virtual:x', '\0virtual:x'])('rejects %s', id => {
     expect(getModuleFile(id)).toBeNull()
   })
 })

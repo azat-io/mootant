@@ -821,7 +821,13 @@ describe('Runner', () => {
     expect(end.dependencies).toContain(path.join(tmpdir(), 'outside.json'))
     expect(
       end.dependencies.filter(dependency => dependency.startsWith(project)),
-    ).toStrictEqual([changed, data, setting, fixture])
+    ).toStrictEqual([
+      changed,
+      data,
+      setting,
+      fixture,
+      path.join(project, 'node_modules/a.json'),
+    ])
     expect(end.environment).toStrictEqual([
       'MOOTANT_ENVIRONMENT',
       'MOOTANT_FIXTURE',

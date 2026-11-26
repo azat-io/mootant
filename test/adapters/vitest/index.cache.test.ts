@@ -141,6 +141,16 @@ let copiesFixture = path.resolve(
 )
 
 /**
+ * Fixture project whose test file covers `src/math.ts` with a value from
+ * `limits-pkg`, a package each test writes into the `node_modules` of its copy,
+ * beside a `package-lock.json` that never changes.
+ */
+let dependencyFixture = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/cache-dependency',
+)
+
+/**
  * Fixture project whose test file covers `src/math.ts` and writes
  * `package.json` back as it read it.
  */
@@ -169,6 +179,85 @@ let variables = Object.fromEntries(
  * Copies of the fixture to remove after each test.
  */
 let copies: string[] = []
+
+/**
+ * Writes `limits-pkg` into the `node_modules` of a copy of the dependency
+ * fixture, as an install, `patch-package` or a hand edit leaves it, with the
+ * age in its entry, in `limits.js`, which its entry imports or requires, or in
+ * the file its manifest, or the nested one of `dist/esm`, names.
+ *
+ * @param root - Root of the copy.
+ * @param shape - `entry` for an ES module package whose entry holds the age,
+ *   `import` for one whose entry imports it, `require` for a CommonJS one whose
+ *   entry requires it, `main` for an ES module package with a file for each
+ *   age, whose `main` names the one of the age, `imports` for one whose entry
+ *   in `dist/esm` imports `#limits`, which the `package.json` there maps to the
+ *   file of the age.
+ * @param age - Age from which the package counts a person as an adult.
+ */
+async function writeLimitsPackage(
+  root: string,
+  shape: 'require' | 'imports' | 'import' | 'entry' | 'main',
+  age: number,
+): Promise<void> {
+  let directory = path.join(root, 'node_modules/limits-pkg')
+  let limits = JSON.stringify({ age })
+  let adults = {
+    'adult-18.js': 'export default { "age": 18 }',
+    'adult-30.js': 'export default { "age": 30 }',
+  }
+  let files = {
+    imports: {
+      'dist/esm/package.json': JSON.stringify({
+        imports: { '#limits': `./adult-${age}.js` },
+        type: 'module',
+      }),
+      'dist/esm/index.js': "export { default } from '#limits'",
+      ...Object.fromEntries(
+        Object.entries(adults).map(([name, text]) => [
+          `dist/esm/${name}`,
+          text,
+        ]),
+      ),
+    },
+    require: {
+      'index.js': "module.exports = require('./limits.js')",
+      'limits.js': `module.exports = ${limits}`,
+    },
+    import: {
+      'index.js': "export { default } from './limits.js'",
+      'limits.js': `export default ${limits}`,
+    },
+    entry: { 'index.js': `export default ${limits}` },
+    main: adults,
+  }
+  let entries = {
+    imports: 'dist/esm/index.js',
+    main: `adult-${age}.js`,
+    require: 'index.js',
+    import: 'index.js',
+    entry: 'index.js',
+  }
+  await mkdir(path.join(directory, 'dist/esm'), { recursive: true })
+  await writeFile(
+    path.join(directory, 'package.json'),
+    JSON.stringify({
+      type: shape === 'require' ? 'commonjs' : 'module',
+      main: entries[shape],
+      name: 'limits-pkg',
+    }),
+  )
+  let written = Object.entries(files[shape])
+  await Promise.all(
+    written.map(([name, text]) =>
+      writeFile(path.join(directory, name), `${text}\n`),
+    ),
+  )
+  /**
+   * Files modified in the millisecond a run starts count as changed during it.
+   */
+  await setTimeout(5)
+}
 
 /**
  * Runs the mutants of the copy with Vitest and counts the isolated units.
@@ -652,6 +741,62 @@ describe('vitestAdapter', () => {
       ran: [],
     })
   }, 60_000)
+
+  it.each([
+    ['an ES module package edited in place', 'entry', false],
+    [
+      'an ES module package edited in place, with the dry run saved',
+      'entry',
+      true,
+    ],
+    ['a file an ES module package imports itself', 'import', false],
+    ['a file a CommonJS package requires itself', 'require', false],
+    [
+      'the entry the manifest of an ES module package names, with the dry run saved',
+      'main',
+      true,
+    ],
+    [
+      'the file a nested package.json maps an import of the package to, with the dry run saved',
+      'imports',
+      true,
+    ],
+  ] as const)(
+    'runs mutants again after a change of %s, as the lockfile stays the same',
+    async (_name, shape, replay) => {
+      let root = await copyFixture(dependencyFixture)
+      await writeLimitsPackage(root, shape, 30)
+      let first = await run(root)
+      let unchanged = await run(root, { replay })
+
+      expect(first.result.diagnostics).toStrictEqual([])
+      expect(unchanged.result.results.every(entry => entry.cached)).toBe(true)
+      expect(unchanged.result.runs).toStrictEqual(replay ? {} : { dry: 1 })
+
+      await writeLimitsPackage(root, shape, 18)
+      let changed = await run(root, { replay })
+      let fresh = await run(root, { cache: false })
+
+      expect(splitCached(changed.result)).toStrictEqual({
+        ran: ['src/math.ts'],
+        cached: [],
+      })
+      expect(changed.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+        fresh.result.results.map(summarizeCachedVerdict),
+      )
+      expect(
+        changed.result.results.map(entry => [
+          entry.mutant.replacement,
+          entry.status,
+        ]),
+      ).toStrictEqual([
+        ['age > 18', 'Killed'],
+        ['age == 18', 'Survived'],
+        ['age >= 17', 'Survived'],
+      ])
+    },
+    120_000,
+  )
 
   it('runs a kill of a unit that stopped at it again after a change of what the tests it skipped read', async () => {
     let root = await copyFixture(bailFixture)

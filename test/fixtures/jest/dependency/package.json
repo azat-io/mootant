@@ -1,0 +1,7 @@
+{
+  "name": "jest-dependency",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  }
+}

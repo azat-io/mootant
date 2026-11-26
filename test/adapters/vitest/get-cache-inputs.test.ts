@@ -132,6 +132,7 @@ describe('getCacheInputs', () => {
       path.join('/p', '.env.test.local'),
       '/p/setup.ts',
       '/p/seed.ts',
+      '/p/node_modules/x/index.js',
       path.resolve('/p', './env/custom.ts'),
     ])
     expect(inputs.settings).toStrictEqual([

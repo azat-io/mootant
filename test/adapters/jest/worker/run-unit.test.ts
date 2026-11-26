@@ -1059,6 +1059,32 @@ describe('runUnit', () => {
     },
   )
 
+  it('adds to the reads the modules under node_modules that the runtime of the unit loaded, each once and sorted, but no other file it loaded', async () => {
+    let worker = createWorker(
+      runner => {
+        worker.channel.vm = createSide()
+        fs.existsSync(path.join(directory, 'kept.js'))
+        fs.existsSync(path.join(directory, 'node_modules/b/index.js'))
+        worker.channel.loads = new Set([
+          path.join(directory, 'node_modules/b/index.js'),
+          path.join(directory, 'node_modules/a/index.js'),
+          path.join(directory, 'jest/vm-setup.cjs'),
+          path.join(directory, 'kept.js'),
+        ])
+        givesNoTests(runner)
+      },
+      { directory: path.join(directory, 'jest') },
+    )
+    let unit = createUnit()
+    await runUnit(unit, worker)
+
+    expect(readFinish(unit).reads).toStrictEqual([
+      path.join(directory, 'kept.js'),
+      path.join(directory, 'node_modules/a/index.js'),
+      path.join(directory, 'node_modules/b/index.js'),
+    ])
+  })
+
   it('lists the modules the own realm of the worker loaded that count, as one that loaded in an earlier unit is not read again', async () => {
     let helper = path.join(directory, 'transform-helper.js')
     let unit = createUnit()

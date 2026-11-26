@@ -5,7 +5,7 @@ import { CACHE_VERSION } from '../../../core/cache/cache-version'
 
 describe('CACHE_VERSION', () => {
   it('names the version in the cache file name', () => {
-    expect(CACHE_VERSION).toBe(5)
-    expect(getCachePath('/p')).toMatch(/run-v5\.json$/u)
+    expect(CACHE_VERSION).toBe(6)
+    expect(getCachePath('/p')).toMatch(/run-v6\.json$/u)
   })
 })

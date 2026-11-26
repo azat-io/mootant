@@ -14,8 +14,8 @@ import { hashFiles } from './hash-files'
 /**
  * Directories the hash of a project tree leaves out, at any depth: installed
  * packages and the store pnpm keeps at the root of a project mounted as a file
- * system of its own, whose changes the lockfile stands for, git's own files,
- * and the reports mootant writes.
+ * system of its own, whose files count where tests load or read them, git's own
+ * files, and the reports mootant writes.
  */
 const SKIPPED = new Set(['node_modules', '.pnpm-store', '.mootant', '.git'])
 

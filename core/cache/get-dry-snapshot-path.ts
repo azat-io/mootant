@@ -8,7 +8,7 @@ import { CACHE_VERSION } from './cache-version'
  *
  * @param root - Project root.
  * @returns Absolute path, such as
- *   `<root>/node_modules/.cache/mootant/dry-v5.json`.
+ *   `<root>/node_modules/.cache/mootant/dry-v6.json`.
  */
 export function getDrySnapshotPath(root: string): string {
   return path.join(

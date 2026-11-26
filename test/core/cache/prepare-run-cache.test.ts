@@ -179,6 +179,8 @@ describe('prepareRunCache', () => {
     await writeFile(path.join(root, 'a.test.ts'), 'test')
     await writeFile(path.join(root, 'vitest.config.ts'), 'config')
     await writeFile(path.join(root, 'tsconfig.json'), '{}')
+    await mkdir(path.join(root, 'node_modules/.pnpm'), { recursive: true })
+    await writeFile(path.join(root, 'node_modules/.package-lock.json'), '{}')
   })
 
   afterAll(async () => {
@@ -281,6 +283,8 @@ describe('prepareRunCache', () => {
     ['a file of the test runner', 'vitest.config.ts'],
     ['an env file', '.env.local'],
     ['a lockfile', 'pnpm-lock.yaml'],
+    ['the lockfile npm installed by', 'node_modules/.package-lock.json'],
+    ['the lockfile pnpm installed by', 'node_modules/.pnpm/lock.yaml'],
     ['the package file', 'package.json'],
     ['a tsconfig file', 'tsconfig.build.json'],
   ])('reuses nothing after a change of %s', async (_name, name) => {

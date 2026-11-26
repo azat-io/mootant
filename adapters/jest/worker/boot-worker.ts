@@ -24,6 +24,7 @@ import { trackSpawners } from '../../shared/track-spawners'
 import { installExitGuards } from './install-exit-guards'
 import { createStateGuard } from './create-state-guard'
 import { createTestRunner } from './create-test-runner'
+import { keepResetLoads } from './keep-reset-loads'
 import { CHANNEL_SLOT } from './channel-slot'
 import { trackStores } from './track-stores'
 import { runUnit } from './run-unit'
@@ -69,10 +70,11 @@ let setV8Flags = setFlagsFromString
  * what it gets in plain Jest. Types are stripped only where the project's Jest
  * strips them, which needs Node's function. One count of the calls into the
  * resolvers and transformers of the projects serves every unit, which tells
- * what they read apart from what tests read. Which reads count outside the
- * directories of the session is decided by the work directory, the one that
- * holds the directory of `session.json`, and the project root
- * (`createInputFilter`), taken here, before any unit runs.
+ * what they read apart from what tests read. Every reset of the modules of a
+ * runtime first gives the unit what the runtime loaded (`keepResetLoads`).
+ * Which reads count outside the directories of the session is decided by the
+ * work directory, the one that holds the directory of `session.json`, and the
+ * project root (`createInputFilter`), taken here, before any unit runs.
  *
  * @param input - What the worker runs with.
  * @param input.process - The worker's process, with `MOOTANT_SESSION`, the
@@ -115,6 +117,7 @@ export function bootWorker(input: {
   let { default: Runtime } = load(session.packages.runtime) as {
     default: { createResolver(config: object, moduleMap: unknown): object }
   }
+  keepResetLoads(Runtime, channel)
   let { default: HasteMap } = load(session.packages.hasteMap) as {
     default: {
       getStatic(config: object): {

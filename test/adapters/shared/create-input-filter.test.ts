@@ -67,18 +67,25 @@ describe('createInputFilter', () => {
     expect(listCounted(filter, files)).toStrictEqual(files)
   })
 
-  it('leaves out node_modules directories and what lies in them, inside the root and outside it', () => {
+  it('counts what lies in node_modules directories, inside the root and outside it, but neither those directories nor their caches', () => {
     let filter = createInputFilter({ directory: work, root })
 
     expect(
       listCounted(filter, [
         path.join(root, 'node_modules'),
         path.join(root, 'node_modules/vitest/package.json'),
+        path.join(root, 'node_modules/.cache'),
+        path.join(root, 'node_modules/.cache/mootant/run-v6.json'),
+        path.join(root, 'node_modules/.cached/data.json'),
         path.resolve('/projects/shop/node_modules'),
         path.resolve('/projects/shop/node_modules/.pnpm/a/index.js'),
-        path.join(root, 'node_modules_old/data.json'),
+        path.resolve('/projects/shop/node_modules/.cache/babel/a.json'),
       ]),
-    ).toStrictEqual([path.join(root, 'node_modules_old/data.json')])
+    ).toStrictEqual([
+      path.join(root, 'node_modules/vitest/package.json'),
+      path.join(root, 'node_modules/.cached/data.json'),
+      path.resolve('/projects/shop/node_modules/.pnpm/a/index.js'),
+    ])
   })
 
   it('leaves out the work directory, as given and by its real path', async () => {

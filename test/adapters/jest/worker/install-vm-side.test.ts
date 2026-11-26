@@ -57,6 +57,7 @@ function createChannel(unit: Partial<JestUnit> = {}): {
       written.push([token, record])
     },
     enterEnvironment() {},
+    loads: new Set(),
     begin: () => 0,
     end() {},
     vm: null,

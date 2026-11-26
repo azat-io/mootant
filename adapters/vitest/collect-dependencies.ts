@@ -2,10 +2,24 @@ import type { TestProject } from 'vitest/node'
 
 import path from 'node:path'
 
+import { getPackageManifest } from '../../core/files/get-package-manifest'
+import { listPackageFiles } from '../../core/files/list-package-files'
 import { listTsconfigFiles } from '../shared/list-tsconfig-files'
 import { compareCodeUnits } from '../../core/compare-code-units'
 import { isVirtualModule } from './is-virtual-module'
 import { getModuleFile } from './get-module-file'
+
+/**
+ * Pattern of the `node_modules` segment of a path, with either separator, as
+ * Vite ids and `require.cache` keys on Windows differ in them.
+ */
+const PACKAGES = /[/\\]node_modules[/\\]/u
+
+/**
+ * Extensions of the TypeScript files Vite transforms with the options of a
+ * `tsconfig.json` file.
+ */
+const TYPESCRIPT = /\.[cm]?tsx?$/u
 
 /**
  * Module of Vite's module graph, as much of it as mootant reads.
@@ -60,11 +74,17 @@ interface GraphEnvironment {
  * module graph, transitively, which takes in files plugins watch and literal
  * dynamic imports that did not run, with all they import: modules that were
  * never transformed are transformed first, so their imports are known. Each
- * directory of those files adds the `tsconfig.json` files that may decide how
- * Vite transforms it (`listTsconfigFiles`). Virtual modules (`isVirtualModule`)
- * are followed but not listed, so the files plugins watch for them are in;
- * files under `node_modules`, which the lockfile stands for, are left out with
- * what they import. The test file itself is always in.
+ * directory of those files, of TypeScript files only under `node_modules`, adds
+ * the `tsconfig.json` files that may decide how Vite transforms it
+ * (`listTsconfigFiles`). Virtual modules (`isVirtualModule`) are followed but
+ * not listed, so the files plugins watch for them are in; files under
+ * `node_modules` are listed but not followed, as Vite transforms none of the
+ * packages Node loads, so what they import is in only when the worker reported
+ * it, each with the `package.json` files that decide its format and its `#`
+ * imports (`listPackageFiles`) and the `package.json` of its package, which
+ * decides what an import of the package resolves to (`getPackageManifest`), as
+ * Node, not Vite, resolves and loads what Vitest leaves to it. The test file
+ * itself is always in.
  *
  * @param input - Test file, its project and what its worker reported.
  * @param input.project - Project the test file ran in.
@@ -89,7 +109,7 @@ export async function collectDependencies(input: {
   let files = new Set([input.file])
   /**
    * Tells whether to follow the imports of a module, those of a project file or
-   * of a virtual module, and adds the file of a project file.
+   * of a virtual module, and adds the file of a module that has one.
    *
    * @param candidate - Module id or path.
    * @returns Whether to follow the imports of the module.
@@ -100,7 +120,7 @@ export async function collectDependencies(input: {
       return isVirtualModule(candidate)
     }
     files.add(file)
-    return true
+    return !PACKAGES.test(file)
   }
   let environments: GraphEnvironment[] = Object.values(
     project.vite.environments,
@@ -149,7 +169,25 @@ export async function collectDependencies(input: {
     }
   }
   await Promise.all(roots)
-  let directories = new Set([...files].map(path.dirname))
+  let packages = new Map<string, string[]>()
+  let manifests = [...files].flatMap(file => {
+    if (!PACKAGES.test(file)) {
+      return []
+    }
+    let manifest = getPackageManifest(file)
+    return [
+      ...listPackageFiles(path.dirname(file), packages),
+      ...(manifest === null ? [] : [manifest]),
+    ]
+  })
+  for (let manifest of manifests) {
+    files.add(manifest)
+  }
+  let directories = new Set(
+    [...files]
+      .filter(file => !PACKAGES.test(file) || TYPESCRIPT.test(file))
+      .map(path.dirname),
+  )
   for (let directory of directories) {
     let tsconfigs = listTsconfigFiles(directory, input.tsconfigs)
     for (let tsconfig of tsconfigs) {

@@ -185,6 +185,35 @@ async function runBothWays(
 }
 
 /**
+ * Writes `limits-pkg` into the `node_modules` of a project, as an install,
+ * `patch-package` or a hand edit leaves it: an ES module package whose entry
+ * gives what `limits.js`, which it imports itself, holds.
+ *
+ * @param root - Root of the project.
+ * @param age - Age from which the package counts a person as an adult.
+ */
+async function writeLimitsPackage(root: string, age: number): Promise<void> {
+  let directory = path.join(root, 'node_modules/limits-pkg')
+  await mkdir(directory, { recursive: true })
+  await writeFile(
+    path.join(directory, 'package.json'),
+    JSON.stringify({ name: 'limits-pkg', main: 'index.js', type: 'module' }),
+  )
+  await writeFile(
+    path.join(directory, 'index.js'),
+    "export { default } from './limits.js'\n",
+  )
+  await writeFile(
+    path.join(directory, 'limits.js'),
+    `export default { age: ${age} }\n`,
+  )
+  /**
+   * Files modified in the millisecond a run starts count as changed during it.
+   */
+  await setTimeout(5)
+}
+
+/**
  * Lists the cause, status and test path of the mutants with the given
  * descriptions.
  *
@@ -1044,6 +1073,42 @@ describe('nodeTestAdapter', () => {
         expect(vi.mocked(startNodeTestSession).mock.calls).toHaveLength(started)
       } finally {
         await rm(workspace, { recursive: true, force: true })
+      }
+    }, 120_000)
+
+    it('runs mutants again after a change of a file an installed package imports itself, as the lockfile stays the same', async () => {
+      let root = await realpath(
+        await mkdtemp(path.join(tmpdir(), 'mootant-dependency-')),
+      )
+      try {
+        await cp(path.join(fixtures, 'dependency'), root, { recursive: true })
+        await writeLimitsPackage(root, 30)
+        let first = await runCached(root, true)
+        await rm(getDrySnapshotPath(root))
+        let unchanged = await runCached(root, true)
+
+        expect(first.diagnostics).toStrictEqual([])
+        expect(unchanged.results.every(entry => entry.cached)).toBe(true)
+        expect(unchanged.runs).toStrictEqual({ dry: 1 })
+
+        await writeLimitsPackage(root, 18)
+        let changed = await runCached(root, true)
+        let fresh = await runCached(root, false)
+
+        expect(listVerdicts(changed)).toStrictEqual(
+          listVerdicts(fresh).map(([replacement, status]) => [
+            replacement,
+            status,
+            false,
+          ]),
+        )
+        expect(listVerdicts(changed)).toStrictEqual([
+          ['age > 18', 'Killed', false],
+          ['age == 18', 'Survived', false],
+          ['age >= 17', 'Survived', false],
+        ])
+      } finally {
+        await rm(root, { recursive: true, force: true })
       }
     }, 120_000)
   })

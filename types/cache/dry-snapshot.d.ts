@@ -44,9 +44,10 @@ export interface DrySnapshot {
   /**
    * Files the dry run and the cache keys depended on, with the hash of their
    * contents after the dry run, or null for a missing one: the files of
-   * `session.inputs`, the lockfile, `package.json`, the `.env`, `tsconfig` and
+   * `session.inputs`, the lockfile with the files that tell what was installed
+   * (`listInstallStates`), `package.json`, the `.env`, `tsconfig` and
    * `jsconfig` files of the root, and every test file of the dry run with its
-   * dependencies, inside the root or not.
+   * dependencies, inside the root or not, under `node_modules` too.
    */
   files: [string, string | null][]
 

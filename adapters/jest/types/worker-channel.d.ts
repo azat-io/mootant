@@ -36,6 +36,13 @@ export interface WorkerChannel {
   unit: JestUnit | null
 
   /**
+   * Files Jest's runtime of the current unit read as the sources of the modules
+   * of the vm (`listRuntimeFiles`): what its file cache held before each reset
+   * of its modules (`keepResetLoads`) and once the test framework returned.
+   */
+  loads: Set<string>
+
+  /**
    * What the vm's setup registered for the current unit, or null while it has
    * not run.
    */

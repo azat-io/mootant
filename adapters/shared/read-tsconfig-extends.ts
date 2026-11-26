@@ -12,11 +12,10 @@ const BYTE_ORDER_MARK = String.fromCodePoint(0xfe_ff)
 
 /**
  * Lists the configuration files a `tsconfig.json` file extends, directly: those
- * given by a path, and those of packages that resolve outside `node_modules`,
- * as in a workspace. Packages in `node_modules` are left out, since the
- * lockfile stands for them; so are files that cannot be read or parsed. The
- * file is JSON with comments and trailing commas, as TypeScript reads it, so it
- * is parsed as a JavaScript expression.
+ * given by a path, and those of packages, in a workspace or in `node_modules`.
+ * Files that cannot be read or parsed are left out. The file is JSON with
+ * comments and trailing commas, as TypeScript reads it, so it is parsed as a
+ * JavaScript expression.
  *
  * @param file - Absolute path of the `tsconfig.json` file.
  * @returns Absolute paths of the extended files that exist.
@@ -39,7 +38,7 @@ export function readTsconfigExtends(file: string): string[] {
     let found = resolved
       .flatMap(candidate => [candidate, `${candidate}.json`])
       .find(candidate => candidate.endsWith('.json') && existsSync(candidate))
-    if (found !== undefined && !found.includes('/node_modules/')) {
+    if (found !== undefined) {
       files.push(found)
     }
   }

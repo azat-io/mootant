@@ -14,7 +14,8 @@ import { createDigest } from './create-digest'
  * is not set included. Incremental keys leave out the files mutants are listed
  * from, for which the region of a mutant stands (see `getMutantRegions`). Test
  * files without dependencies get no key, so their verdicts are neither reused
- * nor stored.
+ * nor stored. Each file is made portable once for all test files, which share
+ * most of what they load, such as the files of a test environment like jsdom.
  *
  * @param input - Test files of the dry run, file hashes and environment.
  * @param input.files - Test files of the dry run.
@@ -37,6 +38,7 @@ export function getTestFileKeys(input: {
   root: string
 }): Map<string, string> {
   let { environment, variables, mutated, hashes, root } = input
+  let paths = new Map<string, string>()
   let keys = new Map<string, string>()
   for (let file of input.files) {
     if (!Array.isArray(file.dependencies)) {
@@ -47,7 +49,7 @@ export function getTestFileKeys(input: {
         file.file,
         ...file.dependencies.filter(dependency => !mutated.has(dependency)),
       ],
-      { hashes, root },
+      { hashes, paths, root },
     )
     let values =
       Object.hasOwn(variables, file.project) ? variables[file.project]! : {}

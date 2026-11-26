@@ -45,6 +45,7 @@ function placeChannel(): {
       written.push([token, record])
     },
     enterEnvironment() {},
+    loads: new Set(),
     begin: () => 0,
     end() {},
     vm: null,

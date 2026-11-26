@@ -52,6 +52,7 @@ describe('trackInputs', () => {
       file('a.json'),
       root,
       path.resolve('/other/c.json'),
+      file('node_modules/x/index.js'),
     ])
     expect(inputs.stop()).toStrictEqual({
       files: [
@@ -59,6 +60,7 @@ describe('trackInputs', () => {
         root,
         file('a.json'),
         file('b.json'),
+        file('node_modules/x/index.js'),
       ],
       modified: [root, file('a.json')],
       environment: ['A', 'B'],

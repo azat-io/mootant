@@ -369,6 +369,47 @@ function throwOnRefusals(
 }
 
 /**
+ * Keeps what later dry runs read of a test file and tells of its end, once per
+ * file, from the attempt that counts, without what lies under `node_modules`,
+ * as no file mutants come from does. A file with no `finish` has no reads, so
+ * the next dry run runs it again. What the transformers read joins what they
+ * read in other units. What tests printed to a console that kept it goes to the
+ * output with the failure of the file, in the order Jest's reporters show
+ * them.
+ *
+ * @param handle - Live session.
+ * @param target - Test file and project.
+ * @param outcome - What its last attempt left behind.
+ */
+function keepLastAttempt(
+  handle: JestHandle,
+  target: DryTarget,
+  outcome: UnitOutcome,
+): void {
+  let { context, state } = handle
+  let { project, file } = target
+  context.onUnitEnd?.()
+  let finish = outcome.records.find(record => record.kind === 'finish')
+  let key = getTestFileKey({ project: project.name, file })
+  if (finish === undefined) {
+    state.reads.delete(key)
+  } else {
+    state.reads.set(
+      key,
+      finish.reads.filter(read => !/[/\\]node_modules[/\\]/u.test(read)),
+    )
+    for (let read of finish.transforms) {
+      state.transforms.add(read)
+    }
+    for (let text of [finish.consoleOutput, finish.failureMessage]) {
+      if (text !== null) {
+        context.onOutput?.(text, file)
+      }
+    }
+  }
+}
+
+/**
  * Lists the test files of a dry run; one in two projects is two.
  *
  * @param handle - Live session.
@@ -400,43 +441,6 @@ function listTargets(
       )
       return reads === undefined || relates(reads)
     })
-}
-
-/**
- * Keeps what later dry runs read of a test file and tells of its end, once per
- * file, from the attempt that counts. A file with no `finish` has no reads, so
- * the next dry run runs it again. What the transformers read joins what they
- * read in other units. What tests printed to a console that kept it goes to the
- * output with the failure of the file, in the order Jest's reporters show
- * them.
- *
- * @param handle - Live session.
- * @param target - Test file and project.
- * @param outcome - What its last attempt left behind.
- */
-function keepLastAttempt(
-  handle: JestHandle,
-  target: DryTarget,
-  outcome: UnitOutcome,
-): void {
-  let { context, state } = handle
-  let { project, file } = target
-  context.onUnitEnd?.()
-  let finish = outcome.records.find(record => record.kind === 'finish')
-  let key = getTestFileKey({ project: project.name, file })
-  if (finish === undefined) {
-    state.reads.delete(key)
-  } else {
-    state.reads.set(key, finish.reads)
-    for (let read of finish.transforms) {
-      state.transforms.add(read)
-    }
-    for (let text of [finish.consoleOutput, finish.failureMessage]) {
-      if (text !== null) {
-        context.onOutput?.(text, file)
-      }
-    }
-  }
 }
 
 /**

@@ -2,6 +2,7 @@ import path from 'node:path'
 
 import type { NodeTestRecord } from './types/node-test-record'
 
+import { getPackageManifest } from '../../core/files/get-package-manifest'
 import { listPackageFiles } from '../../core/files/list-package-files'
 import { listTsconfigFiles } from '../shared/list-tsconfig-files'
 import { compareCodeUnits } from '../../core/compare-code-units'
@@ -11,11 +12,13 @@ import { listLoadedFiles } from './list-loaded-files'
  * Lists what a test file depended on in a test process that reached its end:
  * the test file, its default snapshot file (`<file>.snapshot`), whether it
  * exists or not, the modules the process loaded (`listLoadedFiles`) and the
- * files the test code read that count as inputs (`createInputFilter`), without
- * files under `node_modules`, which the lockfile stands for, and without
- * mootant's preload; for the directory of each module, the `package.json` files
- * that decide its format (`listPackageFiles`) and, when tsx compiles modules,
- * the `tsconfig.json` files that decide how (`listTsconfigFiles`).
+ * files the test code read that count as inputs (`createInputFilter`), under
+ * `node_modules` too, without mootant's preload; for the directory of each
+ * module, the `package.json` files that decide its format (`listPackageFiles`)
+ * and, when tsx compiles modules, the `tsconfig.json` files that decide how
+ * (`listTsconfigFiles`), but in `node_modules`, where tsx takes none; for a
+ * module of an installed package, the `package.json` that decides what an
+ * import of the package resolves to (`getPackageManifest`).
  *
  * @param input - Records of the process and what to look up.
  * @param input.records - Records of the process.
@@ -42,30 +45,33 @@ export function collectNodeDependencies(input: {
   let excluded = path.dirname(input.preload) + path.sep
   /**
    * Tells whether a path a record named counts: an absolute one outside
-   * `node_modules` and mootant's preload.
+   * mootant's preload.
    *
    * @param candidate - Path a record named.
    * @returns Whether it counts.
    */
   function counts(candidate: string): boolean {
-    return (
-      path.isAbsolute(candidate) &&
-      !candidate.includes(`${path.sep}node_modules${path.sep}`) &&
-      !candidate.startsWith(excluded)
-    )
+    return path.isAbsolute(candidate) && !candidate.startsWith(excluded)
   }
+  let packages = `${path.sep}node_modules${path.sep}`
   let modules = [file, ...listLoadedFiles(records)].filter(counts)
   let files = new Set([
     ...modules,
     `${file}.snapshot`,
     ...end.files.filter(counts),
   ])
+  for (let module of modules) {
+    let manifest = getPackageManifest(module)
+    if (manifest !== null) {
+      files.add(manifest)
+    }
+  }
   let directories = new Set(modules.map(module => path.dirname(module)))
   for (let directory of directories) {
     for (let found of listPackageFiles(directory, cache.packages)) {
       files.add(found)
     }
-    if (input.tsx) {
+    if (input.tsx && !`${directory}${path.sep}`.includes(packages)) {
       for (let found of listTsconfigFiles(directory, cache.tsconfigs)) {
         files.add(found)
       }

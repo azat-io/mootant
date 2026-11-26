@@ -16,6 +16,7 @@ import type { RunCache } from '../../types/cache/run-cache'
 
 import { getTestFileKey } from '../run/get-test-file-key'
 import { getEnvironmentKey } from './get-environment-key'
+import { listInstallStates } from './list-install-states'
 import { compareCodeUnits } from '../compare-code-units'
 import { getDisplayPath } from '../run/get-display-path'
 import { findChangedFiles } from './find-changed-files'
@@ -142,24 +143,25 @@ interface PreparedCache {
 /**
  * Prepares the cache of a run after its dry run: asks the adapter what every
  * verdict depends on, hashes those files together with the `.env` files, the
- * lockfile, `package.json` and the `tsconfig` and `jsconfig` files of the root,
- * every file a test file depended on and every file stored entries read beyond
- * that, each file once, then builds the environment key and the key of every
- * test file, which takes in the environment variables it read, and the key of
- * every test file over what it reads outside the files mutants are listed from,
- * for the incremental keys. Files modified since the run started may have
- * changed after the test runner read them, so their hash may not be what
- * verdicts came from: a test file that depends on one gets no key, and no test
- * file gets one when a file of the environment changed. The same goes for a
- * path whose content is unknown, such as a device or a pipe (`UNKNOWN_HASH`),
- * whatever its time. Files the test code of the dry run changed itself
- * (`DryFile.modified`), files of the environment among them, are hashed as they
- * are now, which is what the next run starts from; `saveRunCache` checks that
- * their contents stayed so. A test runner that read such a file before the test
- * code wrote it, as Vitest loads the `.env` files of its mode when it starts,
- * may have run with an earlier text than the keys show, whether the test code
- * or the user changed it. A run with parallel units has an environment key of
- * its own. Outside fast mode, the cache keeps timeouts by the hit limit too.
+ * lockfile with the files that tell what was installed (`listInstallStates`),
+ * `package.json` and the `tsconfig` and `jsconfig` files of the root, every
+ * file a test file depended on and every file stored entries read beyond that,
+ * each file once, then builds the environment key and the key of every test
+ * file, which takes in the environment variables it read, and the key of every
+ * test file over what it reads outside the files mutants are listed from, for
+ * the incremental keys. Files modified since the run started may have changed
+ * after the test runner read them, so their hash may not be what verdicts came
+ * from: a test file that depends on one gets no key, and no test file gets one
+ * when a file of the environment changed. The same goes for a path whose
+ * content is unknown, such as a device or a pipe (`UNKNOWN_HASH`), whatever its
+ * time. Files the test code of the dry run changed itself (`DryFile.modified`),
+ * files of the environment among them, are hashed as they are now, which is
+ * what the next run starts from; `saveRunCache` checks that their contents
+ * stayed so. A test runner that read such a file before the test code wrote it,
+ * as Vitest loads the `.env` files of its mode when it starts, may have run
+ * with an earlier text than the keys show, whether the test code or the user
+ * changed it. A run with parallel units has an environment key of its own.
+ * Outside fast mode, the cache keeps timeouts by the hit limit too.
  *
  * @param input - Session, dry run, settings and the stored entries.
  * @returns Cache of the run, with what the session said verdicts depend on. No
@@ -180,6 +182,7 @@ export async function prepareRunCache(
   let files = [
     ...inputs.files,
     ...(lockfile === null ? [] : [lockfile]),
+    ...listInstallStates(root),
     path.join(root, 'package.json'),
     ...(await readdir(root))
       .filter(name => /^(?:\.env|(?:jsconfig|tsconfig).*\.json$)/u.test(name))

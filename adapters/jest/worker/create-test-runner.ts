@@ -8,6 +8,7 @@ import type { CircusState } from '../types/circus-state'
 import type { JestRecord } from '../types/jest-record'
 
 import { createCircusTracker } from './create-circus-tracker'
+import { listRuntimeFiles } from './list-runtime-files'
 import { readErrorFacts } from './read-error-facts'
 
 /**
@@ -126,7 +127,10 @@ type TestRunnerParameters = [
  * runs out of the store of the test environment's calls
  * (`WorkerCalls.environment`), which the last setup file may have entered for
  * `environment.setup()` and the load of the real test framework, and what
- * follows it, `environment.teardown()` among it, is back in it.
+ * follows it, `environment.teardown()` among it, is back in it. Once the
+ * framework returned, before Jest tears its runtime down, the channel takes the
+ * files that runtime loaded for the vm since its last reset of the modules
+ * (`listRuntimeFiles`), as it took those before each reset (`keepResetLoads`).
  *
  * @param input - What the wrapper works with.
  * @returns The function Jest calls as `(globalConfig, config, environment,
@@ -258,7 +262,14 @@ export function createTestRunner(
     }
 
     environment.handleTestEvent = handleTestEvent
-    return await calls.environment.exit(() => real(...parameters))
+    try {
+      return await calls.environment.exit(() => real(...parameters))
+    } finally {
+      let loaded = listRuntimeFiles(parameters[3])
+      for (let file of loaded) {
+        channel.loads.add(file)
+      }
+    }
   }
 }
 

@@ -17,6 +17,27 @@ describe('listFileHashes', () => {
     ])
   })
 
+  it('takes the portable paths it is given and adds those it computes', () => {
+    let hashes = new Map([
+      ['/p/a.ts', 'a'],
+      ['/p/b.ts', 'b'],
+    ])
+    let paths = new Map([['/p/a.ts', 'given/a.ts']])
+
+    expect(
+      listFileHashes(['/p/b.ts', '/p/a.ts'], { root: '/p', hashes, paths }),
+    ).toStrictEqual([
+      ['b.ts', 'b'],
+      ['given/a.ts', 'a'],
+    ])
+    expect(paths).toStrictEqual(
+      new Map([
+        ['/p/a.ts', 'given/a.ts'],
+        ['/p/b.ts', 'b.ts'],
+      ]),
+    )
+  })
+
   it('gives null for a file hashed as missing or not hashed', () => {
     let hashes = new Map([['/p/a.ts', null]])
 

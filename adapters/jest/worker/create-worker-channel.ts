@@ -51,6 +51,15 @@ export function createWorkerChannel(): WorkerChannel {
   }
 
   let channel: WorkerChannel = {
+    begin(unit) {
+      channel.token += 1
+      channel.unit = unit
+      channel.loads = new Set()
+      channel.vm = null
+      descriptor = openFile(unit.out, 'a')
+      channel.write(channel.token, { kind: 'start' })
+      return channel.token
+    },
     write(token, record) {
       if (descriptor === null || token !== channel.token) {
         return
@@ -73,15 +82,8 @@ export function createWorkerChannel(): WorkerChannel {
       descriptor = null
       queue = []
     },
-    begin(unit) {
-      channel.token += 1
-      channel.unit = unit
-      channel.vm = null
-      descriptor = openFile(unit.out, 'a')
-      channel.write(channel.token, { kind: 'start' })
-      return channel.token
-    },
     enterEnvironment() {},
+    loads: new Set(),
     unit: null,
     vm: null,
     token: 0,

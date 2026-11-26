@@ -91,15 +91,17 @@ describe('createWorkerChannel', () => {
     await rm(directory, { recursive: true, force: true })
   })
 
-  it('raises the token, keeps the unit, forgets the side and writes start', async () => {
+  it('raises the token, keeps the unit, forgets the side and the loads and writes start', async () => {
     let channel = createWorkerChannel()
     channel.vm = {} as VmSide
+    channel.loads = new Set(['/p/node_modules/a/index.js'])
     let unit = createUnit('a.jsonl')
 
     expect(channel.begin(unit)).toBe(1)
     expect(channel.token).toBe(1)
     expect(channel.unit).toBe(unit)
     expect(channel.vm).toBeNull()
+    expect(channel.loads).toStrictEqual(new Set())
     expect(channel.enterEnvironment()).toBeUndefined()
 
     channel.end()

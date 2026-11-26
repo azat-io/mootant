@@ -122,11 +122,11 @@ function describeProjectSettings(
 /**
  * Adds the files the verdicts of a project depend on beyond the modules of each
  * test file: the configuration files of the project with the files they import,
- * the `.env` files Vite loads for it, global setup files with every project
- * file the main process evaluated for them (`getModuleFile`), and a test
- * environment given as a path, which loads outside the modules of a test file.
- * With Vite's module runner off, Node imports global setup files itself and
- * only the files themselves are known.
+ * the `.env` files Vite loads for it, global setup files with every file the
+ * main process evaluated for them (`getModuleFile`), and a test environment
+ * given as a path, which loads outside the modules of a test file. With Vite's
+ * module runner off, Node imports global setup files itself and only the files
+ * themselves are known.
  *
  * @param project - Vitest project.
  * @param files - Receives the files, in this order.

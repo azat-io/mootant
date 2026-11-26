@@ -53,19 +53,20 @@ const ROOT = '<root>'
  * worker reads only once, so that a test file whose unit ran after it would
  * miss it, with the missing files among it only when they are named as
  * configuration files (`isTransformInput`); and the modules the host loaded, as
- * the configuration file imports them and global setup ran, but those under
- * `node_modules`, which the lockfile stands for, and mootant's own files.
- * Settings, with the root in their strings replaced so that a moved project
- * keeps them: per project its configuration without what changes no verdict,
- * and the console its tests print to; what of the global configuration picks
- * the tests of a file and how they run; the versions of Jest, of the
- * `@jest/transform` that strips types and of Node, whose own stripping and
- * targets change the code; whether every unit gets a new worker; and the
- * variables that change verdicts whether tests read them or not (`TZ`,
- * `NODE_ENV`, `LANG`, `LC_*`) with `BABEL_ENV`, which transformers read outside
- * the tests, `NODE_OPTIONS`, the Node flags and the variables the command and
- * the options set. Environment: the hashes of the variables of the host after
- * global setup, which every worker of every project starts from.
+ * the configuration file imports them and global setup ran, but mootant's own
+ * files and those under `node_modules`, such as Jest's own, which an install
+ * that changes them shows in the files that tell what was installed. Settings,
+ * with the root in their strings replaced so that a moved project keeps them:
+ * per project its configuration without what changes no verdict, and the
+ * console its tests print to; what of the global configuration picks the tests
+ * of a file and how they run; the versions of Jest, of the `@jest/transform`
+ * that strips types and of Node, whose own stripping and targets change the
+ * code; whether every unit gets a new worker; and the variables that change
+ * verdicts whether tests read them or not (`TZ`, `NODE_ENV`, `LANG`, `LC_*`)
+ * with `BABEL_ENV`, which transformers read outside the tests, `NODE_OPTIONS`,
+ * the Node flags and the variables the command and the options set.
+ * Environment: the hashes of the variables of the host after global setup,
+ * which every worker of every project starts from.
  *
  * @param input - What the session started with and what its dry runs read.
  * @param input.transforms - Files the transformers, the test environments, the

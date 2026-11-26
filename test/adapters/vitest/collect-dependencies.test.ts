@@ -103,6 +103,7 @@ describe('collectDependencies', () => {
       '{ "extends": "./base.json" }',
     )
     await writeFile(path.join(root, 'base.json'), '{}')
+    await writeFile(path.join(root, 'package.json'), '{}')
   })
 
   afterAll(async () => {
@@ -129,7 +130,7 @@ describe('collectDependencies', () => {
       b,
       createNode(null),
       createNode('virtual:x'),
-      createNode('/x/node_modules/y/index.js'),
+      createNode(path.join(root, 'node_modules/y/index.js'), false),
       lazy,
       broken,
     ]) {
@@ -154,7 +155,7 @@ describe('collectDependencies', () => {
           b.id!,
           `${second.id}#hash`,
           second.id!,
-          '/x/node_modules/vitest/index.js',
+          path.join(root, 'node_modules/vitest/index.js'),
           '\0virtual:module',
           'virtual:other',
         ],
@@ -170,6 +171,12 @@ describe('collectDependencies', () => {
         source('deep'),
         source('lazy'),
         source('second'),
+        path.join(root, 'node_modules/vitest/index.js'),
+        path.join(root, 'node_modules/vitest/package.json'),
+        path.join(root, 'node_modules/y/index.js'),
+        path.join(root, 'node_modules/y/package.json'),
+        path.join(root, 'node_modules/package.json'),
+        path.join(root, 'package.json'),
         file,
         path.join(root, 'base.json'),
         path.join(root, 'src/tsconfig.json'),
@@ -249,13 +256,13 @@ describe('collectDependencies', () => {
     expect(transformed).toStrictEqual([])
   })
 
-  it('follows chains of virtual modules but no module under node_modules', async () => {
+  it('follows chains of virtual modules, and lists a module under node_modules without following it', async () => {
     let file = path.join(root, 'test/a.test.ts')
     let test = createNode(file)
     let routes = createNode('virtual:routes')
     let pages = createNode('\0virtual:pages?lang.ts')
     let page = createNode(path.join(root, 'src/page.ts'))
-    let library = createNode('/x/node_modules/y/index.js')
+    let library = createNode(path.join(root, 'node_modules/y/index.js'))
     library.importedModules.add(createNode(path.join(root, 'src/hidden.ts')))
     pages.importedModules.add(page)
     routes.importedModules.add(pages)
@@ -274,6 +281,10 @@ describe('collectDependencies', () => {
       [
         file,
         page.file!,
+        library.file!,
+        path.join(root, 'node_modules/y/package.json'),
+        path.join(root, 'node_modules/package.json'),
+        path.join(root, 'package.json'),
         path.join(root, 'base.json'),
         path.join(root, 'src/tsconfig.json'),
         path.join(root, 'test/tsconfig.json'),
@@ -281,6 +292,69 @@ describe('collectDependencies', () => {
       ].toSorted(),
     )
     expect(transformed).toStrictEqual([])
+  })
+
+  it('adds the package.json files of each file under node_modules, and looks up tsconfig files there only for TypeScript files', async () => {
+    let file = path.join(root, 'test/a.test.ts')
+    let script = path.join(root, 'node_modules/pkg/dist/index.js')
+    let source = path.join(root, 'node_modules/kit/src/index.ts')
+    let loose = path.join(root, 'node_modules/loose.js')
+    let { environment } = createEnvironment({ [file]: createNode(file) })
+
+    await expect(
+      collectDependencies({
+        reported: [file, script, source, loose],
+        project: createProject([environment]),
+        tsconfigs: new Map(),
+        file,
+      }),
+    ).resolves.toStrictEqual(
+      [
+        file,
+        script,
+        source,
+        loose,
+        path.join(root, 'node_modules/pkg/dist/package.json'),
+        path.join(root, 'node_modules/pkg/package.json'),
+        path.join(root, 'node_modules/kit/src/package.json'),
+        path.join(root, 'node_modules/kit/package.json'),
+        path.join(root, 'node_modules/package.json'),
+        path.join(root, 'package.json'),
+        path.join(root, 'base.json'),
+        path.join(root, 'node_modules/kit/src/tsconfig.json'),
+        path.join(root, 'node_modules/kit/tsconfig.json'),
+        path.join(root, 'node_modules/tsconfig.json'),
+        path.join(root, 'test/tsconfig.json'),
+        path.join(root, 'tsconfig.json'),
+      ].toSorted(),
+    )
+  })
+
+  it('adds the manifest of the package of a file that a nested package.json gives its format and imports', async () => {
+    let file = path.join(root, 'test/a.test.ts')
+    let esm = path.join(root, 'node_modules/@s/p/dist/esm')
+    await mkdir(esm, { recursive: true })
+    await writeFile(path.join(esm, 'package.json'), '{ "type": "module" }')
+    let { environment } = createEnvironment({ [file]: createNode(file) })
+
+    await expect(
+      collectDependencies({
+        reported: [file, path.join(esm, 'm.js')],
+        project: createProject([environment]),
+        tsconfigs: new Map(),
+        file,
+      }),
+    ).resolves.toStrictEqual(
+      [
+        file,
+        path.join(esm, 'm.js'),
+        path.join(esm, 'package.json'),
+        path.join(root, 'node_modules/@s/p/package.json'),
+        path.join(root, 'base.json'),
+        path.join(root, 'test/tsconfig.json'),
+        path.join(root, 'tsconfig.json'),
+      ].toSorted(),
+    )
   })
 
   it('visits each module once through cycles of virtual modules', async () => {

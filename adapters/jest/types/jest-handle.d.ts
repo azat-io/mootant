@@ -20,7 +20,8 @@ export interface JestHandle {
     timeouts: DryRunRequest['timeouts'] | null
 
     /**
-     * Files each test file read in its last dry run, by `getTestFileKey`; a
+     * Files each test file read in its last dry run, by `getTestFileKey`, but
+     * those under `node_modules`, which no file mutants come from is among; a
      * test file with no `finish` has no entry, so it runs again.
      */
     reads: Map<string, readonly string[]>

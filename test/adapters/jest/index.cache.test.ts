@@ -108,6 +108,32 @@ async function runCached(
 }
 
 /**
+ * Writes `limits-pkg` into the `node_modules` of a project, as an install,
+ * `patch-package` or a hand edit leaves it: a CommonJS package whose entry
+ * gives what `limits.js`, which it requires itself, holds.
+ *
+ * @param root - Root of the project.
+ * @param age - Age from which the package counts a person as an adult.
+ */
+async function writeLimitsPackage(root: string, age: number): Promise<void> {
+  let directory = path.join(root, 'node_modules/limits-pkg')
+  await mkdir(directory, { recursive: true })
+  await writeFile(
+    path.join(directory, 'package.json'),
+    JSON.stringify({ name: 'limits-pkg', main: 'index.js' }),
+  )
+  await writeFile(
+    path.join(directory, 'index.js'),
+    "module.exports = require('./limits.js')\n",
+  )
+  await changeFile(
+    path.join(directory, 'limits.js'),
+    `module.exports = { age: ${age} }\n`,
+    true,
+  )
+}
+
+/**
  * Lists the files of the mutants whose verdict came from the cache, and of
  * those whose did not, without mutants nothing ran.
  *
@@ -1202,6 +1228,95 @@ module.exports = class extends TestEnvironment {
       fresh.result.results.map(summarizeCachedVerdict),
     )
   })
+
+  it.each(
+    majors.flatMap(major => [
+      [major, '', "{ testEnvironment: 'node' }"],
+      [
+        major,
+        ', resetModules on',
+        "{ testEnvironment: 'node', resetModules: true }",
+      ],
+    ]),
+  )(
+    'runs the mutants again after a change of a file an installed package requires itself, as the lockfile stays the same, on Jest %i%s',
+    async (major, _resets, config) => {
+      let root = await createProject('dependency', major)
+      await writeFile(
+        path.join(root, 'jest.config.js'),
+        `module.exports = ${config}\n`,
+      )
+      await writeLimitsPackage(root, 30)
+      let first = await runCached(root)
+      let unchanged = await runCached(root)
+
+      expect(first.result.diagnostics).toStrictEqual([])
+      expect(unchanged.result.results.every(entry => entry.cached)).toBe(true)
+      expect(unchanged.units).toBe(0)
+
+      await writeLimitsPackage(root, 18)
+      let changed = await runCached(root, { replay: true })
+      let fresh = await runCached(root, { cache: false })
+
+      expect(splitCached(changed.result)).toStrictEqual({
+        ran: ['src/math.js'],
+        cached: [],
+      })
+      expect(changed.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+        fresh.result.results.map(summarizeCachedVerdict),
+      )
+      expect(
+        ['age > 18', 'age == 18', 'age >= 17'].map(replacement => [
+          replacement,
+          findReplaced(changed.result, replacement)?.status,
+        ]),
+      ).toStrictEqual([
+        ['age > 18', 'Killed'],
+        ['age == 18', 'Survived'],
+        ['age >= 17', 'Survived'],
+      ])
+    },
+  )
+
+  it.each(majors)(
+    'runs the mutants again after a change of a file of a package that a setup file loads before it resets the modules, on Jest %i',
+    async major => {
+      let root = await createProject('dependency', major)
+      await writeFile(
+        path.join(root, 'jest.config.js'),
+        "module.exports = { testEnvironment: 'node', setupFiles: ['./setup.js'] }\n",
+      )
+      await writeFile(
+        path.join(root, 'setup.js'),
+        "globalThis.limits = require('limits-pkg')\njest.resetModules()\n",
+      )
+      await writeFile(
+        path.join(root, 'test/math.test.js'),
+        [
+          "let { isAdult } = require('../src/math')",
+          '',
+          "test('tells adults', () => {",
+          '  expect(isAdult(globalThis.limits.age)).toBe(true)',
+          '  expect(isAdult(5)).toBe(false)',
+          '})',
+          '',
+        ].join('\n'),
+      )
+      await writeLimitsPackage(root, 30)
+      await runCached(root)
+      await writeLimitsPackage(root, 18)
+      let changed = await runCached(root, { replay: true })
+      let fresh = await runCached(root, { cache: false })
+
+      expect(splitCached(changed.result)).toStrictEqual({
+        ran: ['src/math.js'],
+        cached: [],
+      })
+      expect(changed.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+        fresh.result.results.map(summarizeCachedVerdict),
+      )
+    },
+  )
 
   it('neither reads nor writes the cache when it is off', async () => {
     let root = await createCacheProject()

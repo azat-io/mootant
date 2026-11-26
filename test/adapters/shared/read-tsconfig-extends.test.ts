@@ -51,7 +51,7 @@ describe('readTsconfigExtends', () => {
     await rm(root, { recursive: true, force: true })
   })
 
-  it('lists extended files by path and from workspace packages', async () => {
+  it('lists extended files by path and from packages', async () => {
     let file = await write(
       'tsconfig.json',
       `{
@@ -74,6 +74,7 @@ describe('readTsconfigExtends', () => {
       path.join(root, 'configs/base.json'),
       path.join(root, 'configs/strict.json'),
       path.join(root, 'shared/tsconfig.json'),
+      path.join(root, 'node_modules/@tsconfig/node/tsconfig.json'),
     ])
   })
 
