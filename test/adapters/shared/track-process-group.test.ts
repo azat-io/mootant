@@ -6,10 +6,10 @@ import { trackProcessGroup } from '../../../adapters/shared/track-process-group'
 /**
  * Counts the listeners of this process for the exit and the signals.
  *
- * @returns Listeners of `exit`, `SIGINT` and `SIGTERM`.
+ * @returns Listeners of `exit`, `SIGHUP`, `SIGINT`, `SIGQUIT` and `SIGTERM`.
  */
 function countListeners(): number[] {
-  return ['exit', 'SIGINT', 'SIGTERM'].map(event =>
+  return ['exit', 'SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGTERM'].map(event =>
     process.listenerCount(event),
   )
 }
@@ -48,23 +48,26 @@ describe('trackProcessGroup', () => {
     untrack()
   })
 
-  it('stops the processes on a signal and raises it again alone', () => {
-    let before = countListeners()
-    let kill = vi.spyOn(process, 'kill').mockReturnValue(true)
-    let listeners = process.listeners('SIGINT')
-    process.removeAllListeners('SIGINT')
-    trackProcessGroup(41)
-    process.emit('SIGINT', 'SIGINT')
-    for (let listener of listeners) {
-      process.on('SIGINT', listener)
-    }
+  it.each(['SIGHUP', 'SIGINT', 'SIGQUIT'] as const)(
+    'stops the processes on %s and raises it again alone',
+    signal => {
+      let before = countListeners()
+      let kill = vi.spyOn(process, 'kill').mockReturnValue(true)
+      let listeners = process.listeners(signal)
+      process.removeAllListeners(signal)
+      trackProcessGroup(41)
+      process.emit(signal, signal)
+      for (let listener of listeners) {
+        process.on(signal, listener)
+      }
 
-    expect(kill.mock.calls).toStrictEqual([
-      [-41, 'SIGKILL'],
-      [process.pid, 'SIGINT'],
-    ])
-    expect(countListeners()).toStrictEqual(before)
-  })
+      expect(kill.mock.calls).toStrictEqual([
+        [-41, 'SIGKILL'],
+        [process.pid, signal],
+      ])
+      expect(countListeners()).toStrictEqual(before)
+    },
+  )
 
   it('leaves a signal to other listeners', () => {
     let kill = vi.spyOn(process, 'kill').mockReturnValue(true)

@@ -9,7 +9,7 @@ import {
   rm,
 } from 'node:fs/promises'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
-import { execFileSync, fork } from 'node:child_process'
+import { execFileSync, spawn, fork } from 'node:child_process'
 import { setFlagsFromString } from 'node:v8'
 import { runInNewContext } from 'node:vm'
 import { existsSync } from 'node:fs'
@@ -22,6 +22,7 @@ import type { DryRunRequest } from '../../../types/adapter/dry-run-request'
 import type { JestHost } from '../../../adapters/jest/types/jest-host'
 
 import { writeWorkerSession } from '../../../adapters/jest/write-worker-session'
+import { writeWorkerFiles } from '../../../adapters/jest/write-worker-files'
 import { startJestSession } from '../../../adapters/jest/start-jest-session'
 import { createWorkerPool } from '../../../adapters/jest/create-worker-pool'
 import { hashEnvironment } from '../../../adapters/shared/hash-environment'
@@ -30,7 +31,11 @@ import { createJestProject } from '../../helpers/create-jest-project'
 
 vi.mock(import('node:child_process'), async importOriginal => {
   let actual = await importOriginal()
-  return { ...actual, fork: vi.fn(actual.fork) as typeof actual.fork }
+  return {
+    ...actual,
+    fork: vi.fn(actual.fork) as typeof actual.fork,
+    spawn: vi.fn(actual.spawn) as never,
+  }
 })
 
 vi.mock(
@@ -46,6 +51,14 @@ vi.mock(
   async importOriginal => {
     let actual = await importOriginal()
     return { createWorkerPool: vi.fn(actual.createWorkerPool) }
+  },
+)
+
+vi.mock(
+  import('../../../adapters/jest/write-worker-files'),
+  async importOriginal => {
+    let actual = await importOriginal()
+    return { writeWorkerFiles: vi.fn(actual.writeWorkerFiles) }
   },
 )
 
@@ -172,6 +185,7 @@ describe('startJestSession', { timeout: 60_000 }, () => {
     directories = []
     output = []
     vi.mocked(fork).mockClear()
+    vi.mocked(spawn).mockClear()
     vi.mocked(startJestHost).mockClear()
     vi.mocked(createWorkerPool).mockClear()
   })
@@ -1037,6 +1051,63 @@ describe('startJestSession', { timeout: 60_000 }, () => {
       expect(isAlive(hostPid!)).toBe(false)
       expect(isAlive(workerPid!)).toBe(false)
       expect(existsSync(path.join(root, 'teardown-ran'))).toBe(true)
+    })
+
+    it('stops its workers and starts none once the run is interrupted, leaving the host to the close', async () => {
+      let controller = new AbortController()
+      let root = await createProject()
+      let request = {
+        files: [{ file: path.join(root, 'test/add.test.js'), project: '' }],
+        timeouts: { file: 60_000, test: 60_000 },
+        instrumented: false,
+        repeat: false,
+        related: [],
+      }
+      let session = await start(root, {
+        context: { signal: controller.signal },
+      })
+      await session.dryRun(request)
+      let [hostPid, workerPid] = vi
+        .mocked(fork)
+        .mock.results.map(result => (result.value as ChildProcess).pid!)
+      controller.abort()
+
+      await expect.poll(() => isAlive(workerPid!)).toBe(false)
+      await expect(session.dryRun(request)).rejects.toThrow(
+        'mootant closed its Jest workers; no test can run now.',
+      )
+      expect(isAlive(hostPid!)).toBe(true)
+      expect(fork).toHaveBeenCalledTimes(2)
+    })
+
+    it('starts no Jest once the run is interrupted', async () => {
+      let signal = AbortSignal.abort()
+      let root = await createProject()
+
+      await expect(start(root, { context: { signal } })).rejects.toBe(
+        signal.reason,
+      )
+      expect(spawn).not.toHaveBeenCalled()
+      expect(fork).not.toHaveBeenCalled()
+    })
+
+    it('starts no host once the run is interrupted after the configuration was read', async () => {
+      let reason = new Error('Interrupted.')
+      let controller = new AbortController()
+      let write = vi.mocked(writeWorkerFiles).getMockImplementation()!
+      vi.mocked(writeWorkerFiles).mockImplementationOnce(async directory => {
+        let files = await write(directory)
+        controller.abort(reason)
+        return files
+      })
+      let root = await createProject()
+
+      await expect(
+        start(root, { context: { signal: controller.signal } }),
+      ).rejects.toBe(reason)
+      expect(vi.mocked(spawn).mock.calls).toHaveLength(1)
+      expect(startJestHost).not.toHaveBeenCalled()
+      expect(fork).not.toHaveBeenCalled()
     })
 
     it('collects the warnings of every step in order', async () => {

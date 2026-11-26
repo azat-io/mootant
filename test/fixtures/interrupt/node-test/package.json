@@ -1,0 +1,5 @@
+{
+  "name": "interrupt-node-test",
+  "private": true,
+  "type": "module"
+}

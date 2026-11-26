@@ -45,15 +45,6 @@ const ERASE_LINE = '\u{1B}[2K\u{1B}[1G'
 const MOVE_UP = '\u{1B}[1A'
 
 /**
- * Signals that end the process while the spinner runs, with the exit codes a
- * shell reports for them.
- */
-const SIGNAL_EXIT_CODES: [signal: NodeJS.Signals, code: number][] = [
-  ['SIGINT', 130],
-  ['SIGTERM', 143],
-]
-
-/**
  * Progress line that the CLI shows on standard error while a command works.
  */
 export interface Spinner {
@@ -84,8 +75,7 @@ export interface Spinner {
  * In an interactive terminal the spinner redraws its row every 80 ms with the
  * cursor hidden, asking for its text on every frame, so the text may show a
  * live clock. Elsewhere it never animates: only the lines given to `print` are
- * written. While it runs, SIGINT and SIGTERM erase it and show the cursor
- * before the process exits.
+ * written.
  *
  * @param text - Gives the text next to the animation; called on every frame.
  * @param colors - Color functions of the CLI.
@@ -102,7 +92,6 @@ export function createSpinner(
   let rows = 0
   let running = false
   let timer: NodeJS.Timeout | undefined
-  let signalListeners: [signal: NodeJS.Signals, listener: () => void][] = []
 
   /**
    * Builds the sequence that erases every row of the last frame, from the row
@@ -140,40 +129,6 @@ export function createSpinner(
   }
 
   let spinner: Spinner = {
-    start() {
-      if (!isInteractive) {
-        return spinner
-      }
-      for (let [signal, code] of SIGNAL_EXIT_CODES) {
-        let listener: () => void
-        /**
-         * The listener is written right in the call: unicorn/no-process-exit
-         * allows `process.exit()` only in a handler passed to `process.on()`.
-         */
-        process.on(
-          signal,
-          (listener = () => {
-            spinner.stop()
-            process.exit(code)
-          }),
-        )
-        signalListeners.push([signal, listener])
-      }
-      running = true
-      render()
-      return spinner
-    },
-    stop() {
-      clearTimeout(timer)
-      for (let [signal, listener] of signalListeners) {
-        process.off(signal, listener)
-      }
-      signalListeners = []
-      if (running) {
-        running = false
-        stream.write(`${erase()}${SHOW_CURSOR}`)
-      }
-    },
     print(line) {
       if (!running) {
         stream.write(`${line}\n`)
@@ -182,6 +137,21 @@ export function createSpinner(
       let frame = getFrame()
       stream.write(`${erase()}${line}\n${frame}`)
       rows = countTerminalRows(frame, stream.columns)
+    },
+    stop() {
+      clearTimeout(timer)
+      if (running) {
+        running = false
+        stream.write(`${erase()}${SHOW_CURSOR}`)
+      }
+    },
+    start() {
+      if (!isInteractive) {
+        return spinner
+      }
+      running = true
+      render()
+      return spinner
     },
   }
 

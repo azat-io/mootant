@@ -16,6 +16,7 @@ import { createRunProgress } from './create-run-progress'
 import { getFileScores } from './report/get-file-scores'
 import { getTextStyle } from './terminal/get-text-style'
 import { formatCommand } from './report/format-command'
+import { watchInterrupts } from './watch-interrupts'
 import { runMutants } from '../core/run-mutants'
 import { version } from '../package.json'
 
@@ -31,23 +32,35 @@ import { version } from '../package.json'
  * --verbose` the full one. A terminal also gets the files with the lowest
  * scores. When the run asks for an HTML report, it is written after the report
  * is printed and its path goes to stderr; a report that cannot be written is an
- * error.
+ * error. SIGHUP, SIGINT or SIGTERM during the run (`watchInterrupts`) ends the
+ * progress at once, without the line of the running phase, and interrupts the
+ * run, which stops its test processes and removes its files; then nothing is
+ * printed and the process ends by that signal, after 5 seconds even when the
+ * cleanup did not end.
  *
  * @param options - Options of the run command.
  */
 export async function runMutation(options: RunOptions): Promise<void> {
   let { verbose, json, all, ...settings } = options
   let errorStyle = getTextStyle(process.stderr)
+  let interrupts = watchInterrupts()
   let progress = createRunProgress(errorStyle, verbose)
+  interrupts.signal.addEventListener('abort', () => {
+    progress.stop()
+  })
   try {
     let result = await runMutants({
       onProgress: event => {
         progress.handle(event)
       },
       builtIns: getBuiltInAdapters(),
+      signal: interrupts.signal,
       ...settings,
       cwd: process.cwd(),
     })
+    if (interrupts.end()) {
+      return
+    }
     progress.finish()
     let recheck = formatCommand('run', {
       parallelUnits: options.parallelUnits,
@@ -82,6 +95,9 @@ export async function runMutation(options: RunOptions): Promise<void> {
       })
     }
   } catch (error) {
+    if (interrupts.end()) {
+      return
+    }
     progress.finish()
     let output = progress.output()
     let { colors } = errorStyle

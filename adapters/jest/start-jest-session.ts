@@ -58,14 +58,18 @@ import { runDry } from './run-dry'
  * joined with what they read in earlier sessions (`keepTransformReads`,
  * `getJestCacheInputs`). Once the host is ready the session works with the
  * configuration it ran global setup with (`readHostConfig`), the workers and
- * the cache key alike.
+ * the cache key alike. Once the run is interrupted (`AdapterContext.signal`),
+ * no Jest process starts and the workers stop; the host stops on the signal
+ * that interrupted the run, as its group is tracked, or when the session
+ * closes.
  *
  * @param context - Work directory, concurrency, root and output.
  * @param options - Options of the adapter.
  * @returns Session that knows the version, workers, test files and cache
  *   inputs, and runs dry runs and isolated units.
  * @throws {Error} When Jest is missing, older than 29.7 or fails to start, or
- *   when its settings or the command are not supported.
+ *   when its settings or the command are not supported; once the context's
+ *   signal aborted before the host started, its reason.
  */
 export async function startJestSession(
   context: AdapterContext,
@@ -95,6 +99,7 @@ export async function startJestSession(
     run: Parameters<typeof readJestConfig>[0]
     config: JestConfig
   }> {
+    context.signal?.throwIfAborted()
     let filtered = filterJestArguments(command.args, workers)
     let run = {
       onOutput(text: string): void {
@@ -119,6 +124,7 @@ export async function startJestSession(
   let realRoot = await realpath(root)
   let listed = listJestProjects({ root: realRoot, config })
   let files = await writeWorkerFiles(context.workDirectory)
+  context.signal?.throwIfAborted()
   let host = await startJestHost({ ...run, projects: listed.projects, files })
   let { globalConfig, projects } = readHostConfig({
     globalConfig: config.globalConfig,
@@ -171,6 +177,13 @@ export async function startJestSession(
       }),
     size: globalConfig.maxWorkers,
   })
+  context.signal?.addEventListener(
+    'abort',
+    () => {
+      void pool.close()
+    },
+    { once: true },
+  )
   let handle: JestHandle = {
     state: {
       lateTransforms: new Set(),

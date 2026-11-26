@@ -17,7 +17,8 @@ import { runTestProcess } from './run-test-process'
  * The process gets its unit as a line on file descriptor 3, or, where the
  * session sends none that way (`NodeTestHandle.pipe`), in `MOOTANT_UNIT`; a
  * spare process of the test file, started before, may run it instead. What the
- * process writes goes to the context's `onOutput` with the test file.
+ * process writes goes to the context's `onOutput` with the test file. Once the
+ * run is interrupted (`AdapterContext.signal`), no process starts.
  *
  * @param handle - Live session.
  * @param input - Test file, what the process runs, its deadline and a spare
@@ -27,6 +28,7 @@ import { runTestProcess } from './run-test-process'
  *   process.
  * @param input.spare - Spare process of the test file to run in, if any.
  * @returns What the process left behind.
+ * @throws The reason of the context's signal once it aborted.
  */
 export async function runTestFile(
   handle: NodeTestHandle,
@@ -40,6 +42,7 @@ export async function runTestFile(
   >,
 ): Promise<TestProcessOutcome> {
   let { context, state } = handle
+  context.signal?.throwIfAborted()
   let { deadline, spare, file, ...fields } = input
   let directory = path.join(context.workDirectory, 'out')
   mkdirSync(directory, { recursive: true })

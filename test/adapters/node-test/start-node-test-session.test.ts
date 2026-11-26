@@ -312,6 +312,20 @@ describe('startNodeTestSession', () => {
     expect(() => process.kill(other.child.pid!, 0)).not.toThrow()
   })
 
+  it('stops the groups of its own test processes once the run is interrupted', async () => {
+    let controller = new AbortController()
+    let context = await createProject({}, ['a.test.js'])
+    mockRuntime('v22.12.0')
+    let own = startSleeper()
+    let other = startSleeper()
+    let handle = await readHandle({ ...context, signal: controller.signal })
+    handle.groups.add(own.child.pid!)
+    controller.abort()
+
+    await expect(own.ended).resolves.toBe('SIGKILL')
+    expect(() => process.kill(other.child.pid!, 0)).not.toThrow()
+  })
+
   it('applies the options', async () => {
     let context = await createProject({}, ['a.test.js', 'b.js'])
     context.concurrency = null

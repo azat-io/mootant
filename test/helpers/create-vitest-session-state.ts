@@ -13,6 +13,7 @@ export function createVitestSessionState(): VitestSessionState {
       createPoolWorker: () => null as never,
       drain: () => Promise.resolve(),
       name: 'mootant-forks',
+      interrupt: () => {},
       prepare: () => {},
     },
     runnerPath: '/mootant/runner.ts',

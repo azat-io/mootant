@@ -395,6 +395,38 @@ describe('createRunProgress', () => {
     ])
   })
 
+  it('ignores the events that come once it ended', () => {
+    vi.mocked(isInteractiveTerminal).mockReturnValue(false)
+    let progress = createRunProgress(createTextStyle(), true)
+
+    feed(progress, [[0, startRun({ mutants: 1, units: 1 })]])
+    progress.finish()
+    feed(progress, [
+      [0, { message: 'Late note.', kind: 'note' }],
+      [0, { text: 'late output\n', kind: 'output', file: null }],
+      [100, startRun({ mutants: 1, units: 1 })],
+    ])
+    progress.finish()
+
+    expect(lines).toStrictEqual(['✔ testing 1 mutant  0/1 test runs in 0.0s'])
+    expect(progress.output()).toBe('')
+    expect(stops).toBe(1)
+  })
+
+  it('ends an interrupted run without the line of its running phase', () => {
+    vi.mocked(isInteractiveTerminal).mockReturnValue(false)
+    let progress = createRunProgress(createTextStyle(), true)
+
+    feed(progress, [[0, startRun({ mutants: 1, units: 1 })]])
+    progress.stop()
+    progress.stop()
+    progress.finish()
+    feed(progress, [[0, { message: 'Late note.', kind: 'note' }]])
+
+    expect(lines).toStrictEqual([])
+    expect(stops).toBe(2)
+  })
+
   it('keeps what the tests write by test file, or prints it when verbose, and prints notes', () => {
     let quiet = createRunProgress(createTextStyle(), false)
     feed(quiet, [

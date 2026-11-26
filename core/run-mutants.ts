@@ -57,6 +57,7 @@ import { readRunCache } from './cache/read-run-cache'
 import { getCachePath } from './cache/get-cache-path'
 import { countVerdicts } from './run/count-verdicts'
 import { decideResults } from './run/decide-results'
+import { guardSession } from './run/guard-session'
 import { getHtmlPath } from './run/get-html-path'
 import { runDryPhase } from './run/run-dry-phase'
 import { prepareRun } from './config/prepare-run'
@@ -98,6 +99,16 @@ interface RunMutantsOptions {
    * Ids of the only mutants to run (`--mutant`); every mutant when omitted.
    */
   mutantIds?: string[]
+
+  /**
+   * Interrupts the run once aborted, such as on a signal to the command line:
+   * no further run of the test runner starts, the adapter stops the running one
+   * (`AdapterContext.signal`), what that run gave is dropped, the session
+   * closes, the work directory is removed and the run rejects with the signal's
+   * reason. A signal that comes after the last run of the test runner ended
+   * lets the run end as without it, saving its cache.
+   */
+  signal?: AbortSignal
 
   /**
    * Most test files at once; over `run.concurrency`.
@@ -233,13 +244,19 @@ interface Executed {
  * run; the time it takes counts in the isolated phase. With parallel units, an
  * adapter that runs them may run the isolated units of one test file at the
  * same time, and their verdicts are cached apart from those of other runs; an
- * adapter that cannot runs them one after another, with a note.
+ * adapter that cannot runs them one after another, with a note. Once the signal
+ * of the options aborts, nothing more starts: a signal while the mutants are
+ * listed or a saved dry run is checked starts no test runner, and the session
+ * asks nothing more of a started one (`guardSession`), whose adapter stops what
+ * runs; the session still closes and the work directory is still removed.
  *
  * @param options - Paths, configuration, adapters and run settings.
  * @returns Verdicts, diagnostics and timings, before they are formatted.
  * @throws Error - When the configuration, the paths, a `--mutant` id or the
  *   adapter is invalid, when the changed lines cannot be read from git, when
- *   the test runner cannot start, or when tests fail without mutants.
+ *   the test runner cannot start, or when tests fail without mutants; the
+ *   reason of the signal of the options once it aborted before the last run of
+ *   the test runner ended.
  */
 export async function runMutants(
   options: RunMutantsOptions,
@@ -247,6 +264,8 @@ export async function runMutants(
   let started = performance.now()
   let startedAt = Date.now()
   let environment = { ...process.env }
+  let idle = new AbortController()
+  let signal = options.signal ?? idle.signal
   let setup = await prepareRun(options)
   let { root, run } = setup
   let {
@@ -389,18 +408,21 @@ export async function runMutants(
     html,
     fast,
   }
+  signal.throwIfAborted()
   if (snapshots !== null) {
     let replayed = await replayDrySnapshot({ ...shared, snapshots })
+    signal.throwIfAborted()
     if (replayed !== null) {
       return replayed
     }
     await hashTree()
   }
+  signal.throwIfAborted()
   let work = await createWorkDirectory()
   try {
     let switched: SwitchedFile[] = []
     let live: { state: RunState | null } = { state: null }
-    let session = await adapter.start({
+    let opened = await adapter.start({
       onUnitEnd:
         options.onProgress === undefined ?
           undefined
@@ -425,8 +447,10 @@ export async function runMutants(
       workDirectory: work.path,
       files: switched,
       parallelUnits,
+      signal,
       root,
     })
+    let session = guardSession(opened, signal)
     let executed: Executed
     try {
       executed = await execute({ ...shared, switched, session, live })

@@ -19,6 +19,13 @@ export interface MootantForksPool extends PoolRunnerInitializer {
    * @returns Resolves when every spare is gone.
    */
   drain(): Promise<void>
+
+  /**
+   * Stops the process of every worker and spare the pool started that still
+   * runs, as the run is interrupted, and starts none from then on: the start of
+   * a task fails at once.
+   */
+  interrupt(): void
 }
 
 /**

@@ -19,7 +19,8 @@ import { startTestProcess } from './start-test-process'
  * key, as the pool never runs two jobs with one key at once: a spare none of
  * them needs stops, and those they lack start, up to the most spares of the
  * session at once (`NodeTestHandle.spares`); with none, no spare starts. A
- * spare that ended or could not start is dropped.
+ * spare that ended or could not start is dropped. Once the run is interrupted
+ * (`AdapterContext.signal`), no spare starts.
  *
  * @param handle - Live session.
  * @param jobs - Real absolute path of the test file and key of each job, in the
@@ -74,9 +75,13 @@ export function createSpareProcesses(
   }
   /**
    * Stops the spares that the first waiting jobs, one per key, do not need, and
-   * starts those they lack.
+   * starts those they lack; once the run is interrupted, does neither, as the
+   * session stops every spare then.
    */
   function fill(): void {
+    if (context.signal?.aborted === true) {
+      return
+    }
     while (started.has(first)) {
       first += 1
     }

@@ -209,6 +209,45 @@ describe('startVitestSession', () => {
     expect(installMutantRuntime().coverage).toBeNull()
   })
 
+  it('drops the listeners of SIGINT and SIGTERM that Vitest adds as it starts, and refuses workers once the run is interrupted', async () => {
+    let controller = new AbortController()
+    /**
+     * Stands for the listener with which Vitest ends the process.
+     */
+    function onExit(): void {}
+    createVitest.mockImplementationOnce(() => {
+      process.once('SIGINT', onExit)
+      process.once('SIGTERM', onExit)
+      return Promise.resolve(vitest)
+    })
+    let session = await startVitestSession(
+      { ...context, signal: controller.signal },
+      {},
+    )
+    await session.dryRun({
+      timeouts: { file: 100, test: 50 },
+      instrumented: true,
+      repeat: false,
+      related: [],
+      files: null,
+    })
+    let [handle] = vi.mocked(runDry).mock.calls.at(-1)!
+    let worker = handle.state.pool.createPoolWorker({
+      distPath: '/vitest/dist',
+      execArgv: [],
+      env: {},
+    } as never)
+    controller.abort()
+
+    expect(process.listeners('SIGINT')).not.toContain(onExit)
+    expect(process.listeners('SIGTERM')).not.toContain(onExit)
+    await expect(worker.start()).rejects.toThrow(
+      'The run was interrupted, so mootant starts no Vitest worker.',
+    )
+
+    await session.close()
+  })
+
   it('hands console calls with their test files and what Vitest and its workers write to onOutput', async () => {
     let output: [string, string | null][] = []
     vitest.state = {

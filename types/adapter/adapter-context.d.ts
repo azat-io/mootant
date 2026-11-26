@@ -54,6 +54,17 @@ export interface AdapterContext {
   workDirectory: string
 
   /**
+   * Aborted once the run is interrupted, such as on a signal to the command
+   * line. From then on the adapter starts no test process and stops those that
+   * run, so the running call ends soon; the core waits for that call, drops
+   * what it gives, then calls `close` and calls nothing else. The command line
+   * gives this cleanup 5 seconds before it ends the process anyway, leaving
+   * what the adapter did not remove. Optional; an adapter that ignores it lets
+   * its running call go on until then.
+   */
+  signal?: AbortSignal
+
+  /**
    * Project root: the directory of the mootant configuration, else the working
    * directory.
    */

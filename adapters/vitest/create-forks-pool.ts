@@ -85,6 +85,14 @@ interface Spare {
  * The pool notes when each task got its worker process, so the cost of a unit
  * can include the start of its process.
  *
+ * Once the run is interrupted (`interrupt`), the pool stops the process of
+ * every worker and spare it started that still runs, with `SIGKILL` through the
+ * process itself, which cannot stand for another process before it ended, and
+ * starts none: the start of a task fails at once, and a worker refused so has
+ * no process to stop. Vitest ends the run then as after a watchdog's kill.
+ * Should Vitest stop exposing the processes of its workers, an interrupted run
+ * waits until they end or the watchdog stops them.
+ *
  * @param Worker - Forks worker class of the project's Vitest.
  * @param spawns - Receives the epoch milliseconds at which a task got its
  *   worker process, by process id.
@@ -99,6 +107,22 @@ export function createForksPool(
   let left = new Map<TestProject, number>()
   let spares: Spare[] = []
   let exposed: boolean | null = null
+  let interrupted = false
+  let live = new Set<ChildProcess>()
+  /**
+   * Remembers the process of a worker or a spare until it ends, so that an
+   * interrupted run can stop it.
+   *
+   * @param child - The process.
+   */
+  function remember(child: ChildProcess): void {
+    if (!live.has(child)) {
+      live.add(child)
+      child.once('exit', () => {
+        live.delete(child)
+      })
+    }
+  }
   /**
    * Stops a spare unless its process already ended.
    *
@@ -149,6 +173,7 @@ export function createForksPool(
       return false
     }
     child.on('exit', drop)
+    remember(child)
     spare = {
       release: () => {
         worker.off('error', drop)
@@ -170,6 +195,9 @@ export function createForksPool(
    * @param key - Key of that worker.
    */
   function refill(options: PoolWorkerOptions, key: string): void {
+    if (interrupted) {
+      return
+    }
     let { project } = options
     try {
       let limit = getSpareLimit(project.config.maxWorkers)
@@ -211,6 +239,7 @@ export function createForksPool(
       let key = prefork ? getSpareKey(options) : null
       let listeners = new Set<(message: WorkerResponse) => void>()
       let stopping = false
+      let refused = false
       let exited = false
       /**
        * Answers a pending stop for the exited process.
@@ -222,6 +251,12 @@ export function createForksPool(
       }
       return {
         start: async () => {
+          if (interrupted) {
+            refused = true
+            throw new Error(
+              'The run was interrupted, so mootant starts no Vitest worker.',
+            )
+          }
           let spawned = Date.now()
           let { project } = options
           let count = left.get(project)
@@ -239,6 +274,7 @@ export function createForksPool(
           if (child !== null) {
             spawns.set(child.pid!, spawned)
             exited = child.exitCode !== null || child.signalCode !== null
+            remember(child)
           }
           worker.on('exit', () => {
             exited = true
@@ -258,15 +294,17 @@ export function createForksPool(
           }
           worker.on(event, callback)
         },
-        stop: async () => {
-          stopping = false
-          if (!exited) {
-            await worker.stop()
-          }
-        },
         off: (event, callback) => {
           listeners.delete(callback)
-          worker.off(event, callback)
+          if (!refused) {
+            worker.off(event, callback)
+          }
+        },
+        stop: async () => {
+          stopping = false
+          if (!exited && !refused) {
+            await worker.stop()
+          }
         },
         send: message => {
           stopping ||= message.type === 'stop'
@@ -290,6 +328,12 @@ export function createForksPool(
       let idle = spares
       spares = []
       await Promise.all(idle.map(spare => stopSpare(spare)))
+    },
+    interrupt: () => {
+      interrupted = true
+      for (let child of live) {
+        child.kill('SIGKILL')
+      }
     },
     name: POOL_NAME,
   }

@@ -59,8 +59,6 @@ function setColumns(columns: undefined | number): void {
 
 describe('createSpinner', () => {
   let writeSpy: MockInstance<typeof process.stderr.write>
-  let exitSpy: MockInstance<typeof process.exit>
-  let onSpy: MockInstance<typeof process.on>
 
   /**
    * Everything written to standard error since the last check.
@@ -73,25 +71,11 @@ describe('createSpinner', () => {
     return output
   }
 
-  /**
-   * Sends a signal to the listener the spinner registered for it.
-   *
-   * @param signal - Signal to send.
-   */
-  function sendSignal(signal: NodeJS.Signals): void {
-    let [, listener] = onSpy.mock.calls.find(([event]) => event === signal)!
-    listener(signal)
-  }
-
   beforeEach(() => {
     vi.useFakeTimers()
     vi.mocked(isInteractiveTerminal).mockReturnValue(true)
     vi.mocked(isUnicodeSupported).mockReturnValue(true)
     writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-    exitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation(() => undefined as never)
-    onSpy = vi.spyOn(process, 'on')
     setColumns(80)
   })
 
@@ -199,7 +183,6 @@ describe('createSpinner', () => {
 
   it('never animates outside an interactive terminal, only prints lines', () => {
     vi.mocked(isInteractiveTerminal).mockReturnValue(false)
-    let interrupts = process.listenerCount('SIGINT')
 
     let spinner = createSpinner(() => 'testing', colors).start()
     vi.advanceTimersByTime(500)
@@ -207,37 +190,18 @@ describe('createSpinner', () => {
     spinner.stop()
 
     expect(takeOutput()).toBe('done\n')
-    expect(process.listenerCount('SIGINT')).toBe(interrupts)
   })
 
-  it('listens to SIGINT and SIGTERM only while it runs', () => {
-    let interrupts = process.listenerCount('SIGINT')
-    let terminations = process.listenerCount('SIGTERM')
+  it('leaves the signals to the command line', () => {
+    let signals = ['SIGHUP', 'SIGINT', 'SIGTERM'] as const
+    let before = signals.map(signal => process.listenerCount(signal))
 
     let spinner = createSpinner(() => 'testing', colors).start()
 
-    expect(process.listenerCount('SIGINT')).toBe(interrupts + 1)
-    expect(process.listenerCount('SIGTERM')).toBe(terminations + 1)
+    expect(signals.map(signal => process.listenerCount(signal))).toStrictEqual(
+      before,
+    )
 
     spinner.stop()
-
-    expect(process.listenerCount('SIGINT')).toBe(interrupts)
-    expect(process.listenerCount('SIGTERM')).toBe(terminations)
   })
-
-  it.each([
-    { signal: 'SIGINT', code: 130 },
-    { signal: 'SIGTERM', code: 143 },
-  ] as const)(
-    'erases the frame, shows the cursor and exits with $code on $signal',
-    ({ signal, code }) => {
-      createSpinner(() => 'testing', colors).start()
-      takeOutput()
-
-      sendSignal(signal)
-
-      expect(takeOutput()).toBe(`${LINE_START}${ERASE_LINE}${SHOW_CURSOR}`)
-      expect(exitSpy).toHaveBeenCalledExactlyOnceWith(code)
-    },
-  )
 })

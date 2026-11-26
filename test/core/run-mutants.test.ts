@@ -75,6 +75,45 @@ let root = ''
 let ids: Record<string, string[]> = {}
 
 /**
+ * Runs the mutants of the project with a fake adapter and a signal, as `run`
+ * does, and catches what the run rejects with.
+ *
+ * @param world - Builds the simulated tests of the project with the controller
+ *   of the signal, so they can abort it.
+ * @param options - Builds options of the run that differ, with the controller.
+ * @returns The controller, the fake adapter and the rejection, or undefined.
+ */
+async function interrupt(
+  world: (controller: AbortController) => FakeWorld,
+  options: (
+    controller: AbortController,
+  ) => Partial<Parameters<typeof runMutants>[0]> = () => ({}),
+): Promise<{
+  fake: ReturnType<typeof createFakeAdapter>
+  controller: AbortController
+  error: unknown
+}> {
+  let controller = new AbortController()
+  let fake = createFakeAdapter(world(controller))
+  if (vi.mocked(loadConfig).getMockImplementation() === undefined) {
+    vi.mocked(loadConfig).mockResolvedValue(null)
+  }
+  let error: unknown
+  try {
+    await runMutants({
+      builtIns: createBuiltIns('fake', fake.adapter),
+      signal: controller.signal,
+      paths: ['src'],
+      cwd: root,
+      ...options(controller),
+    })
+  } catch (error_) {
+    error = error_
+  }
+  return { controller, error, fake }
+}
+
+/**
  * Runs the mutants of the project with a fake adapter, without a configuration
  * file unless the test set one.
  *
@@ -1196,6 +1235,139 @@ describe('runMutants', () => {
     await expect(stat(workDirectory)).rejects.toThrow('ENOENT')
   })
 
+  describe('with a signal', () => {
+    /**
+     * Builds a project whose test kills the mutant of `src/math.ts`.
+     *
+     * @param fields - Changes to the simulated project.
+     * @returns Simulated project.
+     */
+    function createWorld(fields: Partial<FakeWorld> = {}): FakeWorld {
+      let [add] = ids['src/math.ts']!
+      return {
+        tests: [
+          {
+            file: path.join(root, 'test/math.test.ts'),
+            kills: { [add!]: 'expected 3 to be -1' },
+            covers: [add!],
+            id: 'math',
+          },
+        ],
+        ...fields,
+      }
+    }
+
+    it('gives the adapter the signal and decides the run as without one', async () => {
+      let controller = new AbortController()
+      let plain = await run(createWorld())
+      let signalled = await run(createWorld(), { signal: controller.signal })
+
+      expect(signalled.fake.context!.signal).toBe(controller.signal)
+      expect(plain.fake.context!.signal!.aborted).toBe(false)
+      expect(signalled.result.results.map(entry => entry.status)).toStrictEqual(
+        plain.result.results.map(entry => entry.status),
+      )
+    })
+
+    it('starts no test runner once the signal aborts while the mutants are listed', async () => {
+      let { controller, error, fake } = await interrupt(
+        () => createWorld(),
+        aborting => ({
+          onProgress: () => {
+            aborting.abort()
+          },
+        }),
+      )
+
+      expect(error).toBe(controller.signal.reason)
+      expect(fake.context).toBeNull()
+    })
+
+    it('drops a dry run that ends after the signal, closes the session and removes the work directory', async () => {
+      let { controller, error, fake } = await interrupt(aborting =>
+        createWorld({
+          onDry: result => {
+            aborting.abort()
+            return result
+          },
+        }),
+      )
+
+      expect(error).toBe(controller.signal.reason)
+      expect(fake.calls.dry).toHaveLength(1)
+      expect(fake.calls.isolated).toStrictEqual([])
+      expect(fake.closed).toBe(1)
+      await expect(stat(fake.context!.workDirectory)).rejects.toThrow('ENOENT')
+    })
+
+    it('rejects with the reason of the signal when the interrupted run fails', async () => {
+      let { controller, error } = await interrupt(aborting =>
+        createWorld({
+          onDry: () => {
+            aborting.abort()
+            throw new Error('The worker is gone.')
+          },
+        }),
+      )
+
+      expect(error).toBe(controller.signal.reason)
+    })
+
+    it('runs no later batch run once the signal aborts during one in fast mode', async () => {
+      let { controller, error, fake } = await interrupt(
+        aborting =>
+          createWorld({
+            onBatch: result => {
+              aborting.abort()
+              return result
+            },
+          }),
+        () => ({ fast: true }),
+      )
+
+      expect(error).toBe(controller.signal.reason)
+      expect(fake.calls.batch).toHaveLength(1)
+      expect(fake.calls.isolated).toStrictEqual([])
+      expect(fake.closed).toBe(1)
+    })
+
+    it('asks nothing of a session that starts after the signal and closes it', async () => {
+      let reason = new Error('Interrupted.')
+      let controller = new AbortController()
+      let workDirectory = ''
+      let session = {
+        close: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+        listTestFiles: vi.fn<() => Promise<string[]>>(),
+        runIsolated: vi.fn(),
+        runBatch: vi.fn(),
+        dryRun: vi.fn(),
+      }
+      useRunConfig({
+        runner: {
+          start: context => {
+            ;({ workDirectory } = context)
+            controller.abort(reason)
+            return Promise.resolve(session)
+          },
+          name: 'late',
+          batch: false,
+        },
+      })
+
+      await expect(
+        runMutants({
+          signal: controller.signal,
+          paths: ['src'],
+          builtIns: {},
+          cwd: root,
+        }),
+      ).rejects.toBe(reason)
+      expect(session.listTestFiles).not.toHaveBeenCalled()
+      expect(session.close).toHaveBeenCalledExactlyOnceWith()
+      await expect(stat(workDirectory)).rejects.toThrow('ENOENT')
+    })
+  })
+
   describe('with the cache', () => {
     /**
      * Builds a project whose test kills the mutant of `src/math.ts` and covers
@@ -1468,6 +1640,90 @@ describe('runMutants', () => {
       expect(notes[0]).toMatch(
         /^Did not reuse the dry run of an earlier run, as it could not be replayed \(.+\)\.$/u,
       )
+    })
+
+    it('saves neither verdicts nor the dry run once the signal aborts during an isolated run', async () => {
+      let { controller, error, fake } = await interrupt(aborting =>
+        createWorld({
+          onIsolated: result => {
+            aborting.abort()
+            return result
+          },
+        }),
+      )
+
+      expect(error).toBe(controller.signal.reason)
+      expect(fake.calls.isolated).toHaveLength(1)
+      await expect(stat(cacheFile())).rejects.toThrow('ENOENT')
+      await expect(stat(snapshotFile())).rejects.toThrow('ENOENT')
+    })
+
+    it('replays no saved dry run once the signal aborts while the mutants are listed', async () => {
+      await run(createWorld())
+      let notes: string[] = []
+      /**
+       * Aborts the run on its first event and keeps its notes.
+       *
+       * @param event - Event of the run.
+       * @param controller - Controller of the signal of the run.
+       */
+      function abortAndNote(
+        event: RunEvent,
+        controller: AbortController,
+      ): void {
+        if (event.kind === 'note') {
+          notes.push(event.message)
+        }
+        controller.abort()
+      }
+      let { controller, error, fake } = await interrupt(
+        () => createWorld(),
+        aborting => ({
+          onProgress: event => {
+            abortAndNote(event, aborting)
+          },
+        }),
+      )
+
+      expect(error).toBe(controller.signal.reason)
+      expect(notes).toStrictEqual([])
+      expect(fake.context).toBeNull()
+    })
+
+    it('starts no test runner once the signal aborts while a saved dry run is checked', async () => {
+      await run(createWorld())
+      let snapshot = JSON.parse(
+        await readFile(snapshotFile(), 'utf8'),
+      ) as DrySnapshot
+      await writeFile(
+        snapshotFile(),
+        JSON.stringify({ ...snapshot, phase: { dry: {} } }),
+      )
+      let notes: string[] = []
+      /**
+       * Aborts the run on its first note, the one of the missed replay.
+       *
+       * @param event - Event of the run.
+       * @param controller - Controller of the signal of the run.
+       */
+      function abortOnNote(event: RunEvent, controller: AbortController): void {
+        if (event.kind === 'note') {
+          notes.push(event.message)
+          controller.abort()
+        }
+      }
+      let { controller, error, fake } = await interrupt(
+        () => createWorld(),
+        aborting => ({
+          onProgress: event => {
+            abortOnNote(event, aborting)
+          },
+        }),
+      )
+
+      expect(error).toBe(controller.signal.reason)
+      expect(notes).toHaveLength(1)
+      expect(fake.context).toBeNull()
     })
 
     it('neither reuses nor saves a dry run with --mutant or --since, in fast mode or without the cache', async () => {

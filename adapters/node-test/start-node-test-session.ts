@@ -63,7 +63,9 @@ const TEST_CONTEXT = 'mootant'
  * (`getSpareLimit`), unless `MOOTANT_PREFORK=0` (`readPreforkSwitch`), Windows,
  * a legacy loader, whose code runs before mootant's preload, or flags that load
  * code from a file first or watch the process (`allowsSpares`) rule them out.
- * Closing the session stops the test processes that still run, spares too.
+ * Closing the session stops the test processes that still run, spares too, and
+ * so does an interrupt of the run (`AdapterContext.signal`), after which no
+ * test process starts.
  *
  * @param context - Switched files, work directory, concurrency and root.
  * @param options - Options of the adapter.
@@ -224,11 +226,18 @@ export async function startNodeTestSession(
     node,
     tsx,
   }
+  /**
+   * Stops the test processes of the session that still run, spares too.
+   */
+  function stopGroups(): void {
+    for (let pid of handle.groups) {
+      stopProcessGroup(pid)
+    }
+  }
+  context.signal?.addEventListener('abort', stopGroups, { once: true })
   return {
     close: () => {
-      for (let pid of handle.groups) {
-        stopProcessGroup(pid)
-      }
+      stopGroups()
       handle.groups.clear()
       return Promise.resolve()
     },

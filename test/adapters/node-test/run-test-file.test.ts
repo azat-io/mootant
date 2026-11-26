@@ -186,4 +186,24 @@ describe('runTestFile', () => {
       [],
     )
   })
+
+  it('starts no process once the run is interrupted', async () => {
+    let signal = AbortSignal.abort()
+    let handle = await createHandle({ signal })
+
+    await expect(
+      runTestFile(handle, {
+        file: '/project/a.test.js',
+        deadline: () => Infinity,
+        mode: 'isolated',
+        plan: '/plan',
+        mutant: 'm1',
+        expected: [],
+        hitLimit: 10,
+        bail: true,
+      }),
+    ).rejects.toBe(signal.reason)
+    expect(runTestProcess).not.toHaveBeenCalled()
+    await expect(readdir(directory)).resolves.toStrictEqual([])
+  })
 })

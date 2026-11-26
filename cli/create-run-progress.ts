@@ -20,7 +20,8 @@ import { fitParts } from './terminal/fit-parts'
  */
 export interface RunProgress {
   /**
-   * Takes the next event of the run.
+   * Takes the next event of the run; once the progress ended, events are
+   * ignored, such as those of an interrupted run that still cleans up.
    *
    * @param event - Event from `runMutants`.
    */
@@ -41,6 +42,13 @@ export interface RunProgress {
    * prints the line of the phase that was running. Safe to call twice.
    */
   finish(): void
+
+  /**
+   * Ends the progress of an interrupted run: erases the spinner and prints no
+   * line of the phase that was running, which did not end. Safe to call twice,
+   * and `finish` does nothing after it.
+   */
+  stop(): void
 }
 
 /**
@@ -323,6 +331,9 @@ export function createRunProgress(
 
   return {
     handle(event) {
+      if (finished) {
+        return
+      }
       switch (event.kind) {
         case 'dry-failed':
           failedFiles = event.files
@@ -407,6 +418,10 @@ export function createRunProgress(
         endPhase()
         spinner.stop()
       }
+    },
+    stop() {
+      finished = true
+      spinner.stop()
     },
   }
 }

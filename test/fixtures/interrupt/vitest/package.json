@@ -1,0 +1,5 @@
+{
+  "name": "interrupt-vitest",
+  "private": true,
+  "type": "module"
+}

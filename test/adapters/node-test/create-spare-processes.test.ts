@@ -271,4 +271,24 @@ describe('createSpareProcesses', () => {
     expect(spares.take(1, false)).toBeNull()
     expect(startTestProcess).not.toHaveBeenCalled()
   })
+
+  it('starts no spare once the run is interrupted', () => {
+    mockSpares()
+    let controller = new AbortController()
+    let handle = createHandle(1)
+    handle.context.signal = controller.signal
+    let spares = createSpareProcesses(handle, [
+      { file: '/project/a', key: 'a' },
+      { file: '/project/b', key: 'b' },
+      { file: '/project/c', key: 'c' },
+    ])
+    spares.take(0, false)
+    controller.abort()
+
+    expect(spares.take(1, false)).toBe(started[0])
+    expect(listRunning()).toStrictEqual(['b'])
+    expect(startTestProcess).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ args: ['--import', 'pre', '/project/b'] }),
+    )
+  })
 })

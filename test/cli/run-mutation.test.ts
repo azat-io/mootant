@@ -16,12 +16,14 @@ import { slimRunReport } from '../../cli/report/slim-run-report'
 import { getFileScores } from '../../cli/report/get-file-scores'
 import { createTextStyle } from '../helpers/create-text-style'
 import { createRunResult } from '../helpers/create-run-result'
+import { watchInterrupts } from '../../cli/watch-interrupts'
 import { runMutation } from '../../cli/run-mutation'
 import { runMutants } from '../../core/run-mutants'
 
 vi.mock(import('../../core/run-mutants'))
 vi.mock(import('../../cli/html/write-html-report'))
 vi.mock(import('../../cli/create-run-progress'))
+vi.mock(import('../../cli/watch-interrupts'))
 
 /**
  * Runs `mootant run src` with the result the mocked core resolves.
@@ -57,8 +59,18 @@ describe('runMutation', () => {
   let consoleInfoSpy: MockInstance<typeof console.info>
   let consoleWarnSpy: MockInstance<typeof console.warn>
   let progress: { [Key in keyof RunProgress]: Mock<RunProgress[Key]> }
+  let interrupts: { controller: AbortController; end: Mock<() => boolean> }
 
   beforeEach(() => {
+    let controller = new AbortController()
+    interrupts = {
+      end: vi.fn(() => controller.signal.aborted),
+      controller,
+    }
+    vi.mocked(watchInterrupts).mockReturnValue({
+      signal: controller.signal,
+      end: interrupts.end,
+    })
     vi.stubEnv('NO_COLOR', '1')
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
@@ -67,6 +79,7 @@ describe('runMutation', () => {
       output: vi.fn<RunProgress['output']>(() => ''),
       handle: vi.fn<RunProgress['handle']>(),
       finish: vi.fn<RunProgress['finish']>(),
+      stop: vi.fn<RunProgress['stop']>(),
     }
     vi.mocked(createRunProgress).mockReturnValue(progress)
   })
@@ -103,6 +116,7 @@ describe('runMutation', () => {
         vitest: expect.any(Object) as unknown,
       }) as unknown,
       onProgress: expect.any(Function) as unknown,
+      signal: interrupts.controller.signal,
       config: 'mootant.config.ts',
       mutantIds: ['k3m9x2p7q4w8'],
       parallelUnits: true,
@@ -172,6 +186,7 @@ describe('runMutation', () => {
     expect(Object.keys(vi.mocked(runMutants).mock.calls[0]![0])).toStrictEqual([
       'onProgress',
       'builtIns',
+      'signal',
       'mutantIds',
       'paths',
       'cwd',
@@ -193,6 +208,44 @@ describe('runMutation', () => {
     expect(progress.finish.mock.invocationCallOrder[0]).toBeLessThan(
       consoleInfoSpy.mock.invocationCallOrder[0]!,
     )
+    expect(interrupts.end.mock.invocationCallOrder[0]).toBeLessThan(
+      progress.finish.mock.invocationCallOrder[0]!,
+    )
+  })
+
+  it('ends the progress at once on a signal and prints nothing for the interrupted run', async () => {
+    let stoppedAtSignal = 0
+    vi.mocked(runMutants).mockImplementation(options => {
+      interrupts.controller.abort()
+      stoppedAtSignal = progress.stop.mock.calls.length
+      return Promise.reject(options.signal!.reason as Error)
+    })
+
+    await expect(runSource()).resolves.toBeUndefined()
+
+    expect(stoppedAtSignal).toBe(1)
+    expect(interrupts.end).toHaveBeenCalledExactlyOnceWith()
+    expect(progress.stop).toHaveBeenCalledExactlyOnceWith()
+    expect(progress.finish).not.toHaveBeenCalled()
+    expect(consoleErrorSpy).not.toHaveBeenCalled()
+    expect(consoleInfoSpy).not.toHaveBeenCalled()
+    expect(process.exitCode).toBeUndefined()
+  })
+
+  it('prints no report of a run that ended after a signal', async () => {
+    let result = createPassingResult()
+    result.html = '/repo/.mootant/report.html'
+    vi.mocked(runMutants).mockImplementation(() => {
+      interrupts.controller.abort()
+      return Promise.resolve(result)
+    })
+
+    await runSource()
+
+    expect(interrupts.end).toHaveBeenCalledExactlyOnceWith()
+    expect(consoleErrorSpy).not.toHaveBeenCalled()
+    expect(consoleInfoSpy).not.toHaveBeenCalled()
+    expect(writeHtmlReport).not.toHaveBeenCalled()
   })
 
   it('prints the diagnostics, then the text report, and leaves the exit code alone', async () => {
@@ -303,6 +356,7 @@ describe('runMutation', () => {
 
     await expect(runSource({ mutantIds: ['nope'] })).resolves.toBeUndefined()
 
+    expect(interrupts.end).toHaveBeenCalledExactlyOnceWith()
     expect(progress.finish).toHaveBeenCalledExactlyOnceWith()
     expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith(
       'Error: Unknown mutant id "nope".',

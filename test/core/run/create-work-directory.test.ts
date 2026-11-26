@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
+import { LIVE_WORK_DIRECTORIES } from '../../../core/run/live-work-directories'
 import { createWorkDirectory } from '../../../core/run/create-work-directory'
 
 describe('createWorkDirectory', () => {
@@ -20,5 +21,15 @@ describe('createWorkDirectory', () => {
 
     await expect(stat(work.path)).rejects.toThrow('ENOENT')
     await expect(work.remove()).resolves.toBeUndefined()
+  })
+
+  it('keeps the directory among the live work directories until it is removed', async () => {
+    let work = await createWorkDirectory()
+
+    expect(LIVE_WORK_DIRECTORIES.has(work.path)).toBe(true)
+
+    await work.remove()
+
+    expect(LIVE_WORK_DIRECTORIES.has(work.path)).toBe(false)
   })
 })

@@ -69,6 +69,15 @@ The exit code is 1 when a run has errors or its score falls below the threshold.
 Surviving or uncovered mutants alone do not fail a run without a threshold.
 Without mutants to score, any threshold passes.
 
+A run that gets SIGINT (Ctrl+C), SIGTERM or SIGHUP stops its test processes,
+removes its temporary files and ends by the same signal without a report, so a
+shell shows exit code 130, 143 or 129. Later signals wait for this cleanup,
+which gets 5 seconds: past them, as when a global setup or teardown hangs,
+Mootant removes its own files and ends anyway, and those of the test runner may
+stay. With Vitest, processes the tests start stay when only Mootant gets the
+signal, and project code that handles the signal itself, such as a server a
+global setup starts, may end the run before its cleanup.
+
 ## List mutants
 
 ```sh

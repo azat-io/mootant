@@ -58,6 +58,11 @@ interface FakeWorker {
  */
 interface FakeChild extends EventEmitter {
   /**
+   * Sends a signal to the process: it exits by that signal.
+   */
+  kill: Mock<(signal?: NodeJS.Signals) => boolean>
+
+  /**
    * Signal that ended the process, or null.
    */
   signalCode: NodeJS.Signals | null
@@ -139,6 +144,11 @@ function createWorkerClass(
         pid += 1
         // eslint-disable-next-line unicorn/prefer-event-target -- A ChildProcess is an EventEmitter.
         fake.child ??= Object.assign(new EventEmitter(), {
+          kill: vi.fn((signal: NodeJS.Signals = 'SIGTERM') => {
+            fake.child!.signalCode = signal
+            fake.child!.emit('exit', null, fake.child!.signalCode)
+            return true
+          }),
           signalCode: null,
           exitCode: null,
           pid,
@@ -596,5 +606,58 @@ describe('createForksPool', () => {
       type: 'stopped',
     })
     expect(workers[1]!.stop).not.toHaveBeenCalled()
+  })
+
+  it('stops the processes of every worker and spare it started once the run is interrupted', async () => {
+    let { workers, Worker } = createWorkerClass()
+    let pool = createForksPool(Worker, new Map(), true)
+    pool.prepare(createSpecifications(4))
+    await startTask(pool)
+    await startTask(pool)
+    workers[1]!.child!.exitCode = 0
+    workers[1]!.child!.emit('exit', 0, null)
+    pool.interrupt()
+
+    expect(
+      workers
+        .filter(worker => worker.child !== null)
+        .map(worker => worker.child!.kill.mock.calls),
+    ).toStrictEqual([[['SIGKILL']], [], [['SIGKILL']], [['SIGKILL']]])
+    expect(workers.every(worker => worker.stop.mock.calls.length === 0)).toBe(
+      true,
+    )
+  })
+
+  it('starts no worker once the run is interrupted, and has nothing to stop then', async () => {
+    let { workers, Worker } = createWorkerClass()
+    let pool = createForksPool(Worker, new Map(), true)
+    pool.interrupt()
+    let worker = pool.createPoolWorker(createOptions())
+    let onExit = vi.fn<(...values: unknown[]) => void>()
+
+    await expect(worker.start()).rejects.toThrow(
+      'The run was interrupted, so mootant starts no Vitest worker.',
+    )
+
+    worker.off('exit', onExit)
+    await worker.stop()
+
+    expect(
+      workers.map(fake => [fake.starts, fake.stop.mock.calls]),
+    ).toStrictEqual([[0, []]])
+  })
+
+  it('starts no spare once the run is interrupted before the spares of a task start', async () => {
+    let { workers, Worker } = createWorkerClass()
+    let pool = createForksPool(Worker, new Map(), true)
+    pool.prepare(createSpecifications(3))
+    await pool.createPoolWorker(createOptions()).start()
+    pool.interrupt()
+    await new Promise(resolve => {
+      setImmediate(resolve)
+    })
+
+    expect(workers).toHaveLength(1)
+    expect(workers[0]!.child!.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL')
   })
 })

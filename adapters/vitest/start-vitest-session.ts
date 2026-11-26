@@ -19,6 +19,7 @@ import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
 import { createInterleavedSequencer } from './create-interleaved-sequencer'
 import { readPreforkSwitch } from '../shared/read-prefork-switch'
 import { createOutputReporter } from './create-output-reporter'
+import { dropSignalListeners } from './drop-signal-listeners'
 import { createMootantPlugin } from './create-mootant-plugin'
 import { createOutputStream } from './create-output-stream'
 import { createForksPool } from './create-forks-pool'
@@ -39,7 +40,11 @@ import { runDry } from './run-dry'
  * context's `onOutput` when there is one. Its sequencer spreads out the units
  * of one test file (`createInterleavedSequencer`). The mutant runtime of this
  * process records the mutant sites switched code evaluates here, outside the
- * workers, such as in a `globalSetup` file, until the session closes.
+ * workers, such as in a `globalSetup` file, until the session closes. The
+ * listeners of SIGINT and SIGTERM that Vitest adds as it starts are dropped
+ * (`dropSignalListeners`), and once the run is interrupted the pool stops its
+ * workers and starts none (`MootantForksPool.interrupt`), so an interrupted run
+ * closes Vitest, which removes its temporary files, before the process ends.
  *
  * @param context - Switched files, work directory, concurrency and root.
  * @param options - Options of the adapter.
@@ -88,33 +93,44 @@ export async function startVitestSession(
     runnerPath,
     spawns,
   }
+  context.signal?.addEventListener(
+    'abort',
+    () => {
+      state.pool.interrupt()
+    },
+    { once: true },
+  )
   let { onOutput } = context
   let instance: Vitest | null = null
-  let vitest = await vitestNode.createVitest(
-    {
-      ...(options.config !== undefined && {
-        config: path.resolve(root, options.config),
-      }),
-      ...(context.concurrency !== null && { maxWorkers: context.concurrency }),
-      reporters:
-        onOutput === undefined ?
-          []
-        : [createOutputReporter(onOutput, () => instance)],
-      coverage: { enabled: false },
-      passWithNoTests: true,
-      fsModuleCache: false,
-      watch: false,
-      cache: false,
-      bail: 0,
-      root,
-    },
-    { plugins: [createMootantPlugin(context, state)] },
-    onOutput === undefined ?
-      {}
-    : {
-        stderr: createOutputStream(text => onOutput(text, null)),
-        stdout: createOutputStream(text => onOutput(text, null)),
+  let vitest = await dropSignalListeners(() =>
+    vitestNode.createVitest(
+      {
+        ...(options.config !== undefined && {
+          config: path.resolve(root, options.config),
+        }),
+        ...(context.concurrency !== null && {
+          maxWorkers: context.concurrency,
+        }),
+        reporters:
+          onOutput === undefined ?
+            []
+          : [createOutputReporter(onOutput, () => instance)],
+        coverage: { enabled: false },
+        passWithNoTests: true,
+        fsModuleCache: false,
+        watch: false,
+        cache: false,
+        bail: 0,
+        root,
       },
+      { plugins: [createMootantPlugin(context, state)] },
+      onOutput === undefined ?
+        {}
+      : {
+          stderr: createOutputStream(text => onOutput(text, null)),
+          stdout: createOutputStream(text => onOutput(text, null)),
+        },
+    ),
   )
   instance = vitest
   if (state.error !== null) {

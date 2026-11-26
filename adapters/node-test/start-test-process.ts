@@ -7,10 +7,10 @@ import { trackProcessGroup } from '../shared/track-process-group'
 /**
  * Starts a test process detached, as the leader of a process group of its own,
  * without stdin. Until the process ends or fails to start, mootant stops its
- * group when it exits or gets SIGINT or SIGTERM (`trackProcessGroup`), and the
- * session holds the group in `groups`, which it stops when it closes. With a
- * pipe, the process gets file descriptor 3 too, through which mootant sends its
- * unit.
+ * group when it exits or gets a signal that ends it (`trackProcessGroup`), and
+ * the session holds the group in `groups`, which it stops when it closes. With
+ * a pipe, the process gets file descriptor 3 too, through which mootant sends
+ * its unit.
  *
  * @param options - Binary, arguments, environment, working directory, where the
  *   output goes, the session's groups and whether the unit comes through a

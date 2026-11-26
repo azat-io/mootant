@@ -2,14 +2,17 @@ import { stopLiveProcessGroups } from './stop-live-process-groups'
 import { LIVE_PROCESS_GROUPS } from './live-process-groups'
 
 /**
- * Signals on which mootant stops the test processes it started before it ends.
+ * Signals on which mootant stops the test processes it started before it ends:
+ * those of a closed terminal, of the keys that interrupt and quit, and of a
+ * request to stop.
  */
-const SIGNALS: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
+const SIGNALS: NodeJS.Signals[] = ['SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGTERM']
 
 /**
  * Remembers a test process, which leads a process group of its own and so gets
  * no signal the terminal sends, until it ends: while any is remembered, this
- * process stops them all when it exits or gets SIGINT or SIGTERM.
+ * process stops them all when it exits or gets SIGHUP, SIGINT, SIGQUIT or
+ * SIGTERM.
  *
  * @param pid - Process id of the test process.
  * @returns Function that forgets the process once it ended.
