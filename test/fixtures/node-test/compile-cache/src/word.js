@@ -1,0 +1,1 @@
+export let word = 'ORIG'

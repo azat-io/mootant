@@ -98,6 +98,17 @@ let [major = 0, minor = 0] = execFileSync(
   .map(Number)
 
 /**
+ * Whether the test processes can turn the compile cache on (Node 22.8 and
+ * later).
+ */
+let compileCache =
+  execFileSync(
+    node,
+    ['-p', "typeof require('node:module').enableCompileCache"],
+    { encoding: 'utf8' },
+  ).trim() === 'function'
+
+/**
  * Verdict of one mutant in mootant's run and by hand.
  */
 interface Row {
@@ -398,6 +409,77 @@ describe('nodeTestAdapter', () => {
         await work.remove()
       }
     }, 60_000)
+
+    it.skipIf(!compileCache)(
+      'keeps a compile cache in the work directory and runs the text each dry run serves',
+      async () => {
+        vi.stubEnv('NODE_DISABLE_COMPILE_CACHE', undefined)
+        vi.stubEnv('NODE_COMPILE_CACHE', undefined)
+        let root = path.join(fixtures, 'compile-cache')
+        let work = await createWorkDirectory()
+        let files = await Promise.all(
+          ['src/word.js', 'src/legacy.cjs'].map(async name => {
+            let file = path.join(root, name)
+            let original = await readFile(file, 'utf8')
+            return {
+              switched: original.replace('ORIG', 'SWAP'),
+              original,
+              file,
+            }
+          }),
+        )
+        let related = files.map(entry => entry.file)
+        let session = await nodeTestAdapter({ node }).start({
+          workDirectory: work.path,
+          concurrency: 1,
+          files,
+          root,
+        })
+        /**
+         * Runs the test file once and tells which modules were switched and
+         * whether the test failed.
+         *
+         * @returns Switched modules and the failures of the test's tries.
+         */
+        async function run(): Promise<[string[], boolean[]]> {
+          let dry = await session.dryRun({
+            timeouts: { file: 60_000, test: 60_000 },
+            instrumented: true,
+            repeat: false,
+            files: null,
+            related,
+          })
+          return [
+            dry.served.map(file => path.relative(root, file)).toSorted(),
+            dry.tests.flatMap(test => test.tries.map(entry => entry.failed)),
+          ]
+        }
+        try {
+          let switched = await run()
+          let cache = path.join(work.path, 'compile-cache')
+          let [folder] = await readdir(cache)
+          let entries = await readdir(path.join(cache, folder!))
+          files.length = 0
+
+          /**
+           * Node keeps the code of each path and compiles a text that changed
+           * again: the second run reads the original words.
+           */
+          expect([switched, await run()]).toStrictEqual([
+            [['src/legacy.cjs', 'src/word.js'], [true]],
+            [[], [false]],
+          ])
+          expect(folder).toMatch(/^v\d/u)
+          expect(entries.length).toBeGreaterThan(0)
+        } finally {
+          await session.close()
+          await work.remove()
+          /* Cspell:disable-next-line */
+          vi.unstubAllEnvs()
+        }
+      },
+      60_000,
+    )
 
     it('stops on a test file that fails to load without mutants', async () => {
       await expect(

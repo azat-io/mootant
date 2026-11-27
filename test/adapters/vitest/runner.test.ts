@@ -31,9 +31,14 @@ import type { BatchUnit, BatchTest } from '../../../types/adapter/batch-plan'
 import type { MutantRuntime } from '../../../types/adapter/mutant-runtime'
 import type { IsolatedUnit } from '../../../types/adapter/isolated-plan'
 
+import { enableCompileCache } from '../../../adapters/shared/enable-compile-cache'
 import { getFileHash } from '../../../adapters/vitest/worker/get-file-hash'
 import { readOutRecords } from '../../../adapters/vitest/read-out-records'
 import Runner from '../../../adapters/vitest/runner'
+
+vi.mock(import('../../../adapters/shared/enable-compile-cache'), () => ({
+  enableCompileCache: vi.fn<typeof enableCompileCache>(),
+}))
 
 /**
  * Tracing helper of a Vitest worker, which runs every step of the worker.
@@ -1066,6 +1071,17 @@ describe('Runner', () => {
       ['batch', undefined],
       ['isolated', undefined],
     ])
+  })
+
+  it('turns the compile cache of the worker on in the work directory', () => {
+    vi.mocked(enableCompileCache).mockClear()
+    setOptions('isolated')
+    createRunner()
+
+    expect(vi.mocked(enableCompileCache)).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ createRequire: expect.any(Function) }),
+      directory,
+    )
   })
 
   it('claims the unit planned for the project of the file', async () => {

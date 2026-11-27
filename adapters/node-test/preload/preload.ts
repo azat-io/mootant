@@ -7,6 +7,7 @@ import { realpathSync } from 'node:fs'
 import path from 'node:path'
 
 import { installMutantRuntime } from '../../../core/runtime/install-mutant-runtime'
+import { enableCompileCache } from '../../shared/enable-compile-cache'
 import { installMarkerReceivers } from './install-marker-receivers'
 import { createSourceSwitcher } from './create-source-switcher'
 import { installModuleHooks } from './install-module-hooks'
@@ -28,18 +29,20 @@ const NODE_TEST_VARIABLES = ['NODE_TEST_CONTEXT', 'FORCE_COLOR']
  * since Node runs every `--require` before any `--import`; it has no top-level
  * `await`, so `require()` can load it. In the process of a unit it captures the
  * clock, reads the unit, which the process may wait for (`readUnit`), and only
- * then notes the start, sets the mutant runtime up, installs the module hooks
- * that switch modules, starts recording what the code reads, takes the records
- * of mootant's reporter, passing its todo tests to the tracker, and registers a
- * root `beforeEach` hook that tracks tries and listeners for uncaught errors
- * and the exit. In any other process or thread that loads it, such as one the
- * test code forked, it does nothing.
+ * then turns the compile cache on (`enableCompileCache`), which Node writes as
+ * the process exits, notes the start, sets the mutant runtime up, installs the
+ * module hooks that switch modules, starts recording what the code reads, takes
+ * the records of mootant's reporter, passing its todo tests to the tracker, and
+ * registers a root `beforeEach` hook that tracks tries and listeners for
+ * uncaught errors and the exit. In any other process or thread that loads it,
+ * such as one the test code forked, it does nothing.
  */
 let clock = captureClock()
 let unit = readUnit(process, isMainThread)
 let time = Date.now()
 let started = clock.now()
 if (unit !== null) {
+  enableCompileCache(moduleApi, unit.directory)
   let write = createRecordWriter(unit.out)
   let tracker = createTryTracker({
     runtime: installMutantRuntime(),

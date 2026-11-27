@@ -7,6 +7,7 @@ import type { NodeTestRecord } from '../../../../adapters/node-test/types/node-t
 import type { TryContext } from '../../../../adapters/node-test/types/try-context'
 
 import { installModuleHooks } from '../../../../adapters/node-test/preload/install-module-hooks'
+import { enableCompileCache } from '../../../../adapters/shared/enable-compile-cache'
 import { trackInputs } from '../../../../adapters/shared/track-inputs'
 
 vi.mock(import('node:test'), () => ({ beforeEach: vi.fn() }) as never)
@@ -17,6 +18,10 @@ vi.mock(
   import('../../../../adapters/node-test/preload/install-module-hooks'),
   () => ({ installModuleHooks: vi.fn(() => 'sync' as const) }),
 )
+
+vi.mock(import('../../../../adapters/shared/enable-compile-cache'), () => ({
+  enableCompileCache: vi.fn<typeof enableCompileCache>(),
+}))
 
 vi.mock(import('../../../../adapters/shared/track-inputs'), () => ({
   trackInputs: vi.fn(() => ({
@@ -83,6 +88,7 @@ describe('preload', () => {
     await import('../../../../adapters/node-test/preload/preload')
 
     expect(vi.mocked(installModuleHooks)).not.toHaveBeenCalled()
+    expect(vi.mocked(enableCompileCache)).not.toHaveBeenCalled()
     await expect(getRootBeforeEach()).resolves.not.toHaveBeenCalled()
     expect(on).not.toHaveBeenCalled()
   })
@@ -112,6 +118,13 @@ describe('preload', () => {
     await import('../../../../adapters/node-test/preload/preload')
 
     expect(process.env['MOOTANT_UNIT']).toBeUndefined()
+    expect(vi.mocked(enableCompileCache)).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ register: expect.any(Function) }),
+      path.join(directory, 'work'),
+    )
+    expect(
+      vi.mocked(enableCompileCache).mock.invocationCallOrder[0],
+    ).toBeLessThan(vi.mocked(trackInputs).mock.invocationCallOrder[0]!)
 
     let [api, options] = vi.mocked(installModuleHooks).mock.calls[0]!
 

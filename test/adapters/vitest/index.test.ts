@@ -101,6 +101,15 @@ let taskLocationRoot = path.resolve(
 )
 
 /**
+ * Root of a fixture project whose test file requires a CommonJS module through
+ * Node's own loader, past Vite's module runner.
+ */
+let compileCacheRoot = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/compile-cache',
+)
+
+/**
  * Summarizes a verdict for comparison.
  *
  * @param result - Verdict of a mutant.
@@ -382,6 +391,41 @@ describe('vitestAdapter', () => {
     expect(quick.results.map(summarizeVerdict)).toStrictEqual([
       'src/sum.ts | arithmetic-operator | left - right | Survived | isolated | batch-survivor | -',
     ])
+  }, 30_000)
+
+  it('keeps a compile cache of the workers in the work directory', async () => {
+    vi.stubEnv('NODE_DISABLE_COMPILE_CACHE', undefined)
+    vi.stubEnv('NODE_COMPILE_CACHE', undefined)
+    let work = await createWorkDirectory()
+    let session = await vitestAdapter().start({
+      workDirectory: work.path,
+      root: compileCacheRoot,
+      concurrency: 1,
+      files: [],
+    })
+    try {
+      let dry = await session.dryRun({
+        related: [path.join(compileCacheRoot, 'vitest.config.ts')],
+        timeouts: { file: 60_000, test: 60_000 },
+        instrumented: true,
+        repeat: false,
+        files: null,
+      })
+      let cache = path.join(work.path, 'compile-cache')
+      let [folder] = await readdir(cache)
+
+      expect(dry.tests.map(test => test.tries.length)).toStrictEqual([1])
+      expect(dry.tests[0]!.tries[0]!.failed).toBe(false)
+      expect(folder).toMatch(/^v\d/u)
+      await expect(
+        readdir(path.join(cache, folder!)),
+      ).resolves.not.toStrictEqual([])
+    } finally {
+      await session.close()
+      await work.remove()
+      /* Cspell:disable-next-line */
+      vi.unstubAllEnvs()
+    }
   }, 30_000)
 
   it('reports controls, hung workers and crashes', async () => {

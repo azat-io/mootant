@@ -34,6 +34,14 @@ Mootant supports Node.js 20 from 20.19.0, and Node.js 22.12.0 or later:
 `^22.12.0 || ^24.0.0 || >=26.0.0`, so Node.js 20 works only with Jest and Node
 Test.
 
+From Node.js 22.8, the Vitest and Node Test processes that run the tests keep
+Node's module compile cache in a temporary directory of the run, so a process
+reuses the code an earlier one compiled. The cache is removed with that
+directory when the run ends. Processes that the tests start get no cache, and
+`module.getCompileCacheDir()` in a test gives a directory instead of
+`undefined`. `NODE_DISABLE_COMPILE_CACHE=1` turns the cache off, and a
+`NODE_COMPILE_CACHE` you set is used as it is.
+
 The installer of the [agent skill](/agent-skill), `npx skills`, needs Node.js
 22.20 or later. On an older version, copy `skills/mootant` from the
 [repository](https://github.com/azat-io/mootant) to `.claude/skills/mootant` for

@@ -9,8 +9,8 @@ import type {
 
 import { writeFileSync, closeSync, openSync, rmSync } from 'node:fs'
 import { builtinEnvironments } from 'vitest/runtime'
-import { createRequire } from 'node:module'
 import { createHash } from 'node:crypto'
+import * as moduleApi from 'node:module'
 import { TestRunner } from 'vitest'
 import path from 'node:path'
 
@@ -25,6 +25,7 @@ import type { IsolatedUnit } from '../../types/adapter/isolated-plan'
 import type { InputTracking } from '../shared/types/input-tracking'
 
 import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
+import { enableCompileCache } from '../shared/enable-compile-cache'
 import { watchWorkerClose } from './worker/watch-worker-close'
 import { listDependencies } from './worker/list-dependencies'
 import { getErrorMessage } from '../shared/get-error-message'
@@ -471,7 +472,9 @@ export default class Runner extends TestRunner {
   private file = ''
 
   /**
-   * Creates the runner of one test file, installs the mutant runtime, takes
+   * Creates the runner of one test file, turns the compile cache of the worker
+   * on for the modules it loads from now on (`enableCompileCache`), which
+   * Vitest writes when it stops the worker, installs the mutant runtime, takes
    * over Vitest's report of the worker's unhandled errors (`interceptStrays`),
    * records the worker's process id, so the main process waits until the worker
    * is gone, and moves the end of the unit to the end of the worker's teardown,
@@ -487,6 +490,7 @@ export default class Runner extends TestRunner {
     super(config)
     this.options = this.injectValue('mootant') as VitestWorkerOptions
     let { directory, repeat, mode } = this.options
+    enableCompileCache(moduleApi, directory)
     this.sequential = mode === 'batch' || (mode === 'dry' && repeat)
     if (mode === 'dry') {
       this.config.includeTaskLocation = true
@@ -1216,7 +1220,7 @@ export default class Runner extends TestRunner {
     return listDependencies(
       Reflect.get(this, 'workerState'),
       [
-        ...Object.keys(createRequire(import.meta.url).cache),
+        ...Object.keys(moduleApi.createRequire(import.meta.url).cache),
         ...this.inputs!.files,
       ],
       snapshot,
