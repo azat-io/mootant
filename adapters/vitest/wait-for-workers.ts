@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { setInterval } from 'node:timers/promises'
 import path from 'node:path'
 
+import type { MootantForksPool } from './types/mootant-forks-pool'
 import type { VitestHeartbeat } from './types/vitest-worker'
 
 import { isProcessAlive } from './worker/is-process-alive'
@@ -39,9 +40,11 @@ const BEAT_GRACE = 5000
  * that is, and the watchdog must run until the wait is over. A beat file that
  * cannot be read, such as one being written, is read again on the next look and
  * counts as a beat without budget until then. Workers still alive past the
- * limit and without such a beat are stopped, so no worker outlives the run.
+ * limit and without such a beat are stopped (`stopHungWorker`), so no worker
+ * outlives the run.
  *
  * @param directory - Work directory of the session.
+ * @param pool - Pool of the session.
  * @param limits - Milliseconds to wait at most without a pending heartbeat and
  *   past the budget of one.
  * @param limits.wait - Milliseconds to wait at most without a pending beat.
@@ -53,6 +56,7 @@ const BEAT_GRACE = 5000
  */
 export async function waitForWorkers(
   directory: string,
+  pool: Pick<MootantForksPool, 'stopWorker'>,
   limits: { grace: number; wait: number } = {
     grace: BEAT_GRACE,
     wait: WAIT_LIMIT,
@@ -110,5 +114,5 @@ export async function waitForWorkers(
       }
     }
   }
-  await Promise.all(leftover!.map(pid => stopHungWorker(Number(pid))))
+  await Promise.all(leftover!.map(pid => stopHungWorker(Number(pid), pool)))
 }

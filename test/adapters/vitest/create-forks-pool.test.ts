@@ -608,6 +608,29 @@ describe('createForksPool', () => {
     expect(workers[1]!.stop).not.toHaveBeenCalled()
   })
 
+  it('stops a running process of its workers by id, and tells when it cannot know them', async () => {
+    let { workers, Worker } = createWorkerClass()
+    let pool = createForksPool(Worker, new Map(), false)
+
+    expect(pool.stopWorker(101)).toBeNull()
+
+    await startTask(pool)
+
+    expect([
+      pool.stopWorker(101),
+      pool.stopWorker(101),
+      pool.stopWorker(4242),
+    ]).toStrictEqual([true, false, false])
+    expect(workers[0]!.child!.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL')
+
+    let hidden = createWorkerClass({ fork: () => ({}) })
+    pool = createForksPool(hidden.Worker, new Map(), false)
+    await startTask(pool)
+
+    expect(pool.stopWorker(101)).toBeNull()
+    expect(hidden.workers[0]!.child!.kill).not.toHaveBeenCalled()
+  })
+
   it('stops the processes of every worker and spare it started once the run is interrupted', async () => {
     let { workers, Worker } = createWorkerClass()
     let pool = createForksPool(Worker, new Map(), true)

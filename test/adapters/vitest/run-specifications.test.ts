@@ -51,7 +51,7 @@ describe('runSpecifications', () => {
       root: '/p',
       timeouts,
     })
-    expect(waitForWorkers).toHaveBeenCalledWith('/work')
+    expect(waitForWorkers).toHaveBeenCalledWith('/work', handle.state.pool)
   })
 
   it('tells the workers about parallel units when the context allows them', async () => {

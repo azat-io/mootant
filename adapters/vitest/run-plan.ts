@@ -77,7 +77,7 @@ export async function runPlan(
   }
   let hung = new Map<number, VitestHeartbeat>()
   let watch = watchHeartbeats(directory, async beat => {
-    if (await stopHungWorker(beat.pid)) {
+    if (await stopHungWorker(beat.pid, handle.state.pool)) {
       hung.set(beat.unit, beat)
     }
   })

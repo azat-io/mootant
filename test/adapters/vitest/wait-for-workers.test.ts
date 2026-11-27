@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'node:child_process'
 
-import { beforeEach, afterEach, describe, expect, it } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { writeFile, mkdtemp, mkdir, rm } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
@@ -9,6 +9,12 @@ import path from 'node:path'
 import type { VitestHeartbeat } from '../../../adapters/vitest/types/vitest-worker'
 
 import { waitForWorkers } from '../../../adapters/vitest/wait-for-workers'
+
+/**
+ * Pool that cannot tell its workers, as when Vitest hides their processes, so
+ * the processes are checked by their ids.
+ */
+let pool = { stopWorker: (): null => null }
 
 describe('waitForWorkers', () => {
   let directory: string
@@ -35,7 +41,7 @@ describe('waitForWorkers', () => {
     })
     await writeFile(path.join(directory, 'worker', String(child.pid)), '')
 
-    await expect(waitForWorkers(directory)).resolves.toBeUndefined()
+    await expect(waitForWorkers(directory, pool)).resolves.toBeUndefined()
   })
 
   it('waits until a worker exits', async () => {
@@ -45,7 +51,7 @@ describe('waitForWorkers', () => {
     child.on('exit', () => {
       exited = true
     })
-    await waitForWorkers(directory)
+    await waitForWorkers(directory, pool)
 
     expect(exited).toBe(true)
   })
@@ -55,17 +61,28 @@ describe('waitForWorkers', () => {
     await writeFile(path.join(directory, 'worker', String(child.pid)), '')
     let exit = waitForExit(child)
     let started = performance.now()
-    await waitForWorkers(directory, { wait: 30, grace: 0 })
+    await waitForWorkers(directory, pool, { wait: 30, grace: 0 })
 
     expect(performance.now() - started).toBeGreaterThanOrEqual(25)
     await expect(exit).resolves.toBe('SIGKILL')
+  })
+
+  it('stops the workers left through the pool', async () => {
+    let child = startWorker()
+    await writeFile(path.join(directory, 'worker', String(child.pid)), '')
+    let exit = waitForExit(child)
+    let stopWorker = vi.fn((pid: number) => child.pid === pid && child.kill())
+    await waitForWorkers(directory, { stopWorker }, { wait: 30, grace: 0 })
+
+    expect(stopWorker).toHaveBeenCalledExactlyOnceWith(child.pid)
+    await expect(exit).resolves.toBe('SIGTERM')
   })
 
   it('leaves processes that are not its workers', async () => {
     await writeFile(path.join(directory, 'worker', String(process.pid)), '')
 
     await expect(
-      waitForWorkers(directory, { wait: 30, grace: 0 }),
+      waitForWorkers(directory, pool, { wait: 30, grace: 0 }),
     ).resolves.toBeUndefined()
   })
 
@@ -82,7 +99,7 @@ describe('waitForWorkers', () => {
     setTimeout(() => {
       void writeBeat(child.pid!, 2)
     }, 150)
-    await waitForWorkers(directory, { grace: 20, wait: 30 })
+    await waitForWorkers(directory, pool, { grace: 20, wait: 30 })
 
     expect(performance.now() - started).toBeGreaterThanOrEqual(470)
     await expect(exit).resolves.toBe('SIGKILL')
@@ -96,7 +113,7 @@ describe('waitForWorkers', () => {
       child.kill('SIGKILL')
     }, 100)
     let started = performance.now()
-    await waitForWorkers(directory, { wait: 30, grace: 0 })
+    await waitForWorkers(directory, pool, { wait: 30, grace: 0 })
 
     expect(performance.now() - started).toBeLessThan(10_000)
     expect(child.signalCode).toBe('SIGKILL')
@@ -108,7 +125,7 @@ describe('waitForWorkers', () => {
     await writeFile(path.join(directory, 'beat', `${child.pid}.json`), '{')
     let exit = waitForExit(child)
     let started = performance.now()
-    await waitForWorkers(directory, { grace: 150, wait: 30 })
+    await waitForWorkers(directory, pool, { grace: 150, wait: 30 })
 
     expect(performance.now() - started).toBeGreaterThanOrEqual(145)
     await expect(exit).resolves.toBe('SIGKILL')
@@ -118,7 +135,7 @@ describe('waitForWorkers', () => {
     await writeFile(path.join(directory, 'worker', String(process.pid)), '')
     await rm(path.join(directory, 'beat'), { recursive: true })
 
-    await expect(waitForWorkers(directory)).rejects.toThrow('ENOENT')
+    await expect(waitForWorkers(directory, pool)).rejects.toThrow('ENOENT')
   })
 
   /**

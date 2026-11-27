@@ -12,6 +12,7 @@ export function createVitestSessionState(): VitestSessionState {
     pool: {
       createPoolWorker: () => null as never,
       drain: () => Promise.resolve(),
+      stopWorker: () => null,
       name: 'mootant-forks',
       interrupt: () => {},
       prepare: () => {},

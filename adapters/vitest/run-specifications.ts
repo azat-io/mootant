@@ -60,7 +60,7 @@ export async function runSpecifications(
     } finally {
       await state.pool.drain()
     }
-    await waitForWorkers(context.workDirectory)
+    await waitForWorkers(context.workDirectory, state.pool)
     let [error] = result.unhandledErrors
     return error === undefined ? null : getErrorMessage(error)
   } finally {

@@ -91,7 +91,9 @@ interface Spare {
  * starts none: the start of a task fails at once, and a worker refused so has
  * no process to stop. Vitest ends the run then as after a watchdog's kill.
  * Should Vitest stop exposing the processes of its workers, an interrupted run
- * waits until they end or the watchdog stops them.
+ * waits until they end or the watchdog stops them. The watchdog stops a hung
+ * worker the same way (`stopWorker`); a process id that is none of the pool's
+ * running processes is left.
  *
  * @param Worker - Forks worker class of the project's Vitest.
  * @param spawns - Receives the epoch milliseconds at which a task got its
@@ -322,6 +324,13 @@ export function createForksPool(
           left.set(project, (left.get(project) ?? 0) + 1)
         }
       }
+    },
+    stopWorker: pid => {
+      let child = [...live].find(entry => entry.pid === pid)
+      if (child !== undefined) {
+        return child.kill('SIGKILL')
+      }
+      return exposed === true ? false : null
     },
     drain: async () => {
       left = new Map()

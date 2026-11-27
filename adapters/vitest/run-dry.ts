@@ -67,7 +67,7 @@ export async function runDry(
     resetRunDirectory(context.workDirectory)
     let hung: VitestHeartbeat[] = []
     let watch = watchHeartbeats(context.workDirectory, async beat => {
-      if (await stopHungWorker(beat.pid)) {
+      if (await stopHungWorker(beat.pid, state.pool)) {
         hung.push(beat)
       }
     })

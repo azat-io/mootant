@@ -14,6 +14,18 @@ export interface MootantForksPool extends PoolRunnerInitializer {
   prepare(specifications: readonly TestSpecification[]): void
 
   /**
+   * Stops the process of a worker or spare the pool started that still runs,
+   * with `SIGKILL` through the process itself, which cannot stand for another
+   * process before it ended.
+   *
+   * @param pid - Process id of the worker.
+   * @returns Whether the process was stopped: false when no process of the pool
+   *   with this id runs, null when Vitest does not expose the processes of its
+   *   workers, so the pool cannot tell.
+   */
+  stopWorker(pid: number): boolean | null
+
+  /**
    * Stops the spare workers no task took, and the run's spares to come.
    *
    * @returns Resolves when every spare is gone.
