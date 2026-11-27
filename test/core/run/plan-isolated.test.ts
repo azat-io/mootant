@@ -22,6 +22,7 @@ describe('planIsolated', () => {
         {
           file: '/t/a.test.ts',
           confirming: false,
+          crashed: false,
           retried: false,
           raised: false,
           mutant: 'm1',
@@ -29,6 +30,7 @@ describe('planIsolated', () => {
         {
           file: '/t/a.test.ts',
           confirming: true,
+          crashed: false,
           retried: false,
           raised: false,
           mutant: 'm2',
@@ -63,6 +65,7 @@ describe('planIsolated', () => {
         {
           file: '/t/a.test.ts',
           confirming: true,
+          crashed: false,
           retried: false,
           mutant: 'm1',
           raised: true,
@@ -86,6 +89,7 @@ describe('planIsolated', () => {
         {
           file: '/t/a.test.ts',
           confirming: false,
+          crashed: false,
           retried: false,
           raised: false,
           mutant: 'm1',
@@ -100,6 +104,7 @@ describe('planIsolated', () => {
         {
           file: '/t/a.test.ts',
           confirming: false,
+          crashed: false,
           retried: false,
           raised: false,
           mutant: 'm1',

@@ -376,8 +376,8 @@ sometimes survivors, which lower it.
 <summary>Memory, cache and reports</summary>
 
 - Runs of one test file load at the same time, so memory use grows. Lower
-  [`concurrency`](#concurrency) if memory runs short: a test process that runs
-  out of memory gives its mutant a false kill.
+  [`concurrency`](#concurrency) if memory runs short: test processes that run
+  out of memory twice give their mutant a false kill.
 - Runs with and without this setting never reuse each other's verdicts. The
   first run after a switch runs every mutant again.
 - Reports mark such runs: the `time` line in the terminal, the mode in the HTML

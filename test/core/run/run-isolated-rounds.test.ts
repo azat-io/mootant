@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
+import type { IsolatedFacts } from '../../../types/adapter/isolated-result'
 import type { RunEvent } from '../../../types/run/run-event'
 
 import { createHitLimitError } from '../../../core/runtime/create-hit-limit-error'
 import { previewIsolatedUnit } from '../../../core/run/preview-isolated-unit'
 import { runIsolatedRounds } from '../../../core/run/run-isolated-rounds'
+import { getFinalStatus } from '../../../core/run/get-final-status'
 import { createTestRun } from '../../helpers/create-test-run'
 
 describe('runIsolatedRounds', () => {
@@ -536,6 +538,203 @@ describe('runIsolatedRounds', () => {
     expect(state.mutants.get('m1')!.verdict).toMatchObject({
       status: 'Killed',
       test: 'c1',
+    })
+  })
+
+  it.each<[string, (facts: IsolatedFacts) => IsolatedFacts]>([
+    [
+      'after its tests reached the mutant and passed',
+      facts => ({ ...facts, incomplete: 'crash' }),
+    ],
+    [
+      'before any test reached the mutant',
+      facts => ({ ...facts, incomplete: 'crash', reached: false, tests: [] }),
+    ],
+  ])(
+    'runs a unit once more when its process died %s, and takes the verdict of that run',
+    async (_name, crash) => {
+      /**
+       * Something else killed the process, such as the OOM killer: `c2` reaches
+       * the mutant and checks nothing, so a plain run passes.
+       */
+      let { session, state, fake } = await createTestRun(
+        {
+          tests: [
+            { file: '/t/c.test.ts', id: 'c1' },
+            { file: '/t/c.test.ts', covers: ['m'], id: 'c2' },
+          ],
+          onIsolated: (result, _plan, call) =>
+            call === 1 ? { units: result.units.map(crash) } : result,
+        },
+        { mutants: ['m'], isolate: true },
+      )
+
+      await runIsolatedRounds(session, state)
+
+      let mutant = state.mutants.get('m')!
+
+      expect(
+        fake.calls.isolated.map(plan => plan.units.map(unit => unit.mutant)),
+      ).toStrictEqual([['m'], ['m']])
+      expect(mutant).toMatchObject({ survived: true, verdict: null, units: 2 })
+      expect(getFinalStatus(mutant)).toBe('Survived')
+    },
+  )
+
+  it.each<[string, number]>([
+    ['', 0],
+    [' after the test runner lost its first run', 1],
+  ])(
+    'kills a mutant whose unit process dies again when it runs once more%s',
+    async (_name, lost) => {
+      let { session, state, fake } = await createTestRun(
+        {
+          onIsolated: (result, _plan, call) => ({
+            units:
+              call <= lost ?
+                []
+              : result.units.map(facts => ({
+                  ...facts,
+                  incomplete: 'crash' as const,
+                })),
+          }),
+          tests: [{ file: '/t/a.test.ts', covers: ['m'], id: 'a1' }],
+        },
+        { mutants: ['m'], isolate: true },
+      )
+
+      await runIsolatedRounds(session, state)
+
+      expect(fake.calls.isolated).toHaveLength(2 + lost)
+      expect(state.mutants.get('m')!.verdict).toStrictEqual({
+        file: '/t/a.test.ts',
+        status: 'Killed',
+        cause: 'crash',
+        message: null,
+        test: null,
+      })
+    },
+  )
+
+  it('runs a unit once more when its process died in the retry of a run the test runner lost, and takes the verdict of that run', async () => {
+    let { session, state, fake } = await createTestRun(
+      {
+        onIsolated: (result, _plan, call) => {
+          if (call === 1) {
+            return { units: [] }
+          }
+          return call === 2 ?
+              {
+                units: result.units.map(facts => ({
+                  ...facts,
+                  incomplete: 'crash' as const,
+                })),
+              }
+            : result
+        },
+        tests: [{ file: '/t/a.test.ts', covers: ['m'], id: 'a1' }],
+      },
+      { mutants: ['m'], isolate: true },
+    )
+
+    await runIsolatedRounds(session, state)
+
+    expect(fake.calls.isolated).toHaveLength(3)
+    expect(state.mutants.get('m')).toMatchObject({
+      survived: true,
+      verdict: null,
+      units: 2,
+    })
+  })
+
+  it('runs a crashed unit again with its limits as a retry, before any later file of its mutant', async () => {
+    let { session, state, fake } = await createTestRun(
+      {
+        onIsolated: (result, _plan, call) =>
+          call === 1 ?
+            {
+              units: result.units.map(facts => ({
+                ...facts,
+                incomplete: 'crash' as const,
+              })),
+            }
+          : result,
+        tests: [
+          { file: '/t/a.test.ts', covers: ['m'], id: 'a1' },
+          { file: '/t/b.test.ts', covers: ['m'], duration: 2, id: 'b1' },
+        ],
+      },
+      { mutants: ['m'], isolate: true },
+    )
+    let starts: unknown[] = []
+    state.report = event => {
+      if (event.kind === 'run-start') {
+        let { confirming, survivors, retrying, round } = event
+        starts.push({ confirming, survivors, retrying, round })
+      }
+    }
+
+    await runIsolatedRounds(session, state)
+
+    expect(
+      fake.calls.isolated.map(plan =>
+        plan.units.map(unit => [unit.file.slice(3, 4), unit.limits]),
+      ),
+    ).toStrictEqual([
+      [['a', { hitLimit: 200_000, timeout: 503 }]],
+      [['a', { hitLimit: 200_000, timeout: 503 }]],
+      [['b', { hitLimit: 200_000, timeout: 506 }]],
+    ])
+    expect(starts).toStrictEqual([
+      { confirming: 0, survivors: 0, retrying: 0, round: 1 },
+      { confirming: 0, survivors: 0, retrying: 1, round: 2 },
+      { confirming: 0, survivors: 1, retrying: 0, round: 3 },
+    ])
+    expect(state.mutants.get('m')).toMatchObject({
+      survived: true,
+      verdict: null,
+      units: 3,
+    })
+  })
+
+  it('runs a confirmation whose process died once more with its doubled time, and takes the verdict of that run', async () => {
+    /**
+     * The first unit ran out of time on a busy machine, and something else
+     * killed the process of its confirmation.
+     */
+    let { session, state, fake } = await createTestRun(
+      {
+        onIsolated: (result, _plan, call) => ({
+          units: result.units.map(facts => {
+            if (call === 1) {
+              return {
+                ...facts,
+                tests: facts.tests.map(test => ({ ...test, timedOut: true })),
+              }
+            }
+            return call === 2 ?
+                { ...facts, incomplete: 'crash' as const }
+              : facts
+          }),
+        }),
+        tests: [{ file: '/t/a.test.ts', covers: ['m'], id: 'a1' }],
+      },
+      { mutants: ['m'], isolate: true },
+    )
+
+    await runIsolatedRounds(session, state)
+
+    expect(
+      fake.calls.isolated.map(plan => plan.units.map(unit => unit.limits)),
+    ).toStrictEqual([
+      [{ hitLimit: 200_000, timeout: 503 }],
+      [{ hitLimit: 200_000, timeout: 1006 }],
+      [{ hitLimit: 200_000, timeout: 1006 }],
+    ])
+    expect(state.mutants.get('m')).toMatchObject({
+      survived: true,
+      verdict: null,
+      units: 3,
     })
   })
 })

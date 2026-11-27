@@ -42,6 +42,7 @@ async function apply(
   let requests = mutants.map(mutant => ({
     file: '/t/a.test.ts',
     confirming: false,
+    crashed: false,
     retried: false,
     raised: false,
     mutant,
@@ -58,7 +59,7 @@ async function apply(
 }
 
 describe('applyIsolatedResult', () => {
-  it('kills on failures, load errors, crashes and stray errors, and costs units with their start', async () => {
+  it('kills on failures, load errors and stray errors, runs a crashed unit once more, and costs units with their start', async () => {
     let { state, next } = await apply(
       {
         tests: [
@@ -100,7 +101,16 @@ describe('applyIsolatedResult', () => {
       },
     )
 
-    expect(next).toStrictEqual([])
+    expect(next).toStrictEqual([
+      {
+        file: '/t/a.test.ts',
+        confirming: false,
+        mutant: 'crash',
+        retried: false,
+        crashed: true,
+        raised: false,
+      },
+    ])
     expect(state.mutants.get('failed')).toMatchObject({
       verdict: {
         message: 'expected 1 to be 2',
@@ -121,10 +131,12 @@ describe('applyIsolatedResult', () => {
       status: 'Killed',
       test: null,
     })
-    expect(state.mutants.get('crash')!.verdict).toMatchObject({
-      status: 'Killed',
-      cause: 'crash',
-      test: null,
+    expect(state.mutants.get('crash')).toMatchObject({
+      evidence: new Map([['/t/a.test.ts', 'confirming']]),
+      survived: false,
+      verdict: null,
+      units: 1,
+      tries: 1,
     })
     expect(state.mutants.get('stray')!.verdict).toMatchObject({
       cause: 'stray-error',
@@ -135,6 +147,71 @@ describe('applyIsolatedResult', () => {
       survived: true,
       verdict: null,
     })
+  })
+
+  it('kills on a second crash only, and runs a crashed retry or confirmation once more as it was planned', async () => {
+    let world: FakeWorld = {
+      tests: [{ file: '/t/a.test.ts', covers: ['m1'], id: 'a1' }],
+    }
+    /**
+     * Ends the process of a unit before the end of its test file.
+     *
+     * @param facts - Facts of a unit.
+     * @returns The facts of a crashed unit.
+     */
+    function crash(facts: IsolatedFacts): IsolatedFacts {
+      return { ...facts, incomplete: 'crash' }
+    }
+    let again = await apply(world, ['m1'], {
+      request: { crashed: true },
+      change: crash,
+    })
+    let lost = await apply(world, ['m1'], {
+      request: { retried: true },
+      change: crash,
+    })
+    let confirmation = await apply(world, ['m1'], {
+      request: { confirming: true, raised: true },
+      change: crash,
+    })
+
+    expect(again.next).toStrictEqual([])
+    expect(again.state.mutants.get('m1')!.verdict).toStrictEqual({
+      file: '/t/a.test.ts',
+      status: 'Killed',
+      cause: 'crash',
+      message: null,
+      test: null,
+    })
+    expect(lost.next).toStrictEqual([
+      {
+        file: '/t/a.test.ts',
+        confirming: false,
+        crashed: true,
+        retried: true,
+        raised: false,
+        mutant: 'm1',
+      },
+    ])
+    expect(confirmation.next).toStrictEqual([
+      {
+        file: '/t/a.test.ts',
+        confirming: true,
+        retried: false,
+        crashed: true,
+        mutant: 'm1',
+        raised: true,
+      },
+    ])
+    expect(lost.state.mutants.get('m1')).toMatchObject({
+      evidence: new Map([['/t/a.test.ts', 'confirming']]),
+      verdict: null,
+    })
+    expect(confirmation.state.mutants.get('m1')).toMatchObject({
+      evidence: new Map([['/t/a.test.ts', 'confirming']]),
+      verdict: null,
+    })
+    expect(confirmation.state.diagnostics).toStrictEqual([])
   })
 
   it('waits to confirm loops, hangs and slow tests', async () => {
@@ -166,12 +243,14 @@ describe('applyIsolatedResult', () => {
         file: '/t/a.test.ts',
         confirming: true,
         mutant: 'looped',
+        crashed: false,
         retried: false,
         raised: true,
       },
       {
         file: '/t/a.test.ts',
         confirming: true,
+        crashed: false,
         retried: false,
         mutant: 'slow',
         raised: false,
@@ -179,6 +258,7 @@ describe('applyIsolatedResult', () => {
       {
         file: '/t/a.test.ts',
         confirming: true,
+        crashed: false,
         retried: false,
         mutant: 'hung',
         raised: false,
@@ -346,6 +426,7 @@ describe('applyIsolatedResult', () => {
       {
         file: '/t/a.test.ts',
         confirming: true,
+        crashed: false,
         retried: false,
         mutant: 'late',
         raised: true,
@@ -501,11 +582,16 @@ describe('applyIsolatedResult', () => {
       request: { confirming: true, raised: true },
       change: facts => ({ ...facts, unit: -1 }),
     })
+    let crashed = await apply(world, ['m1'], {
+      change: facts => ({ ...facts, unit: -1 }),
+      request: { crashed: true },
+    })
 
     expect(first.next).toStrictEqual([
       {
         file: '/t/a.test.ts',
         confirming: false,
+        crashed: false,
         retried: true,
         raised: false,
         mutant: 'm1',
@@ -518,6 +604,7 @@ describe('applyIsolatedResult', () => {
       {
         file: '/t/a.test.ts',
         confirming: true,
+        crashed: false,
         retried: true,
         mutant: 'm1',
         raised: true,
@@ -526,6 +613,19 @@ describe('applyIsolatedResult', () => {
     expect(
       confirmation.state.mutants.get('m1')!.evidence.has('/t/a.test.ts'),
     ).toBe(false)
+    expect(crashed.next).toStrictEqual([
+      {
+        file: '/t/a.test.ts',
+        confirming: false,
+        crashed: true,
+        retried: true,
+        raised: false,
+        mutant: 'm1',
+      },
+    ])
+    expect(crashed.state.mutants.get('m1')!.evidence.has('/t/a.test.ts')).toBe(
+      false,
+    )
     expect(second.next).toStrictEqual([])
     expect(second.state.mutants.get('m1')!.verdict).toStrictEqual({
       message: 'The test runner did not report this mutant.',
@@ -554,6 +654,7 @@ describe('applyIsolatedResult', () => {
     let requests = ['/t/a.test.ts', '/t/b.test.ts', '/t/b.test.ts'].map(
       file => ({
         confirming: false,
+        crashed: false,
         retried: false,
         raised: false,
         mutant: 'm1',
@@ -595,6 +696,7 @@ describe('applyIsolatedResult', () => {
     let mutant = state.mutants.get('m1')!
     let requests = mutant.files.splice(0).map(file => ({
       confirming: false,
+      crashed: false,
       retried: false,
       raised: false,
       mutant: 'm1',
@@ -773,6 +875,7 @@ describe('applyIsolatedResult', () => {
       {
         file: '/t/a.test.ts',
         confirming: true,
+        crashed: false,
         retried: false,
         mutant: 'slow',
         raised: false,

@@ -21,7 +21,7 @@ import { countVerdicts } from './count-verdicts'
  * @param work.confirming - Of the mutants of an isolated round, those that
  *   confirm a timeout; 0 when omitted.
  * @param work.retrying - Of the mutants of an isolated round, those that run
- *   again after a lost result; 0 when omitted.
+ *   again after a lost result or a crash; 0 when omitted.
  */
 export function countRun(
   state: RunState,

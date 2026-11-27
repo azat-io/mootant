@@ -19,17 +19,18 @@ import { countRun } from './count-run'
  * take no extra files: without parallel units a unit can wait for another of
  * its test file, and the pool runs units in order, so extra files may make a
  * round longer, and measurements showed no gain. A mutant whose timeout waits
- * for its confirmation takes no new files until the confirmation decides it.
- * The verdict comes from the first file with evidence (`decideEvidence`), so it
- * does not depend on the batches or the workers. A round also runs the retries
- * and confirmations of the round before. A request lives at most six rounds, as
- * a unit missing twice gets an `Error` verdict and a timeout is confirmed once,
- * or twice when the confirmation of a timer goes over the hit limit, so the
- * rounds end. While a round runs, its units count in the live verdict counts as
- * they end (`previewIsolatedUnit`), and every mutant is counted again once its
- * result is recorded (`countVerdicts`). With parallel units
- * (`RunState.parallelUnits`) the units of one test file form no serial chain in
- * the estimate of a round.
+ * for its confirmation, or whose crash waits for one more run of its unit,
+ * takes no new files until that run decides it. The verdict comes from the
+ * first file with evidence (`decideEvidence`), so it does not depend on the
+ * batches or the workers. A round also runs the retries and confirmations of
+ * the round before. A request lives at most seven rounds, as a unit missing
+ * twice gets an `Error` verdict, a second crash of the mutant in the test file
+ * kills, and a timeout is confirmed once, or twice when the confirmation of a
+ * timer goes over the hit limit, so the rounds end. While a round runs, its
+ * units count in the live verdict counts as they end (`previewIsolatedUnit`),
+ * and every mutant is counted again once its result is recorded
+ * (`countVerdicts`). With parallel units (`RunState.parallelUnits`) the units
+ * of one test file form no serial chain in the estimate of a round.
  *
  * @param session - Live test runner.
  * @param state - State of the run, updated in place.
@@ -45,8 +46,9 @@ export async function runIsolatedRounds(
  * Runs one isolated round: the requests carried over from the round before that
  * are still undecided, and the next test files of every undecided mutant. Its
  * start tells how many of its mutants confirm a timeout, else run again after a
- * lost result, else, after the first round, run with more test files, so that
- * the progress names the round by what it holds and counts each mutant once.
+ * lost result or a crash, else, after the first round, run with more test
+ * files, so that the progress names the round by what it holds and counts each
+ * mutant once.
  *
  * @param session - Live test runner.
  * @param state - State of the run, updated in place.
@@ -81,6 +83,7 @@ async function runRound(
       requests.push({
         mutant: mutant.mutant.id,
         confirming: false,
+        crashed: false,
         retried: false,
         raised: false,
         file,
@@ -100,7 +103,7 @@ async function runRound(
   for (let request of requests) {
     if (request.confirming) {
       held.confirming.add(request.mutant)
-    } else if (request.retried) {
+    } else if (request.retried || request.crashed) {
       held.retrying.add(request.mutant)
     } else if (round > 0) {
       held.survivors.add(request.mutant)

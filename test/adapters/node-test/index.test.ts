@@ -670,6 +670,52 @@ describe('nodeTestAdapter', () => {
       ])
     }, 60_000)
 
+    it('runs a unit once more when something else kills its process, and takes the verdict of that run', async () => {
+      let directory = await mkdtemp(path.join(tmpdir(), 'mootant-killed-'))
+      let log = path.join(directory, 'processes')
+      let root = path.join(fixtures, 'killed')
+      try {
+        let listing = await listMutants({ paths: ['src'], cwd: root })
+        let { id } = listing.files[0]!.mutants.find(
+          mutant => mutant.replacement === 'percent >= 100',
+        )!
+        /**
+         * The test file kills the second process that runs it, the first unit
+         * after the dry run, as something outside the run would; no test checks
+         * a percent of exactly 100.
+         */
+        let result = await runMutants({
+          builtIns: createBuiltIns(
+            'node-test',
+            nodeTestAdapter({ env: { KILL_LOG: log }, node }),
+          ),
+          mutantIds: [id],
+          paths: ['src'],
+          concurrency: 1,
+          cache: false,
+          cwd: root,
+        })
+
+        expect(
+          result.results.map(entry => [
+            describeMutant(entry),
+            entry.status,
+            entry.cause,
+          ]),
+        ).toStrictEqual([
+          [
+            'src/price.js | comparison-operator | percent >= 100',
+            'Survived',
+            null,
+          ],
+        ])
+        expect(result.diagnostics).toStrictEqual([])
+        await expect(readFile(log, 'utf8')).resolves.toMatch(/^(?:\d+\n){3}$/u)
+      } finally {
+        await rm(directory, { recursive: true, force: true })
+      }
+    }, 60_000)
+
     it('runs no module of the project in a spare process before its unit, and shows tests what a new process shows', async () => {
       let journal = await mkdtemp(path.join(tmpdir(), 'mootant-spare-'))
       /**

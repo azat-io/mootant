@@ -475,7 +475,7 @@ function describeRun(event: Extract<RunEvent, { kind: 'run-start' }>): {
 /**
  * Names an isolated round after the first by what it holds: survivors that run
  * with more test files, timeouts it confirms and mutants it runs again after a
- * lost result.
+ * lost result or a crash.
  *
  * @param event - Start of the round.
  * @returns Name of the phase and its short form.

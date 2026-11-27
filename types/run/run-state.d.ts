@@ -94,6 +94,12 @@ export interface IsolatedRequest {
   confirming: boolean
 
   /**
+   * Whether an earlier unit of the mutant in the test file crashed, so a crash
+   * of this one kills.
+   */
+  crashed: boolean
+
+  /**
    * Whether the unit already went missing once.
    */
   retried: boolean

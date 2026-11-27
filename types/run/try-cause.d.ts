@@ -9,7 +9,8 @@
  *   `aroundAll`) or the file teardown, such as the cleanup of a worker-scoped
  *   fixture or the teardown of the test environment, failed with the mutant
  *   active, or the test file failed outside its tests (isolated path);
- * - `crash`: the worker died with the mutant active (isolated path);
+ * - `crash`: the worker died with the mutant active, and again in a later run of
+ *   the unit (isolated path);
  * - `hit-limit`: the hit counter stopped a loop or far hotter code (confirmed
  *   with doubled time and `factor × floor` more evaluations);
  * - `time-limit`: a timer stopped stuck or far slower code (confirmed with

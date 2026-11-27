@@ -45,8 +45,8 @@ export type RunEvent =
 
       /**
        * Distinct mutants of an isolated round whose units run again, as the
-       * test runner lost what they gave, and are not counted in `confirming`; 0
-       * in other runs.
+       * test runner lost what they gave or their process died, and are not
+       * counted in `confirming`; 0 in other runs.
        */
       retrying: number
 

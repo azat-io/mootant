@@ -4,6 +4,9 @@ import type { IsolatedRequest } from '../../types/run/run-state'
 
 /**
  * Turns the outcome of an isolated unit into the evidence of its test file: a
+ * crash waits for one more run of the unit, as something else, such as the OOM
+ * killer or a `kill -9`, can end its process too, unless an earlier unit of the
+ * mutant in the test file crashed, while a lost result confirms nothing; a
  * timeout waits for its confirmation, unless the unit confirmed one with what
  * stopped it: a timer or a hang in any confirming unit, the hit limit only in
  * one with the raised limit, since a mutant that only makes code hotter goes
@@ -21,6 +24,9 @@ export function getUnitEvidence(
 ): IsolatedEvidence {
   if (verdict === 'survived' || verdict === null) {
     return 'none'
+  }
+  if (verdict.cause === 'crash') {
+    return request.crashed ? verdict : 'confirming'
   }
   let confirmed =
     verdict.cause === 'hit-limit' ? request.raised : request.confirming
