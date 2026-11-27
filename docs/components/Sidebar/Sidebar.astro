@@ -20,6 +20,26 @@ let { isMobileOnly = false } = Astro.props
   </div>
 </nav>
 
+<script>
+  let getScroller = (): HTMLElement | null =>
+    document.querySelector('.sidebar:not(.menu-mobile-only) > .content')
+
+  let scrollTop = 0
+
+  /* The router swaps in a new sidebar on every navigation, so the scroll
+     position moves from the old one to the new one. */
+  document.addEventListener('astro:before-swap', () => {
+    scrollTop = getScroller()?.scrollTop ?? 0
+  })
+
+  document.addEventListener('astro:after-swap', () => {
+    let scroller = getScroller()
+    if (scroller) {
+      scroller.scrollTop = scrollTop
+    }
+  })
+</script>
+
 <style>
   .sidebar {
     display: none;

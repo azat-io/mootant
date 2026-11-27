@@ -34,6 +34,7 @@ export default defineConfig({
     'quasis',
     'qwen',
     'rolldown',
+    'scroller',
     'shiki',
     'shikijs',
     'shlvl',
