@@ -45,6 +45,18 @@ let inputsFixture = path.resolve(
 )
 
 /**
+ * Fixture project without a `tsconfig` file in its root, whose package
+ * `packages/web` covers `src/math.ts`: a class field there calls a setter of
+ * the base class only when classes compile without `useDefineForClassFields`.
+ * The `tsconfig.json` of the package only references `tsconfig.app.json`, which
+ * holds the options Vite reads.
+ */
+let referencesFixture = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/cache-references',
+)
+
+/**
  * Fixture project whose tests read inputs outside the module graph: an
  * environment variable (`test/greet.test.ts`), a JSON file read with
  * `readFileSync` (`test/price.test.ts`), and modules only a mutant loads, by a
@@ -281,9 +293,11 @@ async function writeLimitsPackage(
  * Runs the mutants of the copy with Vitest and counts the isolated units.
  *
  * @param root - Root of the copy.
- * @param options - Fast mode, the cache setting and whether to replay.
+ * @param options - Fast mode, the cache setting, the paths to mutate and
+ *   whether to replay.
  * @param options.fast - Whether to run in fast mode.
  * @param options.cache - Whether to use the cache; on when omitted.
+ * @param options.paths - Paths to mutate; `src` when omitted.
  * @param options.replay - Whether the run may reuse the dry run an earlier run
  *   saved; otherwise a run with the cache removes that first, so it starts
  *   Vitest, as the rows that check the cache keys of fresh dry runs need.
@@ -291,7 +305,12 @@ async function writeLimitsPackage(
  */
 async function run(
   root: string,
-  options: { replay?: boolean; cache?: boolean; fast?: boolean } = {},
+  options: {
+    replay?: boolean
+    paths?: string[]
+    cache?: boolean
+    fast?: boolean
+  } = {},
 ): Promise<{ result: RunResult; units: number }> {
   let { replay = false, ...settings } = options
   if (!replay && settings.cache !== false) {
@@ -726,6 +745,65 @@ describe('vitestAdapter', () => {
         file,
       })
     }, Promise.resolve())
+  }, 120_000)
+
+  it('runs mutants again after a change of a tsconfig file a package references', async () => {
+    let root = await copyFixture(referencesFixture)
+    let paths = ['packages/web/src']
+    let first = await run(root, { paths })
+    let unchanged = await run(root, { paths })
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(
+      first.result.results.map(entry => [
+        entry.mutant.replacement,
+        entry.status,
+      ]),
+    ).toStrictEqual([
+      ['value / 2', 'Survived'],
+      ['3', 'Survived'],
+      ['1', 'Survived'],
+      [';', 'NoCoverage'],
+      ['0', 'NoCoverage'],
+      ['6', 'Killed'],
+    ])
+    expect(splitCached(unchanged.result)).toStrictEqual({
+      cached: ['packages/web/src/math.ts'],
+      ran: [],
+    })
+
+    let config = path.join(root, 'packages/web/tsconfig.app.json')
+    await writeFile(
+      config,
+      (await readFile(config, 'utf8')).replace(
+        '"useDefineForClassFields": true',
+        '"useDefineForClassFields": false',
+      ),
+    )
+    await setTimeout(5)
+    let changed = await run(root, { paths })
+    let fresh = await run(root, { cache: false, paths })
+
+    expect(splitCached(changed.result)).toStrictEqual({
+      ran: ['packages/web/src/math.ts'],
+      cached: [],
+    })
+    expect(changed.result.results.map(summarizeCachedVerdict)).toStrictEqual(
+      fresh.result.results.map(summarizeCachedVerdict),
+    )
+    expect(
+      changed.result.results.map(entry => [
+        entry.mutant.replacement,
+        entry.status,
+      ]),
+    ).toStrictEqual([
+      ['value / 2', 'Killed'],
+      ['3', 'Killed'],
+      ['1', 'Survived'],
+      [';', 'Killed'],
+      ['0', 'Killed'],
+      ['6', 'Killed'],
+    ])
   }, 120_000)
 
   it('runs mutants again after a change of a file a plugin watches for a virtual module', async () => {

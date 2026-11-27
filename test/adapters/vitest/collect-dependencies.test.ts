@@ -294,6 +294,37 @@ describe('collectDependencies', () => {
     expect(transformed).toStrictEqual([])
   })
 
+  it('adds the tsconfig files the closest one references, with their extends chains', async () => {
+    await mkdir(path.join(root, 'web/test'), { recursive: true })
+    await writeFile(
+      path.join(root, 'web/tsconfig.json'),
+      '{ "files": [], "references": [{ "path": "./tsconfig.app.json" }] }',
+    )
+    await writeFile(
+      path.join(root, 'web/tsconfig.app.json'),
+      '{ "extends": "../base.json" }',
+    )
+    let file = path.join(root, 'web/test/a.test.ts')
+    let { environment } = createEnvironment({ [file]: createNode(file) })
+
+    await expect(
+      collectDependencies({
+        project: createProject([environment]),
+        tsconfigs: new Map(),
+        reported: [file],
+        file,
+      }),
+    ).resolves.toStrictEqual(
+      [
+        file,
+        path.join(root, 'base.json'),
+        path.join(root, 'web/test/tsconfig.json'),
+        path.join(root, 'web/tsconfig.app.json'),
+        path.join(root, 'web/tsconfig.json'),
+      ].toSorted(),
+    )
+  })
+
   it('adds the package.json files of each file under node_modules, and looks up tsconfig files there only for TypeScript files', async () => {
     let file = path.join(root, 'test/a.test.ts')
     let script = path.join(root, 'node_modules/pkg/dist/index.js')

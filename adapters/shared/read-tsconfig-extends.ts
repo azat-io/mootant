@@ -1,33 +1,26 @@
-import type { ExpressionStatement } from 'oxc-parser'
-
-import { readFileSync, realpathSync, existsSync } from 'node:fs'
+import { realpathSync, existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { parseSync } from 'oxc-parser'
 import path from 'node:path'
 
-/**
- * Byte order mark some editors put at the start of a file.
- */
-const BYTE_ORDER_MARK = String.fromCodePoint(0xfe_ff)
+import { findTsconfigProperty } from './find-tsconfig-property'
+import { parseTsconfig } from './parse-tsconfig'
 
 /**
  * Lists the configuration files a `tsconfig.json` file extends, directly: those
  * given by a path, and those of packages, in a workspace or in `node_modules`.
- * Files that cannot be read or parsed are left out. The file is JSON with
- * comments and trailing commas, as TypeScript reads it, so it is parsed as a
- * JavaScript expression.
+ * Files that cannot be read or parsed (`parseTsconfig`) are left out.
  *
  * @param file - Absolute path of the `tsconfig.json` file.
  * @returns Absolute paths of the extended files that exist.
  */
 export function readTsconfigExtends(file: string): string[] {
-  let text: string
-  try {
-    text = readFileSync(file, 'utf8')
-  } catch {
-    return []
-  }
-  let specifiers = readExtends(text)
+  let value = findTsconfigProperty(parseTsconfig(file), 'extends')
+  let elements = value?.type === 'ArrayExpression' ? value.elements : [value]
+  let specifiers = elements.flatMap(element =>
+    element?.type === 'Literal' && typeof element.value === 'string' ?
+      [element.value]
+    : [],
+  )
   let directory = path.dirname(file)
   let files: string[] = []
   for (let specifier of specifiers) {
@@ -43,50 +36,6 @@ export function readTsconfigExtends(file: string): string[] {
     }
   }
   return files
-}
-
-/**
- * Reads the `extends` value of the text of a `tsconfig.json` file: the last
- * `extends` property of the top-level object, when it is a string or an array,
- * whose strings it keeps.
- *
- * @param text - Text of the file, with comments and trailing commas allowed.
- * @returns Specifiers, or none when the text is not an object.
- */
-function readExtends(text: string): string[] {
-  let { program, errors } = parseSync(
-    'tsconfig.js',
-    `(\n${text.startsWith(BYTE_ORDER_MARK) ? text.slice(1) : text}\n)`,
-    { preserveParens: false, lang: 'js' },
-  )
-  let [statement] = program.body as [ExpressionStatement | undefined]
-  if (
-    errors.length > 0 ||
-    program.body.length !== 1 ||
-    statement?.expression.type !== 'ObjectExpression'
-  ) {
-    return []
-  }
-  let value = statement.expression.properties.findLast(
-    property =>
-      property.type === 'Property' &&
-      !property.computed &&
-      ((property.key.type === 'Literal' && property.key.value === 'extends') ||
-        (property.key.type === 'Identifier' &&
-          property.key.name === 'extends')),
-  )
-  if (value?.type !== 'Property') {
-    return []
-  }
-  let elements =
-    value.value.type === 'ArrayExpression' ?
-      value.value.elements
-    : [value.value]
-  return elements.flatMap(element =>
-    element?.type === 'Literal' && typeof element.value === 'string' ?
-      [element.value]
-    : [],
-  )
 }
 
 /**

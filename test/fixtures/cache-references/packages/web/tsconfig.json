@@ -1,0 +1,5 @@
+{
+  // Options Vite reads come from the referenced file.
+  "references": [{ "path": "./tsconfig.app.json" }],
+  "files": []
+}

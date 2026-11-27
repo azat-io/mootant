@@ -189,7 +189,9 @@ export async function collectDependencies(input: {
       .map(path.dirname),
   )
   for (let directory of directories) {
-    let tsconfigs = listTsconfigFiles(directory, input.tsconfigs)
+    let tsconfigs = listTsconfigFiles(directory, input.tsconfigs, {
+      references: true,
+    })
     for (let tsconfig of tsconfigs) {
       files.add(tsconfig)
     }

@@ -1,0 +1,4 @@
+{
+  "compilerOptions": { "useDefineForClassFields": true },
+  "include": ["src"]
+}
