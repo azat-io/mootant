@@ -8,7 +8,7 @@ import { CACHE_VERSION } from './cache-version'
  *
  * @param root - Project root.
  * @returns Absolute path of the cache file, such as
- *   `<root>/node_modules/.cache/mootant/run-v6.json`.
+ *   `<root>/node_modules/.cache/mootant/run-v7.json`.
  */
 export function getCachePath(root: string): string {
   return path.join(

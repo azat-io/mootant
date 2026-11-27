@@ -75,7 +75,7 @@ describe('createInputFilter', () => {
         path.join(root, 'node_modules'),
         path.join(root, 'node_modules/vitest/package.json'),
         path.join(root, 'node_modules/.cache'),
-        path.join(root, 'node_modules/.cache/mootant/run-v6.json'),
+        path.join(root, 'node_modules/.cache/mootant/run-v7.json'),
         path.join(root, 'node_modules/.cached/data.json'),
         path.resolve('/projects/shop/node_modules'),
         path.resolve('/projects/shop/node_modules/.pnpm/a/index.js'),

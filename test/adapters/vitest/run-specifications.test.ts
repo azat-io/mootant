@@ -17,10 +17,14 @@ vi.mock(import('../../../adapters/vitest/wait-for-workers'), () => ({
  */
 function createHandle(run: () => Promise<unknown>): VitestHandle {
   return {
+    vitest: {
+      runTestSpecifications: vi.fn(run),
+      provide: vi.fn(),
+      projects: [],
+    },
     state: {
       pool: { drain: vi.fn(() => Promise.resolve()), prepare: vi.fn() },
     },
-    vitest: { runTestSpecifications: vi.fn(run), provide: vi.fn() },
     context: { workDirectory: '/work', root: '/p' },
   } as never
 }
@@ -42,6 +46,7 @@ describe('runSpecifications', () => {
     expect(handle.vitest.provide).toHaveBeenCalledWith('mootant', {
       directory: '/work',
       repeat: true,
+      defines: {},
       mode: 'dry',
       root: '/p',
       timeouts,
@@ -65,6 +70,7 @@ describe('runSpecifications', () => {
       timeouts: null,
       parallel: true,
       repeat: false,
+      defines: {},
       root: '/p',
     })
   })

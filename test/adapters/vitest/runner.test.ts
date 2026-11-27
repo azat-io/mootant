@@ -17,7 +17,7 @@ import {
 } from 'vitest'
 import { readFile, readdir, mkdtemp, mkdir, rm } from 'node:fs/promises'
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
-import { TestRunner } from 'vitest'
+import { TestRunner, inject } from 'vitest'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -92,6 +92,11 @@ const BATCH_LIMITS: BatchUnit['limits'] = {
 }
 
 /**
+ * Key under which Vite's module runner gives a module its `import.meta`.
+ */
+const IMPORT_META_KEY = '__vite_ssr_import_meta__'
+
+/**
  * Isolated unit of the fake test file with the mutant `m`.
  */
 const ISOLATED_UNIT: IsolatedUnit = {
@@ -110,10 +115,17 @@ let bodies = new WeakMap<RunnerTask, Body>()
 let hooks = new WeakMap<object, FakeHooks>()
 let cleanups: (() => unknown)[] = []
 let workerState = Reflect.get(globalThis, '__vitest_worker__') as {
-  ctx: { environment: { name: string }; traces?: unknown; pool: string }
+  ctx: {
+    environment: { name: string }
+    providedContext: object
+    traces?: unknown
+    pool: string
+  }
+  providedContext: object
   rpc: object
 }
 let realTraces = workerState.ctx.traces
+let realProvided = workerState.providedContext
 let realRpc = workerState.rpc
 
 /**
@@ -239,20 +251,36 @@ async function simulateRepeat(
 /**
  * Creates a runner for the current options.
  *
- * @param hookTimeout - User hook timeout.
- * @param name - Name of the project, if any.
+ * @param project - Settings of the project.
+ * @param project.hookTimeout - User hook timeout; 10 seconds when omitted.
+ * @param project.defines - Defines Vitest set as globals for the project.
+ * @param project.snapshotEnvironment - Custom snapshot environment, if any.
+ * @param project.name - Name of the project, if any.
  * @returns Runner and its serialized configuration.
  */
 function createRunner(
-  hookTimeout = 10_000,
-  name?: string,
+  project: {
+    defines?: Record<string, unknown>
+    snapshotEnvironment?: string
+    hookTimeout?: number
+    name?: string
+  } = {},
 ): {
   config: SerializedConfig
   runner: Runner
 } {
+  let {
+    hookTimeout = 10_000,
+    snapshotEnvironment,
+    defines = {},
+    name,
+  } = project
   let config: SerializedConfig = {
     experimental: { viteModuleRunner: true },
+    snapshotSerializers: [],
+    snapshotEnvironment,
     hookTimeout,
+    defines,
     name,
   } as never
   let runner = new Runner(config)
@@ -646,8 +674,15 @@ describe('Runner', () => {
   afterEach(async () => {
     cleanups = []
     workerState.ctx.traces = realTraces
+    workerState.ctx.providedContext = realProvided
+    workerState.providedContext = realProvided
     workerState.rpc = realRpc
     Reflect.deleteProperty(workerState, Symbol.for('mootant.vitest.strays'))
+    Reflect.deleteProperty(workerState, Symbol.for('mootant.vitest.values'))
+    Reflect.deleteProperty(workerState, Symbol.for('mootant.vitest.meta'))
+    Reflect.deleteProperty(workerState, 'metaDefines')
+    Reflect.deleteProperty(globalThis, '__MOOTANT_RUNNER__')
+    Reflect.deleteProperty(globalThis, 'mootantApp')
     vi.restoreAllMocks()
     await rm(directory, { recursive: true, force: true })
     await Promise.all(
@@ -757,7 +792,11 @@ describe('Runner', () => {
     projects.push(project)
     await mkdir(path.join(project, 'node_modules'))
     options.root = project
-    let { runner } = createRunner()
+    options.defines = { '': { 'mootantApp.version': false } }
+    Reflect.set(globalThis, 'mootantApp', { version: '1' })
+    Reflect.set(globalThis, '__MOOTANT_RUNNER__', 1)
+    let { runner } = createRunner({ defines: { __MOOTANT_RUNNER__: 1 } })
+    expect(inject('mootantEarly' as never)).toBeUndefined()
     let snapshot = '/project/test/__snapshots__/a.test.ts.snap'
     Reflect.set(runner, 'snapshotClient', {
       snapshotStateMap: new Map([
@@ -778,6 +817,12 @@ describe('Runner', () => {
     let file = createFile([
       createTest('a', () => {
         expect(process.env['MOOTANT_PROBE']).toBeUndefined()
+        expect(Reflect.get(globalThis, '__MOOTANT_RUNNER__')).toBe(1)
+        expect(
+          (Reflect.get(globalThis, 'mootantApp') as { version: string })
+            .version,
+        ).toBe('1')
+        expect(inject('mootantProbe' as never)).toBeUndefined()
         expect(existsSync(data)).toBe(false)
         expect(existsSync(path.join(project, 'node_modules/a.json'))).toBe(
           false,
@@ -838,6 +883,11 @@ describe('Runner', () => {
       'MOOTANT_FIXTURE',
       'MOOTANT_LATE',
       'MOOTANT_PROBE',
+      'define=__MOOTANT_RUNNER__',
+      'define=mootantApp.version',
+      'defines=',
+      'provide=mootantEarly',
+      'provide=mootantProbe',
     ])
     expect(end.modified).toStrictEqual([changed])
     expect(saved).toBe(`${getFileHash('', '')}.json`)
@@ -894,7 +944,7 @@ describe('Runner', () => {
       'end',
     ])
     expect(records.at(-1)).toMatchObject({ kind: 'end', unit: 5, hits: 1 })
-    expect(records.at(-1)).toMatchObject({ environment: [] })
+    expect(records.at(-1)).toMatchObject({ environment: ['defines='] })
     expect(records.at(-1)).toHaveProperty('dependencies')
     expect(tests[4]!.mode).toBe('skip')
     expect(hasBeat()).toBe(false)
@@ -945,7 +995,7 @@ describe('Runner', () => {
       { mutants: ['m1', 'm2'], hitLimit: 10, timeout: 20, id: 'a' },
       { mutants: ['m2'], hitLimit: 10, timeout: 20, id: 'b' },
     ])
-    let { runner, config } = createRunner(0)
+    let { runner, config } = createRunner({ hookTimeout: 0 })
     let tests = [
       createTest('a', runtime =>
         runtime.hit('m2') ? new Promise<void>(() => {}) : Promise.resolve(),
@@ -1019,7 +1069,7 @@ describe('Runner', () => {
       }
       let unit = mode === 'isolated' ? { ...ISOLATED_UNIT, project } : batch
       writePlan([unit, unit], project)
-      await createRunner(10_000, project).runner.onBeforeCollect([FILE])
+      await createRunner({ name: project }).runner.onBeforeCollect([FILE])
       started.push(project)
     }
     /**
@@ -1084,18 +1134,76 @@ describe('Runner', () => {
     )
   })
 
-  it('claims the unit planned for the project of the file', async () => {
+  it('claims the unit planned for the project of the file and takes the defines of that project', async () => {
     setOptions('batch')
+    options.defines = { '': { 'mootantApp.version': true }, unit: {} }
     writeBatchPlan(
       [{ mutants: ['m1'], hitLimit: 10, timeout: 20, id: 'a' }],
       'unit',
     )
-    let { runner } = createRunner(10_000, 'unit')
+    let { runner } = createRunner({ name: 'unit' })
     await runFile(runner, createFile([createTest('a')]))
+    let records = await readRecords()
 
-    expect(Object.keys(await readRecords())).toStrictEqual([
+    expect(Object.keys(records)).toStrictEqual([
       `${getFileHash(FILE, 'unit')}-0`,
     ])
+    expect(Object.values(records)[0]!.at(-1)).toMatchObject({
+      environment: ['defines='],
+    })
+  })
+
+  it('counts every provided value and define for a project with a snapshot environment of its own, which Vitest may load before the runner', async () => {
+    setOptions('batch')
+    options.defines = { '': { 'import.meta.mootantTime': false } }
+    writeBatchPlan([{ mutants: ['m1'], hitLimit: 10, timeout: 20, id: 'a' }])
+    let { runner } = createRunner({ snapshotEnvironment: './snapshot.ts' })
+    await runFile(runner, createFile([createTest('a')]))
+    let records = await readRecords()
+
+    expect(Object.values(records)[0]!.at(-1)).toMatchObject({
+      environment: ['define=import.meta.mootantTime', 'defines=', 'provide=*'],
+    })
+  })
+
+  it('counts the defines of import.meta at once without a module runner to track them', async () => {
+    setOptions('batch')
+    options.defines = { '': { 'import.meta.mootantTime': false } }
+    writeBatchPlan([{ mutants: ['m1'], hitLimit: 10, timeout: 20, id: 'a' }])
+    let { runner } = createRunner()
+    await runFile(runner, createFile([createTest('a')]))
+    let records = await readRecords()
+
+    expect(Object.values(records)[0]!.at(-1)).toMatchObject({
+      environment: ['define=import.meta.mootantTime', 'defines='],
+    })
+  })
+
+  it('tracks the defines of import.meta in the modules the module runner evaluates', async () => {
+    setOptions('batch')
+    options.defines = { '': { 'import.meta.mootantTime': false } }
+    Reflect.set(workerState, 'metaDefines', { mootantTime: 'now' })
+    writeBatchPlan([{ mutants: ['m1'], hitLimit: 10, timeout: 20, id: 'a' }])
+    let evaluator: {
+      runInlinedModule(context: Record<string, unknown>): Promise<unknown>
+    } = { runInlinedModule: () => Promise.resolve() }
+    let meta: Record<string, unknown> = {}
+    let { runner } = createRunner()
+    Object.defineProperty(runner, 'moduleRunner', { value: { evaluator } })
+    let body: Body = async () => {
+      await evaluator.runInlinedModule({ [IMPORT_META_KEY]: meta })
+      expect(
+        Object.getOwnPropertyDescriptor(meta, 'mootantTime'),
+      ).toHaveProperty('get')
+      expect(meta['mootantTime']).toBe('now')
+    }
+    await runFile(runner, createFile([createTest('a', body)]))
+    let records = await readRecords()
+
+    expect(Object.values(records)[0]!.at(-1)).toMatchObject({
+      environment: ['define=import.meta.mootantTime', 'defines='],
+    })
+    expect(Reflect.get(workerState, 'metaDefines')).toStrictEqual({})
   })
 
   it('skips every test of a file without a free unit', async () => {
@@ -1475,7 +1583,7 @@ describe('Runner', () => {
 
   it('gives the dry watchdog the timeouts of the hooks', async () => {
     setOptions('dry')
-    let { runner } = createRunner(300)
+    let { runner } = createRunner({ hookTimeout: 300 })
     let beats: VitestHeartbeat[] = []
     let tests = [
       createTest('a', () => {

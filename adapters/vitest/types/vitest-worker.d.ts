@@ -33,7 +33,8 @@ export type VitestOutRecord =
 
       /**
        * Names of the environment variables the test code read, or `*` when it
-       * listed them all, sorted.
+       * listed them all, and of the values of `provide` and `define` it read
+       * (`trackValues`), sorted.
        */
       environment: string[]
 
@@ -154,6 +155,13 @@ export type VitestOutRecord =
  * Options the main process provides to workers under the key `mootant`.
  */
 export interface VitestWorkerOptions {
+  /**
+   * Defines Vitest runs as a script in the workers of each project, by key,
+   * with whether each value is code (`listScriptDefines`), by project name;
+   * none when omitted.
+   */
+  defines?: Record<string, Record<string, boolean>>
+
   /**
    * Watchdog budgets of a dry run (`DryRunRequest.timeouts`), or null in batch
    * and isolated runs, whose plans carry their own.

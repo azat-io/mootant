@@ -120,8 +120,8 @@ export interface CacheEvidence<
  */
 export interface PendingInputs {
   /**
-   * Names of environment variables with the hash of their values, or null for a
-   * variable that is not set, sorted.
+   * Names of environment variables, or of other values, with the hash of their
+   * values, or null for one that is not set, sorted.
    */
   environment: [string, string | null][]
 

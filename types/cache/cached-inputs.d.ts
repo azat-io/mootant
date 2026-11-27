@@ -5,8 +5,8 @@
  */
 export interface CachedInputs {
   /**
-   * Names of environment variables with the hash of their values, or null for a
-   * variable that was not set, sorted.
+   * Names of environment variables, or of other values (`DryFile.environment`),
+   * with the hash of their values, or null for one that was not set, sorted.
    */
   environment: [string, string | null][]
 

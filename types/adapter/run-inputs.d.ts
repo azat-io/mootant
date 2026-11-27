@@ -1,8 +1,8 @@
 /**
  * What a run of a test file read besides the code of its mutant: the files it
- * depended on and the environment variables it read. The cache compares them
- * with the dry run of the test file, and evidence that read more is reused only
- * while those extra inputs are unchanged.
+ * depended on and the environment variables and other values it read. The cache
+ * compares them with the dry run of the test file, and evidence that read more
+ * is reused only while those extra inputs are unchanged.
  */
 export interface RunInputs {
   /**
@@ -14,7 +14,8 @@ export interface RunInputs {
 
   /**
    * Names of the environment variables the test code read, or `*` when it
-   * listed them all; values come from `CacheInputs.environment`.
+   * listed them all, and of other values, as in `DryFile.environment`; values
+   * come from `CacheInputs.environment`.
    */
   environment: string[]
 }

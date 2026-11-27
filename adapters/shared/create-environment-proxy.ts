@@ -3,9 +3,10 @@ import type { EnvironmentProxyState } from './types/environment-proxy-state'
 import { ENVIRONMENT_SLOT } from './environment-slot'
 
 /**
- * Wraps an object of environment variables in a proxy that reports to the
- * receiver of the state the names read and `*` when they are listed. The fields
- * of the state are read at every trap, since their owner replaces them later.
+ * Wraps an object of environment variables, or of other values code reads by
+ * name, in a proxy that reports to the receiver of the state the names read and
+ * `*` when they are listed. The fields of the state are read at every trap,
+ * since their owner replaces them later.
  *
  * @param target - Object to wrap.
  * @param state - Tracking state; `listing` is written here too.

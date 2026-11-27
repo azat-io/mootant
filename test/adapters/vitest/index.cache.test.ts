@@ -160,6 +160,24 @@ let packageFixture = path.resolve(
 )
 
 /**
+ * Fixture workspace of three projects with a shared root: the global setup of
+ * project `a` provides the URL of a server on a random port, with a token of
+ * the run, and its `define` holds the time the configuration loaded;
+ * `test/a/url.test.ts` reads the URL, `test/a/stamp.test.ts` the time and
+ * `test/a/plain.test.ts` neither. The `define` of project `b` holds the time
+ * under a key with a dot, which `test/b/started.test.ts` reads, and on
+ * `import.meta`, which `test/b/meta.test.ts` reads, while
+ * `test/b/other.test.ts` reads only a URL its project never provides. Project
+ * `c` provides a URL too, and its `define` of an environment variable holds
+ * code that stores the URL in a global as Vitest evaluates it, which
+ * `test/c/init.test.ts` reads.
+ */
+let volatileFixture = path.resolve(
+  import.meta.dirname,
+  '../../fixtures/cache-volatile',
+)
+
+/**
  * Environment variables the tests change, with their values before.
  */
 let variables = Object.fromEntries(
@@ -1102,6 +1120,7 @@ describe('vitestAdapter', () => {
       'src/golden.ts',
       'src/listing.ts',
     ]
+    let readers = ['src/child.ts', 'src/config.ts', 'src/listing.ts']
     process.env['MOOTANT_PROVIDE'] = 'p'
     process.env['MOOTANT_DEFINE'] = 'd'
     process.env['MOOTANT_CHILD'] = 'a'
@@ -1152,14 +1171,46 @@ describe('vitestAdapter', () => {
     process.env['MOOTANT_DEFINE'] = 'e'
     let define = await run(root)
 
-    expect(splitCached(define.result).ran).toStrictEqual(all)
+    expect(splitCached(define.result).ran).toStrictEqual(readers)
 
     process.env['MOOTANT_PROVIDE'] = 'q'
     let provide = await run(root)
 
-    expect(splitCached(provide.result).ran).toStrictEqual(all)
+    expect(splitCached(provide.result).ran).toStrictEqual(readers)
     expect(provide.result.diagnostics).toStrictEqual([])
   }, 180_000)
+
+  it('runs again only the test files that read a value of provide or define that changed, in their own project', async () => {
+    let root = await copyFixture(volatileFixture)
+    let all = [
+      'src/code.ts',
+      'src/meta.ts',
+      'src/other.ts',
+      'src/plain.ts',
+      'src/stamp.ts',
+      'src/started.ts',
+      'src/url.ts',
+    ]
+    let first = await run(root)
+    let second = await run(root)
+    let replayed = await run(root, { replay: true })
+
+    expect(first.result.diagnostics).toStrictEqual([])
+    expect(splitCached(first.result)).toStrictEqual({ cached: [], ran: all })
+    expect(splitCached(second.result)).toStrictEqual({
+      ran: [
+        'src/code.ts',
+        'src/meta.ts',
+        'src/stamp.ts',
+        'src/started.ts',
+        'src/url.ts',
+      ],
+      cached: ['src/other.ts', 'src/plain.ts'],
+    })
+    expect(second.result.diagnostics).toStrictEqual([])
+    expect(replayed.result.runs).toStrictEqual({})
+    expect(splitCached(replayed.result)).toStrictEqual({ cached: all, ran: [] })
+  }, 120_000)
 
   it('keeps what teardown and recursive listings read in the cache keys', async () => {
     let root = await copyFixture(teardownFixture)

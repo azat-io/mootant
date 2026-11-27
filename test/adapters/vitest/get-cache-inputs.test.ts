@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { inspect } from 'node:util'
 import path from 'node:path'
 
 import { getCacheInputs } from '../../../adapters/vitest/get-cache-inputs'
@@ -15,11 +16,19 @@ import { createDigest } from '../../../core/cache/create-digest'
  * @param fields.evaluated - Module ids the main process evaluated for the
  *   global setup files, or undefined without a module runner.
  * @param fields.define - Values Vite's `define` replaces, or undefined.
+ * @param fields.defines - Defines Vitest sets as globals; `__D__` when omitted.
+ * @param fields.scripted - Defines Vitest runs as a script; `a.b` with
+ *   `define`, none without it, when omitted.
+ * @param fields.provided - Values provided to the workers, mootant's options
+ *   among them; mootant's options, a map and a big integer when omitted.
  * @param fields.filter - `onUnhandledError` of the root configuration, or
  *   undefined.
  * @returns Project with settings and Vite configuration.
  */
 function createProject(fields: {
+  scripted?: Record<string, unknown>
+  provided?: Record<string, unknown>
+  defines?: Record<string, unknown>
   define?: Record<string, unknown>
   envDir?: string | false
   evaluated?: string[]
@@ -36,12 +45,13 @@ function createProject(fields: {
         hooks: 'stack',
         seed: 123,
       },
+      _scriptDefines:
+        fields.scripted ?? (fields.define ? { 'a.b': 'x' } : undefined),
       snapshotOptions: { updateSnapshot: 'new' },
       environment: fields.environment ?? 'node',
+      defines: fields.defines ?? { __D__: 2 },
       globalSetup: ['/p/setup.ts'],
-      ...(fields.define && { _scriptDefines: { 'a.b': 'x' } }),
       environmentOptions: {},
-      defines: { __D__: 2 },
       hookTimeout: 10_000,
       maxConcurrency: 5,
       testTimeout: 5000,
@@ -67,15 +77,42 @@ function createProject(fields: {
         mode: 'test',
       },
     },
-    getProvidedContext: () => ({
-      mootant: { directory: '/t' },
-      seed: new Map([['n', 1]]),
-      big: 1n,
-    }),
+    getProvidedContext: () =>
+      fields.provided ?? {
+        mootant: { directory: '/t' },
+        seed: new Map([['n', 1]]),
+        big: 1n,
+      },
     globalConfig: { dangerouslyIgnoreUnhandledErrors: true },
     vitest: { state: { onUnhandledError: fields.filter } },
     name: fields.name ?? '',
   }
+}
+
+/**
+ * Lists the cache inputs of a session of the given projects, with no
+ * environment variables.
+ *
+ * @param projects - Projects of the session (`createProject`).
+ * @returns Cache inputs.
+ */
+function listInputs(projects: unknown[]): ReturnType<typeof getCacheInputs> {
+  return getCacheInputs(
+    { vite: { config: { configFileDependencies: [] } }, projects } as never,
+    {},
+  )
+}
+
+/**
+ * Hashes one provided value as `getCacheInputs` does.
+ *
+ * @param value - Value a global setup file provided.
+ * @returns Hash of the value under `provide=value`.
+ */
+function hashProvided(value: unknown): undefined | string {
+  return listInputs([createProject({ provided: { value } })]).environment?.[
+    ''
+  ]?.['provide=value']
 }
 
 /**
@@ -122,6 +159,14 @@ describe('getCacheInputs', () => {
         },
       },
     )
+    let values = {
+      'provide=*': createDigest(
+        "[ [ 'seed', Map(1) { 'n' => 1 } ], [ 'big', 1n ] ]",
+      ),
+      'provide=seed': createDigest("Map(1) { 'n' => 1 }"),
+      'define=__D__': createDigest('[ [ 2 ], [] ]'),
+      'provide=big': createDigest('1n'),
+    }
 
     expect(inputs.files).toStrictEqual([
       '/p/vitest.config.ts',
@@ -149,8 +194,6 @@ describe('getCacheInputs', () => {
           shuffle: true,
           seed: 123,
         },
-        values:
-          "[ { __N__: '1' }, { __D__: 2 }, { 'a.b': 'x' }, [ [ 'seed', Map(1) { 'n' => 1 } ], [ 'big', 1n ] ] ]",
         dangerouslyIgnoreUnhandledErrors: true,
         onUnhandledError: String(dropErrors),
         environment: './env/custom.ts',
@@ -172,8 +215,6 @@ describe('getCacheInputs', () => {
           shuffle: false,
           seed: null,
         },
-        values:
-          "[ null, { __D__: 2 }, null, [ [ 'seed', Map(1) { 'n' => 1 } ], [ 'big', 1n ] ] ]",
         onUnhandledError: null,
         environment: 'jsdom',
         variables: [],
@@ -198,8 +239,15 @@ describe('getCacheInputs', () => {
         PATH: 'p',
         PWD: 'w',
         TZ: 't',
+        ...values,
+        'defines=': createDigest("[ [ '__D__' ], [ 'a.b' ], { __N__: '1' } ]"),
+        'define=a.b': createDigest("[ [], [ 'x' ] ]"),
       },
-      web: { '*': createDigest([]) },
+      web: {
+        ...values,
+        'defines=': createDigest("[ [ '__D__' ], [], null ]"),
+        '*': createDigest([]),
+      },
     })
     expect(Object.keys(inputs.environment?.[''] ?? {})).toStrictEqual([
       'LANG',
@@ -212,6 +260,118 @@ describe('getCacheInputs', () => {
       'VITEST_POOL_ID',
       'VITEST_WORKER_ID',
       '*',
+      'provide=seed',
+      'provide=big',
+      'provide=*',
+      'define=__D__',
+      'define=a.b',
+      'defines=',
     ])
+  })
+
+  it('hashes the provided values and defines of each project apart, never the options of mootant', () => {
+    let base = listInputs([
+      createProject({ provided: { apiUrl: 'a', mootant: 1 }, name: 'a' }),
+      createProject({ provided: { mootant: 1 }, name: 'b' }),
+    ])
+    let url = listInputs([
+      createProject({ provided: { apiUrl: 'b', mootant: 1 }, name: 'a' }),
+      createProject({ provided: { mootant: 1 }, name: 'b' }),
+    ])
+    let options = listInputs([
+      createProject({ provided: { apiUrl: 'a', mootant: 2 }, name: 'a' }),
+      createProject({ provided: { mootant: 2 }, name: 'b' }),
+    ])
+    let define = listInputs([
+      createProject({
+        provided: { apiUrl: 'a', mootant: 1 },
+        defines: { __D__: 3 },
+        name: 'a',
+      }),
+      createProject({ provided: { mootant: 1 }, name: 'b' }),
+    ])
+    let added = listInputs([
+      createProject({
+        provided: { apiUrl: 'a', mootant: 1 },
+        defines: { __D__: 2, __E__: 1 },
+        name: 'a',
+      }),
+      createProject({ provided: { mootant: 1 }, name: 'b' }),
+    ])
+    let a = base.environment?.['a']
+
+    expect(a).toStrictEqual({
+      'defines=': createDigest("[ [ '__D__' ], [], null ]"),
+      'provide=*': createDigest("[ [ 'apiUrl', 'a' ] ]"),
+      'define=__D__': createDigest('[ [ 2 ], [] ]'),
+      'provide=apiUrl': createDigest("'a'"),
+      '*': createDigest([]),
+    })
+    expect(url.settings).toStrictEqual(base.settings)
+    expect(url.environment?.['b']).toStrictEqual(base.environment?.['b'])
+    expect(url.environment?.['a']).toStrictEqual({
+      ...a,
+      'provide=*': createDigest("[ [ 'apiUrl', 'b' ] ]"),
+      'provide=apiUrl': createDigest("'b'"),
+    })
+    expect(options.environment).toStrictEqual(base.environment)
+    expect(define.environment?.['a']).toStrictEqual({
+      ...a,
+      'define=__D__': createDigest('[ [ 3 ], [] ]'),
+    })
+    expect(added.environment?.['a']).toStrictEqual({
+      ...a,
+      'defines=': createDigest("[ [ '__D__', '__E__' ], [], null ]"),
+      'define=__E__': createDigest('[ [ 1 ], [] ]'),
+    })
+    expect(
+      listInputs([createProject({ provided: { '*': 1, x: 2 } })]).environment?.[
+        ''
+      ]?.['provide=*'],
+    ).toBe(createDigest("[ [ '*', 1 ], [ 'x', 2 ] ]"))
+  })
+
+  it('hashes a define by both values a project gives it, when its script and its globals hold the same key', () => {
+    /**
+     * Hashes `__F__` of a project that gives it as a global and in a script.
+     *
+     * @param value - Value of the global.
+     * @param code - Code of the script.
+     * @returns Hash under `define=__F__`.
+     */
+    function hashBoth(value: number, code: string): undefined | string {
+      return listInputs([
+        createProject({ scripted: { __F__: code }, defines: { __F__: value } }),
+      ]).environment?.['']?.['define=__F__']
+    }
+
+    expect(hashBoth(1, 'globalThis.f')).toBe(
+      createDigest("[ [ 1 ], [ 'globalThis.f' ] ]"),
+    )
+    expect(hashBoth(2, 'globalThis.f')).not.toBe(hashBoth(1, 'globalThis.f'))
+    expect(hashBoth(1, 'globalThis.g')).not.toBe(hashBoth(1, 'globalThis.f'))
+  })
+
+  it('hashes a provided value by every part a worker gets, getters, objects that describe themselves and long buffers included', () => {
+    let changed = Buffer.alloc(60)
+    changed[59] = 1
+
+    expect(
+      hashProvided({
+        get port() {
+          return 1
+        },
+      }),
+    ).not.toBe(
+      hashProvided({
+        get port() {
+          return 2
+        },
+      }),
+    )
+    expect(hashProvided({ [inspect.custom]: () => 'box', value: 1 })).not.toBe(
+      hashProvided({ [inspect.custom]: () => 'box', value: 2 }),
+    )
+    expect(hashProvided(Buffer.alloc(60))).not.toBe(hashProvided(changed))
   })
 })

@@ -20,7 +20,8 @@ import { collectDependencies } from './collect-dependencies'
  *   record.
  * @param reported.dependencies - Module ids and paths of `listDependencies`, or
  *   null when the worker could not tell.
- * @param reported.environment - Names of the environment variables read.
+ * @param reported.environment - Names of the environment variables and values
+ *   read (`VitestOutRecord.environment`).
  * @param reported.filtered - Whether `onUnhandledError` decided an unhandled
  *   error of the unit.
  * @returns Inputs of the unit, or null without a report or dependencies.

@@ -4,6 +4,7 @@ import type { VitestWorkerOptions } from './types/vitest-worker'
 import type { VitestHandle } from './types/vitest-session-state'
 
 import { getErrorMessage } from '../shared/get-error-message'
+import { listScriptDefines } from './list-script-defines'
 import { waitForWorkers } from './wait-for-workers'
 
 /**
@@ -20,7 +21,8 @@ import { waitForWorkers } from './wait-for-workers'
  * (`MootantForksPool.prepare`). Otherwise the worker of a unit starts while the
  * unit before it runs and waits for it, so spares would only add load. The
  * spares left stop once Vitest ends the run, as no unit claims them, so the
- * wait for workers never sees them.
+ * wait for workers never sees them. The options name the defines each project
+ * runs as a script (`listScriptDefines`).
  *
  * @param handle - Live Vitest instance of the session.
  * @param worker - Kind of the run the workers perform and, for a dry run, the
@@ -34,7 +36,10 @@ import { waitForWorkers } from './wait-for-workers'
  */
 export async function runSpecifications(
   handle: VitestHandle,
-  worker: Omit<VitestWorkerOptions, 'directory' | 'parallel' | 'root'>,
+  worker: Omit<
+    VitestWorkerOptions,
+    'directory' | 'parallel' | 'defines' | 'root'
+  >,
   specifications: TestSpecification[],
 ): Promise<string | null> {
   let { context, vitest, state } = handle
@@ -42,6 +47,7 @@ export async function runSpecifications(
   vitest.provide('mootant', {
     ...worker,
     ...(context.parallelUnits === true && { parallel: true }),
+    defines: listScriptDefines(vitest),
     directory: context.workDirectory,
     root: context.root,
   })

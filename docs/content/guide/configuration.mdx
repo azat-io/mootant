@@ -391,8 +391,9 @@ Reuses verdicts from earlier runs. `true` by default. `--no-cache` and `--cache`
 set it for one run.
 
 Verdicts are stored in `node_modules/.cache/mootant` in the project root. A
-verdict is reused while the mutated file and the files and environment variables
-read by its tests stay unchanged.
+verdict is reused while the mutated file and the files, environment variables
+and, with Vitest, `provide` and `define` values read by its tests stay
+unchanged.
 
 Mootant tracks files read by tests, including files outside the project root,
 such as workspace fixtures, and files of installed packages. Directory listings
@@ -493,7 +494,8 @@ A verdict is reused while these dependencies stay unchanged:
 
 - The declaration containing the mutant.
 - The code that declaration depends on in the same file.
-- Files and environment variables read by its tests, excluding mutated files.
+- Files, environment variables and, with Vitest, `provide` and `define` values
+  read by its tests, excluding mutated files.
 
 This speeds up runs after an edit, but changes to a caller or another mutated
 file may leave a cached verdict stale.

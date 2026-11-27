@@ -37,7 +37,8 @@ export interface DrySnapshot {
    * test runner could set any (`listVariableHashes`): each one test code read,
    * in the dry run or in a unit whose evidence the cache holds, and `*` for all
    * but those that change from shell to shell, with the hash of the value, or
-   * null when unset.
+   * null when unset, as the names of other values (`DryFile.environment`)
+   * always are.
    */
   variables: [string, string | null][]
 

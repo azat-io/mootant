@@ -27,6 +27,7 @@ import type { InputTracking } from '../shared/types/input-tracking'
 import { installMutantRuntime } from '../../core/runtime/install-mutant-runtime'
 import { enableCompileCache } from '../shared/enable-compile-cache'
 import { watchWorkerClose } from './worker/watch-worker-close'
+import { trackMetaDefines } from './worker/track-meta-defines'
 import { listDependencies } from './worker/list-dependencies'
 import { getErrorMessage } from '../shared/get-error-message'
 import { VITEST_VARIABLES } from './worker/vitest-variables'
@@ -38,11 +39,13 @@ import { installTryHook } from './worker/install-try-hook'
 import { writeHeartbeat } from './worker/write-heartbeat'
 import { findHookError } from './worker/find-hook-error'
 import { getHookBudget } from './worker/get-hook-budget'
+import { VALUE_PREFIXES } from './worker/value-prefixes'
 import { readTryFacts } from './worker/read-try-facts'
 import { captureClock } from '../shared/capture-clock'
 import { trackInputs } from '../shared/track-inputs'
 import { getFileHash } from './worker/get-file-hash'
 import { waitForTurn } from './worker/wait-for-turn'
+import { trackValues } from './worker/track-values'
 import { encodeStray } from './worker/encode-stray'
 import { orderTests } from './worker/order-tests'
 import { claimUnit } from './worker/claim-unit'
@@ -205,15 +208,16 @@ let readDate = Date.now.bind(Date)
  * the worker's teardown: Vitest cleans up the worker-scoped fixtures, then
  * tears the test environment down; errors of both count as a failed suite hook,
  * and the heartbeat covers both, so a hang there stops the worker. What the
- * code reads is recorded until the unit ends, so files and environment
- * variables read in that teardown are inputs of the unit like those its tests
- * read; a teardown step that runs after the unit ended, as the test
- * environment's when the worker's teardown cannot be watched, counts for
- * neither. A test environment other than Vitest's own loads and sets up before
- * the runner exists, out of sight, so its units report no dependencies and are
- * never cached. A unit waits until the worker of the unit before it of the same
- * test file is gone, so a test file never runs twice at once, unless the run is
- * an isolated one with parallel units (`VitestWorkerOptions.parallel`).
+ * code reads is recorded until the unit ends, so files, environment variables
+ * and values of `provide` and `define` read in that teardown are inputs of the
+ * unit like those its tests read; a teardown step that runs after the unit
+ * ended, as the test environment's when the worker's teardown cannot be
+ * watched, counts for neither. A test environment other than Vitest's own loads
+ * and sets up before the runner exists, out of sight, so its units report no
+ * dependencies and are never cached. A unit waits until the worker of the unit
+ * before it of the same test file is gone, so a test file never runs twice at
+ * once, unless the run is an isolated one with parallel units
+ * (`VitestWorkerOptions.parallel`).
  *
  * Tests the user marked concurrent stay concurrent in isolated units and in a
  * dry run that tries each test once, as in a plain run; a batch run and a dry
@@ -263,6 +267,12 @@ export default class Runner extends TestRunner {
    * when the user's tests run concurrently.
    */
   private readonly records = new Map<RunnerTestCase, TestRecord>()
+
+  /**
+   * Defines Vitest ran as a script for the project, by key, with whether each
+   * value is code (`listScriptDefines`).
+   */
+  private readonly scripted: Readonly<Record<string, boolean>>
 
   /**
    * Milliseconds the hooks around each test may take by Vitest's own hook
@@ -319,6 +329,12 @@ export default class Runner extends TestRunner {
    * Mutants a try of this unit already failed with; they are not tried again.
    */
   private readonly killed = new Set<string>()
+
+  /**
+   * Names of the values of `provide` and `define` the code read since the
+   * runner was created (`trackValues`).
+   */
+  private readonly values = new Set<string>()
 
   /**
    * Ids of the tests that run, or null to run every test.
@@ -474,15 +490,18 @@ export default class Runner extends TestRunner {
   /**
    * Creates the runner of one test file, turns the compile cache of the worker
    * on for the modules it loads from now on (`enableCompileCache`), which
-   * Vitest writes when it stops the worker, installs the mutant runtime, takes
-   * over Vitest's report of the worker's unhandled errors (`interceptStrays`),
-   * records the worker's process id, so the main process waits until the worker
-   * is gone, and moves the end of the unit to the end of the worker's teardown,
-   * after the test environment's teardown, whose error fails the unit like a
-   * failed suite hook. A dry run turns test locations on, as the report gives
-   * the line of each test. Batch and isolated runs keep the project's setting:
-   * Vitest finds each location by mapping a stack trace through source maps,
-   * which every unit would pay for each test and suite of its file.
+   * Vitest writes when it stops the worker, records the values of `provide` and
+   * `define` the code reads from now on, as Vitest loads the modules of the
+   * diff and the snapshot serializers after the runner (`trackValues`),
+   * installs the mutant runtime, takes over Vitest's report of the worker's
+   * unhandled errors (`interceptStrays`), records the worker's process id, so
+   * the main process waits until the worker is gone, and moves the end of the
+   * unit to the end of the worker's teardown, after the test environment's
+   * teardown, whose error fails the unit like a failed suite hook. A dry run
+   * turns test locations on, as the report gives the line of each test. Batch
+   * and isolated runs keep the project's setting: Vitest finds each location by
+   * mapping a stack trace through source maps, which every unit would pay for
+   * each test and suite of its file.
    *
    * @param config - Serialized configuration of the project.
    */
@@ -491,6 +510,18 @@ export default class Runner extends TestRunner {
     this.options = this.injectValue('mootant') as VitestWorkerOptions
     let { directory, repeat, mode } = this.options
     enableCompileCache(moduleApi, directory)
+    this.scripted = this.options.defines?.[config.name ?? ''] ?? {}
+    trackValues(
+      Reflect.get(this, 'workerState'),
+      {
+        snapshotEnvironment: config.snapshotEnvironment,
+        scripted: this.scripted,
+        defines: config.defines,
+      },
+      name => {
+        this.values.add(name)
+      },
+    )
     this.sequential = mode === 'batch' || (mode === 'dry' && repeat)
     if (mode === 'dry') {
       this.config.includeTaskLocation = true
@@ -1041,12 +1072,12 @@ export default class Runner extends TestRunner {
 
   /**
    * Starts recording the files the test code reads through `node:fs` that count
-   * as inputs, inside the project root or outside it (`createInputFilter`), and
-   * the environment variables it reads, before the test file and its setup
-   * files load. The first worker of a project in a dry run also writes the
-   * hashes of the worker's environment variables, as Vitest set them up, to
-   * `env/<hash>.json` of the work directory, for the main process to tell what
-   * the variables read were.
+   * as inputs, inside the project root or outside it (`createInputFilter`), the
+   * environment variables it reads and the defines of `import.meta`
+   * (`trackMeta`), before the test file and its setup files load. The first
+   * worker of a project in a dry run also writes the hashes of the worker's
+   * environment variables, as Vitest set them up, to `env/<hash>.json` of the
+   * work directory, for the main process to tell what the variables read were.
    *
    * @param snapshot - Whether to write the environment of the project.
    */
@@ -1060,6 +1091,7 @@ export default class Runner extends TestRunner {
       },
     )
     this.inputs = inputs
+    this.trackMeta()
     if (snapshot) {
       let variables: Record<string, string> = {}
       for (let [name, value = ''] of Object.entries(inputs.real)) {
@@ -1080,18 +1112,58 @@ export default class Runner extends TestRunner {
   }
 
   /**
+   * Tracks the defines of `import.meta` given as JSON in the modules Vitest
+   * evaluates from now on (`trackMetaDefines`), or counts them for the unit at
+   * once when Vitest loaded modules of the project before, a snapshot
+   * environment, the diff options or snapshot serializers, or when they cannot
+   * be tracked.
+   */
+  private trackMeta(): void {
+    let keys = Object.keys(this.scripted).filter(
+      key => key.startsWith('import.meta.') && !this.scripted[key],
+    )
+    if (keys.length === 0) {
+      return
+    }
+    let { snapshotSerializers, snapshotEnvironment, diff } = this.config
+    let early =
+      snapshotEnvironment !== undefined ||
+      typeof diff === 'string' ||
+      snapshotSerializers.length > 0
+    let tracked =
+      !early &&
+      trackMetaDefines(
+        Reflect.get(this, 'workerState'),
+        Reflect.get(this, 'moduleRunner'),
+        {
+          record: name => {
+            this.values.add(name)
+          },
+          keys,
+        },
+      )
+    if (!tracked) {
+      for (let key of keys) {
+        this.values.add(`${VALUE_PREFIXES.define}${key}`)
+      }
+    }
+  }
+
+  /**
    * Stops recording what the code reads once the unit ended and lists what it
    * depended on: what the test file depended on when its file suite ended, with
    * what the worker evaluated, required and read through `node:fs` until now,
-   * the environment variables it read, and the files it read and changed
-   * itself. A test environment other than Vitest's own loads and sets up before
-   * the runner exists, so what its module and `setup` read, and the references
-   * to `process.env` and `node:fs` they keep, are out of sight: such a unit
-   * reports no dependencies, so it is never cached.
+   * the environment variables and the values of `provide` and `define` it read,
+   * and the files it read and changed itself. A test environment other than
+   * Vitest's own loads and sets up before the runner exists, so what its module
+   * and `setup` read, and the references to `process.env` and `node:fs` they
+   * keep, are out of sight: such a unit reports no dependencies, so it is never
+   * cached.
    *
    * @returns What the unit depended on, sorted, or null when it cannot tell,
    *   with the names of the environment variables it read, `*` for all of them,
-   *   and the files and directories it read and changed itself, both sorted.
+   *   and of the values (`trackValues`), and the files and directories it read
+   *   and changed itself, both sorted.
    */
   private stopTracking(): {
     dependencies: string[] | null
@@ -1112,7 +1184,7 @@ export default class Runner extends TestRunner {
       dependencies:
         Object.hasOwn(builtinEnvironments, state.ctx.environment.name) ? sorted
         : null,
-      environment,
+      environment: [...environment, ...this.values].toSorted(),
       modified,
     }
   }

@@ -182,6 +182,7 @@ describe('runDry', () => {
       },
       invalidateFile: vi.fn(),
       provide: vi.fn(),
+      projects: [],
       state: {},
     }
     handle = {
@@ -241,6 +242,7 @@ describe('runDry', () => {
     expect(handle.vitest.provide).toHaveBeenCalledWith('mootant', {
       timeouts: TIMEOUTS,
       repeat: true,
+      defines: {},
       mode: 'dry',
       root: '/',
       directory,
@@ -382,6 +384,7 @@ describe('runDry', () => {
     expect(handle.vitest.provide).toHaveBeenCalledWith('mootant', {
       timeouts: TIMEOUTS,
       repeat: false,
+      defines: {},
       mode: 'dry',
       root: '/',
       directory,

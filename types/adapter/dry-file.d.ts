@@ -15,8 +15,10 @@ export interface DryFile {
 
   /**
    * Names of the environment variables the test code read in the run, or `*`
-   * when it listed them all; values come from `CacheInputs.environment`.
-   * Omitted when the adapter does not track them.
+   * when it listed them all, and of other values of the test runner it read,
+   * under names no variable has, such as `provide=url` for Vitest's
+   * `inject('url')`; values come from `CacheInputs.environment`. Omitted when
+   * the adapter does not track them.
    */
   environment?: string[]
 

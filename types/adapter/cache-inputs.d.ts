@@ -7,8 +7,9 @@ export interface CacheInputs {
    * Hashes of the values of the environment variables test files see, by name,
    * for each project of the test runner by name (see `DryFile.project`), and
    * under `*` a hash of all of them but those that change from one shell to
-   * another; a variable that is not set has no entry. Without it, variables
-   * test files read count as not set.
+   * another; a variable that is not set has no entry. Other values have their
+   * hashes under the names `DryFile.environment` gives them. Without it,
+   * variables test files read count as not set.
    */
   environment?: Record<string, Record<string, string>>
 

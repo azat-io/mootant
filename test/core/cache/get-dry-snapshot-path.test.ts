@@ -6,7 +6,7 @@ import { getDrySnapshotPath } from '../../../core/cache/get-dry-snapshot-path'
 describe('getDrySnapshotPath', () => {
   it('puts the saved dry run next to the cache file', () => {
     expect(getDrySnapshotPath('/project')).toBe(
-      path.join('/project', 'node_modules/.cache/mootant/dry-v6.json'),
+      path.join('/project', 'node_modules/.cache/mootant/dry-v7.json'),
     )
   })
 })
