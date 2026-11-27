@@ -35,12 +35,7 @@ let { keywords = [], headings = [], description, editLink, title } = Astro.props
     {title}
   />
   <Body class="app">
-    <Header>
-      <Sidebar
-        slot="navigation"
-        isMobileOnly
-      />
-    </Header>
+    <Header />
     <Container class="wrapper">
       <Sidebar />
       <main class="main">
