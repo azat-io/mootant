@@ -1,7 +1,7 @@
 import type { Node } from 'oxc-parser'
 
 import type { LiteralChange } from '../../../types/syntax/literal-change'
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 import type { RunContext } from './create-run-context'
 
 import { isNoOpCallbackLiteral } from './is-no-op-callback-literal'
@@ -24,7 +24,7 @@ interface LiteralSkipQuery {
    * Rules of the literal's own mutator, checked after the operand and error
    * message rules; omitted when the mutator has none.
    */
-  getOwnSkip?(): SkipNote | null
+  getOwnSkip?(): CoreNote | null
 
   /**
    * New value of the literal, or new text of a template with expressions.
@@ -54,7 +54,7 @@ export function getLiteralSkip(
   node: Node,
   query: LiteralSkipQuery,
   context: RunContext,
-): SkipNote | null {
+): CoreNote | null {
   let { getOwnSkip, change } = query
   let mutator = getLiteralMutator(node)
   let operandSkip =
@@ -134,7 +134,7 @@ function getComparisonOperandSkip(
   node: Node,
   mutator: string,
   context: RunContext,
-): SkipNote | null {
+): CoreNote | null {
   let by = {
     node: getOperandParent(node, context),
     mutator: 'comparison-operator',

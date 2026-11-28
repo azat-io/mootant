@@ -1,7 +1,7 @@
 import type { Node } from 'oxc-parser'
 
 import type { LiteralChange } from '../../../types/syntax/literal-change'
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 import type { RunContext } from './create-run-context'
 
 import { getForcedTestJustifier } from './get-forced-test-justifier'
@@ -42,7 +42,7 @@ export function getBranchCopySkip(
   node: Node,
   replacement: LiteralChange,
   context: RunContext,
-): SkipNote | null {
+): CoreNote | null {
   let pair = getBranchPair(node, context)
   if (!pair) {
     return null

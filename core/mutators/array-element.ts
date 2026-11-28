@@ -2,6 +2,7 @@ import type { ArrayExpression } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { getCalleeName } from '../tree/get-callee-name'
@@ -43,13 +44,13 @@ export let arrayElement: Mutator = {
               reason:
                 'an empty hook dependency list and [undefined] never change, so the hook behaves the same',
               rule: 'hook-dependencies',
-            }
+            } satisfies CoreNote
           } else if (syntax.isJoinedArray(node)) {
             replacement.skip = {
               reason:
                 "the array is only pushed to and joined with '', which writes undefined as an empty string",
               rule: 'joined-array',
-            }
+            } satisfies CoreNote
           }
           return [replacement]
         }

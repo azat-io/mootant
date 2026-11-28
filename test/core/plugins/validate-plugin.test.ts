@@ -41,6 +41,16 @@ describe('validatePlugin', () => {
       presets: { bare: { description: 'Nothing.', mutators: {} } },
       mutators: {},
     },
+    {
+      skipRules: {
+        'unknown-receiver': { category: 'noise', heuristic: true },
+        'shared-swap': { category: 'duplicate', heuristic: false },
+        'same-unit': { category: 'equivalent', heuristic: false },
+        'frozen-date': { category: 'invalid', heuristic: true },
+      },
+      mutators: { swap: MUTATOR },
+    },
+    { mutators: { swap: MUTATOR }, skipRules: {} },
   ])('accepts %o', plugin => {
     expect(validatePlugin(plugin, 'acme')).toBe(plugin)
   })
@@ -79,6 +89,31 @@ describe('validatePlugin', () => {
         },
       },
       'mutator "swap" has meta.countsForSolitary that is not true or false',
+    ],
+    [{ skipRules: [], mutators: {} }, '"skipRules" must be an object'],
+    [
+      { skipRules: { 'unknown-receiver': 1 }, mutators: {} },
+      'skip rule "unknown-receiver" must be an object',
+    ],
+    [
+      { skipRules: { 'unknown-receiver': { heuristic: true } }, mutators: {} },
+      'skip rule "unknown-receiver" has an invalid category: use "equivalent", "noise", "timeout", "owned", "subsumed", "duplicate" or "invalid"',
+    ],
+    [
+      {
+        skipRules: {
+          'unknown-receiver': { category: 'constructor', heuristic: true },
+        },
+        mutators: {},
+      },
+      'skip rule "unknown-receiver" has an invalid category: use "equivalent", "noise", "timeout", "owned", "subsumed", "duplicate" or "invalid"',
+    ],
+    [
+      {
+        skipRules: { 'unknown-receiver': { category: 'noise' } },
+        mutators: {},
+      },
+      'skip rule "unknown-receiver" has heuristic that is not true or false',
     ],
     [{ mutators: {}, presets: [] }, '"presets" must be an object'],
     [{ presets: { all: 1 }, mutators: {} }, 'preset "all" must be an object'],

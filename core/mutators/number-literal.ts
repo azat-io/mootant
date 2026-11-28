@@ -2,7 +2,7 @@ import type { Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { isGlobalIdentifier } from './shared/is-global-identifier'
@@ -84,7 +84,7 @@ export let numberLiteral: Mutator<NumberLiteralOptions> = {
 function getNumberSkip(
   node: Node,
   context: MutatorContext<NumberLiteralOptions>,
-): SkipNote | null {
+): CoreNote | null {
   let { options, syntax } = context
   let value = getLiteralValue(node) as bigint | number
   let next: bigint | number
@@ -113,7 +113,7 @@ function getNumberSkip(
    *
    * @returns Rule and reason of the skip, or null.
    */
-  function getOwnSkip(): SkipNote | null {
+  function getOwnSkip(): CoreNote | null {
     if (syntax.isBooleanContext(node) && Boolean(value) === Boolean(next)) {
       return {
         reason: 'the new value has the same truth value in a boolean context',

@@ -1,6 +1,6 @@
 import type { PrivateInExpression, BinaryExpression } from 'oxc-parser'
 
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { getLiteralValue } from './shared/get-literal-value'
@@ -65,7 +65,7 @@ export let bitwiseOperator: Mutator = {
  */
 function getZeroSkip(
   node: PrivateInExpression | BinaryExpression,
-): SkipNote | null {
+): CoreNote | null {
   let { operator, right, left } = node
   let rightZero = isZero(getLiteralValue(right))
   if (rightZero && (operator === '<<' || operator === '>>')) {

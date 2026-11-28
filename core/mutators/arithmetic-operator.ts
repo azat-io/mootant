@@ -2,7 +2,7 @@ import type { PrivateInExpression, BinaryExpression, Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { LiteralValue } from './shared/get-literal-value'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { getLiteralValue } from './shared/get-literal-value'
@@ -89,7 +89,7 @@ function getSwapSkip(
   node: PrivateInExpression | BinaryExpression,
   swap: string,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   let { operator, right, left } = node
   let value = getLiteralValue(right)
   if (
@@ -131,7 +131,7 @@ function getSwapSkip(
 function getDropSkip(
   node: PrivateInExpression | BinaryExpression,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   let { syntax } = context
   let right = syntax.unwrapExpression(node.right)
   if (syntax.isErrorMessage(node)) {

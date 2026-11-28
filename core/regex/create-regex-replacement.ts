@@ -2,7 +2,7 @@ import type { PresetSettings } from '../../types/config/preset-settings'
 import type { Replacement } from '../../types/mutator/replacement'
 import type { RegexSource } from '../../types/regex/regex-source'
 import type { TextEdit } from '../../types/source/text-edit'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 
 import { isValidRegexLiteral } from './is-valid-regex-literal'
 import { keepsNeighborTokens } from './keeps-neighbor-tokens'
@@ -26,7 +26,7 @@ interface RegexEdit {
   /**
    * Skip the mutator decided, or null.
    */
-  skip: SkipNote | null
+  skip: CoreNote | null
 
   /**
    * New flags.
@@ -80,7 +80,7 @@ function getRegexSkip(
   source: RegexSource,
   edit: RegexEdit,
   settings: Readonly<PresetSettings>,
-): SkipNote | null {
+): CoreNote | null {
   let { change, flags } = edit
   let pattern =
     change ?

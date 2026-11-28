@@ -1,5 +1,6 @@
 import type { Node } from 'oxc-parser'
 
+import type { RegisteredSkipRule } from '../../types/mutant/registered-skip-rule'
 import type { TemplateExpression } from '../../types/source/template-expression'
 import type { RegisteredMutator } from '../../types/mutator/registered-mutator'
 import type { SkippedCandidate } from '../../types/mutant/skipped-candidate'
@@ -10,6 +11,7 @@ import type { SyntaxHelpers } from '../../types/syntax/syntax-helpers'
 import type { SourceRange } from '../../types/source/source-range'
 import type { Replacement } from '../../types/mutator/replacement'
 import type { ListRemoval } from '../../types/mutant/list-removal'
+import type { SkipRuleId } from '../../types/mutant/skip-rule-id'
 import type { ParsedFile } from '../../types/source/parsed-file'
 import type { SourceCode } from '../../types/source/source-code'
 import type { MutantHost } from '../../types/mutant/mutant-host'
@@ -19,6 +21,7 @@ import type { TreeIndex } from '../../types/syntax/tree-index'
 import type { TypeHints } from '../../types/hints/type-hints'
 import type { TextEdit } from '../../types/source/text-edit'
 import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 
 import { getComponentFramework } from '../parser/get-component-framework'
 import { getListRemovalRange } from '../text/get-list-removal-range'
@@ -27,6 +30,7 @@ import { findCompilerPins } from '../syntax/find-compiler-pins'
 import { removeListElement } from '../text/remove-list-element'
 import { readLiteralType } from '../syntax/read-literal-type'
 import { validateReplacement } from './validate-replacement'
+import { findClosestName } from '../text/find-closest-name'
 import { findIgnoreRule } from '../ignore/find-ignore-rule'
 import { getReplacementKind } from './get-replacement-kind'
 import { parseExpression } from '../text/parse-expression'
@@ -35,6 +39,7 @@ import { groupReplacement } from './group-replacement'
 import { fitTemplateText } from './fit-template-text'
 import { findListRemoval } from './find-list-removal'
 import { getMutantSite } from './get-mutant-site'
+import { skipRules } from '../skips/skip-rules'
 import { getSlot } from '../tree/get-slot'
 import { pickFocus } from './pick-focus'
 
@@ -53,7 +58,7 @@ const MAX_LITERAL_COPIES = 8
 /**
  * Skip of a replacement in a timer delay.
  */
-const TIMER_DELAY_SKIP: SkipNote = {
+const TIMER_DELAY_SKIP: CoreNote = {
   reason: 'it only changes a timer delay',
   rule: 'timer-delay',
 }
@@ -198,7 +203,11 @@ interface VisitorEntry {
  * only it knows which link it removes. A replacement that a visitor marks as
  * skipped is never validated and never becomes a candidate; on request it is
  * collected with its rule, like dropped and invalid replacements, so that
- * skipped replacements never change the candidates. In a template only
+ * skipped replacements never change the candidates. Its rule is checked in
+ * every run: it is one of the skip rules of the mutator's plugin, else a
+ * built-in rule (see `findSkipRule`); a skip with any other rule is a mutator
+ * error, and its replacement is dropped. Rules of the collection itself, such
+ * as a timer delay, are built-in rules whatever the mutator. In a template only
  * expressions are replaced: a replacement of a statement, a declaration or a
  * node of the synthetic module around the template code is dropped without a
  * trace, and every candidate has the scope `<template>`. A replacement in a Vue
@@ -242,29 +251,49 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
    *
    * @param registered - Mutator that returned the replacement.
    * @param change - Range, text, kind and focus of the replacement.
-   * @param note - Rule and reason of the skip.
+   * @param note - Reason and justifying mutant of the skip, with the rule it
+   *   names.
    */
-  function skip(
+  function keepSkipped(
     registered: RegisteredMutator,
     change: Change,
-    note: SkipNote,
+    note: { rule: RegisteredSkipRule } & Omit<SkipNote, 'rule'>,
   ): void {
     if (input.skipped) {
-      let { by } = note
+      let { rule, by } = note
       skipped.push({
         by: by ? { start: by.node.start, mutator: by.mutator, id: null } : null,
-        heuristic: note.heuristic === true,
+        heuristic: rule.heuristic || note.heuristic === true,
         emission: skipped.length,
+        category: rule.category,
         start: change.start,
         reason: note.reason,
         kind: change.kind,
         text: change.text,
         end: change.end,
-        rule: note.rule,
+        rule: rule.id,
         registered,
         ...pickFocus(change),
       })
     }
+  }
+  /**
+   * Keeps a replacement that the collection does not accept, under a built-in
+   * rule whatever the mutator, when skipped replacements are requested.
+   *
+   * @param registered - Mutator that returned the replacement.
+   * @param change - Range, text, kind and focus of the replacement.
+   * @param note - Built-in rule and reason of the skip.
+   */
+  function skip(
+    registered: RegisteredMutator,
+    change: Change,
+    note: CoreNote,
+  ): void {
+    keepSkipped(registered, change, {
+      ...note,
+      rule: { ...skipRules[note.rule], id: note.rule },
+    })
   }
   /**
    * Reads what a replacement writes: the range and text of its node, grouped
@@ -386,11 +415,21 @@ export function collectCandidates(input: CollectInput): CandidateCollection {
     }
     let change = readChange(registered, replacement, removal)
     if (replacement.skip) {
-      skip(
-        registered,
-        change,
-        isTimerDelay(target, change.text) ? TIMER_DELAY_SKIP : replacement.skip,
-      )
+      let { rule: name } = replacement.skip
+      let rule = findSkipRule(registered, name)
+      if (rule === null) {
+        diagnostics.push(
+          createMutatorError(
+            parsed,
+            node,
+            describeUnknownRule(registered, name),
+          ),
+        )
+      } else if (isTimerDelay(target, change.text)) {
+        skip(registered, change, TIMER_DELAY_SKIP)
+      } else {
+        keepSkipped(registered, change, { ...replacement.skip, rule })
+      }
       return
     }
     let empty =
@@ -571,6 +610,37 @@ function createVisitorTable(
 }
 
 /**
+ * Words the error of a skip whose rule is unknown or not a string, with the
+ * closest rule its mutator may name, also for a rule written with a namespace,
+ * or, for a mutator of a plugin, where to declare the rule.
+ *
+ * @param registered - Mutator whose visitor returned the skip.
+ * @param rule - Rule the skip gives, as the visitor returned it.
+ * @returns Sentences that name the mutator and the rule.
+ */
+function describeUnknownRule(
+  registered: RegisteredMutator,
+  rule: unknown,
+): string {
+  let skip = `Mutator "${registered.id}" returned a skip`
+  if (typeof rule !== 'string') {
+    return `${skip} whose rule is not a string.`
+  }
+  let message = `${skip} with the unknown rule "${rule}".`
+  let closest = findClosestName(rule.slice(rule.lastIndexOf('/') + 1), [
+    ...(registered.skipRules?.keys() ?? []),
+    ...Object.keys(skipRules),
+  ])
+  if (closest !== null) {
+    return `${message} Did you mean "${closest}"?`
+  }
+  if (registered.skipRules) {
+    return `${message} Declare it in the skipRules of its plugin.`
+  }
+  return message
+}
+
+/**
  * Builds a mutator error of the file.
  *
  * @param parsed - Parsed file.
@@ -594,6 +664,31 @@ function createMutatorError(
     severity: 'error',
     message,
   }
+}
+
+/**
+ * Finds the rule that a skip of a mutator names: one of the skip rules of its
+ * plugin, else a built-in rule.
+ *
+ * @param registered - Mutator whose visitor returned the skip.
+ * @param name - Rule the skip gives, as the visitor returned it.
+ * @returns The rule with its full id, or null when the mutator may not name it.
+ */
+function findSkipRule(
+  registered: RegisteredMutator,
+  name: unknown,
+): RegisteredSkipRule | null {
+  if (typeof name !== 'string') {
+    return null
+  }
+  let own = registered.skipRules?.get(name)
+  if (own) {
+    return own
+  }
+  if (!Object.hasOwn(skipRules, name)) {
+    return null
+  }
+  return { ...skipRules[name as SkipRuleId], id: name }
 }
 
 /**

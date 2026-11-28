@@ -10,7 +10,7 @@ import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { Replacement } from '../../../types/mutator/replacement'
 import type { ValueBound } from '../../../types/syntax/value-bound'
 import type { NodeSlot } from '../../../types/syntax/node-slot'
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 import type { RunningValue } from './get-running-value'
 
 import { getProvenComparisonValue } from './get-proven-comparison-value'
@@ -46,7 +46,7 @@ export interface ComparisonPlan {
    * that a lower bound leaves equal to the constant, or the lower bound itself
    * when it makes every input where the constant differs impossible.
    */
-  skippedConstants: Map<boolean, SkipNote>
+  skippedConstants: Map<boolean, CoreNote>
 
   /**
    * Entries that are emitted, in emission order.
@@ -217,12 +217,12 @@ interface BoundedSkips {
   /**
    * Winning skip of each constant: the owned one, or the skip by its value.
    */
-  constantSkips: ReadonlyMap<boolean, SkipNote>
+  constantSkips: ReadonlyMap<boolean, CoreNote>
 
   /**
    * Skips of the constants by their value.
    */
-  valueSkips: ReadonlyMap<boolean, SkipNote>
+  valueSkips: ReadonlyMap<boolean, CoreNote>
 
   /**
    * Bounded operand of the comparison, or null.
@@ -322,7 +322,7 @@ export function getComparisonPlan(
 
   let entries: ComparisonEntry[] = []
   let skipped: Replacement[] = []
-  let skippedConstants = new Map<boolean, SkipNote>()
+  let skippedConstants = new Map<boolean, CoreNote>()
 
   /**
    * Skips an entry of the plan.
@@ -330,7 +330,7 @@ export function getComparisonPlan(
    * @param text - Text the entry would write in place of the comparison.
    * @param note - Rule and reason of the skip.
    */
-  function skip(text: string, note: SkipNote): void {
+  function skip(text: string, note: CoreNote): void {
     skipped.push({ skip: note, node, text })
   }
 
@@ -339,7 +339,7 @@ export function getComparisonPlan(
       typeof to === 'boolean' ?
         (shift?.text ?? String(to))
       : sourceCode.replaceOperator(node, to)
-    let lowerBoundSkip: SkipNote | null =
+    let lowerBoundSkip: CoreNote | null =
       region && impossible.has(region) ?
         {
           reason: `a lower bound of an operand makes the inputs where it differs impossible (${boundedOperand!.bound.because})`,
@@ -431,8 +431,8 @@ function getOperatorSkips(
   node: PrivateInExpression | BinaryExpression,
   context: MutatorContext,
   endless: boolean | null,
-): Map<string | null, SkipNote> {
-  let operatorSkips = new Map<string | null, SkipNote>([
+): Map<string | null, CoreNote> {
+  let operatorSkips = new Map<string | null, CoreNote>([
     [
       getCounterEntry(node, context),
       {
@@ -454,7 +454,7 @@ function getOperatorSkips(
     getTypeView(context.hints.getType(node.left)).type === 'object' &&
     getTypeView(context.hints.getType(node.right)).type === 'object'
   ) {
-    let reference: SkipNote = {
+    let reference: CoreNote = {
       reason:
         'both operands are objects, so it compares references instead of order',
       rule: 'reference-equality',
@@ -537,12 +537,12 @@ function getValueSkips(
   node: PrivateInExpression | BinaryExpression,
   context: MutatorContext,
   endless: boolean | null,
-): Map<boolean, SkipNote> {
+): Map<boolean, CoreNote> {
   let proven = getProvenComparisonValue(node, context)
   let leaveNow = getLeaveNowValue(node, context)
-  let skips = new Map<boolean, SkipNote>()
+  let skips = new Map<boolean, CoreNote>()
   for (let value of [true, false]) {
-    let note: SkipNote | null = null
+    let note: CoreNote | null = null
     switch (value) {
       case leaveNow: {
         note = LEAVE_NOW_SKIP
@@ -787,7 +787,7 @@ function getBoundedSkip(
   skips: BoundedSkips,
   impossible: Set<ComparisonRegion>,
   operator: string,
-): SkipNote | null {
+): CoreNote | null {
   let constant = getEntryConstant(impossible, operator)
   if (constant === null || skips.guard || !skips.valueSkips.has(constant)) {
     return null

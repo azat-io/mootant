@@ -71,8 +71,9 @@ export interface ListReportSkipped {
   line: number
 
   /**
-   * Id of the skip rule: a catalog label such as `O3` or `R2`, or a short
-   * kebab-case name such as `lower-bound` or `duplicate`.
+   * Id of the skip rule: a catalog label such as `O3` or `R2`, a short
+   * kebab-case name such as `lower-bound` or `duplicate`, or `namespace/name`
+   * for a rule of a plugin.
    */
   rule: string
 

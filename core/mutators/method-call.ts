@@ -2,7 +2,7 @@ import type { StaticMemberExpression, CallExpression, Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { TextEdit } from '../../types/source/text-edit'
 import type { Mutator } from '../../types/mutator/mutator'
 
@@ -177,7 +177,7 @@ function getEquivalentSkip(
   call: MethodCall,
   rule: MethodRule,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   let { name } = call.callee.property
   if (rule.partner === null) {
     if (call.callee.object.type === 'Super') {
@@ -386,7 +386,7 @@ function getReplacements(
       getRemovalEdits(call, context)
     : [{ start: property.start, text: rule.partner, end: property.end }]
   let text = context.sourceCode.editText(target, edits)
-  let skip: SkipNote | null =
+  let skip: CoreNote | null =
     wrapped ?
       getSkip(call, rule, context)
     : {
@@ -441,7 +441,7 @@ function getSkip(
   call: MethodCall,
   rule: MethodRule,
   context: MutatorContext<MethodCallOptions>,
-): SkipNote | null {
+): CoreNote | null {
   if (!acceptsReceiver(call, rule, context)) {
     return {
       reason:

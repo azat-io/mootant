@@ -5,7 +5,7 @@ import type {
 } from 'oxc-parser'
 
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 
 import { getLiteralValue } from './get-literal-value'
 
@@ -100,7 +100,7 @@ export function getDefaultOptionSkip(
   property: ObjectPropertyKind,
   node: ObjectExpression,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   if (property.type === 'SpreadElement') {
     return null
   }

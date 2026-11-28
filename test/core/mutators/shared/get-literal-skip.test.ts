@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { LiteralChange } from '../../../../types/syntax/literal-change'
 import type { TestContextSetup } from '../../../helpers/create-test-context'
 import type { SkipRuleId } from '../../../../types/mutant/skip-rule-id'
-import type { SkipNote } from '../../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../../types/mutant/core-note'
 
 import { createRunContext } from '../../../../core/mutators/shared/create-run-context'
 import { getLiteralSkip } from '../../../../core/mutators/shared/get-literal-skip'
@@ -14,7 +14,7 @@ import { createTestContext } from '../../../helpers/create-test-context'
 /**
  * Note that the own rules of a test return.
  */
-const OWN_NOTE: SkipNote = { reason: 'own rule', rule: 'case-label' }
+const OWN_NOTE: CoreNote = { reason: 'own rule', rule: 'case-label' }
 
 describe('getLiteralSkip', () => {
   it.each<{

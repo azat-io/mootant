@@ -3,7 +3,7 @@ import type { ChainExpression, Node } from 'oxc-parser'
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
 import type { TextEdit } from '../../types/source/text-edit'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { isNonNullable } from './shared/is-non-nullable'
@@ -128,7 +128,7 @@ function getSkip(
   node: ChainExpression,
   link: OptionalLink,
   context: MutatorContext<OptionalChainingOptions>,
-): SkipNote | null {
+): CoreNote | null {
   let { settings, options, syntax, hints } = context
   if (!syntax.isValuePosition(node)) {
     return {

@@ -7,6 +7,7 @@ import type {
 
 import { describe, expect, it } from 'vitest'
 
+import type { RegisteredSkipRule } from '../../../types/mutant/registered-skip-rule'
 import type { TemplateExpression } from '../../../types/source/template-expression'
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { ActiveMutator } from '../../../types/mutator/active-mutator'
@@ -590,6 +591,7 @@ describe('collectCandidates', () => {
       {
         by: { mutator: 'other', start: 8, id: null },
         kind: 'expression',
+        category: 'owned',
         mutator: 'first',
         reason: 'Owned.',
         heuristic: false,
@@ -601,6 +603,7 @@ describe('collectCandidates', () => {
       },
       {
         kind: 'expression',
+        category: 'owned',
         mutator: 'first',
         reason: 'Noise.',
         heuristic: true,
@@ -613,6 +616,180 @@ describe('collectCandidates', () => {
       },
     ])
   })
+
+  it('lists the skip of a plugin mutator under a rule of its plugin, else under a built-in rule', () => {
+    let { skipped } = collect(
+      ['x = a + b', 'setTimeout(run, 100)'],
+      [
+        {
+          ...activate('acme/swap', 0, () => ({
+            BinaryExpression(node) {
+              return [
+                {
+                  skip: { reason: 'It stays.', rule: 'same-sum' },
+                  text: 'b + a',
+                  node,
+                },
+                {
+                  skip: {
+                    reason: 'A guess.',
+                    rule: 'same-sum',
+                    heuristic: true,
+                  },
+                  text: 'a',
+                  node,
+                },
+                {
+                  skip: { rule: 'receiver-type', reason: 'Built in.' },
+                  text: 'b',
+                  node,
+                },
+                {
+                  skip: { rule: 'timer-delay', reason: 'Own.' },
+                  text: 'a * b',
+                  node,
+                },
+              ]
+            },
+            Literal(node) {
+              return [
+                {
+                  skip: { rule: 'timer-delay', reason: 'Own.' },
+                  text: '200',
+                  node,
+                },
+              ]
+            },
+          })),
+          skipRules: new Map<string, RegisteredSkipRule>([
+            [
+              'timer-delay',
+              { id: 'acme/timer-delay', category: 'owned', heuristic: false },
+            ],
+            [
+              'same-sum',
+              { category: 'equivalent', id: 'acme/same-sum', heuristic: false },
+            ],
+          ]),
+        },
+      ],
+      { skipped: true },
+    )
+
+    expect(
+      skipped.map(candidate => [
+        candidate.rule,
+        candidate.category,
+        candidate.heuristic,
+        candidate.reason,
+      ]),
+    ).toStrictEqual([
+      ['acme/same-sum', 'equivalent', false, 'It stays.'],
+      ['acme/same-sum', 'equivalent', true, 'A guess.'],
+      ['receiver-type', 'noise', true, 'Built in.'],
+      ['acme/timer-delay', 'owned', false, 'Own.'],
+      ['timer-delay', 'noise', true, 'it only changes a timer delay'],
+    ])
+  })
+
+  it.each([false, true])(
+    'reports a skip with an unknown rule as a mutator error and drops it (skipped %s)',
+    skipped => {
+      let result = collect(
+        ['x = a + b', 'setTimeout(run, 100)'],
+        [
+          activate('first', 0, () => ({
+            BinaryExpression(node) {
+              return [
+                {
+                  skip: { rule: 'receiver-types', reason: 'Typo.' },
+                  text: 'a',
+                  node,
+                },
+                { skip: { reason: 'Far.', rule: 'zzz' }, text: 'b', node },
+              ]
+            },
+          })),
+          {
+            ...activate('acme/swap', 1, () => ({
+              BinaryExpression(node) {
+                return [
+                  {
+                    skip: { rule: 'same-sums', reason: 'Typo.' },
+                    text: 'b + a',
+                    node,
+                  },
+                  {
+                    skip: { reason: 'Far.', rule: 'zzz' },
+                    node: node.right,
+                    text: 'c',
+                  },
+                  {
+                    skip: { rule: 'acme/same-sum', reason: 'Full id.' },
+                    text: 'b',
+                    node,
+                  },
+                  { skip: true as never, text: 'b', node },
+                  { text: 'a - b', node },
+                ]
+              },
+              Literal(node) {
+                return [
+                  {
+                    skip: { rule: 'slow-timer', reason: 'Late.' },
+                    text: '200',
+                    node,
+                  },
+                ]
+              },
+            })),
+            skipRules: new Map<string, RegisteredSkipRule>([
+              [
+                'same-sum',
+                {
+                  category: 'equivalent',
+                  id: 'acme/same-sum',
+                  heuristic: false,
+                },
+              ],
+            ]),
+          },
+        ],
+        { skipped },
+      )
+
+      expect(result.diagnostics).toStrictEqual([
+        ...[
+          'Mutator "first" returned a skip with the unknown rule "receiver-types". Did you mean "receiver-type"?',
+          'Mutator "first" returned a skip with the unknown rule "zzz".',
+          'Mutator "acme/swap" returned a skip with the unknown rule "same-sums". Did you mean "same-sum"?',
+          'Mutator "acme/swap" returned a skip with the unknown rule "zzz". Declare it in the skipRules of its plugin.',
+          'Mutator "acme/swap" returned a skip with the unknown rule "acme/same-sum". Did you mean "same-sum"?',
+          'Mutator "acme/swap" returned a skip whose rule is not a string.',
+        ].map(message => ({
+          code: 'mutator-error',
+          file: 'example.ts',
+          severity: 'error',
+          column: 5,
+          line: 1,
+          message,
+        })),
+        {
+          message:
+            'Mutator "acme/swap" returned a skip with the unknown rule "slow-timer". Declare it in the skipRules of its plugin.',
+          code: 'mutator-error',
+          file: 'example.ts',
+          severity: 'error',
+          column: 17,
+          line: 2,
+        },
+      ])
+      expect(result.candidates.map(candidate => candidate.text)).toStrictEqual([
+        '(a - b)',
+      ])
+      expect(result.skipped).toStrictEqual([])
+    },
+  )
 
   it('reports an empty text for anything but an element or a member', () => {
     let { diagnostics, candidates, skipped } = collect(

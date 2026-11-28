@@ -4,7 +4,9 @@ import type { SkipRule } from '../../types/mutant/skip-rule'
  * Registry of the rules that skip a candidate, keyed by rule id: the ownership
  * (O) and redundancy (R) labels of the catalog, and short kebab-case names for
  * the other rules. Each rule has one category and is a heuristic or not; a skip
- * names only its rule, so ids, categories and flags stay consistent.
+ * names only its rule, so ids, categories and flags stay consistent. Built-in
+ * mutators and the collection name these rules; a mutator of a plugin names
+ * them too, after the skip rules of its plugin.
  */
 export let skipRules = {
   'canonical-falsy-default': {

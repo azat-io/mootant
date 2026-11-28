@@ -129,6 +129,39 @@ describe('createMutatorRegistry', () => {
     expect(listRanks(reversedRegistry)).toStrictEqual(listRanks(registry))
   })
 
+  it('gives every mutator of a plugin the skip rules of its plugin under namespace and name', () => {
+    let registry = createMutatorRegistry(
+      { mutators: { alpha: createMutator('A.') } },
+      {
+        acme: {
+          skipRules: {
+            'unknown-receiver': { category: 'noise', heuristic: true },
+            'fixed-hour': { category: 'equivalent', heuristic: false },
+          },
+          mutators: { swap: createMutator('S.'), drop: createMutator('D.') },
+        },
+        zeta: { mutators: { first: createMutator('Z1.') } },
+      },
+    )
+    let swap = registry.mutators.get('acme/swap')!
+
+    expect([...swap.skipRules!]).toStrictEqual([
+      [
+        'fixed-hour',
+        { category: 'equivalent', id: 'acme/fixed-hour', heuristic: false },
+      ],
+      [
+        'unknown-receiver',
+        { id: 'acme/unknown-receiver', category: 'noise', heuristic: true },
+      ],
+    ])
+    expect(registry.mutators.get('acme/drop')!.skipRules).toBe(swap.skipRules)
+    expect(registry.mutators.get('zeta/first')!.skipRules).toStrictEqual(
+      new Map(),
+    )
+    expect(registry.mutators.get('alpha')).not.toHaveProperty('skipRules')
+  })
+
   it('registers core presets by name and plugin presets by namespace and name', () => {
     let recommended = createPreset(['alpha'])
     let strict = createPreset(['acme/no-await'])
@@ -184,6 +217,18 @@ describe('createMutatorRegistry', () => {
         acme: { presets: { 'all rules': createPreset([]) }, mutators: {} },
       },
       message: 'Preset name "all rules" in plugin "acme" is not kebab-case.',
+      core: { mutators: {} },
+    },
+    {
+      plugins: {
+        acme: {
+          skipRules: {
+            FixedHour: { category: 'equivalent', heuristic: false },
+          },
+          mutators: {},
+        },
+      },
+      message: 'Skip rule name "FixedHour" in plugin "acme" is not kebab-case.',
       core: { mutators: {} },
     },
   ])('throws "$message"', ({ message, plugins, core }) => {

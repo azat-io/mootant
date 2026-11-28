@@ -1,7 +1,5 @@
 import type { Node } from 'oxc-parser'
 
-import type { SkipRuleId } from './skip-rule-id'
-
 /**
  * Why a mutator does not emit a replacement it would otherwise make.
  */
@@ -20,13 +18,15 @@ export interface SkipNote {
   heuristic?: boolean
 
   /**
-   * Id of the rule in the registry, which gives the category and whether the
-   * rule is a heuristic.
-   */
-  rule: SkipRuleId
-
-  /**
    * Plain-English reason, worded to follow `skipped: `.
    */
   reason: string
+
+  /**
+   * Name of the rule, which gives the category and whether the rule is a
+   * heuristic: a key of the `skipRules` of the mutator's plugin, else an id of
+   * the registry. A skip with any other rule is a mutator error, and its
+   * replacement is dropped.
+   */
+  rule: string
 }

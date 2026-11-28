@@ -1,3 +1,4 @@
+import type { RegisteredSkipRule } from '../../types/mutant/registered-skip-rule'
 import type { RegisteredMutator } from '../../types/mutator/registered-mutator'
 import type { MutatorRegistry } from '../../types/mutator/mutator-registry'
 import type { Plugin } from '../../types/config/plugin'
@@ -10,14 +11,16 @@ import { isKebabCaseName } from './is-kebab-case-name'
  * plugins under their full ids. Mutators are ranked in canonical order: core
  * mutators by name, then the plugins by namespace and the mutators of each
  * plugin by name, so the order of object keys in plugin files never matters.
+ * Every mutator of a namespaced plugin gets the skip rules of its plugin, keyed
+ * by name, each with its full id; a built-in mutator gets none.
  *
  * @param core - Plugin of the built-in mutators and presets, without a
  *   namespace.
  * @param plugins - Other plugins keyed by the namespace that prefixes their
  *   ids.
  * @returns Mutators in rank order and presets, keyed by full id.
- * @throws Error - When a namespace, mutator name or preset name is not
- *   kebab-case.
+ * @throws Error - When a namespace, mutator name, preset name or skip rule name
+ *   is not kebab-case.
  */
 export function createMutatorRegistry(
   core: Plugin,
@@ -36,12 +39,14 @@ export function createMutatorRegistry(
 
 /**
  * Adds the mutators of one plugin in name order, ranked after the mutators
- * already registered, and its presets.
+ * already registered, with the skip rules of a namespaced plugin, and its
+ * presets.
  *
  * @param registry - Registry being filled.
  * @param plugin - Plugin to add.
  * @param namespace - Namespace of the plugin, or null for the core plugin.
- * @throws Error - When a mutator name or preset name is not kebab-case.
+ * @throws Error - When a mutator name, preset name or skip rule name is not
+ *   kebab-case.
  */
 function registerPlugin(
   registry: MutatorRegistry,
@@ -50,12 +55,23 @@ function registerPlugin(
 ): void {
   let owner = namespace === null ? 'the core plugin' : `plugin "${namespace}"`
   let prefix = namespace === null ? '' : `${namespace}/`
+  let skipRules = new Map<string, RegisteredSkipRule>()
+  let rules = plugin.skipRules ?? {}
+
+  for (let name of Object.keys(rules).toSorted(compareCodeUnits)) {
+    if (!isKebabCaseName(name)) {
+      throw new Error(`Skip rule name "${name}" in ${owner} is not kebab-case.`)
+    }
+    let { heuristic, category } = rules[name]!
+    skipRules.set(name, { id: `${prefix}${name}`, heuristic, category })
+  }
 
   for (let name of Object.keys(plugin.mutators).toSorted(compareCodeUnits)) {
     if (!isKebabCaseName(name)) {
       throw new Error(`Mutator name "${name}" in ${owner} is not kebab-case.`)
     }
     let registered: RegisteredMutator = {
+      ...(namespace !== null && { skipRules }),
       mutator: plugin.mutators[name]!,
       rank: registry.mutators.size,
       id: `${prefix}${name}`,

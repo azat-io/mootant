@@ -7,6 +7,7 @@ import type {
   MutantProbe,
   SkipProbe,
 } from '../../helpers/find-unsound-skips'
+import type { RegisteredSkipRule } from '../../../types/mutant/registered-skip-rule'
 import type { ExpressionCheck } from '../../helpers/check-expression-mutants'
 import type { ActiveMutator } from '../../../types/mutator/active-mutator'
 import type { FormulaDomains } from '../../helpers/get-formula-inputs'
@@ -4505,6 +4506,101 @@ describe('generateFileMutants', () => {
         .skipped,
     ).toStrictEqual([])
   })
+
+  it('lists the skip of a plugin mutator with the id, category and flag of its rule', () => {
+    let setter: Mutator = {
+      create: context => ({
+        CallExpression(node) {
+          return [
+            {
+              skip: {
+                reason: 'the receiver may not be a date',
+                rule: 'unknown-receiver',
+              },
+              text: context.sourceCode
+                .getText(node)
+                .replace('Hours', 'Minutes'),
+              node,
+            },
+          ]
+        },
+      }),
+      meta: { description: 'Sets the wrong unit of a date.' },
+    }
+    let result = generate(
+      ['date.setHours(1)'],
+      [
+        {
+          ...activate('acme/date-setter', 0, setter),
+          skipRules: new Map<string, RegisteredSkipRule>([
+            [
+              'unknown-receiver',
+              {
+                id: 'acme/unknown-receiver',
+                category: 'noise',
+                heuristic: true,
+              },
+            ],
+          ]),
+        },
+      ],
+      { skipped: true },
+    )
+
+    expect(result.diagnostics).toStrictEqual([])
+    expect(result.skipped).toStrictEqual([
+      {
+        reason: 'the receiver may not be a date',
+        replacement: 'date.setMinutes(1)',
+        rule: 'acme/unknown-receiver',
+        mutator: 'acme/date-setter',
+        file: 'src/example.ts',
+        kind: 'expression',
+        category: 'noise',
+        heuristic: true,
+        by: null,
+        start: 0,
+        end: 16,
+      },
+    ])
+  })
+
+  it.each([false, true])(
+    'reports a skip with an unknown rule and keeps the same mutants (skipped %s)',
+    skipped => {
+      let typo: Mutator = {
+        create: () => ({
+          BinaryExpression(node) {
+            return [
+              { skip: { reason: 'Owned.', rule: 'O111' }, text: 'a', node },
+            ]
+          },
+        }),
+        meta: { description: 'Typo.' },
+      }
+      let result = generate(
+        ['total = a + b'],
+        [activate('arithmetic', 0, ARITHMETIC), activate('typo', 1, typo)],
+        { skipped },
+      )
+
+      expect(result.diagnostics).toStrictEqual([
+        {
+          message:
+            'Mutator "typo" returned a skip with the unknown rule "O111". Did you mean "O11"?',
+          file: 'src/example.ts',
+          code: 'mutator-error',
+          severity: 'error',
+          column: 9,
+          line: 1,
+        },
+      ])
+      expect(result.mutants.map(mutant => mutant.replacement)).toStrictEqual([
+        'a - b',
+      ])
+      expect(result.skipped).toStrictEqual([])
+    },
+  )
 
   /*
    * Strict keeps every coarse mutant, which duplicates or subsumes the finer

@@ -2,7 +2,7 @@ import type { Node } from 'oxc-parser'
 
 import type { Replacement } from '../../../types/mutator/replacement'
 import type { NullishDirection } from './get-nullish-directions'
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 import type { ComparisonPlan } from './get-comparison-plan'
 import type { RunContext } from './create-run-context'
 
@@ -126,7 +126,7 @@ export function getConditionConstants(
   let comparison =
     isComparison(inner) ? getComparisonPlan(inner, context) : null
   if (isAndOr(inner)) {
-    let note: SkipNote = {
+    let note: CoreNote = {
       reason: 'the constants of a && or || group are left to logical-operator',
       by: { mutator: 'logical-operator', node: inner },
       rule: 'O1',
@@ -210,7 +210,7 @@ function getLiteralConstantSkip(
   literal: Node,
   { isTest, truth }: { isTest: boolean; truth: boolean },
   context: RunContext,
-): SkipNote {
+): CoreNote {
   let value = getLiteralValue(literal)
   let current = value === null ? 'regex' in literal : Boolean(value)
   if (truth === current) {
@@ -258,7 +258,7 @@ function getComparisonConstantSkip(
   comparison: Node,
   { truth, plan, node }: { plan: ComparisonPlan; truth: boolean; node: Node },
   context: RunContext,
-): SkipNote | null {
+): CoreNote | null {
   let by = { mutator: 'comparison-operator', node: comparison }
   if (
     plan.entries.some(
@@ -294,7 +294,7 @@ function getComparisonConstantSkip(
 function getConstantSkip(
   value: boolean,
   facts: ConstantFacts,
-): SkipNote | null {
+): CoreNote | null {
   if (value === facts.fixed) {
     return {
       reason: `the type hints make the condition always ${value}`,

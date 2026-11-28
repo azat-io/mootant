@@ -5,7 +5,7 @@ import type { InferredType } from '../../types/hints/inferred-type'
 import type { Replacement } from '../../types/mutator/replacement'
 import type { SourceCode } from '../../types/source/source-code'
 import type { LiteralValue } from './shared/get-literal-value'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { getCanonicalFalsyDefault } from './shared/get-canonical-falsy-default'
@@ -41,7 +41,7 @@ interface LogicalVariant {
   /**
    * Why the variant is not emitted, or null when it is.
    */
-  skip: SkipNote | null
+  skip: CoreNote | null
 }
 
 /**
@@ -102,11 +102,13 @@ export let assignmentOperator: Mutator<AssignmentOperatorOptions> = {
           return replacements
         }
         return replacements.map(replacement => ({
-          skip: replacement.skip ?? {
-            reason:
-              'it changes the assignment that advances a loop, so it may keep the loop running forever',
-            rule: 'loop-advance',
-          },
+          skip:
+            replacement.skip ??
+            ({
+              reason:
+                'it changes the assignment that advances a loop, so it may keep the loop running forever',
+              rule: 'loop-advance',
+            } satisfies CoreNote),
           text: replacement.text,
           node,
         }))
@@ -145,7 +147,7 @@ function getLogicalVariants(
     context.hints,
     context.options.nullishSwap,
   )
-  let alwaysNullish: SkipNote | null =
+  let alwaysNullish: CoreNote | null =
     isAlwaysNullish(leftType) ?
       {
         reason:
@@ -154,12 +156,12 @@ function getLogicalVariants(
       }
     : null
   let guard = getGuardSkip(node, leftType, context)
-  let nullishSwap: SkipNote = {
+  let nullishSwap: CoreNote = {
     reason:
       '??= and ||= differ here only on falsy values that the nullishSwap option does not count, such as the value itself',
     rule: 'nullish-swap',
   }
-  let subsumed: SkipNote = {
+  let subsumed: CoreNote = {
     reason:
       'every test that kills the swap between ??= and ||= also kills this change',
     by: { mutator: 'assignment-operator', node },
@@ -222,7 +224,7 @@ function getSwapSkip(
   node: AssignmentExpression,
   swap: string,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   let { operator, right, left } = node
   let leftType = context.hints.getType(left)
   if (
@@ -267,7 +269,7 @@ function getGuardSkip(
   node: AssignmentExpression,
   target: InferredType,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   if (isAlwaysTruthy(target)) {
     return {
       reason:

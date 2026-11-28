@@ -3,7 +3,7 @@ import type { AST } from '@eslint-community/regexpp'
 import type { RegexPatternOptions } from '../../types/mutator/regex-pattern-options'
 import type { RegexSource } from '../../types/regex/regex-source'
 import type { RegexChange } from '../../types/regex/regex-change'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 
 import { findOpenRepeatScope } from './find-open-repeat-scope'
 import { matchesAnyCharacter } from './matches-any-character'
@@ -32,7 +32,7 @@ const PLAIN_CHARACTER_PATTERN = /^[\dA-Za-z]$/u
 /**
  * Skip of a removal that would renumber capturing groups.
  */
-const CAPTURING_GROUP_SKIP: SkipNote = {
+const CAPTURING_GROUP_SKIP: CoreNote = {
   reason:
     'it removes a capturing group, which renumbers the groups after it and changes their references',
   rule: 'regex-capturing-group',
@@ -42,7 +42,7 @@ const CAPTURING_GROUP_SKIP: SkipNote = {
  * Skip of a change of the upper bound of a quantifier that a lookaround does
  * not see.
  */
-const LOOKAROUND_REPEAT_SKIP: SkipNote = {
+const LOOKAROUND_REPEAT_SKIP: CoreNote = {
   reason:
     'a lookaround only asks whether its pattern matches, and with nothing required beyond the quantifier its upper bound does not change that',
   rule: 'unused-repeat',
@@ -70,7 +70,7 @@ const LOOKAROUND_REPEAT_SKIP: SkipNote = {
 export function collectPatternChanges(
   source: Pick<RegexSource, 'flags' | 'tree'>,
   options: Readonly<RegexPatternOptions>,
-  testedSkip: SkipNote | null,
+  testedSkip: CoreNote | null,
 ): RegexChange[] {
   let { tree: pattern, flags } = source
   let isUnicode = flags.includes('u') || flags.includes('v')
@@ -89,7 +89,7 @@ export function collectPatternChanges(
   function add(
     range: { start: number; end: number },
     text: string,
-    skip: SkipNote | null = null,
+    skip: CoreNote | null = null,
   ): void {
     changes.push({ start: range.start, end: range.end, text, skip })
   }
@@ -113,7 +113,7 @@ export function collectPatternChanges(
         index === 0 ?
           { end: alternatives[1]!.start, start: alternative.start }
         : { start: alternatives[index - 1]!.end, end: alternative.end }
-      let skip: SkipNote | null = null
+      let skip: CoreNote | null = null
       if (hasCapturingGroup(alternative)) {
         skip = CAPTURING_GROUP_SKIP
       } else if (isLarge) {
@@ -342,8 +342,8 @@ function printCharacter(value: number, isUnicode: boolean): string {
  */
 function getUpperBoundSkip(
   node: AST.Quantifier,
-  testedSkip: SkipNote | null,
-): SkipNote | null {
+  testedSkip: CoreNote | null,
+): CoreNote | null {
   let scope = findOpenRepeatScope(node)
   if (scope === null) {
     return null

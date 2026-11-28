@@ -2,7 +2,7 @@ import type { LogicalExpression, Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
 import type { Replacement } from '../../../types/mutator/replacement'
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 
 import { isTruthFlippingLiteral } from './is-truth-flipping-literal'
 import { unwrapParentheses } from '../../tree/unwrap-parentheses'
@@ -101,11 +101,11 @@ export function getNullishPlan(
    * @param text - Text the mutant would write in place of the expression.
    * @param note - Rule and reason of the skip.
    */
-  function skip(text: string, note: SkipNote): void {
+  function skip(text: string, note: CoreNote): void {
     plan.skipped.push({ skip: note, node, text })
   }
 
-  let neverNullish: SkipNote = {
+  let neverNullish: CoreNote = {
     reason:
       'the type hints say the left side is never nullish, so the default never applies',
     rule: 'never-nullish',
@@ -115,7 +115,7 @@ export function getNullishPlan(
     (context.syntax.isBooleanContext(node) ||
       isBooleanModeOperand(node, context))
   ) {
-    let position: SkipNote = {
+    let position: CoreNote = {
       reason:
         'in a truth position with a literal default it forces the position to a constant, as another mutator does',
       rule: 'O15',

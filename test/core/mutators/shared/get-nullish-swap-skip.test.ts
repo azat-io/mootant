@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { SkipNote } from '../../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../../types/mutant/core-note'
 
 import { getNullishSwapSkip } from '../../../../core/mutators/shared/get-nullish-swap-skip'
 import { createTestContext } from '../../../helpers/create-test-context'
@@ -9,14 +9,14 @@ import { createTestContext } from '../../../helpers/create-test-context'
  * Skip of a swap that differs only on falsy values the `nullishSwap` option
  * does not count.
  */
-const NULLISH_SWAP: SkipNote = {
+const NULLISH_SWAP: CoreNote = {
   reason:
     '?? and || differ here only on falsy values that the nullishSwap option does not count, such as the default itself',
   rule: 'nullish-swap',
 }
 
 describe('getNullishSwapSkip', () => {
-  it.each<[string, 'distinguishing' | 'always', SkipNote | null]>([
+  it.each<[string, 'distinguishing' | 'always', CoreNote | null]>([
     [
       'function f(n?: number) { x = n?.toFixed(2) || null }',
       'always',

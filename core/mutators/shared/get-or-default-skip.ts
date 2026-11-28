@@ -1,6 +1,6 @@
 import type { Node } from 'oxc-parser'
 
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 import type { LiteralValue } from './get-literal-value'
 import type { RunContext } from './create-run-context'
 
@@ -28,7 +28,7 @@ export function getOrDefaultSkip(
   node: Node,
   value: LiteralValue,
   context: RunContext,
-): SkipNote | null {
+): CoreNote | null {
   let { parent, key } = context.syntax.getContextSlot(node)
   if (
     key !== 'right' ||

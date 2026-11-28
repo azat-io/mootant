@@ -6,7 +6,7 @@ import type {
 } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { isBooleanModeOperand } from './shared/is-boolean-mode-operand'
@@ -93,7 +93,7 @@ export let missingAwait: Mutator = {
 function getAwaitSkip(
   node: AwaitExpression,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   if (isAwaitedByCaller(node, context)) {
     return {
       reason: 'the caller awaits the same promise without the await',
@@ -236,7 +236,7 @@ function getConstantComparison(
 function getNestedAwaitSkip(
   node: AwaitExpression,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   let { settings, syntax } = context
   let { parent } = syntax.getContextSlot(node)
   if (parent?.type !== 'AwaitExpression') {

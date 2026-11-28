@@ -10,7 +10,7 @@ import type {
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { getForcedTestJustifier } from './shared/get-forced-test-justifier'
@@ -32,7 +32,7 @@ interface RemovalSetup {
   /**
    * Skip that the visitor decided for the kind of statement, or null.
    */
-  skip: SkipNote | null
+  skip: CoreNote | null
 }
 
 /**
@@ -87,7 +87,7 @@ export let statementRemoval: Mutator<StatementRemovalOptions> = {
         if (!switchCase) {
           return jumps ? getRemoval(node, parent, { skip: null, context }) : []
         }
-        let skip: SkipNote | null =
+        let skip: CoreNote | null =
           fallsThroughToBreak(switchCase, context) ?
             {
               reason: 'falling through the case reaches only a break',
@@ -110,7 +110,7 @@ export let statementRemoval: Mutator<StatementRemovalOptions> = {
         if (!jumps) {
           return []
         }
-        let skip: SkipNote | null =
+        let skip: CoreNote | null =
           isLoopEnd(node, context) ?
             {
               reason: 'the continue ends the body of its loop',
@@ -153,7 +153,7 @@ export let statementRemoval: Mutator<StatementRemovalOptions> = {
 function getForcedThenSkip(
   node: Node,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   let { sourceCode, syntax } = context
   let { parent } = sourceCode.getSlot(node)
   if (parent?.type === 'BlockStatement' && parent.body.length === 1) {
@@ -238,7 +238,7 @@ function getRemovalSkip(
   node: Node,
   parent: Node | null,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   if (parent?.type === 'LabeledStatement') {
     return {
       reason: 'Mootant cannot switch a mutant on in the body of a label',
@@ -299,7 +299,7 @@ function getEndedCase(
 function getTimerWaitSkip(
   node: ExpressionStatement,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   let { syntax } = context
   let expression = syntax.unwrapExpression(node.expression)
   if (
@@ -384,7 +384,7 @@ function isLoopEnd(node: ContinueStatement, context: MutatorContext): boolean {
 function getTailSkip(
   value: Node | null,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   if (value?.type === 'Literal' && value.value === false) {
     return {
       reason: 'removing a tail return false only turns false into undefined',

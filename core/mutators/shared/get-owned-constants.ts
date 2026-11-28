@@ -1,7 +1,7 @@
 import type { LogicalExpression, Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 
 import { isConstantEligibleGroup } from './is-constant-eligible-group'
 import { isBooleanValued } from './is-boolean-valued'
@@ -25,12 +25,12 @@ import { isAndOr } from './is-and-or'
 export function getOwnedConstants(
   node: Node,
   context: MutatorContext,
-): Map<boolean, SkipNote> {
+): Map<boolean, CoreNote> {
   let { sourceCode, syntax } = context
   let top = getNegationTop(node, context)
   let negated = top.negations % 2 === 1
   let { parent, key } = syntax.getContextSlot(top.node)
-  let owned = new Map<boolean, SkipNote>()
+  let owned = new Map<boolean, CoreNote>()
   if (!isAndOr(parent)) {
     return owned
   }

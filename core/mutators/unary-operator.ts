@@ -1,7 +1,7 @@
 import type { UnaryExpression, Node } from 'oxc-parser'
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { isComparatorResult } from './shared/is-comparator-result'
@@ -58,7 +58,7 @@ export let unaryOperator: Mutator = {
 function getSkip(
   node: UnaryExpression,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   if (
     node.operator === '-' &&
     getLiteralValue(node) === -1 &&

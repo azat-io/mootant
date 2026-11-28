@@ -673,6 +673,127 @@ describe('listMutants', () => {
       expect(all).toStrictEqual(expect.arrayContaining(since))
     })
 
+    it('lists the skip of a plugin mutator under the rule of its plugin with the mutant it names, and reports a rule it does not declare', async () => {
+      let app = path.join(repository.root, 'app')
+      /**
+       * Builds a plugin whose mutator skips `setHours` turned into `setMinutes`
+       * with the given rule, naming return-value's mutant of the returned
+       * value.
+       *
+       * @param rule - Rule the skip names.
+       * @returns Plugin with the mutator and one skip rule.
+       */
+      function createSetterPlugin(rule: string): Plugin {
+        return {
+          mutators: {
+            'date-setter': {
+              create: context => ({
+                CallExpression(node) {
+                  let { callee } = node
+                  let body = context.syntax.getEnclosingFunction(node)?.body
+                  let last =
+                    body?.type === 'BlockStatement' ? body.body.at(-1) : null
+                  if (
+                    callee.type !== 'MemberExpression' ||
+                    callee.property.type !== 'Identifier' ||
+                    callee.property.name !== 'setHours' ||
+                    last?.type !== 'ReturnStatement'
+                  ) {
+                    return []
+                  }
+                  return [
+                    {
+                      skip: {
+                        by: { mutator: 'return-value', node: last.argument! },
+                        reason: 'the receiver may not be a date',
+                        rule,
+                      },
+                      text: context.sourceCode
+                        .getText(node)
+                        .replace('setHours', 'setMinutes'),
+                      node,
+                    },
+                  ]
+                },
+              }),
+              meta: { description: 'Sets the wrong unit of a date.' },
+            },
+          },
+          skipRules: {
+            'unknown-receiver': { category: 'noise', heuristic: true },
+          },
+        }
+      }
+      vi.mocked(loadConfig).mockResolvedValue({
+        config: {
+          plugins: { acme: createSetterPlugin('unknown-receiver') },
+          mutators: { 'acme/date-setter': 'on' },
+        },
+        file: path.join(app, 'mootant.config.js'),
+        directory: app,
+      })
+      try {
+        let { skipped, since, all } = await listChange(
+          'clock.js',
+          [
+            'export function later(date) {',
+            '  date.setHours(date.getHours() + 1)',
+            '  return date',
+            '}',
+          ],
+          [
+            'export function later(date) {',
+            '  date.setHours(date.getHours() + 2)',
+            '  return date',
+            '}',
+          ],
+        )
+
+        expect(skipped.filter(entry => entry.includes('acme/'))).toStrictEqual([
+          '2 acme/date-setter date.setHours(date.getHours() + 2) -> date.setMinutes(date.getHours() + 2) acme/unknown-receiver',
+        ])
+        expect(since.map(mutant => mutant.change)).toStrictEqual([
+          '2 arithmetic-operator date.getHours() + 2 -> date.getHours() - 2',
+          '2 number-literal 2 -> 3',
+          '3 return-value date -> undefined',
+        ])
+        expect(all).toStrictEqual(expect.arrayContaining(since))
+
+        vi.mocked(loadConfig).mockResolvedValue({
+          config: {
+            plugins: { acme: createSetterPlugin('wrong-unit') },
+            mutators: { 'acme/date-setter': 'on' },
+          },
+          file: path.join(app, 'mootant.config.js'),
+          directory: app,
+        })
+        let result = await listMutants({
+          paths: ['src'],
+          since: 'HEAD',
+          skipped: true,
+          cwd: app,
+        })
+
+        expect(
+          result.files.flatMap(file =>
+            file.diagnostics.map(diagnostic => [
+              diagnostic.code,
+              diagnostic.line,
+              diagnostic.message,
+            ]),
+          ),
+        ).toStrictEqual([
+          [
+            'mutator-error',
+            2,
+            'Mutator "acme/date-setter" returned a skip with the unknown rule "wrong-unit". Declare it in the skipRules of its plugin.',
+          ],
+        ])
+      } finally {
+        vi.mocked(loadConfig).mockReset()
+      }
+    })
+
     it('follows a skip through the duplicate it names to the mutant that runs, with its id', async () => {
       let app = path.join(repository.root, 'app')
       let negation: Plugin = {

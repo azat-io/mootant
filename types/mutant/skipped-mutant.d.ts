@@ -1,7 +1,6 @@
 import type { SkipJustifier } from './skip-justifier'
 import type { SkipCategory } from './skip-category'
 import type { TextEdit } from '../source/text-edit'
-import type { SkipRuleId } from './skip-rule-id'
 import type { MutantKind } from './mutant-kind'
 
 /**
@@ -44,11 +43,6 @@ export interface SkippedMutant {
   focus?: TextEdit
 
   /**
-   * Id of the skip rule.
-   */
-  rule: SkipRuleId
-
-  /**
    * Id of the mutator that considered the mutation.
    */
   mutator: string
@@ -62,6 +56,12 @@ export interface SkippedMutant {
    * Offset of the first replaced UTF-16 code unit.
    */
   start: number
+
+  /**
+   * Id of the skip rule: a built-in id such as `O3` or `lower-bound`, or
+   * `namespace/name` for a rule of a plugin.
+   */
+  rule: string
 
   /**
    * Path of the file relative to the working directory, with `/` separators.

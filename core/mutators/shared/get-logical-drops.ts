@@ -1,7 +1,7 @@
 import type { LogicalExpression, Node } from 'oxc-parser'
 
 import type { Replacement } from '../../../types/mutator/replacement'
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 import type { RunContext } from './create-run-context'
 
 import { getCanonicalFalsyDefault } from './get-canonical-falsy-default'
@@ -81,7 +81,7 @@ export function getLogicalDrops(
   let skipped: Replacement[] = []
   let identityName = identity ? 'truthy' : 'falsy'
   let absorbingName = identity ? 'falsy' : 'truthy'
-  let falsyDefaultNote: SkipNote | null = falsyDefault && {
+  let falsyDefaultNote: CoreNote | null = falsyDefault && {
     reason:
       falsyDefault.because === null ?
         "the right operand is the only falsy value of the left operand's type, so the result is the same"
@@ -94,7 +94,7 @@ export function getLogicalDrops(
    *
    * @returns Rule and reason of the skip, or null when the drop is emitted.
    */
-  function getDropLeftSkip(): SkipNote | null {
+  function getDropLeftSkip(): CoreNote | null {
     if (fixedLeft === identity) {
       return {
         reason: `the left operand is always ${identityName}, so dropping it changes nothing`,
@@ -133,7 +133,7 @@ export function getLogicalDrops(
    * @returns Rule and reason of the skip, or null when the right operand may be
    *   dropped.
    */
-  function getRightKeptSkip(): SkipNote | null {
+  function getRightKeptSkip(): CoreNote | null {
     if (fixedRight === identity) {
       return {
         reason: `the right operand is always ${identityName}, so dropping it changes nothing`,
@@ -166,7 +166,7 @@ export function getLogicalDrops(
    *
    * @returns Rule and reason of the skip, or null when the drop is emitted.
    */
-  function getDropRightSkip(): SkipNote | null {
+  function getDropRightSkip(): CoreNote | null {
     if (
       hasPolarMutant(
         { value: identity, decision: right, candidate },
@@ -229,7 +229,7 @@ export function getLogicalDrops(
         reason: 'every test that kills the swap to ?? also kills this drop',
         by: { mutator: 'logical-operator', node },
         rule: 'swap-subsumes-drop',
-      },
+      } satisfies CoreNote,
       text: sourceCode.getText(left),
       node,
     })

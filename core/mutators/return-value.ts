@@ -11,7 +11,7 @@ import type {
 } from './shared/get-return-value-kind'
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 import type { Binding } from '../../types/syntax/binding'
 
@@ -160,7 +160,7 @@ function getReplacements(
       skip: {
         reason: 'it only replaces a returned logging call',
         rule: 'logging-call',
-      },
+      } satisfies CoreNote,
       text: item.text,
       node: target,
     }))
@@ -176,7 +176,7 @@ function getReplacements(
           reason:
             'the function returns void and the value has no effect to remove',
           rule: 'void-result',
-        },
+        } satisfies CoreNote,
         text: 'undefined',
         node: target,
       },
@@ -190,7 +190,7 @@ function getReplacements(
       solitary ?
         { text: item.text, node: target, solitary }
       : { text: item.text, node: target }
-    let skip: SkipNote | null =
+    let skip: CoreNote | null =
       callback && emptiesCallback(callback.owner, item.value) ?
         NO_OP_CALLBACK_SKIP
       : null
@@ -220,7 +220,7 @@ function getConstantSkip(
   target: Node,
   value: boolean,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   let owner = getOwnerConstant(target, value, context)
   if (owner) {
     return {
@@ -644,7 +644,7 @@ function getComparisonSkip(
   target: Node,
   value: boolean,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   let { negations, node } = getInnermost(target)
   if (!isComparison(node)) {
     return null

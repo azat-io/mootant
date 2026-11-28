@@ -2,7 +2,7 @@ import type { RegexFlagOptions } from '../../types/mutator/regex-flag-options'
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
 import type { RegexSource } from '../../types/regex/regex-source'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { createRegexReplacement } from '../regex/create-regex-replacement'
@@ -22,7 +22,7 @@ const REMOVABLE_FLAGS = 'ims'
 /**
  * Skip of a change of `g` for a pattern that matches at most once.
  */
-const ANCHORED_SKIP: SkipNote = {
+const ANCHORED_SKIP: CoreNote = {
   reason:
     'the pattern is anchored at the start or the end, so it matches at most once with or without g',
   rule: 'anchored-global',
@@ -33,7 +33,7 @@ const ANCHORED_SKIP: SkipNote = {
  * there is a match and the first match. The call may be recognized by its
  * name.
  */
-const FIRST_MATCH_SKIP: SkipNote = {
+const FIRST_MATCH_SKIP: CoreNote = {
   reason:
     'only whether there is a match and the first match are read, and g changes neither',
   rule: 'unused-flag',
@@ -94,7 +94,7 @@ function getFlagChanges(
    * @param newFlags - Flags of the mutant.
    * @param skip - Skip of the change, or null.
    */
-  function add(newFlags: string, skip: SkipNote | null): void {
+  function add(newFlags: string, skip: CoreNote | null): void {
     replacements.push(
       createRegexReplacement(
         source,
@@ -110,7 +110,7 @@ function getFlagChanges(
    * @param flag - `g`, `i`, `m` or `s`.
    * @returns Rule and reason of the skip, or null.
    */
-  function getRemovalSkip(flag: string): SkipNote | null {
+  function getRemovalSkip(flag: string): CoreNote | null {
     let isUsed: boolean
     switch (flag) {
       case 'g':
@@ -170,7 +170,7 @@ function getFlagChanges(
 function getMatchSkip(
   source: RegexSource,
   context: MutatorContext<RegexFlagOptions>,
-): SkipNote | null {
+): CoreNote | null {
   let { expression, tree } = source
   let { syntax } = context
   let call = findStringMatchCall(expression, context)

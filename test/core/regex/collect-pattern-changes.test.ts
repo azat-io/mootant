@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { RegexPatternOptions } from '../../../types/mutator/regex-pattern-options'
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 
 import { collectPatternChanges } from '../../../core/regex/collect-pattern-changes'
 import { parseRegexPattern } from '../../../core/regex/parse-regex-pattern'
@@ -19,7 +19,7 @@ const DEFAULTS: RegexPatternOptions = {
 /**
  * Skip of a change at an open edge of a pattern that code only tests.
  */
-const TESTED: SkipNote = { rule: 'unused-repeat', reason: 'tested' }
+const TESTED: CoreNote = { rule: 'unused-repeat', reason: 'tested' }
 
 /**
  * Lists the changed patterns of a pattern.
@@ -100,7 +100,7 @@ describe('collectPatternChanges', () => {
      */
     function collectBounds(
       pattern: string,
-      testedSkip: SkipNote | null,
+      testedSkip: CoreNote | null,
       flags = '',
     ): string[] {
       return collectPatternChanges(

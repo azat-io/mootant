@@ -1,4 +1,5 @@
 import type { Replacement } from '../../types/mutator/replacement'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 /**
@@ -31,7 +32,7 @@ export let updateOperator: Mutator = {
             reason:
               'it changes the update that advances a loop, so it may keep the loop running forever',
             rule: 'loop-advance',
-          }
+          } satisfies CoreNote
         }
         let position: Replacement = {
           text:
@@ -45,14 +46,14 @@ export let updateOperator: Mutator = {
             reason:
               'the value of the update is unused, so prefix and postfix do the same',
             rule: 'unused-result',
-          }
+          } satisfies CoreNote
         } else if (syntax.isForEachResult(node)) {
           position.skip = {
             reason:
               'forEach ignores what its callback returns, so prefix and postfix do the same',
             rule: 'unused-result',
             heuristic: true,
-          }
+          } satisfies CoreNote
         }
         return [swap, position]
       },

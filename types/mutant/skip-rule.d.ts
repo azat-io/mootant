@@ -1,7 +1,8 @@
 import type { SkipCategory } from './skip-category'
 
 /**
- * Entry of the registry of skip rules.
+ * Rule that skips candidates: an entry of the registry of built-in rules or of
+ * the `skipRules` of a plugin.
  */
 export interface SkipRule {
   /**

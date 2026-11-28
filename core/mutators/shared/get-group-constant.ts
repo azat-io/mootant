@@ -1,6 +1,6 @@
 import type { LogicalExpression } from 'oxc-parser'
 
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 import type { RunContext } from './create-run-context'
 
 import { isConstantEligibleGroup } from './is-constant-eligible-group'
@@ -24,7 +24,7 @@ export interface GroupConstant {
   /**
    * Why the constant is not emitted on a node that could have it, or null.
    */
-  skip: SkipNote | null
+  skip: CoreNote | null
 
   /**
    * Whether the constant is emitted.
@@ -63,7 +63,7 @@ export function getGroupConstant(
     value: absorbing,
     decision: node,
   }
-  let skip: SkipNote | null = null
+  let skip: CoreNote | null = null
   if (!isBooleanMode(node, context)) {
     if (!isConstantEligibleGroup(node, context)) {
       return { emitted: false, skip: null }

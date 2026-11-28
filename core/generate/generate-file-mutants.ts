@@ -10,11 +10,13 @@ import type { SkippedMutant } from '../../types/mutant/skipped-mutant'
 import type { ScopeAnalysis } from '../../types/syntax/scope-analysis'
 import type { LoggingCall } from '../../types/syntax/logging-call'
 import type { FileMutants } from '../../types/mutant/file-mutants'
+import type { SkipRuleId } from '../../types/mutant/skip-rule-id'
 import type { ParsedFile } from '../../types/source/parsed-file'
 import type { IgnoreRule } from '../../types/mutant/ignore-rule'
 import type { Diagnostic } from '../../types/mutant/diagnostic'
 import type { TreeIndex } from '../../types/syntax/tree-index'
 import type { TextEdit } from '../../types/source/text-edit'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutant } from '../../types/mutant/mutant'
 
 import { createSyntacticTypeProvider } from '../hints/create-syntactic-type-provider'
@@ -336,7 +338,7 @@ function listSkipped(selection: Selection, file: string): SkippedMutant[] {
   function createDropped(
     candidate: MutantCandidate,
     justifier: MutantCandidate,
-    note: Pick<SkippedCandidate, 'reason' | 'rule'>,
+    note: Pick<CoreNote, 'reason' | 'rule'>,
   ): SkippedCandidate {
     return {
       by: {
@@ -350,7 +352,7 @@ function listSkipped(selection: Selection, file: string): SkippedMutant[] {
       text: candidate.text,
       kind: candidate.kind,
       end: candidate.end,
-      heuristic: false,
+      ...skipRules[note.rule],
       ...pickFocus(candidate),
       ...note,
     }
@@ -376,9 +378,9 @@ function listSkipped(selection: Selection, file: string): SkippedMutant[] {
   return [...collected, ...dropped]
     .toSorted(compareCandidates)
     .map(candidate => ({
-      ...skipRules[candidate.rule],
-      heuristic: skipRules[candidate.rule].heuristic || candidate.heuristic,
       mutator: candidate.registered.id,
+      heuristic: candidate.heuristic,
+      category: candidate.category,
       replacement: candidate.text,
       reason: candidate.reason,
       start: candidate.start,
@@ -579,19 +581,20 @@ function prepareProgram(
  * @returns Skipped candidate with the `log-message` rule.
  */
 function createLogMessageSkip(candidate: MutantCandidate): SkippedCandidate {
+  let rule: SkipRuleId = 'log-message'
   return {
     reason:
       candidate.kind === 'block' ?
         'it only removes a log message'
       : 'it only changes the text of a log message',
     registered: candidate.registered,
+    ...skipRules[rule],
     emission: candidate.emission,
     start: candidate.start,
     text: candidate.text,
     kind: candidate.kind,
-    rule: 'log-message',
     end: candidate.end,
-    heuristic: false,
+    rule,
     ...pickFocus(candidate),
     by: null,
   }

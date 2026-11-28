@@ -1,7 +1,7 @@
 import type { RegisteredMutator } from '../mutator/registered-mutator'
 import type { SkipJustifier } from './skip-justifier'
+import type { SkipCategory } from './skip-category'
 import type { TextEdit } from '../source/text-edit'
-import type { SkipRuleId } from './skip-rule-id'
 import type { MutantKind } from './mutant-kind'
 
 /**
@@ -26,7 +26,13 @@ export interface SkippedCandidate {
   kind: MutantKind | null
 
   /**
-   * Whether the skip rests on a guess beyond its rule.
+   * Category of the skip rule.
+   */
+  category: SkipCategory
+
+  /**
+   * Whether the skip rests on a guess: its rule is a heuristic, or the skip
+   * also rests on one.
    */
   heuristic: boolean
 
@@ -43,11 +49,6 @@ export interface SkippedCandidate {
   emission: number
 
   /**
-   * Id of the skip rule.
-   */
-  rule: SkipRuleId
-
-  /**
    * Plain-English reason of the skip.
    */
   reason: string
@@ -61,6 +62,12 @@ export interface SkippedCandidate {
    * Text that would have been written in place of the range.
    */
   text: string
+
+  /**
+   * Id of the skip rule: a built-in id, or `namespace/name` for a rule of a
+   * plugin.
+   */
+  rule: string
 
   /**
    * End of the replaced range.

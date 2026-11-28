@@ -1,3 +1,4 @@
+import type { SkipCategory } from '../../types/mutant/skip-category'
 import type { Plugin } from '../../types/config/plugin'
 
 import { getSettingsProblem } from './get-settings-problem'
@@ -5,11 +6,24 @@ import { isMutatorSetting } from './is-mutator-setting'
 import { isRecord } from './is-record'
 
 /**
+ * Every category of a skip rule.
+ */
+const SKIP_CATEGORIES: Record<SkipCategory, true> = {
+  equivalent: true,
+  duplicate: true,
+  subsumed: true,
+  timeout: true,
+  invalid: true,
+  owned: true,
+  noise: true,
+}
+
+/**
  * Checks the shape of a plugin loaded at runtime: an object with a `mutators`
  * object of mutators, each with a `create` function and a `meta` object with a
- * description, and optional presets with a description, mutator settings,
- * `extends` and settings. Names and ids are checked when the plugin is
- * registered.
+ * description, optional skip rules with a category and a heuristic flag, and
+ * optional presets with a description, mutator settings, `extends` and
+ * settings. Names and ids are checked when the plugin is registered.
  *
  * @param value - Default export of a plugin package, or a plugin object.
  * @param namespace - Namespace the plugin is loaded under.
@@ -82,6 +96,10 @@ function getPluginProblem(value: unknown): string | null {
       return `mutator "${name}" ${problem}`
     }
   }
+  let rulesProblem = getSkipRulesProblem(value['skipRules'])
+  if (rulesProblem !== null) {
+    return rulesProblem
+  }
   if (value['presets'] === undefined) {
     return null
   }
@@ -93,6 +111,37 @@ function getPluginProblem(value: unknown): string | null {
     let problem = getPresetProblem(preset)
     if (problem !== null) {
       return `preset "${name}" ${problem}`
+    }
+  }
+  return null
+}
+
+/**
+ * Finds what is wrong with the shape of the skip rules of a plugin.
+ *
+ * @param value - Skip rules to check, or undefined when the plugin has none.
+ * @returns Description of the first problem, or null when there is none.
+ */
+function getSkipRulesProblem(value: unknown): string | null {
+  if (value === undefined) {
+    return null
+  }
+  if (!isRecord(value)) {
+    return '"skipRules" must be an object'
+  }
+  for (let [name, rule] of Object.entries(value)) {
+    if (!isRecord(rule)) {
+      return `skip rule "${name}" must be an object`
+    }
+    let { category } = rule
+    if (
+      typeof category !== 'string' ||
+      !Object.hasOwn(SKIP_CATEGORIES, category)
+    ) {
+      return `skip rule "${name}" has an invalid category: use "equivalent", "noise", "timeout", "owned", "subsumed", "duplicate" or "invalid"`
+    }
+    if (typeof rule['heuristic'] !== 'boolean') {
+      return `skip rule "${name}" has heuristic that is not true or false`
     }
   }
   return null

@@ -832,6 +832,61 @@ describe('runMutants', () => {
     expect(math(refused.result)).toStrictEqual([])
   })
 
+  it('lists the skip of a plugin mutator under the rule of its plugin in a run that writes an HTML report', async () => {
+    let [add] = ids['src/math.ts']!
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: {
+        plugins: {
+          acme: {
+            mutators: {
+              swap: {
+                create: context => ({
+                  BinaryExpression: node => [
+                    {
+                      skip: {
+                        reason: 'it adds the same numbers',
+                        rule: 'same-sum',
+                      },
+                      text: `${context.sourceCode.getText(node.right)} + ${context.sourceCode.getText(node.left)}`,
+                      node,
+                    },
+                  ],
+                }),
+                meta: { description: 'Swaps the operands of a sum.' },
+              },
+            },
+            skipRules: {
+              'same-sum': { category: 'equivalent', heuristic: false },
+            },
+          },
+        },
+        mutators: { 'acme/swap': 'on' },
+      },
+      file: path.join(root, 'mootant.config.js'),
+      directory: root,
+    })
+    let { result } = await run(
+      {
+        tests: [
+          {
+            file: path.join(root, 'test/math.test.ts'),
+            covers: [add!],
+            id: 'math',
+          },
+        ],
+      },
+      { html: true },
+    )
+
+    expect(result.html).toBe(path.join(root, '.mootant/report.html'))
+    expect(
+      result.files
+        .find(file => file.file === 'src/math.ts')!
+        .skipped.filter(entry => entry.mutator === 'acme/swap')
+        .map(entry => [entry.rule, entry.category, entry.heuristic]),
+    ).toStrictEqual([['acme/same-sum', 'equivalent', false]])
+  })
+
   it('fails without paths and on unknown mutant ids', async () => {
     vi.mocked(loadConfig).mockResolvedValue(null)
 

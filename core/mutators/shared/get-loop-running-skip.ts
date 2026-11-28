@@ -1,4 +1,4 @@
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 
 /**
  * Builds the skip of a constant that gives a loop its running value, so the
@@ -7,7 +7,7 @@ import type { SkipNote } from '../../../types/mutant/skip-note'
  * @param value - Constant that keeps the loop running.
  * @returns Rule and reason of the skip.
  */
-export function getLoopRunningSkip(value: boolean): SkipNote {
+export function getLoopRunningSkip(value: boolean): CoreNote {
   return {
     reason: `${value} may keep the loop running forever`,
     rule: 'loop-running',

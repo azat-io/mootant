@@ -1,7 +1,7 @@
 import type { LogicalExpression } from 'oxc-parser'
 
 import type { MutatorContext } from '../../../types/mutator/mutator-context'
-import type { SkipNote } from '../../../types/mutant/skip-note'
+import type { CoreNote } from '../../../types/mutant/core-note'
 
 import { distinguishesNullishSwap } from './distinguishes-nullish-swap'
 
@@ -21,7 +21,7 @@ export function getNullishSwapSkip(
   node: LogicalExpression,
   context: MutatorContext,
   nullishSwap: 'distinguishing' | 'always',
-): SkipNote | null {
+): CoreNote | null {
   let neverFalsy = context.syntax.getNeverFalsyFact(node.left)
   if (neverFalsy !== null) {
     return {

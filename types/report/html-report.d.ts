@@ -202,7 +202,8 @@ export interface HtmlReportSkipped {
   start: number
 
   /**
-   * Id of the skip rule, such as `O3` or `lower-bound`.
+   * Id of the skip rule, such as `O3`, `lower-bound` or, for a rule of a
+   * plugin, `namespace/name`.
    */
   rule: string
 

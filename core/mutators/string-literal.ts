@@ -8,7 +8,7 @@ import type {
 
 import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { isBraceSensitiveAttribute } from '../syntax/is-brace-sensitive-attribute'
@@ -174,7 +174,7 @@ function getStringSkip(
   node: TemplateLiteral | StringLiteral,
   change: StringChange,
   context: MutatorContext<StringLiteralOptions>,
-): SkipNote | null {
+): CoreNote | null {
   let { sourceCode, options, syntax } = context
   let { parent, key } = syntax.getContextSlot(node)
   let { value, text } = change
@@ -229,7 +229,7 @@ function getStringSkip(
    *
    * @returns Rule and reason of the skip, or null.
    */
-  function getOwnSkip(): SkipNote | null {
+  function getOwnSkip(): CoreNote | null {
     if (value === '' && isTestedLookupKey(node, context)) {
       return {
         reason:
@@ -262,7 +262,7 @@ function getAttributeSkip(
   attribute: JSXAttribute,
   node: TemplateLiteral | StringLiteral,
   context: MutatorContext<StringLiteralOptions>,
-): SkipNote | null {
+): CoreNote | null {
   if (!context.options.jsxAttributes) {
     return {
       reason: 'it only changes the quoted value of a JSX attribute',
@@ -315,7 +315,7 @@ function getAttributeSkip(
 function getRegexArgumentSkip(
   node: TemplateLiteral | StringLiteral,
   context: MutatorContext,
-): SkipNote | null {
+): CoreNote | null {
   let { parent, index, key } = context.syntax.getContextSlot(node)
   let call =
     key === 'arguments' && parent ? readRegexCall(parent, context) : null

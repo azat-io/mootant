@@ -3,7 +3,7 @@ import type { MutatorContext } from '../../types/mutator/mutator-context'
 import type { Replacement } from '../../types/mutator/replacement'
 import type { RegexSource } from '../../types/regex/regex-source'
 import type { RegexChange } from '../../types/regex/regex-change'
-import type { SkipNote } from '../../types/mutant/skip-note'
+import type { CoreNote } from '../../types/mutant/core-note'
 import type { Mutator } from '../../types/mutator/mutator'
 
 import { createRegexReplacement } from '../regex/create-regex-replacement'
@@ -17,7 +17,7 @@ import { createRegexVisitors } from '../regex/create-regex-visitors'
  * code reads the last match through `RegExp`, and that the type hints are
  * right.
  */
-const TESTED_SKIP: SkipNote = {
+const TESTED_SKIP: CoreNote = {
   reason:
     'only whether the pattern matches is used, and with nothing required before or after the quantifier its upper bound does not change that',
   rule: 'unused-repeat',
@@ -126,7 +126,7 @@ function mutatePattern(
 function getTestedSkip(
   source: RegexSource,
   context: MutatorContext<RegexPatternOptions>,
-): SkipNote | null {
+): CoreNote | null {
   let { expression, flags } = source
   let { syntax } = context
   let isTested = syntax.isRegexOnlyTested(expression, flags)
