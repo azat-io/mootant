@@ -51,6 +51,7 @@ describe('trackProcessGroup', () => {
   it.each(['SIGHUP', 'SIGINT', 'SIGQUIT'] as const)(
     'stops the processes on %s and raises it again alone',
     signal => {
+      vi.spyOn(process, 'platform', 'get').mockReturnValue('linux')
       let before = countListeners()
       let kill = vi.spyOn(process, 'kill').mockReturnValue(true)
       let listeners = process.listeners(signal)
@@ -64,6 +65,28 @@ describe('trackProcessGroup', () => {
       expect(kill.mock.calls).toStrictEqual([
         [-41, 'SIGKILL'],
         [process.pid, signal],
+      ])
+      expect(countListeners()).toStrictEqual(before)
+    },
+  )
+
+  it.each(['SIGHUP', 'SIGQUIT'] as const)(
+    'stops the processes on %s and raises SIGINT in its place alone on Windows',
+    signal => {
+      vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+      let before = countListeners()
+      let kill = vi.spyOn(process, 'kill').mockReturnValue(true)
+      let listeners = process.listeners(signal)
+      process.removeAllListeners(signal)
+      trackProcessGroup(41)
+      process.emit(signal, signal)
+      for (let listener of listeners) {
+        process.on(signal, listener)
+      }
+
+      expect(kill.mock.calls).toStrictEqual([
+        [-41, 'SIGKILL'],
+        [process.pid, 'SIGINT'],
       ])
       expect(countListeners()).toStrictEqual(before)
     },

@@ -36,7 +36,9 @@ export function trackProcessGroup(pid: number): () => void {
 /**
  * Stops the live test processes when this process gets a signal; when no other
  * listener handles the signal, raises it again, so the process ends as it would
- * without this listener.
+ * without this listener. On Windows, where SIGHUP cannot be raised and SIGINT,
+ * SIGQUIT and SIGTERM all end the process at once with exit code 1, it raises
+ * SIGINT for any signal.
  *
  * @param signal - Signal this process got.
  */
@@ -44,7 +46,7 @@ function onSignal(signal: NodeJS.Signals): void {
   stopLiveProcessGroups()
   release()
   if (process.listenerCount(signal) === 0) {
-    process.kill(process.pid, signal)
+    process.kill(process.pid, process.platform === 'win32' ? 'SIGINT' : signal)
   }
 }
 
